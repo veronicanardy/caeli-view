@@ -1,0 +1,73 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    image: caeli-view-app
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/node_modules
+      - caeli-view-vendor:/var/www/html/vendor
+      - caeli-view-cache:/var/www/html/bootstrap/cache
+    ports:
+      - "${APP_PORT:-8000}:8000"
+      - "${VITE_PORT:-5173}:5173"
+    environment:
+      APP_ENV: local
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+      VITE_HMR_HOST: localhost
+      NASA_TIMEOUT_SECONDS: 3
+      NASA_RETRY_TIMES: 0
+      JPL_TIMEOUT_SECONDS: 3
+      JPL_RETRY_TIMES: 0
+      HOME_OBSERVATORY_FEED_ENABLED: "false"
+    command: >
+      sh -lc "composer install --no-interaction --prefer-dist --optimize-autoloader &&
+      php artisan config:cache &&
+      php artisan route:cache &&
+      php artisan view:cache &&
+      (php artisan serve --host=0.0.0.0 --port=8000 &) &&
+      npm run dev -- --host 0.0.0.0 --port 5173"
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "${FORWARD_DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: "${DB_DATABASE:-caeli_view}"
+      POSTGRES_USER: "${DB_USERNAME:-caeli_view}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-secret}"
+    volumes:
+      - caeli-view-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-caeli_view} -d ${DB_DATABASE:-caeli_view}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${FORWARD_REDIS_PORT:-6379}:6379"
+    volumes:
+      - caeli-view-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  caeli-view-postgres:
+  caeli-view-redis:
+  caeli-view-vendor:
+  caeli-view-cache:

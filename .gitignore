@@ -1,0 +1,40 @@
+/vendor
+/node_modules
+/.env
+/.phpunit.cache
+/.phpunit.result.cache
+/storage/*.key
+/storage/app/*
+!/storage/app/.gitignore
+/storage/framework/cache/*
+!/storage/framework/cache/.gitignore
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+/storage/logs/*
+!/storage/logs/.gitignore
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+/public/build
+/public/hot
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.local
+
+# Logs
+npm-debug.log*
+yarn-error.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Environment variants
+.env.*
+!.env.example
+
+# Claude Code — personal settings (machine-specific, never commit)
+.claude/settings.local.json
