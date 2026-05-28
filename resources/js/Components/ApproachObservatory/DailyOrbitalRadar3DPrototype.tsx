@@ -26,6 +26,18 @@ import { SUN_FRAG, SUN_GLOW_FRAG, SUN_GLOW_VERT, SUN_VERT } from '@/lib/observat
 import { CLOUDS_FRAG, EARTH_FRAG, EARTH_VERT } from '@/lib/observatory/shaders/earth.glsl';
 import { MapManualModal, type SceneMode } from './MapManualModal';
 import { FocusCard } from './FocusCard';
+import { Sun } from './Bodies/Sun';
+import { MoonOrbit } from './Bodies/MoonOrbit';
+import { EarthOrbitRingHelio, OrbitLineHelio, SunOrbitGuide } from './Bodies/HeliocentricLines';
+import {
+    DistanceCulledScreenLabel,
+    FocusProtectedHtml,
+    type LabelOccluder,
+    LabelOccluderContext,
+    SceneLabel,
+    ScreenLabel,
+    useCompactLabelMode,
+} from './Overlays/SceneLabels';
 
 /**
  * Isolated 3D prototype of the orbital radar. Lives alongside the SVG radar — it does NOT
@@ -124,9 +136,6 @@ type CameraViewKey = keyof typeof CAMERA_VIEWS;
  * SceneMode is defined in ./MapManualModal so the modal and the scene agree on the same union
  * without re-declaring it on both sides.
  */
-type LabelOccluder = { center: THREE.Vector3; radius: number } | null;
-
-const LabelOccluderContext = createContext<LabelOccluder>(null);
 
 // Palette assigned to objects in order. Keep selected/non-selected legible against the dark bg.
 // The colors are chosen to read against the green-tinted "future" trajectories: warm hues bias
@@ -603,258 +612,6 @@ function ViewButton({ active, onClick, children }: { active: boolean; onClick: (
     );
 }
 
-// --------------- Scene label (DOM overlay; always faces the screen) ---------------
-
-/**
- * A 3D-anchored text label rendered as an <Html> overlay. We deliberately avoid drei's <Text>
- * (troika-three-text) because it fetches a default font from a CDN on first paint — the project
- * forbids frontend fetches to third parties (see performance notes). <Html> uses plain DOM/CSS,
- * scales with distance via `distanceFactor`, and always faces the camera for free.
- */
-function SceneLabel({
-    position,
-    children,
-    distanceFactor,
-    tier,
-    highlighted = false,
-    protectFromFocus = true,
-    onClick,
-    title,
-}: {
-    position: [number, number, number];
-    children: React.ReactNode;
-    distanceFactor?: number;
-    tier: 'primary' | 'ring';
-    highlighted?: boolean;
-    protectFromFocus?: boolean;
-    onClick?: () => void;
-    title?: string;
-}) {
-    const labelRef = useRef<THREE.Group>(null);
-    const focusOccluder = useContext(LabelOccluderContext);
-    const hiddenByFocus = useLabelHiddenByFocusRef(labelRef, protectFromFocus ? focusOccluder : null);
-    const cls =
-        tier === 'primary'
-            ? [
-                  'select-none whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-semibold backdrop-blur',
-                  highlighted ? 'bg-space-950/90 text-white' : 'bg-space-950/75 text-white/90',
-                  onClick ? 'pointer-events-auto cursor-pointer transition hover:bg-space-950 hover:text-white' : 'pointer-events-none',
-              ].join(' ')
-            : [
-                  'select-none whitespace-nowrap rounded-full bg-space-950/60 px-1.5 py-0.5 text-[12px] font-medium text-white/75 backdrop-blur',
-                  onClick ? 'pointer-events-auto cursor-pointer transition hover:bg-space-950/85 hover:text-white' : 'pointer-events-none',
-              ].join(' ');
-
-    return (
-        <group ref={labelRef} position={position}>
-            {!hiddenByFocus ? (
-                <Html position={[0, 0, 0]} center distanceFactor={distanceFactor} zIndexRange={[7, 0]}>
-                    <button
-                        type="button"
-                        className={cls}
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            onClick?.();
-                        }}
-                        onPointerEnter={() => { if (onClick) document.body.style.cursor = 'pointer'; }}
-                        onPointerLeave={() => { if (onClick) document.body.style.cursor = ''; }}
-                        title={title}
-                        aria-label={title}
-                        disabled={!onClick}
-                    >
-                        {children}
-                    </button>
-                </Html>
-            ) : null}
-        </group>
-    );
-}
-
-/**
- * A label anchored to a 3D point but with SCREEN-STABLE size — it does NOT shrink when the object
- * is far away (no `distanceFactor`). This is what keeps a distant asteroid's hover/selection label
- * readable: the text stays a fixed CSS size on screen regardless of depth, while still tracking the
- * marker's projected position. Used for asteroid hover/selected labels (Etapa 7 priority).
- */
-function ScreenLabel({
-    position,
-    emphasized = false,
-    protectFromFocus = true,
-    children,
-    onClick,
-    title,
-}: {
-    position: [number, number, number];
-    emphasized?: boolean;
-    protectFromFocus?: boolean;
-    children: React.ReactNode;
-    onClick?: () => void;
-    title?: string;
-}) {
-    const labelRef = useRef<THREE.Group>(null);
-    const focusOccluder = useContext(LabelOccluderContext);
-    const hiddenByFocus = useLabelHiddenByFocusRef(labelRef, protectFromFocus ? focusOccluder : null);
-
-    return (
-        <group ref={labelRef} position={position}>
-            {!hiddenByFocus ? (
-                <Html position={[0, 0, 0]} center zIndexRange={[12, 0]} style={{ pointerEvents: onClick ? 'auto' : 'none' }}>
-                    <button
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            onClick?.();
-                        }}
-                        onPointerEnter={() => { if (onClick) document.body.style.cursor = 'pointer'; }}
-                        onPointerLeave={() => { if (onClick) document.body.style.cursor = ''; }}
-                        title={title}
-                        aria-label={title}
-                        disabled={!onClick}
-                        className={[
-                            '-translate-y-1/2 whitespace-nowrap rounded-md border bg-space-950/92 px-3 py-2 text-[14px] leading-snug text-white/90 shadow-glow backdrop-blur',
-                            emphasized ? 'border-signal-cyan/50' : 'border-white/10',
-                            onClick ? 'pointer-events-auto cursor-pointer text-left transition hover:border-signal-cyan/40 hover:bg-space-950' : 'pointer-events-none',
-                        ].join(' ')}
-                    >
-                        {children}
-                    </button>
-                </Html>
-            ) : null}
-        </group>
-    );
-}
-
-function DistanceCulledScreenLabel({
-    anchor,
-    maxCameraDistance,
-    ...props
-}: Parameters<typeof ScreenLabel>[0] & {
-    anchor: [number, number, number];
-    maxCameraDistance: number;
-}) {
-    const camera = useThree((state) => state.camera);
-    const [visible, setVisible] = useState(true);
-
-    useFrame(() => {
-        const d = camera.position.distanceTo(new THREE.Vector3(...anchor));
-        const nextVisible = d <= maxCameraDistance;
-        setVisible((current) => (current === nextVisible ? current : nextVisible));
-    });
-
-    return visible ? <ScreenLabel {...props} /> : null;
-}
-
-function FocusProtectedHtml({
-    position,
-    center = true,
-    distanceFactor,
-    zIndexRange,
-    style,
-    children,
-}: {
-    position: [number, number, number];
-    center?: boolean;
-    distanceFactor?: number;
-    zIndexRange?: [number, number];
-    style?: React.CSSProperties;
-    children: React.ReactNode;
-}) {
-    const labelRef = useRef<THREE.Group>(null);
-    const focusOccluder = useContext(LabelOccluderContext);
-    const hiddenByFocus = useLabelHiddenByFocusRef(labelRef, focusOccluder);
-
-    return (
-        <group ref={labelRef} position={position}>
-            {!hiddenByFocus ? (
-                <Html position={[0, 0, 0]} center={center} distanceFactor={distanceFactor} zIndexRange={zIndexRange} style={style}>
-                    {children}
-                </Html>
-            ) : null}
-        </group>
-    );
-}
-
-function useCompactLabelMode(): boolean {
-    const { camera, size } = useThree();
-    const controls = useThree((s) => s.controls) as unknown as { target?: THREE.Vector3 } | null;
-    const [compact, setCompact] = useState(false);
-    const compactRef = useRef(false);
-
-    useFrame(() => {
-        const target = controls?.target ?? new THREE.Vector3(0, 0, 0);
-        const center = target.clone().project(camera);
-        const oneDl = target.clone().add(new THREE.Vector3(1, 0, 0)).project(camera);
-        const lunarRadiusPx = Math.hypot(
-            (oneDl.x - center.x) * size.width * 0.5,
-            (oneDl.y - center.y) * size.height * 0.5,
-        );
-        const next = lunarRadiusPx < COMPACT_LABEL_THRESHOLD_PX;
-        if (next !== compactRef.current) {
-            compactRef.current = next;
-            setCompact(next);
-        }
-    });
-
-    return compact;
-}
-
-function useLabelHiddenByFocusRef(
-    labelRef: React.RefObject<THREE.Object3D | null>,
-    occluder: LabelOccluder,
-): boolean {
-    const { camera, size } = useThree();
-    const [hidden, setHidden] = useState(false);
-    const hiddenRef = useRef(false);
-    const labelPosition = useRef(new THREE.Vector3());
-
-    useFrame(() => {
-        if (!labelRef.current || !occluder) {
-            if (hiddenRef.current) {
-                hiddenRef.current = false;
-                setHidden(false);
-            }
-            return;
-        }
-
-        labelRef.current.getWorldPosition(labelPosition.current);
-        const center = occluder.center.clone().project(camera);
-        if (center.z < -1 || center.z > 1) {
-            if (hiddenRef.current) {
-                hiddenRef.current = false;
-                setHidden(false);
-            }
-            return;
-        }
-
-        const label = labelPosition.current.clone().project(camera);
-        const cameraRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize();
-        const edge = occluder.center.clone().add(cameraRight.multiplyScalar(occluder.radius)).project(camera);
-
-        const centerPx = {
-            x: (center.x * 0.5 + 0.5) * size.width,
-            y: (-center.y * 0.5 + 0.5) * size.height,
-        };
-        const labelPx = {
-            x: (label.x * 0.5 + 0.5) * size.width,
-            y: (-label.y * 0.5 + 0.5) * size.height,
-        };
-        const edgePx = {
-            x: (edge.x * 0.5 + 0.5) * size.width,
-            y: (-edge.y * 0.5 + 0.5) * size.height,
-        };
-
-        const bodyRadiusPx = Math.hypot(edgePx.x - centerPx.x, edgePx.y - centerPx.y);
-        const hideRadiusPx = Math.max(LABEL_HIDE_MIN_RADIUS_PX, bodyRadiusPx + LABEL_HIDE_BODY_PADDING_PX);
-        const nextHidden = Math.hypot(labelPx.x - centerPx.x, labelPx.y - centerPx.y) < hideRadiusPx;
-
-        if (nextHidden !== hiddenRef.current) {
-            hiddenRef.current = nextHidden;
-            setHidden(nextHidden);
-        }
-    });
-
-    return hidden;
-}
 
 // --------------- Heliocentric scene (orbit-solar mode) ---------------
 
@@ -950,7 +707,7 @@ function HeliocentricScene({
                 sphere used in the radar scene (just placed at the origin via SunAtOrigin). */}
             <directionalLight position={[0, 0, 0]} intensity={2.2} color="#fff6e8" />
             <pointLight position={[0, 0, 0]} intensity={0.5} distance={ORBIT_AU_SCALE * 8} color="#ffdca8" />
-            <SunAtOrigin radius={SUN_RADIUS_HELIO} locale={locale} />
+            <Sun position={[0, 0, 0]} radius={SUN_RADIUS_HELIO} locale={locale} />
 
             {/* Earth at its real heliocentric position. Same day/night shader as the radar — the Sun
                 direction from Earth's frame is just −earthScenePos. Subsolar lat/lon keeps the
@@ -999,154 +756,6 @@ function HeliocentricScene({
     );
 }
 
-/** Sun at the scene origin. Reuses the radar Sun's shaders — same look, no Earth-direction offset. */
-function SunAtOrigin({ radius, locale }: { radius: number; locale: 'pt-BR' | 'en' }) {
-    const en = locale === 'en';
-    const surfaceMat = useRef<THREE.ShaderMaterial>(null);
-    const surfaceMaterial = useMemo(
-        () => new THREE.ShaderMaterial({
-            uniforms: { uTime: { value: 0 } },
-            vertexShader: SUN_VERT,
-            fragmentShader: SUN_FRAG,
-        }),
-        [],
-    );
-    const glowMaterial = useMemo(
-        () => new THREE.ShaderMaterial({
-            uniforms: { uColor: { value: new THREE.Color('#ffb84d') } },
-            vertexShader: SUN_GLOW_VERT,
-            fragmentShader: SUN_GLOW_FRAG,
-            transparent: true,
-            side: THREE.BackSide,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-        }),
-        [],
-    );
-    useFrame(({ clock }) => {
-        if (surfaceMat.current) surfaceMat.current.uniforms.uTime.value = clock.getElapsedTime();
-    });
-
-    return (
-        <group>
-            <mesh>
-                <sphereGeometry args={[radius, 160, 96]} />
-                <primitive ref={surfaceMat} object={surfaceMaterial} attach="material" />
-            </mesh>
-            <mesh scale={1.018}>
-                <sphereGeometry args={[radius, 96, 64]} />
-                <meshBasicMaterial color="#ffd27a" transparent opacity={0.1} depthWrite={false} blending={THREE.AdditiveBlending} />
-            </mesh>
-            <mesh scale={1.18}>
-                <sphereGeometry args={[radius, 96, 64]} />
-                <primitive object={glowMaterial} attach="material" />
-            </mesh>
-            <SunProminences radius={radius} />
-            <ScreenLabel position={[0, radius + 0.42, 0]} protectFromFocus={false}>
-                <span className="font-semibold">{en ? 'Sun' : 'Sol'}</span>
-            </ScreenLabel>
-        </group>
-    );
-}
-
-function SunProminences({ radius }: { radius: number }) {
-    const groupRef = useRef<THREE.Group>(null);
-    const arcs = useMemo(() => {
-        const configs = [
-            { start: 0.35, height: 0.18, span: 0.36, tilt: 0.1 },
-            { start: 2.15, height: 0.13, span: 0.28, tilt: -0.18 },
-            { start: 4.7, height: 0.16, span: 0.32, tilt: 0.22 },
-        ];
-
-        return configs.map((config) => {
-            const points: THREE.Vector3[] = [];
-            for (let i = 0; i <= 28; i += 1) {
-                const t = i / 28;
-                const a = config.start + (t - 0.5) * config.span;
-                const lift = Math.sin(Math.PI * t) * config.height * radius;
-                points.push(new THREE.Vector3(
-                    Math.cos(a) * (radius + lift),
-                    Math.sin(config.tilt) * lift + Math.sin(a * 1.7) * radius * 0.04,
-                    Math.sin(a) * (radius + lift),
-                ));
-            }
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const material = new THREE.LineBasicMaterial({
-                color: '#ffb45c',
-                transparent: true,
-                opacity: 0.42,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-            });
-            const line = new THREE.Line(geometry, material);
-            return line;
-        });
-    }, [radius]);
-
-    useEffect(() => () => {
-        arcs.forEach((line) => {
-            line.geometry.dispose();
-            (line.material as THREE.Material).dispose();
-        });
-    }, [arcs]);
-
-    useFrame((_, delta) => {
-        if (groupRef.current) groupRef.current.rotation.y += delta * 0.012;
-    });
-
-    return (
-        <group ref={groupRef}>
-            {arcs.map((line, index) => (
-                <primitive key={index} object={line} />
-            ))}
-        </group>
-    );
-}
-
-function EarthOrbitRingHelio() {
-    const lineObject = useMemo(() => {
-        const segments = 192;
-        const radius = ORBIT_AU_SCALE; // 1 AU
-        const pts: number[] = [];
-        for (let i = 0; i <= segments; i += 1) {
-            const a = (i / segments) * Math.PI * 2;
-            pts.push(Math.cos(a) * radius, 0, Math.sin(a) * radius);
-        }
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts), 3));
-        const material = new THREE.LineBasicMaterial({ color: '#ffcf6e', transparent: true, opacity: 0.3 });
-        const line = new THREE.Line(geometry, material);
-        line.frustumCulled = false;
-        return line;
-    }, []);
-    useEffect(() => () => {
-        lineObject.geometry.dispose();
-        (lineObject.material as THREE.Material).dispose();
-    }, [lineObject]);
-
-    return (
-        <group>
-            <primitive object={lineObject} />
-        </group>
-    );
-}
-
-function OrbitLineHelio({ points, color, opacity = 0.85 }: { points: Float32Array; color: string; opacity?: number }) {
-    const lineObject = useMemo(() => {
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(points, 3));
-        const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
-        const line = new THREE.Line(geometry, material);
-        line.frustumCulled = false;
-        return line;
-    }, [points, color, opacity]);
-    useEffect(() => () => {
-        lineObject.geometry.dispose();
-        (lineObject.material as THREE.Material).dispose();
-    }, [lineObject]);
-
-    return <primitive object={lineObject} />;
-}
 
 // --------------- Scene ---------------
 
@@ -1277,7 +886,12 @@ function Scene({ closestNowObjects, selectedId, orbitMode, onSelect, onResetView
                 />
             ) : (
                 <>
-                    <Sun direction={sunDir} locale={locale} />
+                    <Sun
+                        position={[sunDir[0] * SUN_DISPLAY_DL, sunDir[1] * SUN_DISPLAY_DL, sunDir[2] * SUN_DISPLAY_DL]}
+                        radius={SUN_RADIUS_SCENE}
+                        locale={locale}
+                        withLighting
+                    />
                     <Earth
                         onFocus={focusEarth}
                         sunDirection={sunDir}
@@ -1369,131 +983,6 @@ function framingForOverview(): FocusFraming {
     return { target: new THREE.Vector3(0, 0, 0), position: CAMERA_VIEWS.perspective.clone() };
 }
 
-// --------------- Sun ---------------
-
-/**
- * The Sun as a light reference, placed in the compact heliocentric layer.
- */
-function Sun({ direction, locale }: { direction: [number, number, number]; locale: 'pt-BR' | 'en' }) {
-    const en = locale === 'en';
-    const pos: [number, number, number] = [
-        direction[0] * SUN_DISPLAY_DL,
-        direction[1] * SUN_DISPLAY_DL,
-        direction[2] * SUN_DISPLAY_DL,
-    ];
-
-    const surfaceMat = useRef<THREE.ShaderMaterial>(null);
-    const glowMat = useRef<THREE.ShaderMaterial>(null);
-
-    // Animated photosphere (granulation + sunspots) — a star with life, not a flat disc.
-    const surfaceMaterial = useMemo(
-        () => new THREE.ShaderMaterial({
-            uniforms: { uTime: { value: 0 } },
-            vertexShader: SUN_VERT,
-            fragmentShader: SUN_FRAG,
-        }),
-        [],
-    );
-
-    // Corona glow as a single fresnel shell: a back-facing sphere whose opacity falls off smoothly
-    // toward the rim. This gives a soft halo that fades to nothing — no hard translucent disc that
-    // smears across the screen as a yellow blob when the Sun sits off-frame.
-    const glowMaterial = useMemo(
-        () => new THREE.ShaderMaterial({
-            uniforms: { uColor: { value: new THREE.Color('#ffb84d') } },
-            vertexShader: SUN_GLOW_VERT,
-            fragmentShader: SUN_GLOW_FRAG,
-            transparent: true,
-            side: THREE.BackSide,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-        }),
-        [],
-    );
-
-    useFrame(({ clock }) => {
-        const t = clock.getElapsedTime();
-        if (surfaceMat.current) surfaceMat.current.uniforms.uTime.value = t;
-    });
-
-    return (
-        <group>
-            {/* Key light + a warm point light along the real Sun direction. */}
-            <directionalLight position={pos} intensity={2.2} color="#fff6e8" />
-            <pointLight position={pos} intensity={0.5} distance={80} color="#ffdca8" />
-
-            <group position={pos}>
-                {/* Radiant photosphere with procedural granulation + sunspots. */}
-                <mesh>
-                    <sphereGeometry args={[SUN_RADIUS_SCENE, 160, 96]} />
-                    <primitive ref={surfaceMat} object={surfaceMaterial} attach="material" />
-                </mesh>
-                {/* A thin bright rim just above the surface for a crisp limb. */}
-                <mesh scale={1.018}>
-                    <sphereGeometry args={[SUN_RADIUS_SCENE, 96, 64]} />
-                    <meshBasicMaterial color="#ffd27a" transparent opacity={0.1} depthWrite={false} blending={THREE.AdditiveBlending} />
-                </mesh>
-                {/* Soft fresnel corona that fades to nothing — replaces the old hard halo discs. */}
-                <mesh scale={1.18}>
-                    <sphereGeometry args={[SUN_RADIUS_SCENE, 96, 64]} />
-                    <primitive ref={glowMat} object={glowMaterial} attach="material" />
-                </mesh>
-                <SunProminences radius={SUN_RADIUS_SCENE} />
-                <ScreenLabel position={[0, SUN_RADIUS_SCENE + 0.42, 0]}>
-                    <span className="font-semibold">{en ? 'Sun' : 'Sol'}</span>
-                </ScreenLabel>
-            </group>
-        </group>
-    );
-}
-
-function SunOrbitGuide({
-    sunDirection,
-}: {
-    sunDirection: [number, number, number];
-}) {
-    const orbit = useMemo(() => {
-        const center = sunEclipticDisplayPosition(sunDirection);
-        const radius = center.length() || SUN_DISPLAY_DL;
-        const earthDir = center.clone().multiplyScalar(-1).normalize();
-        const tangent = new THREE.Vector3(-earthDir.z, 0, earthDir.x).normalize();
-        const segments = 192;
-        const pts: number[] = [];
-        for (let i = 0; i <= segments; i += 1) {
-            const a = (i / segments) * Math.PI * 2;
-            const p = center.clone()
-                .add(earthDir.clone().multiplyScalar(Math.cos(a) * radius))
-                .add(tangent.clone().multiplyScalar(Math.sin(a) * radius));
-            pts.push(p.x, p.y, p.z);
-        }
-        const labelAngle = Math.PI * 0.18;
-        const label = center.clone()
-            .add(earthDir.clone().multiplyScalar(Math.cos(labelAngle) * radius))
-            .add(tangent.clone().multiplyScalar(Math.sin(labelAngle) * radius));
-        return { points: new Float32Array(pts), label: [label.x, label.y, label.z] as [number, number, number] };
-    }, [sunDirection]);
-
-    // Real THREE.Line so we can disable frustum culling — this 1 AU Earth-orbit reference must not
-    // vanish when the camera pulls back to frame the heliocentric layer.
-    const lineObject = useMemo(() => {
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(orbit.points, 3));
-        const material = new THREE.LineBasicMaterial({ color: '#ffcf6e', transparent: true, opacity: 0.3 });
-        const line = new THREE.Line(geometry, material);
-        line.frustumCulled = false;
-        return line;
-    }, [orbit.points]);
-    useEffect(() => () => {
-        lineObject.geometry.dispose();
-        (lineObject.material as THREE.Material).dispose();
-    }, [lineObject]);
-
-    return (
-        <group>
-            <primitive object={lineObject} />
-        </group>
-    );
-}
 
 // --------------- Earth ---------------
 
@@ -1827,62 +1316,6 @@ function RingsLayer({ onEarthFocus, showLabels }: { onEarthFocus: () => void; sh
     );
 }
 
-/**
- * The Moon's orbit, drawn as a circle in the Moon's REAL orbital plane (from position × velocity,
- * supplied as `orbitNormal`) — not an arbitrary tilt. The Moon visibly sits ON this 1 DL line.
- *
- * Radius = the Moon geocentric distance after the compact DL scale. The first basis vector is the Moon's
- * own position, so the rendered line passes exactly through the rendered Moon.
- */
-function MoonOrbit({
-    moonPos,
-    orbitNormal,
-}: {
-    moonPos: [number, number, number];
-    orbitNormal: [number, number, number];
-}) {
-    const orbit = useMemo(() => {
-        const m = new THREE.Vector3(...moonPos);
-        const radius = m.length() || 1;
-        if (radius < 1e-6) return null;
-
-        const a = m.clone().normalize();
-        let n = new THREE.Vector3(...orbitNormal).normalize();
-        const up = new THREE.Vector3(0, 1, 0);
-        n = n.sub(a.clone().multiplyScalar(n.dot(a)));
-        if (n.lengthSq() < 1e-6) {
-            n = up.sub(a.clone().multiplyScalar(up.dot(a)));
-        }
-        n.normalize();
-        const b = new THREE.Vector3().crossVectors(n, a).normalize();
-
-        const segments = 128;
-        const pts: number[] = [];
-        for (let i = 0; i <= segments; i += 1) {
-            const ang = (i / segments) * Math.PI * 2;
-            const p = a.clone().multiplyScalar(Math.cos(ang) * radius).add(b.clone().multiplyScalar(Math.sin(ang) * radius));
-            pts.push(p.x, p.y, p.z);
-        }
-        const labelAngle = Math.PI * 0.16;
-        const label = a.clone()
-            .multiplyScalar(Math.cos(labelAngle) * radius)
-            .add(b.clone().multiplyScalar(Math.sin(labelAngle) * radius));
-
-        return { points: new Float32Array(pts), label: [label.x, label.y, label.z] as [number, number, number] };
-    }, [moonPos, orbitNormal]);
-
-    if (!orbit) return null;
-    return (
-        <group>
-            <line>
-                <bufferGeometry attach="geometry">
-                    <bufferAttribute attach="attributes-position" args={[orbit.points, 3]} />
-                </bufferGeometry>
-                <lineBasicMaterial color="#cbd5e1" transparent opacity={0.3} />
-            </line>
-        </group>
-    );
-}
 
 // --------------- Asteroid marker ---------------
 
