@@ -5,10 +5,23 @@ import { createPortal } from 'react-dom';
 import * as THREE from 'three';
 import { TextureLoader } from 'three';
 import { BookOpen, Calculator, ChevronDown, Compass, Eye, GripHorizontal, Maximize2, MousePointer2, Orbit, Radar, X } from 'lucide-react';
-import type { AsteroidTrajectory, ClosestNowObject, LunarReference, OrbitalElements, SunDirection, TrajectoryPoint, UnifiedApproach } from '@/types';
+import type { AsteroidTrajectory, ClosestNowObject, LunarReference, OrbitalElements, SunDirection, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { buildHeliocentricOrbit, compressDistanceDl, compressSceneVector, computeSceneEphemeris, helioAUToSunCenteredScene, KM_PER_AU, ORBIT_AU_SCALE, SUN_DISPLAY_DL, type SceneEphemeris } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
+import { normalize3, sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
+import { formatDistanceAU, formatTimestamp } from '@/lib/observatory/format';
+import { orientEarth, orientMoonTidal } from '@/lib/observatory/earthOrientation';
+import {
+    clipPolylineByLength,
+    closestApproachNearPosition,
+    collectTimeTicks,
+    currentPositionInScene,
+    findClosestApproachPoint,
+    toVec3,
+} from '@/lib/observatory/trajectorySampling';
+import { sunEclipticDisplayPosition } from '@/lib/observatory/sunGeometry';
+import { buildMoonBump, mulberry32 } from '@/lib/observatory/moonTextures';
 
 /**
  * Isolated 3D prototype of the orbital radar. Lives alongside the SVG radar — it does NOT
@@ -79,22 +92,6 @@ const LABEL_HIDE_MIN_RADIUS_PX = 56;
 /** Extra padding added to the body's own projected radius before hiding nearby labels. */
 const LABEL_HIDE_BODY_PADDING_PX = 72;
 
-/**
- * Snap threshold (in scene units) for replacing the geocentric "current" marker with the
- * closest-approach point when they fall within this distance — avoids drawing two markers on top
- * of each other near the moment of closest approach.
- */
-const CLOSEST_APPROACH_MERGE_DISTANCE_SCENE = 0.45;
-
-/**
- * Converts the backend's 2D ecliptic Sun direction (x, y in the ecliptic plane, z dropped) into
- * the scene's 3D axis convention (ecliptic x/y → scene x/z, ecliptic z → scene y). The geocentric
- * Sun has |z_ecl| ≲ 1e-4, so collapsing it to zero is well within the radar's visual precision —
- * astronomy-engine takes over once it resolves and supplies the full 3D vector anyway.
- */
-function sunDirectionFromIncoming(input: SunDirection): [number, number, number] {
-    return normalize3([input.x, 0, input.y]);
-}
 
 // Camera presets. The scene is fully explorable via OrbitControls at all times; these are just
 // soft "starting angles" the user can jump to. Each one tweens in; the user can immediately
@@ -2255,17 +2252,6 @@ const SUN_GLOW_FRAG = /* glsl */ `
     }
 `;
 
-/**
- * Earth orbit reference, drawn around the displayed Sun (SUN_DISPLAY_DL, the compressed 1 AU
- * distance). The asteroid solar orbits pass through the same radial log compression, so the whole
- * scene stays order-consistent.
- */
-function sunEclipticDisplayPosition(sunDirection: [number, number, number]): THREE.Vector3 {
-    const planar = new THREE.Vector3(sunDirection[0], 0, sunDirection[2]);
-    if (planar.lengthSq() < 1e-6) return new THREE.Vector3(SUN_DISPLAY_DL, 0, 0);
-    return planar.normalize().multiplyScalar(SUN_DISPLAY_DL);
-}
-
 function SunOrbitGuide({
     sunDirection,
 }: {
@@ -2312,11 +2298,6 @@ function SunOrbitGuide({
             <primitive object={lineObject} />
         </group>
     );
-}
-
-function normalize3(v: [number, number, number]): [number, number, number] {
-    const len = Math.hypot(v[0], v[1], v[2]) || 1;
-    return [v[0] / len, v[1] / len, v[2] / len];
 }
 
 // --------------- Earth ---------------
@@ -2443,139 +2424,6 @@ function Earth({
             ) : null}
         </group>
     );
-}
-
-/**
- * Direction (unit vector, MODEL space) of a geographic point (lat, lon) on a THREE.SphereGeometry
- * carrying a standard equirectangular map (Greenwich centered, u=0.5 at lon=0).
- *
- * Three's SphereGeometry positions vertices as:
- *   x = -cos(phi)·sin(theta),  y = cos(theta),  z = sin(phi)·sin(theta),  where phi = u·2π.
- * For a Greenwich-centered equirectangular, u = lon/360 + 0.5, so phi = lon + π and the texel for
- * (lat, lon) lands on:
- *   x =  cos(lon)·cos(lat)
- *   y =  sin(lat)
- *   z = -sin(lon)·cos(lat)
- *
- * Sanity: Greenwich (0,0) → (1, 0, 0). 90°E → (0, 0, -1). 90°W → (0, 0, 1). North pole → (0,1,0).
- */
-function geoToModelDir(latDeg: number, lonDeg: number): THREE.Vector3 {
-    const lat = (latDeg * Math.PI) / 180;
-    const lon = (lonDeg * Math.PI) / 180;
-    const cl = Math.cos(lat);
-    return new THREE.Vector3(Math.cos(lon) * cl, Math.sin(lat), -Math.sin(lon) * cl);
-}
-
-/**
- * Earth's axial obliquity in radians (IAU 2006 mean value for J2000.0: 23.4393°). The Earth's
- * rotation axis sits 23.44° off the ecliptic normal — a fact the previous orientation forced
- * to zero by snapping the north pole to scene +Y.
- */
-const EARTH_OBLIQUITY_RAD = (23.4393 * Math.PI) / 180;
-
-/**
- * The Earth's true rotation axis, expressed in scene axes. In ecliptic J2000 the celestial north
- * pole is (0, -sin ε, cos ε). The scene swaps Y/Z (x_scene = x_ecl, y_scene = z_ecl, z_scene = y_ecl),
- * so the polar axis becomes (0, cos ε, -sin ε) in scene coordinates. This vector is INERTIAL: it
- * does not move with the Sun-Earth direction, so we get the seasons for free (winter solstice in
- * the north when the axis tilts AWAY from the Sun, etc.).
- */
-const EARTH_POLAR_AXIS_SCENE = new THREE.Vector3(
-    0,
-    Math.cos(EARTH_OBLIQUITY_RAD),
-    -Math.sin(EARTH_OBLIQUITY_RAD),
-);
-
-/**
- * Orients the Earth with its TRUE rotation axis (23.44° off the ecliptic normal, fixed in inertial
- * space) AND keeps the real subsolar point pointing at the Sun.
- *
- * Two physical constraints that must both hold:
- *   1. The model north pole (model +Y) must map to the inertial polar axis EARTH_POLAR_AXIS_SCENE.
- *   2. The subsolar geographic point (latitude/longitude where the Sun is overhead now) must end up
- *      on the Sun direction.
- *
- * Both constraints are geometrically compatible because the subsolar latitude is, by construction,
- * the Sun's declination of-date: the angle between the Sun direction and the equatorial plane equals
- * the subsolar latitude. So the basis built from {polar axis, subsolar→Sun} is orthonormal up to
- * floating-point error, and Gram-Schmidt on Up cleans residuals without distorting the geometry.
- *
- * Compared to the previous implementation, which forced the north pole to scene +Y and silently
- * collapsed the obliquity to zero, this preserves the real tilt. The shader's honest
- * dot(worldNormal, sunDir) terminator stays correct because both the normals and the sun direction
- * live in the same world frame.
- */
-function orientEarth(
-    group: THREE.Group,
-    sunDirection: [number, number, number],
-    subsolarLatDeg: number,
-    subsolarLonDeg: number,
-): void {
-    const sun = new THREE.Vector3(...sunDirection).normalize();
-
-    // Source frame (model space, before rotation): model north pole is +Y, subsolar texel direction
-    // comes from the equirectangular UV convention shared with geoToModelDir.
-    const srcUp = new THREE.Vector3(0, 1, 0);
-    const srcForward = geoToModelDir(subsolarLatDeg, subsolarLonDeg);
-
-    // Target frame (world space): up = inertial polar axis (TRUE tilt), forward = Sun direction.
-    const tgtUp = EARTH_POLAR_AXIS_SCENE.clone();
-    const tgtForward = sun.clone();
-
-    // Gram-Schmidt: right = up × forward; re-derive forward from right to absorb residual non-
-    // orthogonality (sub-arc-second of-date vs. J2000 precession is the only source of slack).
-    const buildBasis = (up: THREE.Vector3, forward: THREE.Vector3): THREE.Matrix4 => {
-        let right = new THREE.Vector3().crossVectors(up, forward);
-        if (right.lengthSq() < 1e-6) right = new THREE.Vector3(1, 0, 0); // sun on a pole — degenerate
-        right.normalize();
-        const fwd = new THREE.Vector3().crossVectors(right, up).normalize();
-        return new THREE.Matrix4().makeBasis(fwd, up, right);
-    };
-
-    const src = buildBasis(srcUp, srcForward);
-    const tgt = buildBasis(tgtUp, tgtForward);
-
-    // Rotation = target · inverse(source). Both bases are orthonormal, so inverse = transpose.
-    const rot = tgt.multiply(src.transpose());
-    group.quaternion.setFromRotationMatrix(rot);
-}
-
-/**
- * Tidally-locks the Moon mesh: the lunar near-side (texture's lat=0, lon=0 — the +X model axis,
- * by the same equirectangular convention as Earth) is rotated to face the scene origin (Earth),
- * while the lunar north pole stays as close to scene +Y as possible.
- *
- * Same target-basis construction as orientEarth(): build orthonormal source and target frames,
- * read the rotation off basis · transpose(basis). The Moon is parented in a group placed at its
- * scene position, so the "Earth direction" in mesh-local space is just −scenePosition normalised.
- */
-function orientMoonTidal(mesh: THREE.Mesh, scenePosition: [number, number, number]): void {
-    const earthDir = new THREE.Vector3(-scenePosition[0], -scenePosition[1], -scenePosition[2]);
-    if (earthDir.lengthSq() < 1e-9) return; // Moon at origin: leave it as-is.
-    earthDir.normalize();
-
-    const worldUp = new THREE.Vector3(0, 1, 0);
-
-    // Source: near-side direction in model space (textured (0,0) = +X), plus the model north pole.
-    const srcForward = new THREE.Vector3(1, 0, 0);
-    const srcUp = new THREE.Vector3(0, 1, 0);
-
-    // Target: near-side must face Earth (origin); lunar north stays near scene up.
-    const tgtForward = earthDir.clone();
-    let tgtRight = new THREE.Vector3().crossVectors(worldUp, tgtForward);
-    if (tgtRight.lengthSq() < 1e-6) tgtRight = new THREE.Vector3(1, 0, 0); // Earth near a lunar pole
-    tgtRight.normalize();
-    const tgtUp = new THREE.Vector3().crossVectors(tgtForward, tgtRight).normalize();
-
-    let srcRight = new THREE.Vector3().crossVectors(srcUp, srcForward);
-    if (srcRight.lengthSq() < 1e-6) srcRight = new THREE.Vector3(0, 0, 1);
-    srcRight.normalize();
-    const srcUpO = new THREE.Vector3().crossVectors(srcForward, srcRight).normalize();
-
-    const src = new THREE.Matrix4().makeBasis(srcForward, srcUpO, srcRight);
-    const tgt = new THREE.Matrix4().makeBasis(tgtForward, tgtUp, tgtRight);
-    const rot = tgt.multiply(src.transpose());
-    mesh.quaternion.setFromRotationMatrix(rot);
 }
 
 // Day/night Earth shader. World-space normal vs. Sun direction gives a soft terminator; the night
@@ -4240,204 +4088,3 @@ function motionLabel(
     }
 }
 
-// --------------- Helpers ---------------
-
-function currentPositionInScene(object: ClosestNowObject): [number, number, number] | null {
-    const point = object.trajectory?.currentPoint;
-    if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') return null;
-    return horizonsToScene(point.x, point.y, point.z ?? 0);
-}
-
-function toVec3(point: { x: number; y: number; z?: number | null }): THREE.Vector3 {
-    const [x, y, z] = horizonsToScene(point.x, point.y, point.z ?? 0);
-    return new THREE.Vector3(x, y, z);
-}
-
-/**
- * Walks a polyline from its FIRST point and keeps points until the accumulated length reaches
- * `maxLengthDL`, inserting a final interpolated point exactly at that length. Used to clip the
- * visible trajectory to a readable span around "now" without distorting its shape — the kept
- * portion is the true path, just shorter. Returns at least the first two points when available.
- */
-function clipPolylineByLength(points: THREE.Vector3[], maxLengthDL: number): THREE.Vector3[] {
-    if (points.length <= 1) return points;
-    const kept: THREE.Vector3[] = [points[0]];
-    let total = 0;
-    for (let i = 1; i < points.length; i += 1) {
-        const seg = points[i].clone().sub(points[i - 1]);
-        const segLen = seg.length();
-        if (segLen < 1e-9) continue;
-        if (total + segLen <= maxLengthDL) {
-            kept.push(points[i]);
-            total += segLen;
-            continue;
-        }
-        const remaining = maxLengthDL - total;
-        kept.push(points[i - 1].clone().add(seg.multiplyScalar(remaining / segLen)));
-        break;
-    }
-    return kept;
-}
-
-/**
- * Horizons returns geocentric ecliptic coordinates in km. Scene axes swap Y ↔ Z so the
- * ecliptic plane sits on XZ (matching where the DL rings live) and the ecliptic-north points
- * along +Y (matching what the camera reads as "up"). We first express the point in LINEAR DL, then
- * run it through the SAME radial log compression as the Moon and the heliocentric orbit. Because
- * the compression only rescales the radial magnitude (direction kept), depth (Z) is never
- * compressed relative to X/Y, and every body lives in one consistent, order-preserving space.
- */
-function horizonsToScene(xKm: number, yKm: number, zKm: number): [number, number, number] {
-    return compressSceneVector([
-        xKm / KM_PER_LD,
-        zKm / KM_PER_LD,
-        yKm / KM_PER_LD,
-    ]);
-}
-
-function findClosestApproachPoint(trajectory: AsteroidTrajectory): {
-    vec: THREE.Vector3;
-    distanceKm: number;
-    distanceLD: number | null;
-    timestamp: string;
-} | null {
-    const candidates: TrajectoryPoint[] = [
-        ...(trajectory.pastPoints ?? []),
-        ...(trajectory.futurePoints ?? []),
-    ];
-    if (trajectory.currentPoint) candidates.push(trajectory.currentPoint);
-    if (candidates.length === 0) return null;
-
-    let best: TrajectoryPoint | null = null;
-    let bestKm = Number.POSITIVE_INFINITY;
-    for (const point of candidates) {
-        const km = typeof point.distanceKm === 'number'
-            ? point.distanceKm
-            : Math.sqrt(point.x ** 2 + point.y ** 2 + (point.z ?? 0) ** 2);
-        if (km < bestKm) {
-            bestKm = km;
-            best = point;
-        }
-    }
-    if (!best) return null;
-
-    return {
-        vec: toVec3(best),
-        distanceKm: bestKm,
-        distanceLD: typeof best.distanceLunar === 'number' ? best.distanceLunar : bestKm / KM_PER_LD,
-        timestamp: best.timestamp,
-    };
-}
-
-function closestApproachNearPosition(
-    trajectory: AsteroidTrajectory | null | undefined,
-    position: THREE.Vector3 | null,
-): ReturnType<typeof findClosestApproachPoint> {
-    if (!trajectory || !position) return null;
-    const closest = findClosestApproachPoint(trajectory);
-    if (!closest) return null;
-
-    return closest.vec.distanceToSquared(position) <= CLOSEST_APPROACH_MERGE_DISTANCE_SCENE * CLOSEST_APPROACH_MERGE_DISTANCE_SCENE
-        ? closest
-        : null;
-}
-
-/**
- * Picks the trajectory samples closest to now-24h, now+24h and now+72h and returns their scene
- * positions + short labels. "now" is the currentPoint's timestamp (the instant Horizons anchored
- * the trajectory to). Only ticks with a real sample within ~6h of the target time are emitted.
- */
-function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: THREE.Vector3; label: string }> {
-    const now = trajectory.currentPoint?.timestamp ? new Date(trajectory.currentPoint.timestamp).getTime() : NaN;
-    if (Number.isNaN(now)) return [];
-
-    const all: TrajectoryPoint[] = [
-        ...(trajectory.pastPoints ?? []),
-        ...(trajectory.currentPoint ? [trajectory.currentPoint] : []),
-        ...(trajectory.futurePoints ?? []),
-    ];
-    if (all.length === 0) return [];
-
-    const HOUR = 3_600_000;
-    const targets: Array<{ deltaH: number; label: string }> = [
-        { deltaH: -24, label: '−24h' },
-        { deltaH: 24, label: '+24h' },
-        { deltaH: 72, label: '+72h' },
-    ];
-
-    const ticks: Array<{ vec: THREE.Vector3; label: string }> = [];
-    for (const { deltaH, label } of targets) {
-        const targetTime = now + deltaH * HOUR;
-        let best: TrajectoryPoint | null = null;
-        let bestDelta = Number.POSITIVE_INFINITY;
-        for (const point of all) {
-            const stamp = new Date(point.timestamp).getTime();
-            if (Number.isNaN(stamp)) continue;
-            const delta = Math.abs(stamp - targetTime);
-            if (delta < bestDelta) { bestDelta = delta; best = point; }
-        }
-        // Only show the tick if we actually have a sample within 6h of the target.
-        if (best && bestDelta <= 6 * HOUR) {
-            ticks.push({ vec: toVec3(best), label });
-        }
-    }
-    return ticks;
-}
-
-function formatTimestamp(value: string, locale: 'pt-BR' | 'en'): string {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat(locale, {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'UTC',
-    }).format(date);
-}
-
-function formatDistanceAU(distanceKm: number | null | undefined, locale: 'pt-BR' | 'en'): string {
-    if (distanceKm === null || distanceKm === undefined || !Number.isFinite(distanceKm)) return '—';
-    const au = distanceKm / KM_PER_AU;
-    return `${new Intl.NumberFormat(locale, {
-        maximumFractionDigits: au < 0.01 ? 5 : au < 0.1 ? 4 : 3,
-    }).format(au)} ${locale === 'en' ? 'AU' : 'UA'}`;
-}
-
-// --------------- Procedural Moon bump (crater relief over the photo texture) ---------------
-
-function buildMoonBump(size: number): THREE.CanvasTexture {
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size / 2;
-    const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#808080';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const rng = mulberry32(0xd4e5f6);
-    for (let i = 0; i < 320; i += 1) {
-        const x = rng() * canvas.width;
-        const y = rng() * canvas.height;
-        const r = 3 + rng() * 18;
-        const grad = ctx.createRadialGradient(x, y, 1, x, y, r);
-        grad.addColorStop(0, 'rgba(40,40,40,0.6)');
-        grad.addColorStop(0.7, 'rgba(180,180,180,0.4)');
-        grad.addColorStop(1, 'rgba(128,128,128,0)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    return new THREE.CanvasTexture(canvas);
-}
-
-function mulberry32(seed: number): () => number {
-    let t = seed >>> 0;
-    return () => {
-        t = (t + 0x6d2b79f5) >>> 0;
-        let r = t;
-        r = Math.imul(r ^ (r >>> 15), r | 1);
-        r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
-        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-    };
-}
