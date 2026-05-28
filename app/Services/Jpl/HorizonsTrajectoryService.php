@@ -2,6 +2,7 @@
 
 namespace App\Services\Jpl;
 
+use App\DTOs\Jpl\Horizons\HorizonsVectorFetchResultData;
 use App\Exceptions\JplApiException;
 use App\Exceptions\JplRateLimitException;
 use App\Exceptions\JplUnavailableException;
@@ -9,10 +10,7 @@ use App\Support\AsteroidIdentityNormalizer;
 use App\Support\DistancePresenter;
 use App\Support\HorizonsCommandBuilder;
 use Carbon\CarbonImmutable;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 final class HorizonsTrajectoryService
@@ -26,6 +24,12 @@ final class HorizonsTrajectoryService
     private const NOW_TRAJECTORY_SUCCESS_TTL_SECONDS = 1800;         // 30 min
     private const NEGATIVE_TTL_LOCAL_SECONDS = 120;                  // 2 min in local
     private const NEGATIVE_TTL_DEFAULT_SECONDS = 600;                // 10 min elsewhere
+
+    public function __construct(
+        private readonly HorizonsClient $client,
+        private readonly HorizonsTextParser $parser,
+    ) {
+    }
 
     /**
      * Trajectory of one focused object, with a window of ±2 days around the closest approach.
@@ -125,10 +129,10 @@ final class HorizonsTrajectoryService
             $windowEnd->format('Y-M-d H:i'),
             '3 minutes',
         );
-        $points = $fetch['points'];
+        $points = $fetch->pointsToArray();
 
         if ($points === null || count($points) === 0) {
-            $reason = $fetch['failureReason'] ?? 'no_ephemeris';
+            $reason = $fetch->failureReason ?? 'no_ephemeris';
             $note = $this->noteForFailure($reason, $mode);
             $this->logFailure($objectId, $mode, $reason);
 
@@ -280,12 +284,12 @@ final class HorizonsTrajectoryService
             $windowEnd->format('Y-M-d H:i'),
             $stepSize,
         );
-        $points = $fetch['points'];
+        $points = $fetch->pointsToArray();
 
         $approachTime = $this->parseTime($object['approachTime'] ?? null);
 
         if ($points === null || count($points) < 2) {
-            $reason = $fetch['failureReason'] ?? 'no_ephemeris';
+            $reason = $fetch->failureReason ?? 'no_ephemeris';
             $this->logFailure($objectId, 'now_trajectory', $reason);
             $result = $this->unavailableTrajectory(
                 $object,
@@ -330,7 +334,7 @@ final class HorizonsTrajectoryService
             ),
             // Osculating heliocentric orbital elements (from the Horizons header) so the frontend
             // can draw the object's full orbit around the Sun. Null when unavailable.
-            'orbitalElements' => $fetch['elements'] ?? null,
+            'orbitalElements' => $fetch->elementsToArray(),
             'status' => 'available',
             'note' => 'Trajetória baseada em vetores JPL/Horizons.',
         ];
@@ -423,7 +427,7 @@ final class HorizonsTrajectoryService
      */
     private function fetchVectorsForObject(array $object, string $startTime, string $stopTime, string $stepSize): ?array
     {
-        return $this->fetchVectorsWithDiagnostics($object, $startTime, $stopTime, $stepSize)['points'];
+        return $this->fetchVectorsWithDiagnostics($object, $startTime, $stopTime, $stepSize)->pointsToArray();
     }
 
     /**
@@ -431,37 +435,37 @@ final class HorizonsTrajectoryService
      * plus the osculating orbital elements parsed from the response header (free — Horizons always
      * prints them in the VECTORS header, no extra request needed).
      *
-     * @return array{points: array<int, array<string, mixed>>|null, failureReason: string|null, elements: array<string, float>|null}
+     * @return HorizonsVectorFetchResultData
      */
-    private function fetchVectorsWithDiagnostics(array $object, string $startTime, string $stopTime, string $stepSize): array
+    private function fetchVectorsWithDiagnostics(array $object, string $startTime, string $stopTime, string $stepSize): HorizonsVectorFetchResultData
     {
         $identity = AsteroidIdentityNormalizer::normalize((string) ($object['rawName'] ?? $object['name'] ?? ''));
         $commands = $this->commandCandidates($object, $identity);
 
         if ($commands === []) {
-            return ['points' => null, 'failureReason' => 'no_command_candidates', 'elements' => null];
+            return HorizonsVectorFetchResultData::unavailable('no_command_candidates');
         }
 
         $lastFailureReason = null;
 
         foreach ($commands as $command) {
             try {
-                $content = $this->get($this->vectorQuery(
+                $content = $this->client->vectors(
                     $command,
                     $startTime,
                     $stopTime,
                     $stepSize,
                     'NO',
-                ));
+                );
 
-                if (! $this->hasEphemeris($content)) {
+                if (! $this->parser->hasEphemeris($content)) {
                     $lastFailureReason = 'no_ephemeris';
                     continue;
                 }
 
-                $points = $this->parseVectorPoints($content);
+                $points = $this->parser->parseVectorPoints($content);
                 if (count($points) >= 1) {
-                    return ['points' => $points, 'failureReason' => null, 'elements' => $this->parseOrbitalElements($content)];
+                    return HorizonsVectorFetchResultData::available($points, $this->parser->parseOrbitalElements($content));
                 }
                 $lastFailureReason = 'parse_error';
             } catch (JplRateLimitException $exception) {
@@ -476,164 +480,7 @@ final class HorizonsTrajectoryService
             }
         }
 
-        return ['points' => null, 'failureReason' => $lastFailureReason ?? 'no_ephemeris', 'elements' => null];
-    }
-
-    /**
-     * Parses the osculating orbital elements Horizons prints in the VECTORS header. These let the
-     * frontend reconstruct the object's full heliocentric ellipse without any extra API call.
-     *
-     * Header looks like:
-     *   EPOCH=  2461184.5 ! ...
-     *    EC= .503...   QR= .993...   TP= 2461206.39...
-     *    OM= 66.10...   W=  202.08...  IN= 2.529...
-     *
-     * @return array<string, float>|null  keys: ec, qrAu, tpJd, omDeg, wDeg, inDeg, epochJd
-     */
-    private function parseOrbitalElements(string $content): ?array
-    {
-        $grab = static function (string $name) use ($content): ?float {
-            // Match "NAME= value" allowing leading-dot decimals and scientific notation.
-            if (preg_match('/\b'.preg_quote($name, '/').'=\s*([-+]?\.?\d[\d.eE+-]*)/', $content, $m) === 1) {
-                return is_numeric($m[1]) ? (float) $m[1] : null;
-            }
-            return null;
-        };
-
-        $ec = $grab('EC');
-        $qr = $grab('QR');
-        $in = $grab('IN');
-        $om = $grab('OM');
-        $w = $grab('W');
-        $tp = $grab('TP');
-        $epoch = $grab('EPOCH');
-
-        // Require the shape-defining elements; the rest can default to 0 if absent.
-        if ($ec === null || $qr === null || $in === null) {
-            return null;
-        }
-
-        return [
-            'ec' => $ec,
-            'qrAu' => $qr,
-            'inDeg' => $in,
-            'omDeg' => $om ?? 0.0,
-            'wDeg' => $w ?? 0.0,
-            'tpJd' => $tp ?? 0.0,
-            'epochJd' => $epoch ?? 0.0,
-        ];
-    }
-
-    private function get(array $query): string
-    {
-        $path = '/horizons.api';
-
-        try {
-            $response = Http::baseUrl((string) config('services.jpl.horizons_base_url', 'https://ssd.jpl.nasa.gov/api'))
-                ->timeout((int) config('services.jpl.timeout', 10))
-                ->retry(
-                    (int) config('services.jpl.retry_times', 2),
-                    (int) config('services.jpl.retry_sleep_ms', 300),
-                    throw: false,
-                )
-                ->get($path, $query);
-        } catch (ConnectionException) {
-            Log::warning('JPL Horizons API connection failed.', ['path' => $path]);
-            throw new JplUnavailableException();
-        }
-
-        return $this->decode($response, $path);
-    }
-
-    private function decode(Response $response, string $path): string
-    {
-        if ($response->status() === 429) {
-            Log::notice('JPL Horizons API rate limit reached.', ['path' => $path]);
-            throw new JplRateLimitException();
-        }
-
-        if ($response->serverError()) {
-            Log::warning('JPL Horizons API server error.', ['path' => $path, 'status' => $response->status()]);
-            throw new JplUnavailableException();
-        }
-
-        if ($response->failed()) {
-            Log::warning('JPL Horizons API request failed.', ['path' => $path, 'status' => $response->status()]);
-            throw new JplApiException();
-        }
-
-        return $response->body();
-    }
-
-    private function hasEphemeris(string $content): bool
-    {
-        return str_contains($content, '$$SOE') && str_contains($content, '$$EOE');
-    }
-
-    private function vectorQuery(string $command, string $startTime, string $stopTime, string $stepSize, string $objectData): array
-    {
-        return [
-            'format' => 'text',
-            'COMMAND' => $this->horizonsValue($command),
-            'OBJ_DATA' => $this->horizonsValue($objectData),
-            'MAKE_EPHEM' => $this->horizonsValue('YES'),
-            'EPHEM_TYPE' => $this->horizonsValue('VECTORS'),
-            'CENTER' => $this->horizonsValue('500@399'),
-            'START_TIME' => $this->horizonsValue($startTime),
-            'STOP_TIME' => $this->horizonsValue($stopTime),
-            'STEP_SIZE' => $this->horizonsValue($stepSize),
-            'VEC_TABLE' => $this->horizonsValue('3'),
-            'CSV_FORMAT' => $this->horizonsValue('YES'),
-            'VEC_LABELS' => $this->horizonsValue('NO'),
-            'REF_PLANE' => $this->horizonsValue('ECLIPTIC'),
-            'OUT_UNITS' => $this->horizonsValue('KM-S'),
-        ];
-    }
-
-    private function parseVectorPoints(string $result): array
-    {
-        if (! str_contains($result, '$$SOE') || ! str_contains($result, '$$EOE')) {
-            return [];
-        }
-
-        $table = trim(str($result)->between('$$SOE', '$$EOE')->toString());
-        $points = [];
-
-        foreach (preg_split('/\R/', $table) ?: [] as $line) {
-            $columns = array_map('trim', str_getcsv(trim($line)));
-            if (count($columns) < 5) {
-                continue;
-            }
-
-            $x = $this->floatOrNull($columns[2] ?? null);
-            $y = $this->floatOrNull($columns[3] ?? null);
-            $z = $this->floatOrNull($columns[4] ?? null);
-            $vx = $this->floatOrNull($columns[5] ?? null);
-            $vy = $this->floatOrNull($columns[6] ?? null);
-            $vz = $this->floatOrNull($columns[7] ?? null);
-            $rangeKm = $this->floatOrNull($columns[9] ?? null);
-            $rangeRateKmS = $this->floatOrNull($columns[10] ?? null);
-            if ($x === null || $y === null || $z === null) {
-                continue;
-            }
-
-            $distanceKm = $rangeKm ?? sqrt($x ** 2 + $y ** 2 + $z ** 2);
-            $points[] = [
-                'timestamp' => $this->normalizeTimestamp($columns[1] ?? $columns[0] ?? null),
-                'x' => $x,
-                'y' => $y,
-                'z' => $z,
-                'vx' => $vx,
-                'vy' => $vy,
-                'vz' => $vz,
-                'rangeKm' => $rangeKm,
-                'rangeRateKmS' => $rangeRateKmS,
-                'distanceKm' => $distanceKm,
-                'distanceLunar' => $distanceKm / DistancePresenter::LUNAR_DISTANCE_KM,
-            ];
-        }
-
-        return $points;
+        return HorizonsVectorFetchResultData::unavailable($lastFailureReason ?? 'no_ephemeris');
     }
 
     private function commandCandidates(array $object, array $identity): array
@@ -644,11 +491,6 @@ final class HorizonsTrajectoryService
             (string) ($object['detailIdentifier'] ?? ''),
             (string) ($object['designation'] ?? ''),
         );
-    }
-
-    private function horizonsValue(string $value): string
-    {
-        return "'".str_replace("'", '', $value)."'";
     }
 
     private function trustedSpkId(mixed $value): ?string
@@ -801,18 +643,6 @@ final class HorizonsTrajectoryService
         }
 
         return 'unknown';
-    }
-
-    private function normalizeTimestamp(?string $value): string
-    {
-        $clean = trim((string) $value);
-        $clean = preg_replace('/^A\.D\.\s*/', '', $clean) ?? $clean;
-
-        try {
-            return CarbonImmutable::parse($clean, 'UTC')->toIso8601String();
-        } catch (\Throwable) {
-            return $clean;
-        }
     }
 
     private function floatOrNull(mixed $value): ?float
