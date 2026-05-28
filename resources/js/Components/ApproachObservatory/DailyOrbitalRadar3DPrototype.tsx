@@ -22,6 +22,8 @@ import {
 } from '@/lib/observatory/trajectorySampling';
 import { sunEclipticDisplayPosition } from '@/lib/observatory/sunGeometry';
 import { buildMoonBump, mulberry32 } from '@/lib/observatory/moonTextures';
+import { SUN_FRAG, SUN_GLOW_FRAG, SUN_GLOW_VERT, SUN_VERT } from '@/lib/observatory/shaders/sun.glsl';
+import { CLOUDS_FRAG, EARTH_FRAG, EARTH_VERT } from '@/lib/observatory/shaders/earth.glsl';
 
 /**
  * Isolated 3D prototype of the orbital radar. Lives alongside the SVG radar — it does NOT
@@ -2135,123 +2137,6 @@ function Sun({ direction, locale }: { direction: [number, number, number]; local
     );
 }
 
-// Sun surface shader: value-noise granulation + a fresnel limb brighten, drifting with uTime so
-// it shimmers like a star's photosphere. Kept cheap (a few octaves of hash noise).
-const SUN_VERT = /* glsl */ `
-    uniform float uTime;
-    varying vec3 vPos;
-    varying vec3 vNormal;
-    varying vec3 vView;
-    void main() {
-        float t = uTime * 0.08;
-        vec3 unit = normalize(position);
-        float boil =
-            sin(unit.x * 18.0 + t) * 0.006 +
-            sin(unit.y * 23.0 - t * 1.4) * 0.004 +
-            sin(unit.z * 29.0 + t * 0.7) * 0.003;
-        vec3 displaced = position + normal * boil;
-        vPos = displaced;
-        vNormal = normalize(normalMatrix * normal);
-        vec4 mv = modelViewMatrix * vec4(displaced, 1.0);
-        vView = normalize(-mv.xyz);
-        gl_Position = projectionMatrix * mv;
-    }
-`;
-
-const SUN_FRAG = /* glsl */ `
-    uniform float uTime;
-    varying vec3 vPos;
-    varying vec3 vNormal;
-    varying vec3 vView;
-
-    float hash(vec3 p) {
-        p = fract(p * 0.3183099 + 0.1);
-        p *= 17.0;
-        return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-    }
-    float noise(vec3 x) {
-        vec3 i = floor(x);
-        vec3 f = fract(x);
-        f = f * f * (3.0 - 2.0 * f);
-        return mix(
-            mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
-                mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
-            mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
-                mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
-    }
-    // Fractal brownian motion: several octaves of noise summed → rich, organic granulation.
-    float fbm(vec3 p) {
-        float v = 0.0;
-        float a = 0.5;
-        for (int i = 0; i < 5; i++) {
-            v += a * noise(p);
-            p *= 2.02;
-            a *= 0.5;
-        }
-        return v;
-    }
-    void main() {
-        vec3 p = normalize(vPos);
-        float t = uTime * 0.12;
-
-        float latBand = sin((p.y + fbm(p * 2.0)) * 9.0 + t * 0.5) * 0.08;
-        float gran = fbm(p * 12.0 + vec3(t, t * 0.6, -t));
-        float fil = fbm(p * 34.0 - vec3(t * 1.4, t, t * 0.5));
-        float cells = abs(gran - 0.5) * 2.0;
-        float n = gran * 0.48 + fil * 0.34 + cells * 0.16 + latBand;
-
-        // Color ramp: deep orange troughs → bright yellow-white peaks.
-        vec3 deep = vec3(0.78, 0.22, 0.035);
-        vec3 mid  = vec3(1.0, 0.48, 0.08);
-        vec3 hot  = vec3(1.0, 0.9, 0.58);
-        vec3 whiteHot = vec3(1.0, 0.98, 0.86);
-        vec3 col = mix(deep, mid, smoothstep(0.22, 0.52, n));
-        col = mix(col, hot, smoothstep(0.48, 0.78, n));
-        col = mix(col, whiteHot, smoothstep(0.78, 0.96, n));
-
-        // Sunspots: sparse dark cooler patches from a low-frequency noise threshold.
-        float spotField = fbm(p * 3.4 + vec3(9.0, 3.0, 13.0));
-        float spotMask = smoothstep(0.76, 0.86, spotField) * smoothstep(0.08, 0.55, abs(p.y));
-        col *= mix(1.0, 0.36, spotMask);
-
-        // Subtle magnetic lanes.
-        float lanes = smoothstep(0.66, 0.95, fil) * 0.22;
-        col += lanes * vec3(1.0, 0.55, 0.18);
-
-        // Fresnel limb brightening for a glowing edge.
-        float fres = pow(1.0 - max(dot(normalize(vNormal), normalize(vView)), 0.0), 2.5);
-        col += fres * vec3(1.0, 0.62, 0.24) * 0.42;
-
-        gl_FragColor = vec4(col, 1.0);
-    }
-`;
-
-// Sun corona glow: a back-facing shell whose alpha falls off smoothly toward the rim (fresnel), so
-// the halo fades to nothing instead of being a hard translucent disc that smears across the screen.
-const SUN_GLOW_VERT = /* glsl */ `
-    varying vec3 vNormal;
-    varying vec3 vView;
-    void main() {
-        vNormal = normalize(normalMatrix * normal);
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        vView = normalize(-mv.xyz);
-        gl_Position = projectionMatrix * mv;
-    }
-`;
-
-const SUN_GLOW_FRAG = /* glsl */ `
-    uniform vec3 uColor;
-    varying vec3 vNormal;
-    varying vec3 vView;
-    void main() {
-        float rim = pow(1.0 - max(dot(normalize(vNormal), normalize(vView)), 0.0), 3.8);
-        float coreFade = smoothstep(0.12, 0.95, rim);
-        float alpha = coreFade * 0.24;
-        vec3 col = mix(uColor, vec3(1.0, 0.86, 0.55), rim);
-        gl_FragColor = vec4(col, alpha);
-    }
-`;
-
 function SunOrbitGuide({
     sunDirection,
 }: {
@@ -2425,74 +2310,6 @@ function Earth({
         </group>
     );
 }
-
-// Day/night Earth shader. World-space normal vs. Sun direction gives a soft terminator; the night
-// map's brightness is used as a city-lights mask that only shows on the dark hemisphere.
-const EARTH_VERT = /* glsl */ `
-    varying vec2 vUv;
-    varying vec3 vWorldNormal;
-    void main() {
-        vUv = uv;
-        vWorldNormal = normalize(mat3(modelMatrix) * normal);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-`;
-
-const EARTH_FRAG = /* glsl */ `
-    uniform sampler2D dayMap;
-    uniform sampler2D nightMap;
-    uniform vec3 sunDir;
-    varying vec2 vUv;
-    varying vec3 vWorldNormal;
-
-    // The day/night maps are sampled as RAW sRGB-encoded data (we deliberately don't tag them as
-    // sRGB textures, see useEarthTexture), so we convert sRGB → linear here, light in linear, then
-    // back to sRGB for output. Doing the conversion ourselves is what stops the day side from
-    // rendering near-black (the previous double-decode darkened the oceans into looking like night).
-    vec3 toLinear(vec3 c) { return pow(c, vec3(2.2)); }
-    vec3 toSRGB(vec3 c) { return pow(c, vec3(1.0 / 2.2)); }
-
-    void main() {
-        float lambert = dot(normalize(vWorldNormal), normalize(sunDir));
-        // Tight terminator centered on the limb. The audit flagged the previous ±0.20 as visibly
-        // wider than the real ~0.5° penumbra; ±0.05 keeps the day/night line crisp without
-        // hard-edged stepping.
-        float dayAmount = smoothstep(-0.05, 0.05, lambert);
-
-        vec3 dayColor = toLinear(texture2D(dayMap, vUv).rgb);
-        vec3 nightTex = toLinear(texture2D(nightMap, vUv).rgb);
-
-        // Day side: bright, near-full daylight with a higher ambient floor so the lit hemisphere
-        // reads vividly (was too dim before). Gentle gamma on lambert keeps the terminator soft.
-        float lit = clamp(lambert, 0.0, 1.0);
-        vec3 dayLit = dayColor * (0.62 + 0.95 * pow(lit, 0.7));
-
-        // Night side: very dim base + city lights, only on the dark hemisphere.
-        vec3 cityLights = nightTex * (1.0 - dayAmount) * 1.2;
-        vec3 nightLit = dayColor * 0.025 + cityLights;
-
-        vec3 color = mix(nightLit, dayLit, dayAmount);
-        gl_FragColor = vec4(toSRGB(color), 1.0);
-    }
-`;
-
-// Cloud shell: the greyscale cloud map's brightness is both the cloud color and its opacity, so the
-// black sky-areas of the map render fully transparent. Clouds are lit by the same sun dot and fade
-// out on the night side so they never glow in the dark.
-const CLOUDS_FRAG = /* glsl */ `
-    uniform sampler2D cloudMap;
-    uniform vec3 sunDir;
-    varying vec2 vUv;
-    varying vec3 vWorldNormal;
-    void main() {
-        float c = texture2D(cloudMap, vUv).r;          // cloud density 0..1
-        float lambert = dot(normalize(vWorldNormal), normalize(sunDir));
-        float dayAmount = smoothstep(-0.05, 0.3, lambert);
-        float light = 0.15 + 0.9 * clamp(lambert, 0.0, 1.0);
-        float alpha = c * dayAmount * 0.85;            // transparent where no cloud / on night side
-        gl_FragColor = vec4(vec3(light), alpha);
-    }
-`;
 
 /**
  * Loads the Earth texture imperatively. We avoid drei/R3F's `useLoader` here because it suspends
