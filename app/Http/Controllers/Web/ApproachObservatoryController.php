@@ -192,8 +192,10 @@ class ApproachObservatoryController
             $dateMax = $anchorMax;
         }
 
+        \Illuminate\Support\Facades\Log::info('[closestNow] request', compact('anchorMin', 'anchorMax', 'dateMin', 'dateMax', 'limit', 'mode'));
+
         try {
-            $payload = $this->closestNow->select($dateMin, $dateMax, $limit, $mode);
+            $payload = $this->closestNow->select($dateMin, $dateMax, $limit, $mode, $anchorMin);
         } catch (\Throwable) {
             $payload = [
                 'mode'                => 'closest_now',
@@ -213,7 +215,7 @@ class ApproachObservatoryController
         }
 
         return response()->json($payload)
-            ->header('Cache-Control', 'public, max-age=900, stale-while-revalidate=900');
+            ->header('Cache-Control', 'no-store');
     }
 
     public function trajectory(Request $request): JsonResponse

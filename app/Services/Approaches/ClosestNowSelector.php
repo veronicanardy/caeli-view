@@ -104,15 +104,20 @@ final class ClosestNowSelector
      * individual do Horizons (por objectId + bucket de tempo) e são reutilizados
      * automaticamente; apenas os objetos 6–15 (+ margem) geram novas chamadas.
      *
-     * @param  string  $dateMin  Data inicial ISO (Y-m-d), inclusive
-     * @param  string  $dateMax  Data final ISO (Y-m-d), inclusive
-     * @param  int     $limit    Quantos objetos retornar (padrão 5, máx 30)
-     * @param  string  $mode     Critério de seleção: 'nearest' | 'upcoming' | 'featured' | 'attention'
+     * @param  string  $dateMin   Data inicial ISO (Y-m-d), inclusive (já pode estar alargada pelo controller)
+     * @param  string  $dateMax   Data final ISO (Y-m-d), inclusive (já pode estar alargada pelo controller)
+     * @param  int     $limit     Quantos objetos retornar (padrão 5, máx 30)
+     * @param  string  $mode      Critério de seleção: 'nearest' | 'upcoming' | 'featured' | 'attention'
+     * @param  string  $anchorMin Data âncora original (antes do alargamento) — usada pelo modo 'upcoming'
      */
-    public function select(string $dateMin, string $dateMax, int $limit = self::TOP_RESULT_LIMIT, string $mode = 'nearest'): array
+    public function select(string $dateMin, string $dateMax, int $limit = self::TOP_RESULT_LIMIT, string $mode = 'nearest', string $anchorMin = ''): array
     {
         $limit = max(1, min($limit, 30));
         $mode  = in_array($mode, self::VALID_MODES, true) ? $mode : 'nearest';
+
+        // Âncora para o modo 'upcoming': data original sem alargamento.
+        // Se não fornecida, cai para $dateMin (comportamento legado).
+        $anchor = $anchorMin !== '' ? $anchorMin : $dateMin;
 
         // O $limit entra na chave de cache porque o conteúdo do pipeline varia com ele:
         // limit=5 consulta ~10 objetos no Horizons; limit=30 consulta ~35.
@@ -122,16 +127,16 @@ final class ClosestNowSelector
         // individual do Horizons por objectId (TTL 30min) reutiliza automaticamente os
         // ~10 objetos já consultados — apenas os objetos 11–20 geram novas chamadas à API.
         $windowSignature = implode(',', self::HORIZONS_WINDOW);
-        $cacheKey        = 'closest-now:v3:' . md5($dateMin . '|' . $dateMax . '|' . $mode . '|' . $limit . '|' . $windowSignature);
+        $cacheKey        = 'closest-now:v5:' . md5($dateMin . '|' . $dateMax . '|' . $mode . '|' . $limit . '|' . $anchor . '|' . $windowSignature);
 
         $full = Cache::flexible(
             $cacheKey,
             [self::RESULT_CACHE_TTL_SECONDS, self::RESULT_CACHE_TTL_SECONDS + 900],
-            fn (): array => $this->resolve($dateMin, $dateMax, $mode, $limit),
+            fn (): array => $this->resolve($dateMin, $dateMax, $mode, $limit, $anchor),
         );
 
-        // Fatia o resultado já ordenado para o limite solicitado (garantia extra de segurança).
-        if ($mode === 'nearest' && is_array($full['objects'] ?? null)) {
+        // Fatia o resultado já ordenado para o limite solicitado (todos os modos).
+        if (is_array($full['objects'] ?? null)) {
             $full['objects']        = array_slice($full['objects'], 0, $limit);
             $full['requestedLimit'] = $limit;
         }
@@ -157,15 +162,19 @@ final class ClosestNowSelector
      * `$limit + HORIZONS_MARGIN` primeiros têm posição real do Horizons. O slice
      * final para o $limit pedido é aplicado pelo chamador (select).
      */
-    private function resolve(string $dateMin, string $dateMax, string $mode, int $limit = self::TOP_RESULT_LIMIT): array
+    private function resolve(string $dateMin, string $dateMax, string $mode, int $limit = self::TOP_RESULT_LIMIT, string $anchor = ''): array
     {
+        // Âncora para filtros por data (modo 'upcoming'): usa o valor fornecido ou cai para $dateMin.
+        $anchorDate = $anchor !== '' ? $anchor : $dateMin;
+
         // Passo 1: candidatos do CAD + NeoWs.
         // 'featured' e 'attention' usam janela de ± 90 dias sem dist_max para garantir
         // que objetos famosos (Bennu, Eros…) e PHAs sejam encontrados mesmo fora da janela diária.
+        // 'upcoming' usa janela alargada para capturar os próximos 3 dias.
         $observeParams = match ($mode) {
             'featured', 'attention' => [
-                'date_min'      => CarbonImmutable::parse($dateMin, 'UTC')->subDays(90)->toDateString(),
-                'date_max'      => CarbonImmutable::parse($dateMin, 'UTC')->addDays(90)->toDateString(),
+                'date_min'      => CarbonImmutable::parse($anchorDate, 'UTC')->subDays(90)->toDateString(),
+                'date_max'      => CarbonImmutable::parse($anchorDate, 'UTC')->addDays(90)->toDateString(),
                 'type'          => 'all',
                 'dist_max'      => '1.0',   // até 1 UA — inclui objetos famosos distantes
                 'sort'          => 'dist',
@@ -190,7 +199,7 @@ final class ClosestNowSelector
         }
 
         // Passo 2: filtra e seleciona candidatos de acordo com o modo.
-        $candidates = $this->pickCandidates($approaches, $mode, $dateMin);
+        $candidates = $this->pickCandidates($approaches, $mode, $anchorDate);
 
         if ($candidates === []) {
             return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato com dados suficientes para projeção.');
@@ -327,8 +336,11 @@ final class ClosestNowSelector
     }
 
     /**
-     * Modo 'upcoming': somente objetos cuja data de aproximação cai no dia âncora.
-     * Retorna todo o conjunto sem limite — a UI exibe quem couber.
+     * Modo 'upcoming': objetos cuja data de máxima aproximação cai nos próximos 3 dias
+     * a partir da data âncora (inclusive). Ordenados por proximidade temporal com o instante atual.
+     *
+     * Atenção: approachDate pode vir em formatos distintos da NASA (ex: "2026-May-28 12:42"
+     * ou "2026-05-28T12:42:00"). Usamos Carbon::parse() para normalizar antes de comparar.
      *
      * @param  array<int, array<string, mixed>>  $approaches
      * @param  string                            $dateMin  Data âncora no formato Y-m-d
@@ -336,19 +348,28 @@ final class ClosestNowSelector
      */
     private function pickUpcomingCandidates(array $approaches, string $dateMin): array
     {
-        $anchor = substr($dateMin, 0, 10); // garante só Y-m-d
+        $anchorStart = CarbonImmutable::parse($dateMin, 'UTC')->startOfDay();
+        $anchorEnd   = $anchorStart->addDays(3)->endOfDay();
 
-        return array_values(array_filter(
+        $filtered = array_values(array_filter(
             $approaches,
-            static function (array $a) use ($anchor): bool {
-                $approachDate = (string) ($a['approachDate'] ?? '');
-                if ($approachDate === '') {
+            static function (array $a) use ($anchorStart, $anchorEnd): bool {
+                $raw = (string) ($a['approachDate'] ?? '');
+                if ($raw === '') {
                     return false;
                 }
-                // Compara só a parte de data (Y-m-d) ignorando hora
-                return substr($approachDate, 0, 10) === $anchor;
+                try {
+                    $date = CarbonImmutable::parse($raw, 'UTC');
+                } catch (\Throwable) {
+                    return false;
+                }
+                return $date->greaterThanOrEqualTo($anchorStart) && $date->lessThanOrEqualTo($anchorEnd);
             },
         ));
+
+        usort($filtered, $this->compareByUpcomingApproach(...));
+
+        return $filtered;
     }
 
     /**
@@ -626,11 +647,11 @@ final class ClosestNowSelector
     private function compareByUpcomingApproach(array $a, array $b): int
     {
         $now   = CarbonImmutable::now('UTC');
-        $aDate = isset($a['approach']['approachDate'])
-            ? CarbonImmutable::parse($a['approach']['approachDate'], 'UTC')
+        $aDate = isset($a['approachDate'])
+            ? CarbonImmutable::parse($a['approachDate'], 'UTC')
             : null;
-        $bDate = isset($b['approach']['approachDate'])
-            ? CarbonImmutable::parse($b['approach']['approachDate'], 'UTC')
+        $bDate = isset($b['approachDate'])
+            ? CarbonImmutable::parse($b['approachDate'], 'UTC')
             : null;
 
         if ($aDate === null && $bDate === null) return 0;

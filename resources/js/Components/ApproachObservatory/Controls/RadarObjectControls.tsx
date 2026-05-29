@@ -12,36 +12,57 @@ type Props = {
 
 const LIMITS: ObjectLimit[] = [5, 15, 30];
 
-type ModeOption = { value: SelectionMode; labelPt: string; labelEn: string; tooltipPt: string; tooltipEn: string };
+type ModeOption = {
+    value:       SelectionMode;
+    labelPt:     string;
+    labelEn:     string;
+    tooltipPt:   string;
+    tooltipEn:   string;
+    detailPt:    string;
+    detailEn:    string;
+    icon:        string;
+};
 
 const MODE_OPTIONS: ModeOption[] = [
     {
         value:     'nearest',
         labelPt:   'Mais próximos agora',
         labelEn:   'Closest now',
-        tooltipPt: 'Objetos com menor distância atual da Terra, derivada de vetores reais do JPL Horizons.',
-        tooltipEn: 'Objects with the smallest current distance from Earth, derived from real JPL Horizons vectors.',
+        tooltipPt: 'Os asteroides que estão mais perto da Terra agora',
+        tooltipEn: 'The asteroids currently nearest to Earth',
+        detailPt:  'Pense neles como os vizinhos de hoje. Neste momento, são os que estão no nosso "quintal" do sistema solar.',
+        detailEn:  'Think of them as today\'s neighbors. Right now, they happen to be in our corner of the solar system.',
+        icon:      '◎',
     },
     {
         value:     'upcoming',
         labelPt:   'Próximas aproximações',
         labelEn:   'Upcoming passes',
-        tooltipPt: 'Objetos cuja data de máxima aproximação é a mais próxima do momento atual. Não indica risco.',
-        tooltipEn: 'Objects whose closest approach date is nearest to now. Does not indicate risk.',
+        tooltipPt: 'Asteroides que passam pelo ponto mais perto da Terra até 3 dias',
+        tooltipEn: 'Asteroids making their closest pass to Earth up to 3 days',
+        detailPt:  'Cada asteroide faz sua passagem mais próxima da Terra em um dia específico — como um trem que tem horário. Esses são os que têm essa passagem agendada para breve. Podem ainda estar longe agora, mas é nos próximos dias que chegam ao ponto mais perto que vão chegar.',
+        detailEn:  'Every asteroid has one closest-pass day — like a train with a schedule. These have that day coming up soon. They may still be far right now, but the next few days are when they\'ll be as close as they\'ll get.',
+        icon:      '⟶',
     },
     {
         value:     'featured',
         labelPt:   'Em destaque',
         labelEn:   'Featured',
-        tooltipPt: 'Seleção de objetos conhecidos, historicamente relevantes ou cientificamente interessantes.',
-        tooltipEn: 'A curated selection of well-known, historically relevant, or scientifically interesting objects.',
+        tooltipPt: 'Os asteroides com nome e com história',
+        tooltipEn: 'Asteroids with names and stories',
+        detailPt:  'A maioria dos asteroides tem só um código. Esses têm nome de verdade — foram estudados, observados por décadas ou são referências da astronomia. São os "famosos" do sistema solar.',
+        detailEn:  'Most asteroids only have a code. These have real names — studied, observed for decades, or used as astronomy references. The "celebrities" of the solar system.',
+        icon:      '★',
     },
     {
         value:     'attention',
         labelPt:   'Maior atenção',
         labelEn:   'Watch list',
-        tooltipPt: 'Objetos que merecem acompanhamento por tamanho, órbita ou classificação PHA. Não implica risco imediato.',
-        tooltipEn: 'Objects worth tracking for size, orbit, or PHA classification. Does not imply immediate risk.',
+        tooltipPt: 'Asteroides que os cientistas acompanham com mais cuidado',
+        tooltipEn: 'Asteroids scientists monitor more carefully',
+        detailPt:  'São grandes o suficiente ou passam perto o suficiente para valer um monitoramento contínuo. Não significa que vão colidir — a NASA os chama assim por precaução, não por alarme.',
+        detailEn:  'Large enough or close enough to warrant ongoing monitoring. It doesn\'t mean collision is coming — NASA flags them out of caution, not alarm.',
+        icon:      '◈',
     },
 ];
 
@@ -61,6 +82,7 @@ export function RadarObjectControls({
     const en = locale === 'en';
     const currentMode = MODE_OPTIONS.find((o) => o.value === selectionMode) ?? MODE_OPTIONS[0];
     const [open, setOpen] = useState(false);
+    const [hoveredTooltip, setHoveredTooltip] = useState<SelectionMode | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Fecha ao clicar fora
@@ -89,7 +111,7 @@ export function RadarObjectControls({
             {/* Chips de quantidade */}
             <div className="flex items-center gap-1.5">
                 <span className="select-none text-[11px] uppercase tracking-wide text-white/45">
-                    {en ? 'Show' : 'Exibir'}
+                    {en ? 'Show up to' : 'Exibir até'}
                 </span>
                 <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-0.5">
                     {LIMITS.map((limit) => (
@@ -126,7 +148,6 @@ export function RadarObjectControls({
                         type="button"
                         disabled={loading}
                         onClick={() => setOpen((v) => !v)}
-                        title={en ? currentMode.tooltipEn : currentMode.tooltipPt}
                         aria-haspopup="listbox"
                         aria-expanded={open}
                         aria-label={en ? 'Selection criterion' : 'Critério de seleção'}
@@ -145,25 +166,65 @@ export function RadarObjectControls({
                         <ul
                             role="listbox"
                             aria-label={en ? 'Selection criterion' : 'Critério de seleção'}
-                            className="absolute left-0 top-full z-50 mt-1 min-w-full overflow-hidden rounded-lg border border-white/12 bg-space-950 shadow-glow"
+                            className="absolute left-0 top-full z-50 mt-1 min-w-full rounded-lg border border-white/12 bg-space-950 shadow-glow"
                         >
                             {MODE_OPTIONS.map((opt) => {
                                 const selected = opt.value === selectionMode;
+                                const tooltipVisible = hoveredTooltip === opt.value;
                                 return (
                                     <li
                                         key={opt.value}
                                         role="option"
                                         aria-selected={selected}
-                                        title={en ? opt.tooltipEn : opt.tooltipPt}
                                         onClick={() => { onModeChange(opt.value); setOpen(false); }}
+                                        onMouseEnter={() => setHoveredTooltip(opt.value)}
+                                        onMouseLeave={() => setHoveredTooltip(null)}
                                         className={[
-                                            'cursor-pointer whitespace-nowrap px-3.5 py-2 text-[12px] transition-colors',
+                                            'group relative cursor-pointer px-3.5 py-2.5 text-[12px] transition-colors',
                                             selected
                                                 ? 'bg-signal-cyan/15 text-signal-cyan'
                                                 : 'text-white/70 hover:bg-white/[0.06] hover:text-white',
                                         ].join(' ')}
                                     >
-                                        {en ? opt.labelEn : opt.labelPt}
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className={[
+                                                    'text-[10px] tabular-nums',
+                                                    selected ? 'text-signal-cyan/70' : 'text-white/30 group-hover:text-white/50',
+                                                ].join(' ')}>
+                                                    {opt.icon}
+                                                </span>
+                                                <span className="whitespace-nowrap">{en ? opt.labelEn : opt.labelPt}</span>
+                                            </div>
+                                            <span className={[
+                                                'shrink-0 rounded-full text-[9px] leading-none px-1 py-0.5 border transition-colors',
+                                                selected
+                                                    ? 'border-signal-cyan/30 text-signal-cyan/60'
+                                                    : 'border-white/10 text-white/25 group-hover:border-white/20 group-hover:text-white/40',
+                                            ].join(' ')}>
+                                                ?
+                                            </span>
+                                        </div>
+
+                                        {/* Tooltip expandido — abre à direita */}
+                                        {tooltipVisible && (
+                                            <div className="pointer-events-none absolute left-full top-0 z-[100] ml-2 w-60 rounded-xl border border-white/15 bg-[#07111f]/95 p-3.5 shadow-glow backdrop-blur-md">
+                                                <div className="mb-2 flex items-center gap-2">
+                                                    <span className="text-base text-signal-cyan/80">{opt.icon}</span>
+                                                    <span className="text-[13px] font-semibold text-white">
+                                                        {en ? opt.labelEn : opt.labelPt}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[12px] leading-relaxed text-white/80">
+                                                    {en ? opt.tooltipEn : opt.tooltipPt}
+                                                </p>
+                                                <div className="mt-2.5 border-t border-white/10 pt-2.5">
+                                                    <p className="text-[12px] leading-relaxed text-white/65">
+                                                        {en ? opt.detailEn : opt.detailPt}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </li>
                                 );
                             })}

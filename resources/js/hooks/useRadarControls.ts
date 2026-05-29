@@ -52,12 +52,9 @@ export function useRadarControls(): RadarControls {
     const setSelectionMode = (mode: SelectionMode) => {
         setSelectionModeState(mode);
         try { localStorage.setItem(STORAGE_KEY_MODE, mode); } catch { /* ignorado */ }
-        // Ao voltar para 'nearest', reseta o limit para 5 para não deixar o usuário
-        // preso em 30 depois de ter explorado a lista maior.
-        if (mode === 'nearest') {
-            setObjectLimitState(5);
-            try { localStorage.setItem(STORAGE_KEY_LIMIT, '5'); } catch { /* ignorado */ }
-        }
+        // Sempre que o critério muda, volta para 5 objetos — independente do critério anterior.
+        setObjectLimitState(5);
+        try { localStorage.setItem(STORAGE_KEY_LIMIT, '5'); } catch { /* ignorado */ }
     };
 
     const resetControls = () => {
