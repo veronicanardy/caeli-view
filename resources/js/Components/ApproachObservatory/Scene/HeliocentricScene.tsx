@@ -7,7 +7,7 @@ import { EARTH_RADIUS_DL } from '@/lib/observatory/bodyScale';
 import { FocusProtectedHtml, ScreenLabel } from '../Overlays/SceneLabels';
 import { Earth } from '../Bodies/Earth/Earth';
 import { Sun } from '../Bodies/Sun/Sun';
-import { EarthOrbitRingHelio, OrbitLineHelio } from '../Bodies/HeliocentricLines';
+import { OrbitLineHelio } from '../Trajectory/HeliocentricLines';
 
 const KM_PER_LD = 384_400;
 const SUN_RADIUS_KM = 695_700;
@@ -121,10 +121,6 @@ export function HeliocentricScene({
                     protectLabelFromFocus={false}
                 />
             </group>
-
-            {/* 1 AU Earth-orbit reference ring (linear AU). Drawn as a circle centered on the Sun
-                in the ecliptic plane. */}
-            <EarthOrbitRingHelio />
 
             {/* The asteroid's full Kepler orbit, with Sun at the true focus, exact shape. The whole
                 ellipse is rendered brightly so the orbit reads as a continuous path; the marker
