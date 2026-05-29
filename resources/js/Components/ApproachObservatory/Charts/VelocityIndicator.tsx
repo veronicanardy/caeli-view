@@ -1,7 +1,16 @@
 import { Gauge } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 
-export function VelocityIndicator({ velocityKph, maxVelocityKph = 120000 }: { velocityKph: number | null | undefined; maxVelocityKph?: number }) {
+/** Exibe a velocidade relativa de um objeto como barra de progresso com gradiente de cor. */
+export function VelocityIndicator({
+    velocityKph,
+    maxVelocityKph = 120_000,
+}: {
+    velocityKph: number | null | undefined;
+    /** Velocidade máxima de referência para escalar a barra (padrão: 120.000 km/h). */
+    maxVelocityKph?: number;
+}) {
+    // Mínimo de 6% para que a barra nunca desapareça visualmente mesmo em velocidades muito baixas.
     const percent = velocityKph ? Math.max(6, Math.min(100, (velocityKph / maxVelocityKph) * 100)) : 0;
 
     return (
@@ -13,8 +22,13 @@ export function VelocityIndicator({ velocityKph, maxVelocityKph = 120000 }: { ve
                 </span>
                 <span>{formatNumber(velocityKph, 0)} km/h</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-gradient-to-r from-signal-cyan via-signal-mint to-signal-amber" style={{ width: `${percent}%` }} />
+
+            {/* Gradiente: ciano (lento) → menta → âmbar (rápido) */}
+            <div className="h-2 overflow-hidden rounded-full bg-white/10" role="meter" aria-label="Velocidade relativa" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+                <div
+                    className="h-full rounded-full bg-gradient-to-r from-signal-cyan via-signal-mint to-signal-amber transition-all duration-500"
+                    style={{ width: `${percent}%` }}
+                />
             </div>
         </div>
     );

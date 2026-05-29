@@ -2,6 +2,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
 import { ReactNode } from 'react';
 import { ApproachObservatoryCharts } from '@/types';
 
+/** Estilo compartilhado para os tooltips de todos os gráficos. */
 const tooltipStyle = {
     background: 'rgba(9, 11, 16, 0.96)',
     border: '1px solid rgba(255,255,255,0.14)',
@@ -9,9 +10,19 @@ const tooltipStyle = {
     color: '#f7fafc',
 };
 
+/**
+ * Painel de quatro gráficos estatísticos do Observatório de Aproximações.
+ *
+ * Gráficos exibidos:
+ * - Aproximações por dia (barras verticais)
+ * - Distribuição asteroides × cometas (rosca)
+ * - Objetos de menor distância em distâncias lunares (barras horizontais)
+ * - Objetos de maior velocidade relativa (barras horizontais)
+ */
 export function ApproachCharts({ charts }: { charts: ApproachObservatoryCharts }) {
     return (
         <div className="grid gap-5 xl:grid-cols-2">
+            {/* Aproximações por dia */}
             <ChartShell title="Aproximações por dia">
                 <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={charts.byDay}>
@@ -23,16 +34,30 @@ export function ApproachCharts({ charts }: { charts: ApproachObservatoryCharts }
                     </BarChart>
                 </ResponsiveContainer>
             </ChartShell>
+
+            {/* Distribuição por tipo de objeto */}
             <ChartShell title="Asteroides e cometas">
                 <ResponsiveContainer width="100%" height={240}>
                     <PieChart>
-                        <Pie data={charts.byType} dataKey="value" nameKey="name" innerRadius={54} outerRadius={88} paddingAngle={4}>
-                            {charts.byType.map((entry) => <Cell key={entry.name} fill={entry.name === 'Cometas' ? '#f8c76b' : '#54d6d6'} />)}
+                        <Pie
+                            data={charts.byType}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={54}
+                            outerRadius={88}
+                            paddingAngle={4}
+                        >
+                            {charts.byType.map((entry) => (
+                                // Cometas recebem âmbar; asteroides recebem ciano.
+                                <Cell key={entry.name} fill={entry.name === 'Cometas' ? '#f8c76b' : '#54d6d6'} />
+                            ))}
                         </Pie>
                         <Tooltip contentStyle={tooltipStyle} />
                     </PieChart>
                 </ResponsiveContainer>
             </ChartShell>
+
+            {/* Top objetos por menor distância */}
             <ChartShell title="Menores distâncias em distâncias lunares">
                 <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={charts.closest} layout="vertical" margin={{ left: 22 }}>
@@ -44,6 +69,8 @@ export function ApproachCharts({ charts }: { charts: ApproachObservatoryCharts }
                     </BarChart>
                 </ResponsiveContainer>
             </ChartShell>
+
+            {/* Top objetos por maior velocidade relativa */}
             <ChartShell title="Maiores velocidades">
                 <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={charts.fastest} layout="vertical" margin={{ left: 22 }}>
@@ -59,6 +86,7 @@ export function ApproachCharts({ charts }: { charts: ApproachObservatoryCharts }
     );
 }
 
+/** Contêiner visual padrão para cada gráfico: borda sutil, fundo escuro e sombra glow. */
 function ChartShell({ title, children }: { title: string; children: ReactNode }) {
     return (
         <section className="rounded-lg border border-white/10 bg-white/[0.045] p-5 shadow-glow">

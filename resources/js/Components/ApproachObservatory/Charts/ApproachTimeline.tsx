@@ -14,12 +14,22 @@ type Props = {
     t: Translator;
 };
 
+/** Número máximo de dias exibidos na linha do tempo. */
 const MAX_DAYS = 14;
 
+/**
+ * Linha do tempo interativa de aproximações de objetos celestes.
+ *
+ * - Agrupa aproximações por dia e exibe até MAX_DAYS dias.
+ * - O grupo do próximo dia futuro começa expandido automaticamente.
+ * - Destaca o dia de pico (maior número de eventos) e o dia atual.
+ * - A primeira aproximação futura recebe badge "próxima".
+ */
 export function ApproachTimeline({ approaches, locale, t }: Props) {
     const groups = useMemo(() => groupApproachesByDay(approaches, locale), [approaches, locale]);
     const daily = useMemo(() => buildDailySummary(approaches, locale), [approaches, locale]);
 
+    /** ID da primeira aproximação futura para exibir o badge "próxima". */
     const nextId = useMemo(() => {
         const today = localDateIso(new Date());
         for (const group of groups) {
@@ -29,6 +39,7 @@ export function ApproachTimeline({ approaches, locale, t }: Props) {
         return null;
     }, [groups]);
 
+    /** Abre automaticamente o grupo do próximo dia com aproximações. */
     const initialExpanded = useMemo(() => {
         const today = localDateIso(new Date());
         const next = groups.find((group) => group.date >= today);
@@ -62,21 +73,39 @@ export function ApproachTimeline({ approaches, locale, t }: Props) {
             <DailySummary daily={daily} peakTotal={peakTotal} t={t} />
 
             <div className="relative rounded-lg border border-white/10 bg-white/[0.035] p-4 sm:p-5">
-                <span className="pointer-events-none absolute bottom-5 left-[26px] top-5 w-px bg-gradient-to-b from-signal-cyan/30 via-white/10 to-transparent sm:left-[30px]" aria-hidden="true" />
+                {/* Linha vertical decorativa que conecta os marcadores de data */}
+                <span
+                    className="pointer-events-none absolute bottom-5 left-[26px] top-5 w-px bg-gradient-to-b from-signal-cyan/30 via-white/10 to-transparent sm:left-[30px]"
+                    aria-hidden="true"
+                />
+
                 <ol className="relative space-y-4">
                     {visible.map((group) => {
                         const isOpen = expanded.has(group.date);
+                        // Dia de pico: tem o maior número de aproximações no período (mínimo 2 eventos).
                         const isPeak = group.items.length === peakTotal && peakTotal > 1;
 
                         return (
                             <li key={group.date}>
+                                {/* Cabeçalho clicável do grupo de dia */}
                                 <button
                                     type="button"
                                     onClick={() => toggle(group.date)}
                                     aria-expanded={isOpen}
                                     className="flex w-full items-center gap-3 rounded text-left outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan"
                                 >
-                                    <span className={`relative z-10 inline-flex size-3 shrink-0 rounded-full ring-4 ${group.isToday ? 'bg-signal-amber ring-signal-amber/20' : group.isPast ? 'bg-white/30 ring-white/5' : 'bg-signal-cyan ring-signal-cyan/15'}`} aria-hidden="true" />
+                                    {/* Marcador colorido: âmbar = hoje, branco = passado, ciano = futuro */}
+                                    <span
+                                        className={`relative z-10 inline-flex size-3 shrink-0 rounded-full ring-4 ${
+                                            group.isToday
+                                                ? 'bg-signal-amber ring-signal-amber/20'
+                                                : group.isPast
+                                                  ? 'bg-white/30 ring-white/5'
+                                                  : 'bg-signal-cyan ring-signal-cyan/15'
+                                        }`}
+                                        aria-hidden="true"
+                                    />
+
                                     <div className="flex flex-1 flex-wrap items-baseline justify-between gap-2">
                                         <p className="flex items-center gap-2 text-sm font-semibold text-white">
                                             {group.dateLabel}
@@ -93,12 +122,21 @@ export function ApproachTimeline({ approaches, locale, t }: Props) {
                                             ) : null}
                                         </p>
                                         <p className="flex items-center gap-2 text-[11px] text-white/45">
-                                            <span>{group.items.length} {group.items.length === 1 ? t('observatory.timeline.events.one') : t('observatory.timeline.events.other')}</span>
-                                            <ChevronDown className={`size-3.5 transition ${isOpen ? 'rotate-180 text-signal-cyan' : ''}`} aria-hidden="true" />
+                                            <span>
+                                                {group.items.length}{' '}
+                                                {group.items.length === 1
+                                                    ? t('observatory.timeline.events.one')
+                                                    : t('observatory.timeline.events.other')}
+                                            </span>
+                                            <ChevronDown
+                                                className={`size-3.5 transition ${isOpen ? 'rotate-180 text-signal-cyan' : ''}`}
+                                                aria-hidden="true"
+                                            />
                                         </p>
                                     </div>
                                 </button>
 
+                                {/* Lista de aproximações do dia, visível apenas quando expandido */}
                                 {isOpen ? (
                                     <ul className="ml-6 mt-2 space-y-1.5 sm:ml-8">
                                         {group.items.map((approach) => (
@@ -120,6 +158,7 @@ export function ApproachTimeline({ approaches, locale, t }: Props) {
     );
 }
 
+/** Retorna a data local no formato ISO (YYYY-MM-DD) sem conversão para UTC. */
 function localDateIso(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -127,19 +166,42 @@ function localDateIso(date: Date): string {
     return `${year}-${month}-${day}`;
 }
 
-function DailySummary({ daily, peakTotal, t }: { daily: ReturnType<typeof buildDailySummary>; peakTotal: number; t: Translator }) {
+/**
+ * Mini-gráfico de barras que resume o total de aproximações por dia.
+ * Cores: menta = pico, âmbar = hoje, branco apagado = passado, ciano = futuro.
+ */
+function DailySummary({
+    daily,
+    peakTotal,
+    t,
+}: {
+    daily: ReturnType<typeof buildDailySummary>;
+    peakTotal: number;
+    t: Translator;
+}) {
     if (!daily.length) return null;
+
     return (
         <section className="rounded-lg border border-white/10 bg-white/[0.025] p-3 sm:p-4">
             <p className="text-[11px] uppercase tracking-wide text-white/45">{t('observatory.timeline.summary.title')}</p>
+
             <div className="mt-2 flex items-end gap-1 overflow-x-auto pb-1">
                 {daily.map((day) => {
+                    // Altura proporcional ao total do dia, com mínimo de 6px para visibilidade.
                     const height = Math.max(6, Math.round((day.total / peakTotal) * 36));
                     return (
                         <div key={day.date} className="flex min-w-[44px] flex-col items-center gap-1">
                             <span className="text-[10px] font-medium text-white/65">{day.total}</span>
                             <div
-                                className={`w-3 rounded-sm transition-all ${day.isPeak ? 'bg-signal-mint' : day.isToday ? 'bg-signal-amber' : day.isPast ? 'bg-white/25' : 'bg-signal-cyan/70'}`}
+                                className={`w-3 rounded-sm transition-all ${
+                                    day.isPeak
+                                        ? 'bg-signal-mint'
+                                        : day.isToday
+                                          ? 'bg-signal-amber'
+                                          : day.isPast
+                                            ? 'bg-white/25'
+                                            : 'bg-signal-cyan/70'
+                                }`}
                                 style={{ height: `${height}px` }}
                                 aria-hidden="true"
                             />
@@ -152,7 +214,20 @@ function DailySummary({ daily, peakTotal, t }: { daily: ReturnType<typeof buildD
     );
 }
 
-function TimelineRow({ approach, highlighted, nextLabel }: { approach: UnifiedApproach; highlighted: boolean; nextLabel: string }) {
+/**
+ * Linha individual de uma aproximação na lista expandida de um dia.
+ * Quando `highlighted` é verdadeiro, aplica estilo ciano para indicar a próxima aproximação.
+ */
+function TimelineRow({
+    approach,
+    highlighted,
+    nextLabel,
+}: {
+    approach: UnifiedApproach;
+    highlighted: boolean;
+    nextLabel: string;
+}) {
+    // Prefere a distância lunar calculada a partir de km; cai de volta para o valor armazenado.
     const lunarDistance = lunarDistanceFromKm(approach.nominalDistanceKm) ?? approach.lunarDistance;
     const identity = resolveApproachIdentity(approach);
 
@@ -160,8 +235,13 @@ function TimelineRow({ approach, highlighted, nextLabel }: { approach: UnifiedAp
         <li>
             <Link
                 href={approach.detailRoute}
-                className={`group flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-signal-cyan ${highlighted ? 'border-signal-cyan/40 bg-signal-cyan/10 hover:bg-signal-cyan/15' : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'}`}
+                className={`group flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-signal-cyan ${
+                    highlighted
+                        ? 'border-signal-cyan/40 bg-signal-cyan/10 hover:bg-signal-cyan/15'
+                        : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
+                }`}
             >
+                {/* Lado esquerdo: badge de próxima, tipo do objeto e nome */}
                 <div className="flex min-w-0 items-center gap-2">
                     {highlighted ? (
                         <span className="rounded-full border border-signal-cyan/40 bg-signal-cyan/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-signal-cyan">
@@ -171,15 +251,24 @@ function TimelineRow({ approach, highlighted, nextLabel }: { approach: UnifiedAp
                     <ObjectTypeBadge type={approach.objectType} />
                     <div className="min-w-0">
                         <p className="truncate font-medium text-white">{identity.displayName}</p>
-                        {identity.subtitle ? <p className="truncate text-[11px] text-white/45">{identity.subtitle}</p> : null}
+                        {identity.subtitle ? (
+                            <p className="truncate text-[11px] text-white/45">{identity.subtitle}</p>
+                        ) : null}
                     </div>
                 </div>
+
+                {/* Lado direito: distância em km e em distâncias lunares (oculto em mobile) */}
                 <div className="hidden shrink-0 items-center gap-3 text-xs text-white/55 sm:flex">
                     <span>{compactKm(approach.nominalDistanceKm)}</span>
                     <span className="text-white/40">·</span>
                     <span>{lunarDistanceLabel(lunarDistance)}</span>
-                    <ChevronRight className="size-3.5 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-signal-cyan" aria-hidden="true" />
+                    <ChevronRight
+                        className="size-3.5 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-signal-cyan"
+                        aria-hidden="true"
+                    />
                 </div>
+
+                {/* Seta visível apenas em mobile */}
                 <ChevronRight className="size-3.5 shrink-0 text-white/40 sm:hidden" aria-hidden="true" />
             </Link>
         </li>
