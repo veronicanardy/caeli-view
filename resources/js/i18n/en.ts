@@ -185,7 +185,6 @@ const en = {
     'observatory.table.description': 'Complete list for the range. Distances in kilometers, compared to the average Earth-Moon distance.',
     'observatory.support.title': 'Reading the range',
     'observatory.support.description': 'Short takeaways drawn from the data itself, with no alarmism.',
-    'observatory.near.title': 'How to interpret "near" in space',
     'observatory.empty.title': 'No relevant close approach found for this date.',
     'observatory.empty.message': 'Choose yesterday, today, tomorrow, or another date to query a new daily state.',
     'observatory.loading.map': 'Fetching daily approaches...',

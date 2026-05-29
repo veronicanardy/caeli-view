@@ -657,17 +657,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                             </Suspense>
                             </TechnicalDataPanel>
                         ) : null}
-
-                        {lunarReference && (
-                            <section className="section-slide rounded-lg border border-white/10 bg-white/[0.035] p-5 text-sm leading-7 text-white/60">
-                                <h2 className="text-base font-semibold text-white">{t('observatory.near.title')}</h2>
-                                <p className="mt-2">
-                                    {en
-                                        ? `The Moon is, on average, ${new Intl.NumberFormat('en').format(lunarReference.distanceKm)} km from Earth. A "near" object in astronomy can still be hundreds of thousands or millions of kilometers away. The visual attention level only highlights proximity, speed, and estimated size; it does not claim impact risk.`
-                                        : `A Lua está, em média, a ${new Intl.NumberFormat('pt-BR').format(lunarReference.distanceKm)} km da Terra. Um objeto "próximo" em astronomia ainda pode estar a centenas de milhares ou milhões de quilômetros. O nível de atenção visual é apenas uma forma de destacar proximidade, velocidade e tamanho estimado; ele não afirma risco de impacto.`}
-                                </p>
-                            </section>
-                        )}
                     </>
                 )}
             </section>

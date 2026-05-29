@@ -4,14 +4,21 @@ import { createContext, useContext, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 /**
+ * Zona proibida para labels — retângulo em pixels (coordenadas do canvas) que os labels
+ * devem evitar. Usado para impedir que labels apareçam sobre o painel lateral.
+ */
+export type NoGoRect = { left: number; top: number; right: number; bottom: number } | null;
+export const LabelNoGoContext = createContext<NoGoRect>(null);
+
+/**
  * Limiares de pixel compartilhados pelos hooks de layout de rótulo. Mantidos aqui para que o
  * módulo de labels seja autossuficiente.
  */
 const COMPACT_LABEL_THRESHOLD_PX = 92;
 // Abaixo deste limiar a região Terra-Lua é pequena demais para exibir labels de asteroides
 // sem amontoamento — esconde todos (exceto o selecionado, tratado pelo chamador).
-const HIDE_ASTEROID_LABELS_THRESHOLD_PX = 40;
-const LABEL_HIDE_MIN_RADIUS_PX = 56;
+const HIDE_ASTEROID_LABELS_THRESHOLD_PX = 10;
+const LABEL_HIDE_MIN_RADIUS_PX = 72;
 const LABEL_HIDE_BODY_PADDING_PX = 72;
 
 export type LabelOccluder = { center: THREE.Vector3; radius: number } | null;
@@ -53,6 +60,7 @@ export function SceneLabel({
     const labelRef = useRef<THREE.Group>(null);
     const focusOccluder = useContext(LabelOccluderContext);
     const hiddenByFocus = useLabelHiddenByFocusRef(labelRef, protectFromFocus ? focusOccluder : null);
+    const hiddenByNoGo = useLabelInNoGoZone(labelRef);
     const cls =
         tier === 'primary'
             ? [
@@ -67,7 +75,7 @@ export function SceneLabel({
 
     return (
         <group ref={labelRef} position={position}>
-            {!hiddenByFocus ? (
+            {!hiddenByFocus && !hiddenByNoGo ? (
                 <Html position={[0, 0, 0]} center distanceFactor={distanceFactor} zIndexRange={[7, 0]}>
                     <button
                         type="button"
@@ -114,10 +122,11 @@ export function ScreenLabel({
     const labelRef = useRef<THREE.Group>(null);
     const focusOccluder = useContext(LabelOccluderContext);
     const hiddenByFocus = useLabelHiddenByFocusRef(labelRef, protectFromFocus ? focusOccluder : null);
+    const hiddenByNoGo = useLabelInNoGoZone(labelRef);
 
     return (
         <group ref={labelRef} position={position}>
-            {!hiddenByFocus ? (
+            {!hiddenByFocus && !hiddenByNoGo ? (
                 <Html position={[0, 0, 0]} center zIndexRange={[12, 0]} style={{ pointerEvents: onClick ? 'auto' : 'none' }}>
                     <button
                         type="button"
@@ -251,6 +260,37 @@ export function useHideAsteroidLabelsMode(): boolean {
     });
 
     return hide;
+}
+
+/**
+ * Retorna true quando a posição projetada deste label cai dentro da NoGoRect do contexto.
+ * Roda a cada frame mas só dispara re-render quando o estado muda.
+ */
+function useLabelInNoGoZone(labelRef: React.RefObject<THREE.Object3D | null>): boolean {
+    const { camera, size } = useThree();
+    const noGo = useContext(LabelNoGoContext);
+    const [blocked, setBlocked] = useState(false);
+    const blockedRef = useRef(false);
+    const pos = useRef(new THREE.Vector3());
+
+    useFrame(() => {
+        if (!labelRef.current || !noGo) {
+            if (blockedRef.current) { blockedRef.current = false; setBlocked(false); }
+            return;
+        }
+        labelRef.current.getWorldPosition(pos.current);
+        const projected = pos.current.clone().project(camera);
+        if (projected.z > 1) {
+            if (blockedRef.current) { blockedRef.current = false; setBlocked(false); }
+            return;
+        }
+        const px = (projected.x * 0.5 + 0.5) * size.width;
+        const py = (-projected.y * 0.5 + 0.5) * size.height;
+        const next = px >= noGo.left && px <= noGo.right && py >= noGo.top && py <= noGo.bottom;
+        if (next !== blockedRef.current) { blockedRef.current = next; setBlocked(next); }
+    });
+
+    return blocked;
 }
 
 /**
