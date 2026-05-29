@@ -22,7 +22,7 @@ final class HorizonsTrajectoryService
     /** Versões de cache por tipo de consulta — incrementar ao mudar o formato da resposta. */
     private const TRAJECTORY_CACHE_VERSION = 'command-v4';
     private const POSITION_CACHE_VERSION = 'reftime-v3';
-    private const NOW_TRAJECTORY_CACHE_VERSION = 'now-traj-v2-elements';
+    private const NOW_TRAJECTORY_CACHE_VERSION = 'now-traj-v3-short-window';
 
     /** Arredondamento de tempo para cache compartilhado entre objetos no mesmo tick. */
     private const CURRENT_MODE_BUCKET_MINUTES = 15;
@@ -32,9 +32,9 @@ final class HorizonsTrajectoryService
     private const CURRENT_MODE_SUCCESS_TTL_SECONDS = 900;   // 15 min
     private const NOW_TRAJECTORY_SUCCESS_TTL_SECONDS = 1800; // 30 min
 
-    /** TTL de cache negativo (falha): mais curto em local para facilitar debug. */
-    private const NEGATIVE_TTL_LOCAL_SECONDS = 120;
-    private const NEGATIVE_TTL_DEFAULT_SECONDS = 600;
+    /** TTL de cache negativo (falha): muito curto — o Horizons costuma encontrar na próxima tentativa. */
+    private const NEGATIVE_TTL_LOCAL_SECONDS = 15;
+    private const NEGATIVE_TTL_DEFAULT_SECONDS = 60;
 
     public function __construct(
         private readonly HorizonsEphemerisRetrier $retrier,

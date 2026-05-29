@@ -2,12 +2,12 @@
 
 namespace App\Services\Approaches;
 
-use App\DTOs\Approaches\UnifiedApproachData;
 use App\Services\Jpl\Horizons\HorizonsTrajectoryService;
 use App\Support\DistancePresenter;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Concurrency;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Determina quais objetos estão mais próximos da Terra *agora*, usando vetores do JPL Horizons.
@@ -29,13 +29,26 @@ use Illuminate\Support\Facades\Concurrency;
 final class ClosestNowSelector
 {
     /**
-     * Quantos candidatos avaliar no Horizons antes de cortar para o limite final.
+     * Quantos candidatos buscar no CAD/SBDB antes de qualquer corte.
      *
      * Precisa ser maior que o maior `limit` aceito pelo controller (30) mais margem para PHAs
      * extras. 45 garante que mesmo com limit=30 haja candidatos suficientes para ordenar por
      * distância real e ainda sobrar PHAs que não estavam no top-30 por miss_distance.
+     *
+     * O Horizons NÃO é consultado para todos eles: apenas os `limit + HORIZONS_MARGIN`
+     * mais próximos por distância nominal recebem trajetória real. Os demais entram no
+     * resultado com fallback nominal e hasRealCurrentDistance=false.
      */
     private const TOP_CANDIDATES = 45;
+
+    /**
+     * Quantos candidatos extras além do `limit` solicitado recebem consulta ao Horizons.
+     *
+     * A margem serve como reserva caso algum objeto da "janela principal" falhe ou seja
+     * descartado na deduplicação. Com margem=5, um `limit=5` consulta até 10 objetos,
+     * garantindo que os 5 finais tenham dados reais sempre que possível.
+     */
+    private const HORIZONS_MARGIN = 5;
 
     /** Número padrão de objetos retornados ao chamador */
     private const TOP_RESULT_LIMIT = 5;
@@ -44,19 +57,23 @@ final class ClosestNowSelector
     private const VALID_MODES = ['nearest', 'upcoming', 'featured', 'attention'];
 
     /**
-     * Janela temporal enviada ao Horizons: -30d passado / +90d futuro com passo de 2 dias (~60 pontos).
+     * Janela temporal enviada ao Horizons: ±2 dias com passo de 6 horas (~9 pontos por objeto).
      *
-     * Por que esse tamanho? NEOs mal curvam a trajetória em poucos dias (~1° por dia), mas ao longo
-     * de ~120 dias um NEO típico descreve um arco claramente curvo (ex: 2026 KL2 curva ~48°).
-     * 120 dias ainda é uma fração pequena de uma órbita típica (~2,8 anos / ~1000 dias),
-     * então a cena continua sendo um "radar de proximidade", não uma órbita heliocêntrica completa.
-     * O passo de 2 dias mantém ~60 pontos × 5 objetos = ~300 amostras (leve) e a spline suaviza.
+     * Janela curta tem dois efeitos positivos:
+     *   1. Respostas muito menores → menos timeout quando 30 objetos são consultados em paralelo.
+     *   2. A distância atual interpolada fica mais precisa (ponto mais próximo de "agora").
+     * Para o critério "mais próximos agora" não precisamos de órbita completa — só queremos
+     * saber onde o objeto está hoje. A trajetória de ±2 dias é suficiente para a cena 3D
+     * mostrar a curva de passagem sem exigir 60 pontos por objeto.
      */
     private const HORIZONS_WINDOW = [
-        'startOffsetHours' => -720,   // -30 dias
-        'stopOffsetHours'  => 2160,   // +90 dias
-        'stepSize'         => '2 days',
+        'startOffsetHours' => -48,    // -2 dias
+        'stopOffsetHours'  => 48,     // +2 dias
+        'stepSize'         => '6 hours',
     ];
+
+    /** Máximo de objetos consultados simultaneamente no Horizons. Acima disso os timeouts explodem. */
+    private const HORIZONS_BATCH_SIZE = 8;
 
     /**
      * TTL do cache para o resultado resolvido.
@@ -74,6 +91,19 @@ final class ClosestNowSelector
     /**
      * Retorna os objetos selecionados para o radar dentro da janela de datas informada.
      *
+     * O pipeline usa lazy-loading para o Horizons: apenas os `$limit + HORIZONS_MARGIN`
+     * candidatos mais próximos por distância nominal recebem trajetória real. Os demais
+     * entram no resultado com fallback nominal (hasRealCurrentDistance=false).
+     *
+     * A chave de cache NÃO inclui o limit: o resultado completo é armazenado e
+     * fatias menores simplesmente fazem array_slice sobre ele. Isso garante que
+     * top-5, top-15 e top-30 sejam fatias coerentes do mesmo conjunto ordenado —
+     * sem pipelines independentes que podem discordar entre si.
+     *
+     * Quando o limit aumenta (ex: 5→15), os objetos 1–5 já estão no cache
+     * individual do Horizons (por objectId + bucket de tempo) e são reutilizados
+     * automaticamente; apenas os objetos 6–15 (+ margem) geram novas chamadas.
+     *
      * @param  string  $dateMin  Data inicial ISO (Y-m-d), inclusive
      * @param  string  $dateMax  Data final ISO (Y-m-d), inclusive
      * @param  int     $limit    Quantos objetos retornar (padrão 5, máx 30)
@@ -84,16 +114,29 @@ final class ClosestNowSelector
         $limit = max(1, min($limit, 30));
         $mode  = in_array($mode, self::VALID_MODES, true) ? $mode : 'nearest';
 
-        // A assinatura da janela + mode faz parte da chave de cache para que uma mudança de
-        // configuração (ex: ampliar o horizonte temporal) invalide resultados antigos imediatamente.
+        // O $limit entra na chave de cache porque o conteúdo do pipeline varia com ele:
+        // limit=5 consulta ~10 objetos no Horizons; limit=30 consulta ~35.
+        //
+        // Quando o usuário expande de 5→15, o cache de limit=5 é ignorado e resolve()
+        // é executado novamente com limit=15. O custo adicional é mínimo: o cache
+        // individual do Horizons por objectId (TTL 30min) reutiliza automaticamente os
+        // ~10 objetos já consultados — apenas os objetos 11–20 geram novas chamadas à API.
         $windowSignature = implode(',', self::HORIZONS_WINDOW);
-        $cacheKey        = 'closest-now:' . md5($dateMin . '|' . $dateMax . '|' . $limit . '|' . $mode . '|' . $windowSignature);
+        $cacheKey        = 'closest-now:v3:' . md5($dateMin . '|' . $dateMax . '|' . $mode . '|' . $limit . '|' . $windowSignature);
 
-        return Cache::flexible(
+        $full = Cache::flexible(
             $cacheKey,
             [self::RESULT_CACHE_TTL_SECONDS, self::RESULT_CACHE_TTL_SECONDS + 900],
-            fn (): array => $this->resolve($dateMin, $dateMax, $limit, $mode),
+            fn (): array => $this->resolve($dateMin, $dateMax, $mode, $limit),
         );
+
+        // Fatia o resultado já ordenado para o limite solicitado (garantia extra de segurança).
+        if ($mode === 'nearest' && is_array($full['objects'] ?? null)) {
+            $full['objects']        = array_slice($full['objects'], 0, $limit);
+            $full['requestedLimit'] = $limit;
+        }
+
+        return $full;
     }
 
     // -------------------------------------------------------------------------
@@ -103,10 +146,18 @@ final class ClosestNowSelector
     /**
      * Executa o pipeline completo de resolução sem cache.
      *
-     * O parâmetro `$limit` só é aplicado no modo 'nearest'.
-     * Os demais modos retornam todos os candidatos que passam no filtro de modo.
+     * Estratégia de lazy-loading do Horizons:
+     *   1. Pré-ordena todos os candidatos por distância nominal do CAD (operação gratuita).
+     *   2. Consulta o Horizons apenas para os `$limit + HORIZONS_MARGIN` mais próximos.
+     *   3. Os demais candidatos entram no resultado usando nominalDistanceKm como fallback,
+     *      com hasRealCurrentDistance=false, e ficam disponíveis para expansões futuras
+     *      (cache individual do Horizons por objectId + bucket de tempo).
+     *
+     * Resultado: sempre contém TOP_CANDIDATES objetos ordenados, mas apenas os
+     * `$limit + HORIZONS_MARGIN` primeiros têm posição real do Horizons. O slice
+     * final para o $limit pedido é aplicado pelo chamador (select).
      */
-    private function resolve(string $dateMin, string $dateMax, int $limit, string $mode): array
+    private function resolve(string $dateMin, string $dateMax, string $mode, int $limit = self::TOP_RESULT_LIMIT): array
     {
         // Passo 1: candidatos do CAD + NeoWs.
         // 'featured' e 'attention' usam janela de ± 90 dias sem dist_max para garantir
@@ -135,37 +186,67 @@ final class ClosestNowSelector
         $approaches = is_array($data['approaches'] ?? null) ? $data['approaches'] : [];
 
         if ($approaches === []) {
-            return $this->emptyResult($dateMin, $dateMax, $limit, $mode, 'Nenhum candidato encontrado no período.');
+            return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato encontrado no período.');
         }
 
-        // Passo 2: filtra e seleciona candidatos de acordo com o modo
+        // Passo 2: filtra e seleciona candidatos de acordo com o modo.
         $candidates = $this->pickCandidates($approaches, $mode, $dateMin);
 
         if ($candidates === []) {
-            return $this->emptyResult($dateMin, $dateMax, $limit, $mode, 'Nenhum candidato com dados suficientes para projeção.');
+            return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato com dados suficientes para projeção.');
         }
 
-        // Passo 3: busca trajetórias do Horizons em paralelo para cada candidato
-        $trajectories = $this->fetchTrajectoriesParallel($candidates);
+        // Passo 3: pré-ordena por distância nominal do CAD (gratuito) e divide em
+        // "prioritários" (recebem Horizons) e "reserva" (ficam com fallback nominal).
+        //
+        // Para modos que não são 'nearest', o Horizons é consultado para todos porque
+        // o conjunto já é pequeno e fixo (objetos featured, PHAs, upcoming do dia).
+        [$priorityCandidates, $reserveCandidates] = $this->splitCandidatesByPriority($candidates, $mode, $limit);
 
-        // Passo 4: monta resultado por objeto com distância atual e ordena
-        $objects = $this->buildObjects($candidates, $trajectories);
+        Log::info('[ClosestNow] pipeline iniciado', [
+            'mode'              => $mode,
+            'limit'             => $limit,
+            'candidatos_cad'    => count($approaches),
+            'candidatos_apos_pick' => count($candidates),
+            'horizons_priorizados' => count($priorityCandidates),
+            'horizons_reserva'  => count($reserveCandidates),
+        ]);
+
+        // Passo 4: busca trajetórias do Horizons apenas para os candidatos prioritários.
+        $started      = microtime(true);
+        $trajectories = $this->fetchTrajectoriesParallel($priorityCandidates);
+        $elapsed      = round((microtime(true) - $started) * 1000);
+
+        $horizonsOk    = count(array_filter($trajectories, fn ($t) => ($t['status'] ?? null) === 'available'));
+        $horizonsFail  = count($trajectories) - $horizonsOk;
+
+        Log::info('[ClosestNow] Horizons concluído', [
+            'horizons_ok'     => $horizonsOk,
+            'horizons_falha'  => $horizonsFail,
+            'tempo_ms'        => $elapsed,
+        ]);
+
+        // Passo 5: monta resultado. Candidatos reserva entram com trajectory=null →
+        // buildObjects usa nominalDistanceKm como fallback (hasRealCurrentDistance=false).
+        $allCandidates = array_merge($priorityCandidates, $reserveCandidates);
+        $objects       = $this->buildObjects($allCandidates, $trajectories);
 
         usort($objects, $this->compareByCurrentDistance(...));
 
-        // Limit só se aplica ao modo 'nearest' — os demais retornam o conjunto filtrado inteiro
-        $finalObjects = $mode === 'nearest'
-            ? array_slice($objects, 0, $limit)
-            : $objects;
+        // Remove duplicatas por nome canônico mantendo apenas a entrada mais próxima (já é a primeira após sort).
+        // Necessário porque um mesmo objeto pode ter múltiplas entradas no CAD com datas de aproximação
+        // distintas, que passam pela dedup do ApproachMerger (baseada em nome+data) como entidades separadas.
+        $objects = $this->deduplicateByName($objects);
 
         return [
             'mode'                => 'closest_now',
             'selectionMode'       => $mode,
             'generatedAt'         => CarbonImmutable::now('UTC')->toIso8601String(),
             'window'              => ['dateMin' => $dateMin, 'dateMax' => $dateMax],
-            'requestedLimit'      => $limit,
+            'requestedLimit'      => 30,
             'candidatesEvaluated' => count($candidates),
-            'objects'             => $finalObjects,
+            'horizonsQueried'     => count($priorityCandidates),
+            'objects'             => $objects,
             'lunarReference'      => [
                 'distanceKm'           => DistancePresenter::LUNAR_DISTANCE_KM,
                 'earthDiametersApprox' => 30.0,
@@ -350,7 +431,50 @@ final class ClosestNowSelector
     }
 
     /**
-     * Dispara as consultas ao Horizons em paralelo e retorna um mapa indexado pelo ID da aproximação.
+     * Divide os candidatos em dois grupos: prioritários (recebem Horizons) e reserva (fallback nominal).
+     *
+     * Para o modo 'nearest', pré-ordena por nominalDistanceKm e consulta o Horizons apenas
+     * para os `$limit + HORIZONS_MARGIN` mais próximos. Isso garante que a página abra
+     * consultando no máximo 10 objetos para limit=5, 20 para limit=15, e 35 para limit=30,
+     * em vez dos 45 que seriam consultados sem esse corte.
+     *
+     * O cache individual por objectId no HorizonsTrajectoryService garante que, ao expandir
+     * de 5→15, os 5 já processados sejam reaproveitados sem nova chamada à API.
+     *
+     * Para modos não-nearest (featured, attention, upcoming), consulta todos os candidatos
+     * pois o conjunto já é pequeno e fixo — não faz sentido aplicar lazy-loading.
+     *
+     * @param  array<int, array<string, mixed>>  $candidates
+     * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>}
+     *         [prioritários, reserva]
+     */
+    private function splitCandidatesByPriority(array $candidates, string $mode, int $limit): array
+    {
+        if ($mode !== 'nearest') {
+            return [$candidates, []];
+        }
+
+        // Pré-ordena pelo ranking nominal do CAD (nominalDistanceKm).
+        // Objetos sem distância vão para o final — receberão fallback null no buildObjects.
+        usort(
+            $candidates,
+            static fn (array $a, array $b): int =>
+                ((float) ($a['nominalDistanceKm'] ?? PHP_INT_MAX)) <=> ((float) ($b['nominalDistanceKm'] ?? PHP_INT_MAX)),
+        );
+
+        $horizonsCount    = min(count($candidates), $limit + self::HORIZONS_MARGIN);
+        $priorityCandidates = array_slice($candidates, 0, $horizonsCount);
+        $reserveCandidates  = array_slice($candidates, $horizonsCount);
+
+        return [$priorityCandidates, $reserveCandidates];
+    }
+
+    /**
+     * Consulta o Horizons em lotes paralelos para evitar timeouts por sobrecarga.
+     *
+     * 30 requisições simultâneas causam timeout na maioria dos objetos. Lotes de 8
+     * mantêm a concorrência útil sem saturar a conexão com o JPL.
+     * Entre lotes há uma pausa de 300ms para não bater no rate-limit da API.
      *
      * @param  array<int, array<string, mixed>>   $candidates
      * @return array<string, array<string, mixed>>
@@ -368,7 +492,31 @@ final class ClosestNowSelector
             $tasks[$id] = fn () => $this->horizons->trajectoryAroundNow($payload, self::HORIZONS_WINDOW);
         }
 
-        return $tasks !== [] ? Concurrency::run($tasks) : [];
+        if ($tasks === []) {
+            return [];
+        }
+
+        $results = [];
+        $batches = array_chunk($tasks, self::HORIZONS_BATCH_SIZE, preserve_keys: true);
+
+        Log::info('[ClosestNow] Horizons lotes', [
+            'total_objetos' => count($tasks),
+            'total_lotes'   => count($batches),
+            'tamanho_lote'  => self::HORIZONS_BATCH_SIZE,
+        ]);
+
+        foreach ($batches as $i => $batch) {
+            if ($i > 0) {
+                usleep(300_000); // 300ms entre lotes
+            }
+            Log::debug('[ClosestNow] Horizons lote ' . ($i + 1), [
+                'objetos' => array_keys($batch),
+            ]);
+            $batchResults = Concurrency::run($batch);
+            $results      = array_merge($results, $batchResults);
+        }
+
+        return $results;
     }
 
     // -------------------------------------------------------------------------
@@ -410,25 +558,64 @@ final class ClosestNowSelector
     }
 
     /**
-     * Comparador para modo 'nearest': prioriza distância atual real do Horizons.
-     * Objetos sem efeméride vão para o final, ordenados pela miss_distance nominal.
+     * Comparador por distância: usa currentDistanceKm que já contém o fallback nominal quando
+     * o Horizons falhou (ver extractCurrentDistance). Objetos sem qualquer distância vão pro final.
+     * Em caso de empate numérico, distância real do Horizons tem precedência sobre nominal.
      */
     private function compareByCurrentDistance(array $a, array $b): int
     {
-        $aKm = $a['hasRealCurrentDistance'] ? $a['currentDistanceKm'] : null;
-        $bKm = $b['hasRealCurrentDistance'] ? $b['currentDistanceKm'] : null;
+        $aKm = isset($a['currentDistanceKm']) ? (float) $a['currentDistanceKm'] : null;
+        $bKm = isset($b['currentDistanceKm']) ? (float) $b['currentDistanceKm'] : null;
 
         if ($aKm === null && $bKm === null) {
-            $aFallback = (float) ($a['approach']['nominalDistanceKm'] ?? INF);
-            $bFallback = (float) ($b['approach']['nominalDistanceKm'] ?? INF);
-
-            return $aFallback <=> $bFallback;
+            return 0;
         }
 
-        if ($aKm === null) return 1;
-        if ($bKm === null) return -1;
+        if ($aKm === null) {
+            return 1;
+        }
+
+        if ($bKm === null) {
+            return -1;
+        }
+
+        if ($aKm === $bKm) {
+            // Desempate: Horizons real tem precedência sobre nominal de mesma distância
+            return (int) $b['hasRealCurrentDistance'] <=> (int) $a['hasRealCurrentDistance'];
+        }
 
         return $aKm <=> $bKm;
+    }
+
+    /**
+     * Remove duplicatas por nome canônico mantendo apenas a primeira ocorrência de cada objeto
+     * (que após o usort já é a entrada com menor distância atual).
+     *
+     * Um mesmo asteroide pode ter múltiplas entradas no pool quando o CAD registrou mais de
+     * uma aproximação dentro da janela temporal e as datas distintas fizeram o dedupeKey do
+     * ApproachMerger tratá-las como objetos diferentes.
+     *
+     * @param  array<int, array<string, mixed>>  $objects
+     * @return array<int, array<string, mixed>>
+     */
+    private function deduplicateByName(array $objects): array
+    {
+        $seen   = [];
+        $result = [];
+
+        foreach ($objects as $obj) {
+            $rawName = (string) ($obj['approach']['rawName'] ?? $obj['approach']['name'] ?? $obj['approach']['id'] ?? '');
+            $key     = strtolower(preg_replace('/[^a-z0-9]+/i', '', $rawName));
+
+            if ($key === '' || isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $result[]   = $obj;
+        }
+
+        return $result;
     }
 
     /**

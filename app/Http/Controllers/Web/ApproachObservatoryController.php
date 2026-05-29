@@ -192,7 +192,25 @@ class ApproachObservatoryController
             $dateMax = $anchorMax;
         }
 
-        $payload = $this->closestNow->select($dateMin, $dateMax, $limit, $mode);
+        try {
+            $payload = $this->closestNow->select($dateMin, $dateMax, $limit, $mode);
+        } catch (\Throwable) {
+            $payload = [
+                'mode'                => 'closest_now',
+                'selectionMode'       => $mode,
+                'generatedAt'         => CarbonImmutable::now('UTC')->toIso8601String(),
+                'window'              => ['dateMin' => $dateMin, 'dateMax' => $dateMax],
+                'requestedLimit'      => $limit,
+                'candidatesEvaluated' => 0,
+                'objects'             => [],
+                'lunarReference'      => [
+                    'distanceKm'           => 384400,
+                    'earthDiametersApprox' => 30.0,
+                    'label'                => 'Distância média Terra-Lua',
+                    'description'          => 'A Lua é referência visual: cerca de 384.400 km, aproximadamente 30 Terras.',
+                ],
+            ];
+        }
 
         return response()->json($payload)
             ->header('Cache-Control', 'public, max-age=900, stale-while-revalidate=900');

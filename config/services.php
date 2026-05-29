@@ -15,7 +15,7 @@ return [
     'jpl' => [
         'base_url' => env('JPL_API_BASE_URL', 'https://ssd-api.jpl.nasa.gov'),
         'horizons_base_url' => env('JPL_HORIZONS_BASE_URL', 'https://ssd.jpl.nasa.gov/api'),
-        'timeout' => (int) env('JPL_TIMEOUT_SECONDS', 10),
+        'timeout' => (int) env('JPL_TIMEOUT_SECONDS', 20),
         'retry_times' => (int) env('JPL_RETRY_TIMES', 2),
         'retry_sleep_ms' => (int) env('JPL_RETRY_SLEEP_MS', 300),
         'cad_cache_ttl' => (int) env('JPL_CAD_CACHE_TTL_SECONDS', 21600),
