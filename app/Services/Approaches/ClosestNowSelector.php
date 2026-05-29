@@ -134,9 +134,12 @@ final class ClosestNowSelector
         // Passo 4: monta resultado por objeto com distância atual e reordena pelo critério do mode
         $objects = $this->buildObjects($candidates, $trajectories);
 
-        $comparator = $mode === 'upcoming'
-            ? $this->compareByUpcomingApproach(...)
-            : $this->compareByCurrentDistance(...);
+        $comparator = match ($mode) {
+            'upcoming'  => $this->compareByUpcomingApproach(...),
+            'attention' => $this->compareByAttention(...),
+            'featured'  => $this->compareByFeatured(...),
+            default     => $this->compareByCurrentDistance(...),
+        };
 
         usort($objects, $comparator);
 
@@ -331,6 +334,82 @@ final class ClosestNowSelector
         if (! $aFuture && $bFuture) return 1;
 
         return abs($aDate->diffInSeconds($now)) <=> abs($bDate->diffInSeconds($now));
+    }
+
+    /**
+     * Comparador para modo 'attention': PHAs primeiro, depois por distância atual.
+     * Dentro de cada grupo (PHA / não-PHA) ordena pela distância atual do Horizons.
+     */
+    private function compareByAttention(array $a, array $b): int
+    {
+        $aHazard = (bool) ($a['approach']['hazardFlag'] ?? false);
+        $bHazard = (bool) ($b['approach']['hazardFlag'] ?? false);
+
+        // PHAs têm precedência absoluta sobre não-PHAs
+        if ($aHazard !== $bHazard) {
+            return $aHazard ? -1 : 1;
+        }
+
+        // Dentro do mesmo grupo: mais próximo agora primeiro
+        return $this->compareByCurrentDistance($a, $b);
+    }
+
+    /**
+     * Comparador para modo 'featured': objetos da lista curada primeiro (por nome/designação),
+     * depois os demais por distância atual. Permite destacar asteroides famosos ou relevantes
+     * mesmo que não sejam os mais próximos no momento.
+     */
+    private function compareByFeatured(array $a, array $b): int
+    {
+        $aFeatured = $this->isFeaturedObject($a['approach']);
+        $bFeatured = $this->isFeaturedObject($b['approach']);
+
+        if ($aFeatured !== $bFeatured) {
+            return $aFeatured ? -1 : 1;
+        }
+
+        // Dentro do mesmo grupo: mais próximo agora primeiro
+        return $this->compareByCurrentDistance($a, $b);
+    }
+
+    /**
+     * Verifica se o objeto é "em destaque" — lista curada de asteroides conhecidos.
+     * Matching por nome normalizado (sem prefixo, sem espaços extras, case-insensitive).
+     */
+    private function isFeaturedObject(array $approach): bool
+    {
+        static $featured = [
+            '99942', 'apophis',
+            '101955', 'bennu',
+            '162173', 'ryugu',
+            '25143', 'itokawa',
+            '433', 'eros',
+            '3122', 'florence',
+            '1862', 'apollo',
+            '1566', 'icarus',
+            '4179', 'toutatis',
+            '4769', 'castalia',
+            '2340', 'hathor',
+            '1036', 'ganymed',
+        ];
+
+        $name = strtolower(trim((string) ($approach['name'] ?? '')));
+        $displayName = strtolower(trim((string) ($approach['displayName'] ?? '')));
+        $spkId = trim((string) ($approach['spkId'] ?? ''));
+        $designation = strtolower(trim((string) ($approach['provisionalDesignation'] ?? $approach['designation'] ?? '')));
+
+        foreach ($featured as $token) {
+            if (
+                str_contains($name, $token)
+                || str_contains($displayName, $token)
+                || str_contains($designation, $token)
+                || ($spkId !== '' && str_contains($spkId, $token))
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
