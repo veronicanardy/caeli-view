@@ -296,21 +296,23 @@ export function DailyOrbitalRadar3DPrototype({
                             </ul>
                         </div>
                     </div>
-                    <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
-                        <ViewButton active={view === 'top' && !focusedObject} onClick={() => pickView('top')}>
-                            {en ? 'Top' : 'Superior'}
-                        </ViewButton>
-                        <ViewButton active={view === 'side' && !focusedObject} onClick={() => pickView('side')}>
-                            {en ? 'Side' : 'Lateral'}
-                        </ViewButton>
-                        <span className="mx-0.5 h-4 w-px bg-white/10" aria-hidden />
-                        <ViewButton
-                            active={view === 'perspective' && !focusedObject}
-                            onClick={resetView}
-                        >
-                            {en ? 'Reset' : 'Resetar'}
-                        </ViewButton>
-                    </div>
+                    {activeMode !== 'orbit' ? (
+                        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
+                            <ViewButton active={view === 'top' && !focusedObject} onClick={() => pickView('top')}>
+                                {en ? 'Top' : 'Superior'}
+                            </ViewButton>
+                            <ViewButton active={view === 'side' && !focusedObject} onClick={() => pickView('side')}>
+                                {en ? 'Side' : 'Lateral'}
+                            </ViewButton>
+                            <span className="mx-0.5 h-4 w-px bg-white/10" aria-hidden />
+                            <ViewButton
+                                active={view === 'perspective' && !focusedObject}
+                                onClick={resetView}
+                            >
+                                {en ? 'Reset' : 'Resetar'}
+                            </ViewButton>
+                        </div>
+                    ) : null}
                 </div>
 
                 {/* Inline focus card — slides in from the left when an object is selected. Hands the
