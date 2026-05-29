@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber';
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import * as THREE from 'three';
 import { createPortal } from 'react-dom';
 import { BookOpen, ChevronDown } from 'lucide-react';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
@@ -8,13 +9,16 @@ import { computeSceneEphemeris, KM_PER_AU, type SceneEphemeris } from '@/lib/sce
 import { sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
 import { MapManualModal, type SceneMode } from './Controls/MapManualModal';
+import { RadarObjectControls } from './Controls/RadarObjectControls';
 import { OrbitWelcomeToast, RadarWelcomeToast } from './Controls/WelcomeToast';
 import { FocusCard } from './Panels/FocusCard';
+import { BodyInfoCard } from './Panels/BodyInfoCard';
 import { RadarScene } from './Scene/RadarScene';
 import {
     CAMERA_FOV_DEG,
     MAX_CAMERA_DISTANCE,
     computeFocusFraming,
+    framingForBody,
     type CameraViewKey,
     type FocusFraming,
 } from './Scene/CameraRig';
@@ -73,6 +77,12 @@ export function DailyOrbitalRadar3D({
     initialSunDirection,
 }: Props) {
     const en = locale === 'en';
+
+    // Adia a atualização dos objetos na cena 3D enquanto `radarLoading` está ativo.
+    // Isso garante que o overlay "Carregando…" pinte no browser antes de o Three.js
+    // instanciar novos meshes (o que congela o thread principal por ~100 ms).
+    const deferredObjects = useDeferredValue(closestNowObjects);
+    const sceneObjects = radarLoading ? deferredObjects : closestNowObjects;
 
     // Fallback síncrono para a direção do Sol: o servidor já conhece a longitude solar atual
     // (Meeus, SunDirectionCalculator) e a envia pelo Inertia. Até o astronomy-engine resolver
@@ -157,8 +167,9 @@ export function DailyOrbitalRadar3D({
     const selectObject = (approach: UnifiedApproach) => {
         const newObject = closestNowObjects.find((o) => o.approach.id === approach.id);
         const newHasOrbit = Boolean(newObject?.trajectory?.orbitalElements);
-        // Se o novo objeto não tem órbita, volta para o close-up para não mostrar tela vazia.
         if (!orbitMode || !newHasOrbit) setOrbitMode(false);
+        setBodyCardOpen(null);
+        setMercuryFocusTarget(null);
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
         onSelect(approach);
     };
@@ -173,12 +184,31 @@ export function DailyOrbitalRadar3D({
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
     });
 
-    // Foca Terra ou Lua via lista lateral — o trabalho de câmera vive no RadarScene.
-    // Bumpamos o nonce para que o mesmo corpo possa ser re-focado sem mudança de kind.
+    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'mercury' | null>(null);
+    const [mercuryFocusTarget, setMercuryFocusTarget] = useState<FocusFraming | null>(null);
+
+    // Foca Terra ou Lua. Se estiver em modo órbita, dispara o overlay de transição antes de
+    // re-enquadrar — o mesmo tratamento dado ao botão "Voltar ao Asteroide".
     const focusBody = (body: 'earth' | 'moon') => {
         onClearSelection?.();
-        setCameraIntent((intent) => ({ kind: 'body', view: intent.view, body, nonce: nextCameraNonce(intent) }));
+        setBodyCardOpen(body);
+        setMercuryFocusTarget(null);
+        const doFocus = () => setCameraIntent((intent) => ({ kind: 'body', view: intent.view, body, nonce: nextCameraNonce(intent) }));
+        if (orbitMode) {
+            triggerTransition(() => { setOrbitMode(false); doFocus(); });
+        } else {
+            doFocus();
+        }
     };
+
+    const focusMercury = useCallback(() => {
+        onClearSelection?.();
+        setBodyCardOpen('mercury');
+        const pos = ephemeris?.mercuryScenePosition;
+        if (pos) setMercuryFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.028));
+    }, [ephemeris, onClearSelection]);
+
+    const mercuryFocused = bodyCardOpen === 'mercury';
 
     const resetView = () => {
         onClearSelection?.();
@@ -226,28 +256,30 @@ export function DailyOrbitalRadar3D({
                 >
                     <Suspense fallback={null}>
                         <RadarScene
-                            closestNowObjects={closestNowObjects}
+                            closestNowObjects={sceneObjects}
                             selectedId={selectedId}
                             orbitMode={orbitMode}
-                            onSelect={selectObject}
+                            onSelect={(approach) => { setBodyCardOpen(null); setMercuryFocusTarget(null); selectObject(approach); }}
                             cameraIntent={cameraIntent}
-                            focusTarget={focusTarget}
+                            focusTarget={focusTarget ?? mercuryFocusTarget}
                             ephemeris={ephemeris}
                             fallbackSunDirection={fallbackSunDirection}
                             locale={locale}
                             objectLimit={objectLimit}
-                            onClearSelection={() => onClearSelection?.()}
+                            onFocusMercury={focusMercury}
+                            onFocusBody={focusBody}
+                            isMercuryFocused={mercuryFocused}
                         />
                     </Suspense>
                 </Canvas>
 
                 {/* Barra superior: painel lateral + botões de câmera. */}
                 <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-3">
-                    <div className="pointer-events-auto w-[min(18rem,48%)] overflow-hidden rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl">
+                    <div className="pointer-events-auto flex h-[min(28rem,70vh)] w-[min(18rem,48%)] flex-col overflow-hidden rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl">
 
                         {/* Controles de seleção: quantidade + critério — integrados no painel lateral. */}
                         <div className="border-b border-white/10 px-2 py-2">
-                            <RadarControls
+                            <RadarObjectControls
                                 objectLimit={objectLimit}
                                 selectionMode={selectionMode}
                                 onLimitChange={onLimitChange}
@@ -257,42 +289,24 @@ export function DailyOrbitalRadar3D({
                             />
                         </div>
 
-                        {/* Corpos de referência: Terra e Lua clicáveis para voar a câmera até eles. */}
-                        <div className="border-b border-white/10 px-2 py-2">
-                            <div className="px-1 pb-1 text-[11px] uppercase tracking-wide text-white/45">
-                                {en ? 'Reference' : 'Referência'}
-                            </div>
-                            <div className="grid grid-cols-2 gap-1">
-                                <button
-                                    type="button"
-                                    onClick={() => focusBody('earth')}
-                                    className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
-                                >
-                                    <span>🌍</span><span className="font-medium">{en ? 'Earth' : 'Terra'}</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => focusBody('moon')}
-                                    className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
-                                >
-                                    <span>🌙</span><span className="font-medium">{en ? 'Moon' : 'Lua'}</span>
-                                </button>
-                            </div>
-                        </div>
+                        {/* Corpos de referência */}
+                        <ReferenceSection
+                            en={en}
+                            mercuryFocused={mercuryFocused}
+                            onFocusEarth={() => focusBody('earth')}
+                            onFocusMoon={() => focusBody('moon')}
+                            onFocusMercury={focusMercury}
+                        />
 
-                        {/* Lista dos objetos: clicar voa a câmera até o asteroide. */}
-                        <div className="px-2 py-2">
+                        {/* Lista dos objetos: ocupa o espaço restante do painel com scroll. */}
+                        <div className="flex min-h-0 flex-1 flex-col px-2 py-2">
                             <div className="px-1 pb-1.5 text-[11px] uppercase tracking-wide text-white/45">
                                 {listTitle(closestNowObjects.length, selectionMode, en)}
                             </div>
                             {radarLoading ? null : closestNowObjects.length === 0 ? (
                                 <EmptyModeMessage selectionMode={selectionMode} locale={locale} />
                             ) : (
-                                <ul className={[
-                                    'space-y-0.5',
-                                    objectLimit === 15 ? 'max-h-48 overflow-y-auto' : '',
-                                    objectLimit === 30 ? 'max-h-36 overflow-y-auto' : '',
-                                ].join(' ')}>
+                                <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
                                     {closestNowObjects.map((o, index) => (
                                         <ObjectListItem
                                             key={o.approach.id}
@@ -344,6 +358,8 @@ export function DailyOrbitalRadar3D({
                         onShowCloseUp={showCloseUp}
                         locale={locale}
                     />
+                ) : bodyCardOpen ? (
+                    <BodyInfoCard body={bodyCardOpen} onClose={() => setBodyCardOpen(null)} locale={locale} />
                 ) : null}
 
                 {/* Overlay de carregamento — mesmo visual para transição de modo e atualização de filtros. */}
@@ -382,12 +398,12 @@ const EMPTY_MODE_MESSAGES: Record<SelectionMode, { pt: string; en: string }> = {
     nearest:   { pt: 'Nenhum objeto próximo encontrado agora.', en: 'No nearby objects found right now.' },
     upcoming:  { pt: 'Nenhuma aproximação prevista para hoje.', en: 'No close approaches scheduled for today.' },
     featured:  {
-        pt: 'Nenhum objeto em destaque visível agora. Bennu, Eros, Ceres, Itokawa e Vesta não aparecem nesta janela de datas.',
-        en: 'No featured objects visible right now. Bennu, Eros, Ceres, Itokawa and Vesta are not in this date window.',
+        pt: 'Nenhum dos objetos em destaque (Bennu, Eros, Ceres, Itokawa, Vesta) tem posição disponível no radar agora.',
+        en: 'None of the featured objects (Bennu, Eros, Ceres, Itokawa, Vesta) have a position available in the radar right now.',
     },
     attention: {
-        pt: 'Nenhum objeto monitorado pela NASA/JPL encontrado nesta janela. Tente ampliar o intervalo de datas.',
-        en: 'No NASA/JPL-monitored objects found in this window. Try widening the date range.',
+        pt: 'Nenhum objeto monitorado pela NASA/JPL com posição disponível no radar agora.',
+        en: 'No NASA/JPL-monitored objects with a position available in the radar right now.',
     },
 };
 
@@ -400,98 +416,6 @@ function EmptyModeMessage({ selectionMode, locale }: { selectionMode: SelectionM
     );
 }
 
-const LIMITS_OPTIONS: ObjectLimit[] = [5, 15, 30];
-
-const MODE_LABELS: Record<SelectionMode, { pt: string; en: string }> = {
-    nearest:   { pt: 'Mais próximos agora', en: 'Closest now' },
-    upcoming:  { pt: 'Próximas aproximações', en: 'Upcoming passes' },
-    featured:  { pt: 'Em destaque', en: 'Featured' },
-    attention: { pt: 'Maior atenção', en: 'Watch list' },
-};
-
-/**
- * Controles compactos de quantidade e critério — integrados no painel lateral da cena.
- * Usa <select> nativo com background explicitamente escuro para funcionar em todos os OS.
- */
-function RadarControls({
-    objectLimit,
-    selectionMode,
-    onLimitChange,
-    onModeChange,
-    locale,
-    loading,
-}: {
-    objectLimit: ObjectLimit;
-    selectionMode: SelectionMode;
-    onLimitChange: (l: ObjectLimit) => void;
-    onModeChange: (m: SelectionMode) => void;
-    locale: 'pt-BR' | 'en';
-    loading: boolean;
-}) {
-    const en = locale === 'en';
-
-    return (
-        <div className="space-y-1.5">
-            {/* Linha 1: critério de seleção */}
-            <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-wide text-white/40 select-none w-12 shrink-0">
-                    {en ? 'Criterion' : 'Critério'}
-                </span>
-                <select
-                    value={selectionMode}
-                    disabled={loading}
-                    onChange={(e) => onModeChange(e.target.value as SelectionMode)}
-                    aria-label={en ? 'Selection criterion' : 'Critério de seleção'}
-                    style={{ colorScheme: 'dark' }}
-                    className={[
-                        'flex-1 min-w-0 rounded-lg border border-white/15 px-2 py-0.5',
-                        'bg-space-950 text-[11px] text-white/80 outline-none',
-                        'focus-visible:ring-1 focus-visible:ring-signal-cyan',
-                        'hover:border-white/25 cursor-pointer disabled:cursor-wait disabled:opacity-50',
-                    ].join(' ')}
-                >
-                    {(Object.entries(MODE_LABELS) as [SelectionMode, { pt: string; en: string }][]).map(([value, labels]) => (
-                        <option key={value} value={value} className="bg-[#0a0e1a] text-white">
-                            {en ? labels.en : labels.pt}
-                        </option>
-                    ))}
-                </select>
-                {loading && (
-                    <span className="size-1.5 animate-pulse rounded-full bg-signal-cyan/60 shrink-0" aria-hidden />
-                )}
-            </div>
-
-            {/* Linha 2: chips de quantidade — só visíveis no modo 'nearest' */}
-            {selectionMode === 'nearest' ? (
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-wide text-white/40 select-none w-12 shrink-0">
-                        {en ? 'Show' : 'Exibir'}
-                    </span>
-                    <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-0.5">
-                        {LIMITS_OPTIONS.map((limit) => (
-                            <button
-                                key={limit}
-                                type="button"
-                                disabled={loading}
-                                onClick={() => onLimitChange(limit)}
-                                aria-pressed={objectLimit === limit}
-                                className={[
-                                    'rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-all outline-none',
-                                    'disabled:cursor-wait focus-visible:ring-1 focus-visible:ring-signal-cyan',
-                                    objectLimit === limit
-                                        ? 'bg-signal-cyan/20 text-signal-cyan ring-1 ring-signal-cyan/40'
-                                        : 'text-white/50 hover:text-white/80',
-                                ].join(' ')}
-                            >
-                                {limit}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            ) : null}
-        </div>
-    );
-}
 
 /**
  * Deriva o modo ativo da cena a partir do estado de seleção e modo de órbita.
@@ -557,11 +481,9 @@ function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, comp
                         {en ? 'no pos.' : 'sem pos.'}
                     </span>
                 ) : null}
-                {!compact ? (
-                    <span className="shrink-0 tabular-nums text-white/55">
-                        {compactKm(o.currentDistanceKm)}
-                    </span>
-                ) : null}
+                <span className="shrink-0 tabular-nums text-white/55">
+                    {compactKm(o.currentDistanceKm)}
+                </span>
             </button>
         </li>
     );
@@ -721,5 +643,79 @@ function ViewButton({
         >
             {children}
         </button>
+    );
+}
+
+/**
+ * Seção de corpos de referência do painel lateral.
+ *
+ * Terra e Lua são sempre visíveis. O botão "···" expande uma linha adicional
+ * com planetas de ambientação (por enquanto só Mercúrio). Cada planeta aparece
+ * como um pontinho colorido + nome, sem ícone emoji para manter a discrição.
+ * Ao adicionar Vênus, Marte etc., basta acrescentar na lista AMBIENT_PLANETS.
+ */
+function ReferenceSection({
+    en,
+    mercuryFocused,
+    onFocusEarth,
+    onFocusMoon,
+    onFocusMercury,
+}: {
+    en: boolean;
+    mercuryFocused: boolean;
+    onFocusEarth: () => void;
+    onFocusMoon: () => void;
+    onFocusMercury: () => void;
+}) {
+    const [planetsOpen, setPlanetsOpen] = useState(false);
+
+    const btnCls = 'flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan';
+
+    return (
+        <div className="border-b border-white/10 px-2 py-2">
+            <div className="px-1 pb-1 text-[11px] uppercase tracking-wide text-white/45">
+                {en ? 'Reference' : 'Referência'}
+            </div>
+
+            {/* Linha principal: Terra + Lua + botão ··· */}
+            <div className="flex items-center gap-1">
+                <button type="button" onClick={onFocusEarth} className={btnCls}>
+                    <span>🌍</span><span className="font-medium">{en ? 'Earth' : 'Terra'}</span>
+                </button>
+                <button type="button" onClick={onFocusMoon} className={btnCls}>
+                    <span>🌙</span><span className="font-medium">{en ? 'Moon' : 'Lua'}</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setPlanetsOpen((v) => !v)}
+                    title={en ? 'More bodies' : 'Mais corpos'}
+                    className={[
+                        'ml-auto rounded-lg px-2 py-1.5 text-[13px] tracking-widest transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                        planetsOpen ? 'text-white' : 'text-white/40 hover:text-white/70',
+                    ].join(' ')}
+                >
+                    ···
+                </button>
+            </div>
+
+            {/* Painel expansível: planetas de ambientação */}
+            {planetsOpen ? (
+                <div className="mt-1 border-t border-white/8 pt-1">
+                    <button
+                        type="button"
+                        onClick={onFocusMercury}
+                        className={[
+                            btnCls,
+                            'w-full',
+                            mercuryFocused ? 'text-white' : '',
+                        ].join(' ')}
+                    >
+                        {/* Pontinho prateado — identidade visual de Mercúrio sem emoji */}
+                        <span className="inline-block size-2 rounded-full bg-[#b0b8c8] ring-1 ring-white/20" />
+                        <span className="font-medium">{en ? 'Mercury' : 'Mercúrio'}</span>
+                    </button>
+                </div>
+            ) : null}
+        </div>
     );
 }

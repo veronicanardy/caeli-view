@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
+import { ORBIT_AU_SCALE, SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { sunEclipticDisplayPosition } from '@/lib/observatory/sunGeometry';
 
 const ORBIT_LINE_SEGMENTS = 192;
-const ORBIT_COLOR = '#ffcf6e';
+const ORBIT_COLOR = '#5b9bd5';    // azul Terra — distingue a órbita da Terra dos outros anéis
 const ORBIT_GUIDE_OPACITY = 0.3;
 const DEFAULT_ORBIT_LINE_OPACITY = 0.85;
 
@@ -191,5 +191,55 @@ export function DisplayedEarthOrbitGuide({ sunDirection }: DisplayedEarthOrbitGu
         return null;
     }
 
+    return <primitive object={lineObject} />;
+}
+
+/**
+ * Semi-major axis de Mercúrio em AU. Fonte: IAU / NASA Planetary Fact Sheet.
+ * Usado para escalar o anel heliocêntrico de Mercúrio na cena geocêntrica.
+ */
+const MERCURY_SEMI_MAJOR_AU = 0.387;
+
+/**
+ * Guia visual da órbita de Mercúrio ao redor do Sol na cena geocêntrica.
+ *
+ * O anel é centrado na posição visual do Sol (comprimida) e tem raio proporcional
+ * à distância Sol→Mercúrio: MERCURY_SEMI_MAJOR_AU × SUN_DISPLAY_DL.
+ * Isso preserva a proporção correta entre a órbita da Terra (raio = SUN_DISPLAY_DL)
+ * e a de Mercúrio (raio = 0.387 × SUN_DISPLAY_DL) — Mercúrio claramente mais interno.
+ *
+ * Mais transparente que a Terra: é só contexto de sistema solar, não informação primária.
+ */
+export function DisplayedMercuryOrbitGuide({ sunDirection }: { sunDirection: [number, number, number] }) {
+    const points = useMemo(() => {
+        const sunPos = sunEclipticDisplayPosition(sunDirection);
+        const mercuryOrbitRadius = MERCURY_SEMI_MAJOR_AU * SUN_DISPLAY_DL;
+
+        // Anel centrado no Sol, raio = distância heliocêntrica de Mercúrio na escala visual.
+        // Mesma construção do buildDisplayedOrbitGuidePoints mas com raio diferente.
+        const earthDir = sunPos.clone().multiplyScalar(-1).normalize();
+        const tangent = new THREE.Vector3(-earthDir.z, 0, earthDir.x);
+        if (tangent.lengthSq() < 1e-6) tangent.set(1, 0, 0);
+        else tangent.normalize();
+
+        const pts: number[] = [];
+        for (let i = 0; i <= ORBIT_LINE_SEGMENTS; i += 1) {
+            const a = (i / ORBIT_LINE_SEGMENTS) * Math.PI * 2;
+            const pt = sunPos.clone()
+                .add(earthDir.clone().multiplyScalar(Math.cos(a) * mercuryOrbitRadius))
+                .add(tangent.clone().multiplyScalar(Math.sin(a) * mercuryOrbitRadius));
+            pts.push(pt.x, pt.y, pt.z);
+        }
+        return new Float32Array(pts);
+    }, [sunDirection]);
+
+    const lineObject = useMemo(
+        () => createOrbitLine(points, '#9aa0aa', 0.14),
+        [points],
+    );
+
+    useEffect(() => () => disposeOrbitLine(lineObject), [lineObject]);
+
+    if (points.length === 0) return null;
     return <primitive object={lineObject} />;
 }

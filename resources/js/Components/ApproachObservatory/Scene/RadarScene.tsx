@@ -10,10 +10,11 @@ import { Sun } from '../Bodies/Sun/Sun';
 import { Earth } from '../Bodies/Earth/Earth';
 import { Moon } from '../Bodies/Moon/Moon';
 import { MoonOrbit } from '../Bodies/Moon/MoonOrbit';
-import { DisplayedEarthOrbitGuide } from '../Trajectory/HeliocentricLines';
+import { Mercury } from '../Bodies/Mercury/Mercury';
+import { DisplayedEarthOrbitGuide, DisplayedMercuryOrbitGuide } from '../Trajectory/HeliocentricLines';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { RingsLayer } from '../Overlays/RingsLayer';
-import { LabelOccluderContext, useCompactLabelMode } from '../Overlays/SceneLabels';
+import { LabelOccluderContext, useCompactLabelMode, useHideAsteroidLabelsMode } from '../Overlays/SceneLabels';
 import { NowTrajectory } from '../Trajectory/NowTrajectory';
 import { HeliocentricScene } from './HeliocentricScene';
 import { CameraRig, InertialZoom, MAX_CAMERA_DISTANCE, type FocusFraming, framingForBody } from './CameraRig';
@@ -29,7 +30,6 @@ type RadarSceneProps = {
     selectedId: string | null;
     orbitMode: boolean;
     onSelect: (approach: UnifiedApproach) => void;
-    onClearSelection: () => void;
     cameraIntent: CameraIntent;
     focusTarget: FocusFraming | null;
     ephemeris: SceneEphemeris | null;
@@ -37,9 +37,13 @@ type RadarSceneProps = {
     fallbackSunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
     objectLimit: ObjectLimit;
+    onFocusMercury: () => void;
+    isMercuryFocused: boolean;
+    /** Chamado quando Terra ou Lua são focados de dentro da cena (clique no label/hitbox). */
+    onFocusBody: (body: 'earth' | 'moon') => void;
 };
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, onClearSelection, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, objectLimit }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, objectLimit, onFocusMercury, isMercuryFocused, onFocusBody }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -71,18 +75,22 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         () => ephemeris?.moonOrbitNormal ?? [0, 1, 0],
         [ephemeris],
     );
+    // Posição geocêntrica de Mercúrio em unidades de cena (já log-comprimida). Retorna null
+    // enquanto a efeméride não resolveu — o componente simplesmente não é renderizado até lá.
+    const mercuryPos = useMemo<[number, number, number] | null>(
+        () => ephemeris?.mercuryScenePosition ?? null,
+        [ephemeris],
+    );
     const compactLabels = useCompactLabelMode();
+    const hideAsteroidLabels = useHideAsteroidLabelsMode();
 
     // Clicar na Terra ou na Lua re-enquadra a câmera naquele corpo sem "selecioná-lo". Ambos usam
     // o mesmo enquadramento próximo (framingForBody), então o comportamento é idêntico seja
     // disparado da cena 3D, dos botões de anel ou da lista lateral. Uma seleção de objeto
     // (focusTarget) sempre vence e limpa qualquer foco de corpo.
     const [bodyFocus, setBodyFocus] = useState<{ body: 'earth' | 'moon'; framing: FocusFraming; nonce: number } | null>(null);
-    const focusEarth = () => {
-        onClearSelection();
-        setBodyFocus({ body: 'earth', framing: framingForBody(new THREE.Vector3(0, 0, 0), EARTH_RADIUS_DL), nonce: Date.now() });
-    };
-    const focusMoon = () => setBodyFocus({ body: 'moon', framing: framingForBody(new THREE.Vector3(...moonPos), MOON_RADIUS_DL), nonce: Date.now() });
+    const focusEarth = () => onFocusBody('earth');
+    const focusMoon = () => onFocusBody('moon');
 
     // Reagir a um foco de Terra/Lua solicitado de fora da cena. Chaveado pelo nonce de intenção
     // para que o mesmo corpo possa ser re-focado; usa o enquadramento próximo para ambos.
@@ -113,10 +121,13 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     const focusNonce = focusTarget ? cameraIntent.nonce : bodyFocus?.nonce ?? 0;
     const orbitLabelsOnly = orbitMode && selectedHasOrbit;
 
-    // Com 5 objetos: labels sempre visíveis (comportamento original).
+    // Com 5 objetos: labels visíveis enquanto perto o suficiente; distante demais → só selecionado.
     // Com 15 ou 30: label visível apenas no objeto selecionado; hover é tratado pelo AsteroidMarker.
-    const showLabelForObject = (id: string) =>
-        objectLimit === 5 ? (!orbitLabelsOnly || id === selectedId) : id === selectedId;
+    const showLabelForObject = (id: string) => {
+        if (id === selectedId) return !orbitLabelsOnly;
+        if (hideAsteroidLabels) return false;
+        return objectLimit === 5 && !orbitLabelsOnly;
+    };
 
     const focusedObjectPosition = focusedObject ? currentPositionInScene(focusedObject) : null;
     const labelOccluder = bodyFocus?.body === 'earth'
@@ -169,9 +180,15 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     />
                     <Moon onFocus={focusMoon} position={moonPos} sunDirection={sunDir} compactLabel={compactLabels} showLabel={!orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} />
                     <MoonOrbit moonPos={moonPos} orbitNormal={moonOrbitNormal} />
+                    {/* Mercúrio: planeta de ambientação — posição geocêntrica real via astronomy-engine.
+                        Renderizado somente após a efeméride resolver (mercuryPos !== null). */}
+                    {mercuryPos ? <Mercury position={mercuryPos} sunDirection={sunDir} locale={locale} onFocus={onFocusMercury} isFocused={isMercuryFocused} /> : null}
                     <RingsLayer onEarthFocus={focusEarth} showLabels={!compactLabels && !orbitLabelsOnly} />
                     {!orbitLabelsOnly ? (
-                        <DisplayedEarthOrbitGuide sunDirection={sunDir} />
+                        <>
+                            <DisplayedEarthOrbitGuide sunDirection={sunDir} />
+                            <DisplayedMercuryOrbitGuide sunDirection={sunDir} />
+                        </>
                     ) : null}
 
                     {/* Marcadores geocêntricos (próximos à Terra). A seleção nunca move a rocha. */}

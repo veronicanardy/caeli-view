@@ -95,6 +95,13 @@ export type SceneEphemeris = {
      * Earth at its real position on its 1 AU orbit (with eccentricity ~0.017 honestly applied).
      */
     earthHelioPositionAU: { x: number; y: number; z: number };
+    /**
+     * Mercury's geocentric position in scene units (log-compressed DL), ready to pass directly
+     * to a THREE.Group position. Derived from astronomy-engine GeoVector(Body.Mercury) rotated
+     * to ecliptic J2000, then through the same horizonsToScene pipeline used for Moon/asteroids.
+     * Null until the async ephemeris resolves.
+     */
+    mercuryScenePosition: [number, number, number];
 };
 
 let modulePromise: Promise<typeof Astronomy> | null = null;
@@ -200,6 +207,54 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         const earthHelioEcl = A.RotateVector(eqjToEclMatrix(A), earthHelioEqj);
         const earthHelioPositionAU = { x: earthHelioEcl.x, y: earthHelioEcl.y, z: earthHelioEcl.z };
 
+        // Mercury: scene position derived from its HELIOCENTRIC vector so it lies on the
+        // heliocentric orbit ring drawn in the radar scene.
+        //
+        // WHY heliocentric and not geocentric (GeoVector):
+        //   The orbit ring (DisplayedMercuryOrbitGuide) is centred on the displayed Sun and
+        //   has radius = MERCURY_SEMI_MAJOR_AU × SUN_DISPLAY_DL — a heliocentric construction.
+        //   Placing Mercury via GeoVector (geocentric) would put it somewhere unrelated to that
+        //   ring because the geocentric distance varies from ~0.5 to ~1.5 AU as Mercury orbits.
+        //   Using the heliocentric vector guarantees the planet dot sits exactly on its ring.
+        //
+        // Pipeline:
+        //   HelioVector(Mercury) → EQJ → ecliptic J2000 → scene axes (x, z, y) with LINEAR AU
+        //   scale (ORBIT_AU_SCALE = SUN_DISPLAY_DL) → add Sun scene position → final scene coords.
+        //   The linear scale matches the orbit ring builder; no log compression needed here because
+        //   we are working in the heliocentric sub-layer (same convention as buildHeliocentricOrbit).
+        // Mercury: position in the radar scene, consistent with DisplayedMercuryOrbitGuide.
+        //
+        // The orbit ring lives in the Y=0 plane (scene ecliptic plane). It is centred on the
+        // Sun projected onto Y=0: sunEclipticCenter = normalize2D(sunDir.xz) × SUN_DISPLAY_DL.
+        // Points on the ring are at distance MERCURY_SEMI_MAJOR_AU × SUN_DISPLAY_DL from that
+        // centre, sweeping the XZ plane.
+        //
+        // To place Mercury ON that ring we need its heliocentric angle in the ecliptic XZ plane.
+        // We get that from HelioVector(Mercury) → ecliptic J2000 → project onto XZ (drop ecl.z,
+        // which maps to scene Y) → normalize → scale by MERCURY_SEMI_MAJOR_AU × SUN_DISPLAY_DL.
+        // Then offset by the Sun's ecliptic-projected scene position.
+        const mercuryHelioEqj = A.HelioVector(A.Body.Mercury, date);
+        const mercuryHelioEcl = A.RotateVector(eqjToEclMatrix(A), mercuryHelioEqj);
+
+        // Heliocentric direction of Mercury in the ecliptic XZ plane (drop ecl.z = scene Y).
+        // ecl.x → scene X,  ecl.y → scene Z  (the Y↔Z swap; ecl.z is ecliptic north = scene Y)
+        const mRawX = mercuryHelioEcl.x;
+        const mRawZ = mercuryHelioEcl.y;   // ecliptic Y → scene Z
+        const mLen = Math.hypot(mRawX, mRawZ) || 1;
+
+        // Sun ecliptic-projected centre (same as sunEclipticDisplayPosition in sunGeometry.ts)
+        const sunDirLen = Math.hypot(sunDirection[0], sunDirection[2]) || 1;
+        const sunEclX = (sunDirection[0] / sunDirLen) * SUN_DISPLAY_DL;
+        const sunEclZ = (sunDirection[2] / sunDirLen) * SUN_DISPLAY_DL;
+
+        // Place Mercury at MERCURY_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun in its direction
+        const mercuryOrbitRadius = 0.387 * SUN_DISPLAY_DL;
+        const mercuryScenePosition: [number, number, number] = [
+            sunEclX + (mRawX / mLen) * mercuryOrbitRadius,
+            0,   // Y=0: stays in the ecliptic plane, same as the ring
+            sunEclZ + (mRawZ / mLen) * mercuryOrbitRadius,
+        ];
+
         return {
             sunDirection,
             sunScenePosition,
@@ -210,6 +265,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             subsolarLatDeg,
             subsolarLonDeg,
             earthHelioPositionAU,
+            mercuryScenePosition,
         };
     } catch {
         return null;
