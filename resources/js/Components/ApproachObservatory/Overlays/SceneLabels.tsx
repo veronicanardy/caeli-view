@@ -8,6 +8,9 @@ import * as THREE from 'three';
  * módulo de labels seja autossuficiente.
  */
 const COMPACT_LABEL_THRESHOLD_PX = 92;
+// Abaixo deste limiar a região Terra-Lua é pequena demais para exibir labels de asteroides
+// sem amontoamento — esconde todos (exceto o selecionado, tratado pelo chamador).
+const HIDE_ASTEROID_LABELS_THRESHOLD_PX = 40;
 const LABEL_HIDE_MIN_RADIUS_PX = 56;
 const LABEL_HIDE_BODY_PADDING_PX = 72;
 
@@ -218,6 +221,36 @@ export function useCompactLabelMode(): boolean {
     });
 
     return compact;
+}
+
+/**
+ * Retorna true quando a câmera está longe demais da Terra para exibir labels de asteroides
+ * sem amontoamento. Usa a mesma projeção de 1 DL que useCompactLabelMode, mas com um limiar
+ * menor — quando a região Terra-Lua encolhe abaixo de HIDE_ASTEROID_LABELS_THRESHOLD_PX, os
+ * labels de rochas devem ser ocultados (exceto o objeto selecionado, responsabilidade do chamador).
+ */
+export function useHideAsteroidLabelsMode(): boolean {
+    const { camera, size } = useThree();
+    const controls = useThree((s) => s.controls) as unknown as { target?: THREE.Vector3 } | null;
+    const [hide, setHide] = useState(false);
+    const hideRef = useRef(false);
+
+    useFrame(() => {
+        const target = controls?.target ?? new THREE.Vector3(0, 0, 0);
+        const center = target.clone().project(camera);
+        const oneDl = target.clone().add(new THREE.Vector3(1, 0, 0)).project(camera);
+        const lunarRadiusPx = Math.hypot(
+            (oneDl.x - center.x) * size.width * 0.5,
+            (oneDl.y - center.y) * size.height * 0.5,
+        );
+        const next = lunarRadiusPx < HIDE_ASTEROID_LABELS_THRESHOLD_PX;
+        if (next !== hideRef.current) {
+            hideRef.current = next;
+            setHide(next);
+        }
+    });
+
+    return hide;
 }
 
 /**

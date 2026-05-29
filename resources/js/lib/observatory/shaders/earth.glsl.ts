@@ -75,9 +75,9 @@ export const EARTH_FRAG = /* glsl */ `
 
         float lambert = dot(normal, sun);
 
-        // O lado diurno começa mais tarde e a transição fica mais longa.
-        // Isso faz o lado escuro "tomar" mais da Terra e evita corte duro.
-        float dayAmount = smoothstep(0.04, 0.30, lambert);
+        // Faixa de crepúsculo: terminator centrado em lambert=0 (horizonte solar real).
+        // -0.10 a +0.42 cobre ~25° de ângulo solar (crepúsculo civil + náutico + astronômico).
+        float dayAmount = smoothstep(-0.10, 0.42, lambert);
 
         vec3 dayColor = toLinear(texture2D(dayMap, vUv).rgb);
         vec3 nightTex = toLinear(texture2D(nightMap, vUv).rgb);
@@ -86,10 +86,11 @@ export const EARTH_FRAG = /* glsl */ `
         float lit = clamp(lambert, 0.0, 1.0);
         vec3 dayLit = dayColor * (0.48 + 0.95 * pow(lit, 0.78));
 
-        // Lado noturno: permanece por mais área e some de forma mais gradual.
-        float nightAmount = 1.0 - smoothstep(-0.04, 0.22, lambert);
-        vec3 cityLights = nightTex * nightAmount * 1.18;
-        vec3 nightLit = dayColor * 0.012 + cityLights;
+        // Luzes urbanas: somem em lambert=0.08 (Sol 5° acima do horizonte).
+        // Isso evita que as luzes "vazem" para o lado iluminado perto do terminador.
+        float nightAmount = 1.0 - smoothstep(-0.18, 0.08, lambert);
+        vec3 cityLights = nightTex * nightAmount * 1.08;
+        vec3 nightLit = dayColor * 0.010 + cityLights;
 
         vec3 color = mix(nightLit, dayLit, dayAmount);
 

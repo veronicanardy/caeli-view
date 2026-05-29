@@ -70,11 +70,13 @@ export function MapManualModal({
         if (!dragging && !resizing) return;
         const onMove = (event: PointerEvent) => {
             if (dragging && dragRef.current) {
-                setBox((b) => clampManualBox(event.clientX - dragRef.current!.offsetX, event.clientY - dragRef.current!.offsetY, b.width, b.height));
+                const { offsetX, offsetY } = dragRef.current;
+                setBox((b) => clampManualBox(event.clientX - offsetX, event.clientY - offsetY, b.width, b.height));
             } else if (resizing && resizeRef.current) {
-                const dx = event.clientX - resizeRef.current.startX;
-                const dy = event.clientY - resizeRef.current.startY;
-                setBox((b) => clampManualBox(b.x, b.y, resizeRef.current!.startWidth + dx, resizeRef.current!.startHeight + dy));
+                const { startX, startY, startWidth, startHeight } = resizeRef.current;
+                const dx = event.clientX - startX;
+                const dy = event.clientY - startY;
+                setBox((b) => clampManualBox(b.x, b.y, startWidth + dx, startHeight + dy));
             }
         };
         const onUp = () => {

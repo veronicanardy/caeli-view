@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import type { ObjectLimit, SelectionMode } from '@/types';
 
 type Props = {
@@ -45,8 +46,9 @@ const MODE_OPTIONS: ModeOption[] = [
 ];
 
 /**
- * Controles discretos do radar: chips de quantidade (5/15/30) e select de critério de seleção.
- * Posicionado no painel de cabeçalho acima da cena 3D.
+ * Controles discretos do radar: chips de quantidade (5/15/30) e dropdown customizado de critério.
+ * O dropdown é implementado com divs para permitir estilização completa — o <select> nativo
+ * não aceita CSS nas <option> abertas (fundo branco ilegível no tema escuro).
  */
 export function RadarObjectControls({
     objectLimit,
@@ -58,13 +60,35 @@ export function RadarObjectControls({
 }: Props) {
     const en = locale === 'en';
     const currentMode = MODE_OPTIONS.find((o) => o.value === selectionMode) ?? MODE_OPTIONS[0];
+    const [open, setOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Fecha ao clicar fora
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    // Fecha com Escape
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [open]);
 
     return (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
 
             {/* Chips de quantidade */}
             <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-white/45 uppercase tracking-wide select-none">
+                <span className="select-none text-[11px] uppercase tracking-wide text-white/45">
                     {en ? 'Show' : 'Exibir'}
                 </span>
                 <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-0.5">
@@ -87,37 +111,64 @@ export function RadarObjectControls({
                         </button>
                     ))}
                 </div>
+                <span className="select-none text-[11px] uppercase tracking-wide text-white/45">
+                    {en ? 'Objects' : 'Objetos'}
+                </span>
             </div>
 
-            {/* Select de critério */}
+            {/* Dropdown customizado de critério */}
             <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-white/45 uppercase tracking-wide select-none">
+                <span className="select-none text-[11px] uppercase tracking-wide text-white/45">
                     {en ? 'Criterion' : 'Critério'}
                 </span>
-                <div className="relative">
-                    <select
-                        value={selectionMode}
+                <div ref={containerRef} className="relative">
+                    <button
+                        type="button"
                         disabled={loading}
-                        onChange={(e) => onModeChange(e.target.value as SelectionMode)}
+                        onClick={() => setOpen((v) => !v)}
                         title={en ? currentMode.tooltipEn : currentMode.tooltipPt}
+                        aria-haspopup="listbox"
+                        aria-expanded={open}
                         aria-label={en ? 'Selection criterion' : 'Critério de seleção'}
                         className={[
-                            'appearance-none rounded-full border border-white/15 bg-white/[0.06]',
-                            'pl-3 pr-7 py-0.5 text-[12px] text-white/80 transition',
-                            'outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                            'flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06]',
+                            'pl-3 pr-2.5 py-0.5 text-[12px] text-white/80 transition outline-none',
+                            'focus-visible:ring-2 focus-visible:ring-signal-cyan',
                             'hover:border-white/25 hover:text-white cursor-pointer disabled:cursor-wait',
                         ].join(' ')}
                     >
-                        {MODE_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                                {en ? opt.labelEn : opt.labelPt}
-                            </option>
-                        ))}
-                    </select>
-                    {/* Seta custom — o select nativo não deixa estilizar o ícone */}
-                    <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/40" aria-hidden>
-                        ▾
-                    </span>
+                        <span>{en ? currentMode.labelEn : currentMode.labelPt}</span>
+                        <span className="text-white/40" aria-hidden>▾</span>
+                    </button>
+
+                    {open ? (
+                        <ul
+                            role="listbox"
+                            aria-label={en ? 'Selection criterion' : 'Critério de seleção'}
+                            className="absolute left-0 top-full z-50 mt-1 min-w-full overflow-hidden rounded-lg border border-white/12 bg-space-950 shadow-glow"
+                        >
+                            {MODE_OPTIONS.map((opt) => {
+                                const selected = opt.value === selectionMode;
+                                return (
+                                    <li
+                                        key={opt.value}
+                                        role="option"
+                                        aria-selected={selected}
+                                        title={en ? opt.tooltipEn : opt.tooltipPt}
+                                        onClick={() => { onModeChange(opt.value); setOpen(false); }}
+                                        className={[
+                                            'cursor-pointer whitespace-nowrap px-3.5 py-2 text-[12px] transition-colors',
+                                            selected
+                                                ? 'bg-signal-cyan/15 text-signal-cyan'
+                                                : 'text-white/70 hover:bg-white/[0.06] hover:text-white',
+                                        ].join(' ')}
+                                    >
+                                        {en ? opt.labelEn : opt.labelPt}
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    ) : null}
                 </div>
             </div>
 
@@ -128,7 +179,7 @@ export function RadarObjectControls({
 
             {/* Aviso sutil quando 15 ou 30 objetos ativos */}
             {objectLimit > 5 ? (
-                <span className="text-[11px] text-white/35 select-none">
+                <span className="select-none text-[11px] text-white/35">
                     {en
                         ? 'More objects — scene gets denser. Take your time.'
                         : 'Mais objetos — a cena fica mais densa. Explore com calma.'}
