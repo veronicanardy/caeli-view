@@ -10,7 +10,7 @@ import { Sun } from '../Bodies/Sun/Sun';
 import { Earth } from '../Bodies/Earth/Earth';
 import { Moon } from '../Bodies/Moon/Moon';
 import { MoonOrbit } from '../Bodies/Moon/MoonOrbit';
-import { DisplayedEarthOrbitGuide } from '../Bodies/HeliocentricLines';
+import { DisplayedEarthOrbitGuide } from '../Trajectory/HeliocentricLines';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { RingsLayer } from '../Overlays/RingsLayer';
 import { LabelOccluderContext, useCompactLabelMode } from '../Overlays/SceneLabels';
@@ -162,8 +162,9 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         subsolarLonDeg={ephemeris?.subsolarLonDeg ?? 0}
                         showLabel={!orbitLabelsOnly}
                         protectLabelFromFocus={bodyFocus?.body !== 'earth'}
+                        isFocused={bodyFocus?.body === 'earth'}
                     />
-                    <Moon onFocus={focusMoon} position={moonPos} sunDirection={sunDir} compactLabel={compactLabels} showLabel={!orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isApproximate={!ephemeris} locale={locale} />
+                    <Moon onFocus={focusMoon} position={moonPos} sunDirection={sunDir} compactLabel={compactLabels} showLabel={!orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} />
                     <MoonOrbit moonPos={moonPos} orbitNormal={moonOrbitNormal} />
                     <RingsLayer onEarthFocus={focusEarth} showLabels={!compactLabels && !orbitLabelsOnly} />
                     {!orbitLabelsOnly ? (

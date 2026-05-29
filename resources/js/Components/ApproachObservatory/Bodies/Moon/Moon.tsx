@@ -16,6 +16,8 @@ export interface MoonProps {
     protectLabelFromFocus: boolean;
     isApproximate: boolean;
     locale: 'pt-BR' | 'en';
+    /** When true, the Moon is the current camera focus — disable click/hover. */
+    isFocused?: boolean;
 }
 
 export function Moon({
@@ -27,6 +29,7 @@ export function Moon({
     protectLabelFromFocus,
     isApproximate,
     locale,
+    isFocused = false,
 }: MoonProps) {
     const en = locale === 'en';
     const [hovered, setHovered] = useState(false);
@@ -101,15 +104,17 @@ export function Moon({
             {/* Preenchimento suave por earthshine, limitado à Lua para não afetar Terra/asteroides. */}
             <pointLight position={fillPos} intensity={0.05} distance={MOON_RADIUS_DL * 6} color="#3a4a6a" />
 
-            {/* Hitbox invisível para hover/click. Clique centraliza a câmera na Lua sem abrir painel de foco. */}
-            <mesh
-                onPointerOver={handlePointerOver}
-                onPointerOut={handlePointerOut}
-                onClick={handleClick}
-            >
-                <sphereGeometry args={[MOON_HITBOX_DL, 16, 16]} />
-                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-            </mesh>
+            {/* Hitbox invisível para hover/click. Quando a Lua já está em foco, o hitbox é removido. */}
+            {!isFocused ? (
+                <mesh
+                    onPointerOver={handlePointerOver}
+                    onPointerOut={handlePointerOut}
+                    onClick={handleClick}
+                >
+                    <sphereGeometry args={[MOON_HITBOX_DL, 16, 16]} />
+                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+            ) : null}
 
             {showLabel ? (
                 <DistanceCulledScreenLabel

@@ -22,38 +22,14 @@ const HITBOX_SPHERE_SEGMENTS = 16;
 const LABEL_POSITION: [number, number, number] = [0, EARTH_RADIUS_DL + 0.14, 0];
 
 interface EarthProps {
-    /**
-     * Callback chamado quando o usuário clica na Terra para recentralizar a câmera.
-     */
     onFocus: () => void;
-
-    /**
-     * Vetor da direção do Sol no sistema de coordenadas da cena.
-     *
-     * Esse vetor é usado pelos shaders para determinar qual hemisfério está
-     * iluminado e também por `orientEarth` para alinhar o ponto subsolar.
-     */
     sunDirection: [number, number, number];
-
-    /**
-     * Latitude, em graus, do ponto da Terra onde o Sol está diretamente acima.
-     */
     subsolarLatDeg: number;
-
-    /**
-     * Longitude, em graus, do ponto da Terra onde o Sol está diretamente acima.
-     */
     subsolarLonDeg: number;
-
-    /**
-     * Define se o rótulo "Terra" deve ser exibido.
-     */
     showLabel: boolean;
-
-    /**
-     * Evita que o rótulo conflite visualmente com o objeto em foco.
-     */
     protectLabelFromFocus: boolean;
+    /** When true, the Earth is the current camera focus — disable click/hover. */
+    isFocused?: boolean;
 }
 
 function safeSetCursor(value: string) {
@@ -89,6 +65,7 @@ export function Earth({
     subsolarLonDeg,
     showLabel,
     protectLabelFromFocus,
+    isFocused = false,
 }: EarthProps) {
     /**
      * Textura diurna da Terra. Usa `raw` porque o shader customizado controla
@@ -294,15 +271,18 @@ export function Earth({
 
             {/* Hitbox invisível para facilitar hover/clique.
                 Clicar na Terra recentraliza a câmera nela como atalho de visão.
-                A Terra é contexto da cena, então não abre painel de foco. */}
-            <mesh
-                onPointerOver={handlePointerOver}
-                onPointerOut={handlePointerOut}
-                onClick={handleClick}
-            >
-                <sphereGeometry args={[EARTH_HITBOX_DL, HITBOX_SPHERE_SEGMENTS, HITBOX_SPHERE_SEGMENTS]} />
-                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-            </mesh>
+                A Terra é contexto da cena, então não abre painel de foco.
+                Quando já está em foco, o hitbox é removido para evitar hover/clique. */}
+            {!isFocused ? (
+                <mesh
+                    onPointerOver={handlePointerOver}
+                    onPointerOut={handlePointerOut}
+                    onClick={handleClick}
+                >
+                    <sphereGeometry args={[EARTH_HITBOX_DL, HITBOX_SPHERE_SEGMENTS, HITBOX_SPHERE_SEGMENTS]} />
+                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+            ) : null}
 
             {showLabel ? (
                 <ScreenLabel

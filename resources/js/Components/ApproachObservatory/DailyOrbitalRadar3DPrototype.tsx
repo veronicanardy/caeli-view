@@ -116,7 +116,12 @@ export function DailyOrbitalRadar3DPrototype({
     };
 
     const selectObject = (approach: UnifiedApproach) => {
-        setOrbitMode(false); // every new selection starts as a close-up on the asteroid
+        const newObject = closestNowObjects.find((o) => o.approach.id === approach.id);
+        const newHasOrbit = Boolean(newObject?.trajectory?.orbitalElements);
+        // Stay in orbit mode if the new object also has orbital data; otherwise reset to close-up.
+        if (!orbitMode || !newHasOrbit) {
+            setOrbitMode(false);
+        }
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
         onSelect(approach);
     };
@@ -163,20 +168,21 @@ export function DailyOrbitalRadar3DPrototype({
 
     return (
         <section className="space-y-3">
-            <div className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-100">
-                <strong className="font-semibold">{en ? 'Prototype' : 'Protótipo'}:</strong>{' '}
-                {activeMode === 'orbit'
-                    ? (en
-                        ? 'Orbit mode: linear AU scale centred on the Sun. The asteroid is propagated by Kepler so it sits exactly on the drawn ellipse.'
-                        : 'Modo órbita: escala linear em UA centrada no Sol. O asteroide é propagado por Kepler — fica exatamente sobre a elipse desenhada.')
-                    : (en
-                        ? 'Radar mode: geocentric X/Y/Z from JPL Horizons, centred on Earth. Radial distance is log-compressed; direction (and orbital inclination) stay honest — inclined asteroids visibly sit above or below the Moon plane.'
-                        : 'Modo radar: X/Y/Z geocêntricos do JPL Horizons, centrado na Terra. A distância radial é comprimida em log; a direção (e a inclinação orbital) permanecem honestas — asteroides com inclinação aparecem visivelmente acima ou abaixo do plano da Lua.')}
+            <div>
+                <h2 className="text-lg font-bold text-white">
+                    {en ? 'Orbital radar of the day' : 'Radar orbital do dia'}
+                </h2>
+                <p className="text-sm text-white/60">
+                    <span className="mr-2 font-medium text-white/80">{en ? 'Current position' : 'Posição atual'}</span>
+                    {en
+                        ? `Showing the 5 closest objects to Earth right now.`
+                        : `Mostrando os 5 objetos mais próximos da Terra agora.`}
+                </p>
             </div>
 
             <div className="relative h-[72vh] min-h-[640px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d] sm:h-[78vh] sm:min-h-[760px]">
                 <Canvas
-                    camera={{ position: CAMERA_VIEWS.perspective.toArray(), fov: CAMERA_FOV_DEG, near: 0.01, far: MAX_CAMERA_DISTANCE * 3 }}
+                    camera={{ position: [0, 4.5, 9], fov: CAMERA_FOV_DEG, near: 0.01, far: MAX_CAMERA_DISTANCE * 3 }}
                     dpr={[1, 1.6]}
                     gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
                 >
@@ -313,8 +319,6 @@ export function DailyOrbitalRadar3DPrototype({
                 ) : null}
 
                 <SceneLegend lunarReference={lunarReference} locale={locale} mode={activeMode} />
-
-                <ModeChips mode={activeMode} locale={locale} />
             </div>
         </section>
     );
@@ -378,43 +382,6 @@ function SceneLegend({ lunarReference, locale, mode }: { lunarReference: LunarRe
 }
 
 
-/**
- * Persistent chip cluster bottom-left: a quick, always-visible summary of the active scale, scene
- * centre and data provenance — so the user never has to guess which ruler they're reading.
- * Different content per mode so neither set of claims overstates what the scene actually delivers.
- */
-function ModeChips({ mode, locale }: { mode: SceneMode; locale: 'pt-BR' | 'en' }) {
-    const en = locale === 'en';
-    const chips = mode === 'orbit'
-        ? [
-              en ? 'Heliocentric orbit · linear AU · Sun at focus' : 'Órbita heliocêntrica · UA linear · Sol no foco',
-              en ? 'Kepler orbit · Horizons osculating elements' : 'Órbita Kepler · elementos osculadores Horizons',
-              en ? 'Position propagated by Kepler’s equation' : 'Posição propagada pela equação de Kepler',
-              en ? 'Earth axial tilt 23.44° (real)' : 'Inclinação axial da Terra 23,44° (real)',
-              en ? 'Body sizes amplified for visibility' : 'Tamanhos ampliados para leitura',
-          ]
-        : [
-              en ? 'Earth-relative trajectory · log radial scale' : 'Trajetória relativa à Terra · escala log radial',
-              en ? 'Real geocentric positions · JPL Horizons' : 'Posições reais geocêntricas · JPL Horizons',
-              en ? 'Direction honest · radial magnitude compressed' : 'Direção honesta · magnitude radial comprimida',
-              en ? 'Day/night from the real Sun direction' : 'Dia/noite pela direção real do Sol',
-              en ? 'Earth axial tilt 23.44° (real)' : 'Inclinação axial da Terra 23,44° (real)',
-              en ? 'Body sizes amplified for visibility' : 'Tamanhos ampliados para leitura',
-          ];
-
-    return (
-        <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex max-w-[min(28rem,46%)] flex-wrap gap-1.5">
-            {chips.map((label) => (
-                <span
-                    key={label}
-                    className="rounded-full border border-white/10 bg-space-950/82 px-2.5 py-0.5 text-[11px] font-medium text-white/70 backdrop-blur"
-                >
-                    {label}
-                </span>
-            ))}
-        </div>
-    );
-}
 
 /**
  * Computes Sun direction + Moon position with astronomy-engine, refreshing on a short cadence so

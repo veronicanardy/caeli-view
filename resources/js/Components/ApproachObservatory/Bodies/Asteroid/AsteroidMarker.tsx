@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
-import { compactKm } from '@/lib/format';
 import {
     closestApproachNearPosition,
     currentPositionInScene,
@@ -30,6 +29,7 @@ const ROTATION_X_SPEED = 0.018;
  */
 type AsteroidMarkerProps = {
     object: ClosestNowObject;
+    palette: { future: string; current: string; past: string };
     isSelected: boolean;
     dimmed: boolean;
     onSelect: (approach: UnifiedApproach) => void;
@@ -56,10 +56,11 @@ type AsteroidMarkerProps = {
  */
 export function AsteroidMarker({
     object,
+    palette: _palette,
     isSelected,
     dimmed,
     onSelect,
-    compactLabel,
+    compactLabel: _compactLabel,
     showLabel,
     protectLabelFromFocus,
     locale,
@@ -104,24 +105,26 @@ export function AsteroidMarker({
                 )}
             </group>
 
-            <mesh
-                onPointerOver={(e) => {
-                    e.stopPropagation();
-                    setHovered(true);
-                    document.body.style.cursor = 'pointer';
-                }}
-                onPointerOut={() => {
-                    setHovered(false);
-                    document.body.style.cursor = '';
-                }}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onSelect(object.approach);
-                }}
-            >
-                <sphereGeometry args={[HITBOX_RADIUS, HITBOX_SEGMENTS, HITBOX_SEGMENTS]} />
-                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-            </mesh>
+            {!isSelected ? (
+                <mesh
+                    onPointerOver={(e) => {
+                        e.stopPropagation();
+                        setHovered(true);
+                        document.body.style.cursor = 'pointer';
+                    }}
+                    onPointerOut={() => {
+                        setHovered(false);
+                        document.body.style.cursor = '';
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onSelect(object.approach);
+                    }}
+                >
+                    <sphereGeometry args={[HITBOX_RADIUS, HITBOX_SEGMENTS, HITBOX_SEGMENTS]} />
+                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+            ) : null}
 
             {showLabel ? (
                 <ScreenLabel
@@ -134,13 +137,6 @@ export function AsteroidMarker({
                     <div className="font-semibold">
                         {object.approach.displayName ?? object.approach.name}
                     </div>
-
-                    {!compactLabel ? (
-                        <div className="text-white/65">
-                            {compactKm(object.currentDistanceKm)} ·{' '}
-                            {object.currentDistanceLD !== null ? `${object.currentDistanceLD.toFixed(2)} DL` : '—'}
-                        </div>
-                    ) : null}
 
                     {nearbyClosestApproach ? (
                         <div className="mt-1 rounded border border-signal-cyan/35 bg-signal-cyan/10 px-2 py-1 text-[12px] font-semibold text-signal-cyan">
