@@ -98,6 +98,13 @@ export function DailyOrbitalRadar3DPrototype({
     //   - orbit (orbitMode = true): the camera pulls BACK to frame its full orbit around the Sun.
     // Selecting any object always starts in close-up; the "Ver órbita" button switches to orbit.
     const [orbitMode, setOrbitMode] = useState(false);
+    const [sceneTransitioning, setSceneTransitioning] = useState(false);
+
+    const triggerTransition = (fn: () => void) => {
+        setSceneTransitioning(true);
+        fn();
+        setTimeout(() => setSceneTransitioning(false), 420);
+    };
 
     // When an object is selected, compute a framing that keeps Earth + object + (a slice of) the
     // trajectory all in view. Null when nothing is selected → fall back to the preset view.
@@ -127,14 +134,14 @@ export function DailyOrbitalRadar3DPrototype({
     };
 
     // Toggle to the orbit framing (or back to the close-up) for the currently focused object.
-    const showOrbit = () => {
+    const showOrbit = () => triggerTransition(() => {
         setOrbitMode(true);
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
-    };
-    const showCloseUp = () => {
+    });
+    const showCloseUp = () => triggerTransition(() => {
         setOrbitMode(false);
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
-    };
+    });
 
     // Lets the side list focus Earth/Moon (the camera work lives in <RadarScene>). We bump the
     // intent nonce so the same body can be re-focused, and clear any object selection first.
@@ -332,6 +339,15 @@ export function DailyOrbitalRadar3DPrototype({
                         onShowCloseUp={showCloseUp}
                         locale={locale}
                     />
+                ) : null}
+
+                {sceneTransitioning ? (
+                    <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
+                        <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-space-950/90 px-4 py-2.5 text-[13px] text-white/70 shadow-glow">
+                            <span className="size-2 animate-pulse rounded-full bg-signal-cyan" aria-hidden />
+                            {en ? 'Loading…' : 'Carregando…'}
+                        </div>
+                    </div>
                 ) : null}
 
                 <SceneLegend lunarReference={lunarReference} locale={locale} mode={activeMode} />
