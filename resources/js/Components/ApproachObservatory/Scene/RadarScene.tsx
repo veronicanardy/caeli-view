@@ -1,7 +1,7 @@
 import { OrbitControls } from '@react-three/drei';
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
-import type { AsteroidTrajectory, ClosestNowObject, UnifiedApproach } from '@/types';
+import type { AsteroidTrajectory, ClosestNowObject, ObjectLimit, UnifiedApproach } from '@/types';
 import { compressDistanceDl, compressSceneVector, SUN_DISPLAY_DL, type SceneEphemeris } from '@/lib/sceneEphemeris';
 import { currentPositionInScene } from '@/lib/observatory/trajectorySampling';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
@@ -36,9 +36,10 @@ type RadarSceneProps = {
     /** Server-seeded Sun direction used until the ephemeris resolves. Never an arbitrary vector. */
     fallbackSunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
+    objectLimit: ObjectLimit;
 };
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, onClearSelection, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, onClearSelection, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, objectLimit }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -111,6 +112,12 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     const activeFocus = focusTarget ?? bodyFocus?.framing ?? null;
     const focusNonce = focusTarget ? cameraIntent.nonce : bodyFocus?.nonce ?? 0;
     const orbitLabelsOnly = orbitMode && selectedHasOrbit;
+
+    // Com 5 objetos: labels sempre visíveis (comportamento original).
+    // Com 15 ou 30: label visível apenas no objeto selecionado; hover é tratado pelo AsteroidMarker.
+    const showLabelForObject = (id: string) =>
+        objectLimit === 5 ? (!orbitLabelsOnly || id === selectedId) : id === selectedId;
+
     const focusedObjectPosition = focusedObject ? currentPositionInScene(focusedObject) : null;
     const labelOccluder = bodyFocus?.body === 'earth'
         ? { center: new THREE.Vector3(0, 0, 0), radius: EARTH_RADIUS_DL * 1.35 }
@@ -177,16 +184,22 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                             dimmed={hasSelection && object.approach.id !== selectedId}
                             onSelect={onSelect}
                             compactLabel={compactLabels}
-                            showLabel={!orbitLabelsOnly || object.approach.id === selectedId}
+                            showLabel={showLabelForObject(object.approach.id)}
                             protectLabelFromFocus={object.approach.id !== selectedId}
                             locale={locale}
                         />
                     ))}
 
-                    {/* Trajetórias geocêntricas locais "agora" — só fazem sentido na camada de radar. */}
+                    {/* Trajetórias geocêntricas locais "agora" — só fazem sentido na camada de radar.
+                        Com 30 objetos renderiza trajetória apenas para o selecionado para evitar
+                        poluição visual e manter performance (~1800 vértices se todos renderizassem). */}
                     {closestNowObjects
                         .map((object, index) => ({ object, palette: OBJECT_PALETTE[index % OBJECT_PALETTE.length] }))
-                        .filter(({ object }) => object.trajectory && object.trajectory.status === 'available')
+                        .filter(({ object }) => {
+                            if (!object.trajectory || object.trajectory.status !== 'available') return false;
+                            if (objectLimit === 30 && object.approach.id !== selectedId) return false;
+                            return true;
+                        })
                         .map(({ object, palette }) => {
                             const activeTrajectory = object.approach.id === selectedId;
                             return (
