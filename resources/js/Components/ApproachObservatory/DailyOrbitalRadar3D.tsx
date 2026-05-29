@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createPortal } from 'react-dom';
-import { BookOpen, ChevronDown } from 'lucide-react';
+import { BookOpen, ChevronDown, Maximize2, Minimize2 } from 'lucide-react';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { computeSceneEphemeris, KM_PER_AU, type SceneEphemeris } from '@/lib/sceneEphemeris';
@@ -14,6 +14,7 @@ import { OrbitWelcomeToast, RadarWelcomeToast } from './Controls/WelcomeToast';
 import { FocusCard } from './Panels/FocusCard';
 import { BodyInfoCard } from './Panels/BodyInfoCard';
 import { RadarScene } from './Scene/RadarScene';
+import { LabelNoGoContext, type NoGoRect } from './Overlays/SceneLabels';
 import {
     CAMERA_FOV_DEG,
     MAX_CAMERA_DISTANCE,
@@ -158,6 +159,39 @@ export function DailyOrbitalRadar3D({
     const activeMode: SceneMode = deriveActiveMode(orbitMode, focusedObject);
 
     const [manualOpen, setManualOpen] = useState(false);
+    const [fullscreen, setFullscreen] = useState(false);
+    const sidePanelRef = useRef<HTMLDivElement>(null);
+    const canvasContainerRef = useRef<HTMLDivElement>(null);
+    const [noGoRect, setNoGoRect] = useState<NoGoRect>(null);
+
+    // Recalcula o rect do painel lateral relativo ao canvas sempre que o layout muda
+    useEffect(() => {
+        const update = () => {
+            const panel = sidePanelRef.current;
+            const canvas = canvasContainerRef.current;
+            if (!panel || !canvas) return;
+            const panelRect = panel.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+            setNoGoRect({
+                left:   panelRect.left   - canvasRect.left,
+                top:    panelRect.top    - canvasRect.top,
+                right:  panelRect.right  - canvasRect.left,
+                bottom: panelRect.bottom - canvasRect.top,
+            });
+        };
+        update();
+        const observer = new ResizeObserver(update);
+        if (sidePanelRef.current) observer.observe(sidePanelRef.current);
+        if (canvasContainerRef.current) observer.observe(canvasContainerRef.current);
+        return () => observer.disconnect();
+    }, [fullscreen]);
+
+    useEffect(() => {
+        if (!fullscreen) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false); };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [fullscreen]);
 
     const pickView = (key: CameraViewKey) => {
         onClearSelection?.();
@@ -170,6 +204,7 @@ export function DailyOrbitalRadar3D({
         if (!orbitMode || !newHasOrbit) setOrbitMode(false);
         setBodyCardOpen(null);
         setMercuryFocusTarget(null);
+        setVenusFocusTarget(null);
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
         onSelect(approach);
     };
@@ -184,8 +219,9 @@ export function DailyOrbitalRadar3D({
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
     });
 
-    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'mercury' | null>(null);
+    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'mercury' | 'venus' | null>(null);
     const [mercuryFocusTarget, setMercuryFocusTarget] = useState<FocusFraming | null>(null);
+    const [venusFocusTarget, setVenusFocusTarget] = useState<FocusFraming | null>(null);
 
     // Foca Terra ou Lua. Se estiver em modo órbita, dispara o overlay de transição antes de
     // re-enquadrar — o mesmo tratamento dado ao botão "Voltar ao Asteroide".
@@ -193,6 +229,7 @@ export function DailyOrbitalRadar3D({
         onClearSelection?.();
         setBodyCardOpen(body);
         setMercuryFocusTarget(null);
+        setVenusFocusTarget(null);
         const doFocus = () => setCameraIntent((intent) => ({ kind: 'body', view: intent.view, body, nonce: nextCameraNonce(intent) }));
         if (orbitMode) {
             triggerTransition(() => { setOrbitMode(false); doFocus(); });
@@ -204,11 +241,21 @@ export function DailyOrbitalRadar3D({
     const focusMercury = useCallback(() => {
         onClearSelection?.();
         setBodyCardOpen('mercury');
+        setVenusFocusTarget(null);
         const pos = ephemeris?.mercuryScenePosition;
         if (pos) setMercuryFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.028));
     }, [ephemeris, onClearSelection]);
 
+    const focusVenus = useCallback(() => {
+        onClearSelection?.();
+        setBodyCardOpen('venus');
+        setMercuryFocusTarget(null);
+        const pos = ephemeris?.venusScenePosition;
+        if (pos) setVenusFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.038));
+    }, [ephemeris, onClearSelection]);
+
     const mercuryFocused = bodyCardOpen === 'mercury';
+    const venusFocused = bodyCardOpen === 'venus';
 
     const resetView = () => {
         onClearSelection?.();
@@ -223,32 +270,18 @@ export function DailyOrbitalRadar3D({
     }, [focusedObject]);
 
     return (
-        <section className="space-y-4 transition-all duration-500 ease-out">
-            <div className="rounded-xl border border-white/10 bg-white/[0.035] p-4 shadow-glow transition-all duration-500 ease-out sm:p-5">
-                <header className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                            <h2 className="text-xl font-semibold text-white">
-                                {en ? 'Orbital radar of the day' : 'Radar orbital do dia'}
-                            </h2>
-                            <span className="inline-flex items-center gap-1 rounded-full border border-signal-cyan/45 bg-signal-cyan/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-signal-cyan">
-                                {en ? 'Live · 3D' : 'Ao vivo · 3D'}
-                            </span>
-                        </div>
-                        <p className="mt-1 text-xs text-white/60">
-                            <span className="mr-1.5 font-medium text-white/80">
-                                {en ? 'Current position' : 'Posição atual'}
-                            </span>
-                            {listTitle(closestNowObjects.length, selectionMode, en)}
-                        </p>
-                    </div>
-                </header>
-            </div>
-
+        <section>
+            {fullscreen && (
+                <div className="h-[calc(100vh-8rem)] min-h-[560px] rounded-lg border border-white/5 bg-white/[0.02]" aria-hidden />
+            )}
             <div
-                className="relative h-[72vh] min-h-[640px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d] sm:h-[78vh] sm:min-h-[760px]"
+                ref={canvasContainerRef}
+                className={fullscreen
+                    ? 'fixed inset-0 z-50 bg-[#03060d]'
+                    : 'relative h-[calc(100vh-8rem)] min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d]'}
                 onContextMenu={(e) => e.preventDefault()}
             >
+                <LabelNoGoContext.Provider value={noGoRect}>
                 <Canvas
                     camera={{ position: [0, 4.5, 9], fov: CAMERA_FOV_DEG, near: 0.01, far: MAX_CAMERA_DISTANCE * 3 }}
                     dpr={[1, 1.6]}
@@ -259,23 +292,25 @@ export function DailyOrbitalRadar3D({
                             closestNowObjects={sceneObjects}
                             selectedId={selectedId}
                             orbitMode={orbitMode}
-                            onSelect={(approach) => { setBodyCardOpen(null); setMercuryFocusTarget(null); selectObject(approach); }}
+                            onSelect={(approach) => { setBodyCardOpen(null); setMercuryFocusTarget(null); setVenusFocusTarget(null); selectObject(approach); }}
                             cameraIntent={cameraIntent}
-                            focusTarget={focusTarget ?? mercuryFocusTarget}
+                            focusTarget={focusTarget ?? mercuryFocusTarget ?? venusFocusTarget}
                             ephemeris={ephemeris}
                             fallbackSunDirection={fallbackSunDirection}
                             locale={locale}
                             objectLimit={objectLimit}
                             onFocusMercury={focusMercury}
-                            onFocusBody={focusBody}
                             isMercuryFocused={mercuryFocused}
+                            onFocusVenus={focusVenus}
+                            isVenusFocused={venusFocused}
+                            onFocusBody={focusBody}
                         />
                     </Suspense>
                 </Canvas>
 
                 {/* Barra superior: painel lateral + botões de câmera. */}
                 <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-3">
-                    <div className="pointer-events-auto flex h-[min(28rem,70vh)] w-[min(18rem,48%)] flex-col overflow-hidden rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl">
+                    <div ref={sidePanelRef} className="pointer-events-auto flex h-[min(26rem,70vh)] w-[min(18rem,48%)] flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl">
 
                         {/* Controles de seleção: quantidade + critério — integrados no painel lateral. */}
                         <div className="border-b border-white/10 px-2 py-2">
@@ -293,9 +328,11 @@ export function DailyOrbitalRadar3D({
                         <ReferenceSection
                             en={en}
                             mercuryFocused={mercuryFocused}
+                            venusFocused={venusFocused}
                             onFocusEarth={() => focusBody('earth')}
                             onFocusMoon={() => focusBody('moon')}
                             onFocusMercury={focusMercury}
+                            onFocusVenus={focusVenus}
                         />
 
                         {/* Lista dos objetos: ocupa o espaço restante do painel com scroll. */}
@@ -323,25 +360,35 @@ export function DailyOrbitalRadar3D({
                         </div>
                     </div>
 
-                    {/* Botões de visão de câmera — ocultos no modo órbita, onde a câmera é gerenciada
-                        automaticamente pelo enquadramento heliocêntrico. */}
-                    {activeMode !== 'orbit' ? (
-                        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
-                            <ViewButton active={view === 'top' && !focusedObject} onClick={() => pickView('top')}>
-                                {en ? 'Top' : 'Superior'}
-                            </ViewButton>
-                            <ViewButton active={view === 'side' && !focusedObject} onClick={() => pickView('side')}>
-                                {en ? 'Side' : 'Lateral'}
-                            </ViewButton>
-                            <span className="mx-0.5 h-4 w-px bg-white/10" aria-hidden />
-                            <ViewButton
-                                active={view === 'perspective' && !focusedObject}
-                                onClick={resetView}
-                            >
-                                {en ? 'Reset' : 'Resetar'}
-                            </ViewButton>
-                        </div>
-                    ) : null}
+                    {/* Botões de visão de câmera + fullscreen */}
+                    <div className="pointer-events-auto flex items-center gap-2">
+                        {activeMode !== 'orbit' ? (
+                            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
+                                <ViewButton active={view === 'top' && !focusedObject} onClick={() => pickView('top')}>
+                                    {en ? 'Top' : 'Superior'}
+                                </ViewButton>
+                                <ViewButton active={view === 'side' && !focusedObject} onClick={() => pickView('side')}>
+                                    {en ? 'Side' : 'Lateral'}
+                                </ViewButton>
+                                <span className="mx-0.5 h-4 w-px bg-white/10" aria-hidden />
+                                <ViewButton
+                                    active={view === 'perspective' && !focusedObject}
+                                    onClick={resetView}
+                                >
+                                    {en ? 'Reset' : 'Resetar'}
+                                </ViewButton>
+                            </div>
+                        ) : null}
+                        <button
+                            type="button"
+                            onClick={() => setFullscreen((v) => !v)}
+                            title={fullscreen ? (en ? 'Exit fullscreen' : 'Sair da tela cheia') : (en ? 'Fullscreen' : 'Tela cheia')}
+                            aria-label={fullscreen ? (en ? 'Exit fullscreen' : 'Sair da tela cheia') : (en ? 'Fullscreen' : 'Tela cheia')}
+                            className="flex items-center justify-center rounded-full border border-white/10 bg-space-950/82 p-1.5 text-white/60 backdrop-blur transition hover:border-white/25 hover:text-white"
+                        >
+                            {fullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Painel de foco inline — desliza da esquerda quando um objeto é selecionado.
@@ -362,6 +409,16 @@ export function DailyOrbitalRadar3D({
                     <BodyInfoCard body={bodyCardOpen} onClose={() => setBodyCardOpen(null)} locale={locale} />
                 ) : null}
 
+                {/* Título e badge — overlay centrado na borda inferior do canvas */}
+                <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
+                    <h2 className="text-[11px] font-medium text-white/40">
+                        {en ? 'Orbital radar · 3D' : 'Radar orbital · 3D'}
+                    </h2>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-signal-cyan/30 bg-signal-cyan/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-signal-cyan/70">
+                        {en ? 'Live' : 'Ao vivo'}
+                    </span>
+                </div>
+
                 {/* Overlay de carregamento — mesmo visual para transição de modo e atualização de filtros. */}
                 {(sceneTransitioning || radarLoading) ? (
                     <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
@@ -380,6 +437,7 @@ export function DailyOrbitalRadar3D({
                 </div>
 
                 <SceneLegend lunarReference={lunarReference} locale={locale} mode={activeMode} manualOpen={manualOpen} onManualOpenChange={setManualOpen} />
+                </LabelNoGoContext.Provider>
             </div>
         </section>
     );
@@ -657,15 +715,19 @@ function ViewButton({
 function ReferenceSection({
     en,
     mercuryFocused,
+    venusFocused,
     onFocusEarth,
     onFocusMoon,
     onFocusMercury,
+    onFocusVenus,
 }: {
     en: boolean;
     mercuryFocused: boolean;
+    venusFocused: boolean;
     onFocusEarth: () => void;
     onFocusMoon: () => void;
     onFocusMercury: () => void;
+    onFocusVenus: () => void;
 }) {
     const [planetsOpen, setPlanetsOpen] = useState(false);
 
@@ -700,7 +762,7 @@ function ReferenceSection({
 
             {/* Painel expansível: planetas de ambientação */}
             {planetsOpen ? (
-                <div className="mt-1 border-t border-white/8 pt-1">
+                <div className="mt-1 border-t border-white/8 pt-1 space-y-0.5">
                     <button
                         type="button"
                         onClick={onFocusMercury}
@@ -713,6 +775,19 @@ function ReferenceSection({
                         {/* Pontinho prateado — identidade visual de Mercúrio sem emoji */}
                         <span className="inline-block size-2 rounded-full bg-[#b0b8c8] ring-1 ring-white/20" />
                         <span className="font-medium">{en ? 'Mercury' : 'Mercúrio'}</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onFocusVenus}
+                        className={[
+                            btnCls,
+                            'w-full',
+                            venusFocused ? 'text-white' : '',
+                        ].join(' ')}
+                    >
+                        {/* Pontinho âmbar — identidade visual de Vênus */}
+                        <span className="inline-block size-2 rounded-full bg-[#c8b870] ring-1 ring-white/20" />
+                        <span className="font-medium">{en ? 'Venus' : 'Vênus'}</span>
                     </button>
                 </div>
             ) : null}

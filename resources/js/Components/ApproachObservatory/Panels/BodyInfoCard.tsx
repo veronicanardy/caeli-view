@@ -23,7 +23,7 @@ interface BodyConfig {
     facts: BodyFact[];
 }
 
-const BODIES: Record<'earth' | 'moon' | 'mercury', BodyConfig> = {
+const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus', BodyConfig> = {
     earth: {
         namePt: 'Terra',
         nameEn: 'Earth',
@@ -72,10 +72,26 @@ const BODIES: Record<'earth' | 'moon' | 'mercury', BodyConfig> = {
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Nenhum / None' },
         ],
     },
+    venus: {
+        namePt: 'Vênus',
+        nameEn: 'Venus',
+        subtitlePt: 'Planeta · Sistema Solar Interno',
+        subtitleEn: 'Planet · Inner Solar System',
+        contextPt: 'Segundo planeta do Sol e o mais brilhante no céu noturno da Terra. Coberto por nuvens densas de CO₂. Exibido como contexto espacial — não é o foco do CaeliView. Posição em tempo real via JPL.',
+        contextEn: 'Second planet from the Sun and the brightest object in the Earth\'s night sky. Covered in thick CO₂ clouds. Shown for spatial context — not CaeliView\'s focus. Real-time position via JPL.',
+        dotColor: '#c8b870',
+        facts: [
+            { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '108,2 mi km (0,723 UA) / 108.2M km (0.723 AU)' },
+            { labelPt: 'Diâmetro',            labelEn: 'Diameter',             value: '12.104 km (95% da Terra)' },
+            { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '224,7 dias / 224.7 days' },
+            { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '243 dias (retrógrado) / 243 days (retrograde)' },
+            { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Nenhum / None' },
+        ],
+    },
 };
 
 interface BodyInfoCardProps {
-    body: 'earth' | 'moon' | 'mercury';
+    body: 'earth' | 'moon' | 'mercury' | 'venus';
     onClose: () => void;
     locale: 'pt-BR' | 'en';
 }

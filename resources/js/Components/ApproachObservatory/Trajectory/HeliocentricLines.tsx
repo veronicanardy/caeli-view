@@ -243,3 +243,48 @@ export function DisplayedMercuryOrbitGuide({ sunDirection }: { sunDirection: [nu
     if (points.length === 0) return null;
     return <primitive object={lineObject} />;
 }
+
+/**
+ * Semi-major axis de Vênus em AU. Fonte: IAU / NASA Planetary Fact Sheet.
+ */
+const VENUS_SEMI_MAJOR_AU = 0.723;
+
+/**
+ * Guia visual da órbita de Vênus ao redor do Sol na cena geocêntrica.
+ *
+ * Mesmo padrão do DisplayedMercuryOrbitGuide — anel centrado no Sol com
+ * raio = VENUS_SEMI_MAJOR_AU × SUN_DISPLAY_DL.
+ * Vênus fica entre Mercúrio e a Terra: anéis claramente aninhados.
+ * Cor levemente âmbar para distinguir do anel prateado de Mercúrio e do azul da Terra.
+ */
+export function DisplayedVenusOrbitGuide({ sunDirection }: { sunDirection: [number, number, number] }) {
+    const points = useMemo(() => {
+        const sunPos = sunEclipticDisplayPosition(sunDirection);
+        const venusOrbitRadius = VENUS_SEMI_MAJOR_AU * SUN_DISPLAY_DL;
+
+        const earthDir = sunPos.clone().multiplyScalar(-1).normalize();
+        const tangent = new THREE.Vector3(-earthDir.z, 0, earthDir.x);
+        if (tangent.lengthSq() < 1e-6) tangent.set(1, 0, 0);
+        else tangent.normalize();
+
+        const pts: number[] = [];
+        for (let i = 0; i <= ORBIT_LINE_SEGMENTS; i += 1) {
+            const a = (i / ORBIT_LINE_SEGMENTS) * Math.PI * 2;
+            const pt = sunPos.clone()
+                .add(earthDir.clone().multiplyScalar(Math.cos(a) * venusOrbitRadius))
+                .add(tangent.clone().multiplyScalar(Math.sin(a) * venusOrbitRadius));
+            pts.push(pt.x, pt.y, pt.z);
+        }
+        return new Float32Array(pts);
+    }, [sunDirection]);
+
+    const lineObject = useMemo(
+        () => createOrbitLine(points, '#c8b870', 0.14),
+        [points],
+    );
+
+    useEffect(() => () => disposeOrbitLine(lineObject), [lineObject]);
+
+    if (points.length === 0) return null;
+    return <primitive object={lineObject} />;
+}

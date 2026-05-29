@@ -11,7 +11,8 @@ import { Earth } from '../Bodies/Earth/Earth';
 import { Moon } from '../Bodies/Moon/Moon';
 import { MoonOrbit } from '../Bodies/Moon/MoonOrbit';
 import { Mercury } from '../Bodies/Mercury/Mercury';
-import { DisplayedEarthOrbitGuide, DisplayedMercuryOrbitGuide } from '../Trajectory/HeliocentricLines';
+import { Venus } from '../Bodies/Venus/Venus';
+import { DisplayedEarthOrbitGuide, DisplayedMercuryOrbitGuide, DisplayedVenusOrbitGuide } from '../Trajectory/HeliocentricLines';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { RingsLayer } from '../Overlays/RingsLayer';
 import { LabelOccluderContext, useCompactLabelMode, useHideAsteroidLabelsMode } from '../Overlays/SceneLabels';
@@ -39,11 +40,13 @@ type RadarSceneProps = {
     objectLimit: ObjectLimit;
     onFocusMercury: () => void;
     isMercuryFocused: boolean;
+    onFocusVenus: () => void;
+    isVenusFocused: boolean;
     /** Chamado quando Terra ou Lua são focados de dentro da cena (clique no label/hitbox). */
     onFocusBody: (body: 'earth' | 'moon') => void;
 };
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, objectLimit, onFocusMercury, isMercuryFocused, onFocusBody }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusBody }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -79,6 +82,10 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     // enquanto a efeméride não resolveu — o componente simplesmente não é renderizado até lá.
     const mercuryPos = useMemo<[number, number, number] | null>(
         () => ephemeris?.mercuryScenePosition ?? null,
+        [ephemeris],
+    );
+    const venusPos = useMemo<[number, number, number] | null>(
+        () => ephemeris?.venusScenePosition ?? null,
         [ephemeris],
     );
     const compactLabels = useCompactLabelMode();
@@ -121,12 +128,12 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     const focusNonce = focusTarget ? cameraIntent.nonce : bodyFocus?.nonce ?? 0;
     const orbitLabelsOnly = orbitMode && selectedHasOrbit;
 
-    // Com 5 objetos: labels visíveis enquanto perto o suficiente; distante demais → só selecionado.
-    // Com 15 ou 30: label visível apenas no objeto selecionado; hover é tratado pelo AsteroidMarker.
+    // Labels visíveis para todos os objetos enquanto a câmera não estiver muito afastada.
+    // Só some quando hideAsteroidLabels (câmera muito longe) — independente do limite de objetos.
     const showLabelForObject = (id: string) => {
         if (id === selectedId) return !orbitLabelsOnly;
         if (hideAsteroidLabels) return false;
-        return objectLimit === 5 && !orbitLabelsOnly;
+        return !orbitLabelsOnly;
     };
 
     const focusedObjectPosition = focusedObject ? currentPositionInScene(focusedObject) : null;
@@ -180,14 +187,16 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     />
                     <Moon onFocus={focusMoon} position={moonPos} sunDirection={sunDir} compactLabel={compactLabels} showLabel={!orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} />
                     <MoonOrbit moonPos={moonPos} orbitNormal={moonOrbitNormal} />
-                    {/* Mercúrio: planeta de ambientação — posição geocêntrica real via astronomy-engine.
-                        Renderizado somente após a efeméride resolver (mercuryPos !== null). */}
+                    {/* Planetas de ambientação — posição heliocêntrica real via astronomy-engine.
+                        Renderizados somente após a efeméride resolver. */}
                     {mercuryPos ? <Mercury position={mercuryPos} sunDirection={sunDir} locale={locale} onFocus={onFocusMercury} isFocused={isMercuryFocused} /> : null}
+                    {venusPos ? <Venus position={venusPos} sunDirection={sunDir} locale={locale} onFocus={onFocusVenus} isFocused={isVenusFocused} /> : null}
                     <RingsLayer onEarthFocus={focusEarth} showLabels={!compactLabels && !orbitLabelsOnly} />
                     {!orbitLabelsOnly ? (
                         <>
                             <DisplayedEarthOrbitGuide sunDirection={sunDir} />
                             <DisplayedMercuryOrbitGuide sunDirection={sunDir} />
+                            <DisplayedVenusOrbitGuide sunDirection={sunDir} />
                         </>
                     ) : null}
 

@@ -60,3 +60,28 @@ export const MERCURY: PlanetDatum = {
     texturePath: '/images/mercury/mercury-2k.jpg',
     fallbackColor: '#a89880',                          // warm grey matching real surface albedo
 };
+
+/**
+ * Venus's physical constants.
+ *
+ * physicalRadiusDl = 6051.8 km / 384400 km/DL = 0.01574 DL
+ *
+ * Visual exaggeration: Vênus é ligeiramente menor que a Terra (0.11 DL visual).
+ * Renderizamos em 0.038 DL (~24× físico) — maior que Mercúrio, menor que a Terra,
+ * refletindo a proporção real (Vênus ≈ 95% do diâmetro terrestre).
+ *
+ * Rotation: −243.018 Earth days (retrograde — negativo na lógica do spin).
+ *   O sinal negativo é aplicado na taxa de rotação do componente Venus.tsx.
+ * Axial tilt: 177.36° — efetivamente de cabeça para baixo (rotação retrógrada).
+ *   A inclinação >90° codifica a natureza retrógrada; o shader trata isso corretamente.
+ *
+ * Textura: camada de nuvens (não a superfície rochosa, que nunca é visível).
+ */
+export const VENUS: PlanetDatum = {
+    physicalRadiusDl: 6_051.8 / KM_PER_LD,           // 0.01574 DL — true radius
+    visualRadiusDl: 0.038,                              // rendered radius (~24× exaggeration)
+    rotationPeriodS: 243.018 * 24 * 3600,              // magnitude; sign applied in Venus.tsx
+    axialTiltDeg: 177.36,                               // retrograde obliquity (IAU WGCCRE 2015)
+    texturePath: '/images/venus/venus-2k.jpg',
+    fallbackColor: '#c8a84a',                           // âmbar dourado — cor das nuvens de CO₂
+};

@@ -102,6 +102,12 @@ export type SceneEphemeris = {
      * Null until the async ephemeris resolves.
      */
     mercuryScenePosition: [number, number, number];
+    /**
+     * Venus's scene position, same convention as mercuryScenePosition.
+     * Derived from HelioVector(Body.Venus) → ecliptic J2000 → placed on the heliocentric ring
+     * at VENUS_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
+     */
+    venusScenePosition: [number, number, number];
 };
 
 let modulePromise: Promise<typeof Astronomy> | null = null;
@@ -255,6 +261,20 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             sunEclZ + (mRawZ / mLen) * mercuryOrbitRadius,
         ];
 
+        // Venus: same pipeline as Mercury — heliocentric vector → ecliptic XZ direction → ring.
+        // Semi-major axis: 0.723 AU (IAU / NASA Planetary Fact Sheet).
+        const venusHelioEqj = A.HelioVector(A.Body.Venus, date);
+        const venusHelioEcl = A.RotateVector(eqjToEclMatrix(A), venusHelioEqj);
+        const vRawX = venusHelioEcl.x;
+        const vRawZ = venusHelioEcl.y;   // ecliptic Y → scene Z
+        const vLen = Math.hypot(vRawX, vRawZ) || 1;
+        const venusOrbitRadius = 0.723 * SUN_DISPLAY_DL;
+        const venusScenePosition: [number, number, number] = [
+            sunEclX + (vRawX / vLen) * venusOrbitRadius,
+            0,
+            sunEclZ + (vRawZ / vLen) * venusOrbitRadius,
+        ];
+
         return {
             sunDirection,
             sunScenePosition,
@@ -266,6 +286,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             subsolarLonDeg,
             earthHelioPositionAU,
             mercuryScenePosition,
+            venusScenePosition,
         };
     } catch {
         return null;
