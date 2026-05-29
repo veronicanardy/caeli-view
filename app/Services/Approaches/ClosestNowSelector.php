@@ -102,6 +102,9 @@ final class ClosestNowSelector
 
     /**
      * Executa o pipeline completo de resolução sem cache.
+     *
+     * O parâmetro `$limit` só é aplicado no modo 'nearest'.
+     * Os demais modos retornam todos os candidatos que passam no filtro de modo.
      */
     private function resolve(string $dateMin, string $dateMax, int $limit, string $mode): array
     {
@@ -121,8 +124,8 @@ final class ClosestNowSelector
             return $this->emptyResult($dateMin, $dateMax, $limit, $mode, 'Nenhum candidato encontrado no período.');
         }
 
-        // Passo 2: seleciona top-N por miss_distance + todos os PHAs do período
-        $candidates = $this->pickCandidates($approaches, $mode);
+        // Passo 2: filtra e seleciona candidatos de acordo com o modo
+        $candidates = $this->pickCandidates($approaches, $mode, $dateMin);
 
         if ($candidates === []) {
             return $this->emptyResult($dateMin, $dateMax, $limit, $mode, 'Nenhum candidato com dados suficientes para projeção.');
@@ -131,17 +134,15 @@ final class ClosestNowSelector
         // Passo 3: busca trajetórias do Horizons em paralelo para cada candidato
         $trajectories = $this->fetchTrajectoriesParallel($candidates);
 
-        // Passo 4: monta resultado por objeto com distância atual e reordena pelo critério do mode
+        // Passo 4: monta resultado por objeto com distância atual e ordena
         $objects = $this->buildObjects($candidates, $trajectories);
 
-        $comparator = match ($mode) {
-            'upcoming'  => $this->compareByUpcomingApproach(...),
-            'attention' => $this->compareByAttention(...),
-            'featured'  => $this->compareByFeatured(...),
-            default     => $this->compareByCurrentDistance(...),
-        };
+        usort($objects, $this->compareByCurrentDistance(...));
 
-        usort($objects, $comparator);
+        // Limit só se aplica ao modo 'nearest' — os demais retornam o conjunto filtrado inteiro
+        $finalObjects = $mode === 'nearest'
+            ? array_slice($objects, 0, $limit)
+            : $objects;
 
         return [
             'mode'                => 'closest_now',
@@ -150,7 +151,7 @@ final class ClosestNowSelector
             'window'              => ['dateMin' => $dateMin, 'dateMax' => $dateMax],
             'requestedLimit'      => $limit,
             'candidatesEvaluated' => count($candidates),
-            'objects'             => array_slice($objects, 0, $limit),
+            'objects'             => $finalObjects,
             'lunarReference'      => [
                 'distanceKm'           => DistancePresenter::LUNAR_DISTANCE_KM,
                 'earthDiametersApprox' => 30.0,
@@ -165,19 +166,38 @@ final class ClosestNowSelector
     // -------------------------------------------------------------------------
 
     /**
-     * Seleciona os candidatos que serão consultados no Horizons.
+     * Filtra e seleciona os candidatos de acordo com o modo de seleção.
      *
-     * Critério base: top-N por miss_distance + união com todos os PHAs da janela.
-     * PHAs sempre entram independentemente do ranking — merecem avaliação real.
+     * Cada modo aplica critérios distintos sobre o pool de aproximações:
      *
-     * No modo 'attention' os PHAs entram primeiro na lista de candidatos, garantindo
-     * que sejam priorizados mesmo quando o pool total excede TOP_CANDIDATES.
+     *   nearest   — top-N por miss_distance + todos os PHAs (comportamento original)
+     *   upcoming  — somente objetos cuja data de aproximação cai no dia $dateMin
+     *   featured  — somente objetos com modelo 3D real disponível (nomes próprios conhecidos)
+     *   attention — somente objetos com hazardFlag = true (monitorados pela NASA/JPL)
      *
      * @param  array<int, array<string, mixed>>  $approaches
      * @param  string                            $mode
+     * @param  string                            $dateMin    Data âncora para o filtro 'upcoming' (Y-m-d)
      * @return array<int, array<string, mixed>>
      */
-    private function pickCandidates(array $approaches, string $mode): array
+    private function pickCandidates(array $approaches, string $mode, string $dateMin): array
+    {
+        return match ($mode) {
+            'upcoming'  => $this->pickUpcomingCandidates($approaches, $dateMin),
+            'featured'  => $this->pickFeaturedCandidates($approaches),
+            'attention' => $this->pickAttentionCandidates($approaches),
+            default     => $this->pickNearestCandidates($approaches),
+        };
+    }
+
+    /**
+     * Modo 'nearest': top-N por miss_distance + todos os PHAs da janela.
+     * PHAs sempre entram independentemente do ranking — merecem avaliação real.
+     *
+     * @param  array<int, array<string, mixed>>  $approaches
+     * @return array<int, array<string, mixed>>
+     */
+    private function pickNearestCandidates(array $approaches): array
     {
         $withDistance = array_filter(
             $approaches,
@@ -191,19 +211,6 @@ final class ClosestNowSelector
 
         $byId = [];
 
-        // No modo 'attention' PHAs entram primeiro para terem precedência no pool de candidatos
-        if ($mode === 'attention') {
-            foreach ($approaches as $approach) {
-                if (! (bool) ($approach['hazardFlag'] ?? false)) {
-                    continue;
-                }
-                $id = (string) ($approach['id'] ?? '');
-                if ($id !== '') {
-                    $byId[$id] = $approach;
-                }
-            }
-        }
-
         foreach (array_slice($withDistance, 0, self::TOP_CANDIDATES) as $approach) {
             $id = (string) ($approach['id'] ?? '');
             if ($id !== '') {
@@ -211,7 +218,6 @@ final class ClosestNowSelector
             }
         }
 
-        // Garante que todos os PHAs entrem, independentemente do ranking por distância
         foreach ($approaches as $approach) {
             if (! (bool) ($approach['hazardFlag'] ?? false)) {
                 continue;
@@ -223,6 +229,110 @@ final class ClosestNowSelector
         }
 
         return array_values($byId);
+    }
+
+    /**
+     * Modo 'upcoming': somente objetos cuja data de aproximação cai no dia âncora.
+     * Retorna todo o conjunto sem limite — a UI exibe quem couber.
+     *
+     * @param  array<int, array<string, mixed>>  $approaches
+     * @param  string                            $dateMin  Data âncora no formato Y-m-d
+     * @return array<int, array<string, mixed>>
+     */
+    private function pickUpcomingCandidates(array $approaches, string $dateMin): array
+    {
+        $anchor = substr($dateMin, 0, 10); // garante só Y-m-d
+
+        return array_values(array_filter(
+            $approaches,
+            static function (array $a) use ($anchor): bool {
+                $approachDate = (string) ($a['approachDate'] ?? '');
+                if ($approachDate === '') {
+                    return false;
+                }
+                // Compara só a parte de data (Y-m-d) ignorando hora
+                return substr($approachDate, 0, 10) === $anchor;
+            },
+        ));
+    }
+
+    /**
+     * Modo 'featured': somente objetos com modelo 3D real disponível na cena.
+     * A lista de nomes/números espelha exatamente REAL_ASTEROID_MODELS no frontend.
+     *
+     * @param  array<int, array<string, mixed>>  $approaches
+     * @return array<int, array<string, mixed>>
+     */
+    private function pickFeaturedCandidates(array $approaches): array
+    {
+        return array_values(array_filter(
+            $approaches,
+            fn (array $a): bool => $this->hasFeaturedModel($a),
+        ));
+    }
+
+    /**
+     * Modo 'attention': somente objetos monitorados pela NASA/JPL (hazardFlag = true).
+     *
+     * @param  array<int, array<string, mixed>>  $approaches
+     * @return array<int, array<string, mixed>>
+     */
+    private function pickAttentionCandidates(array $approaches): array
+    {
+        return array_values(array_filter(
+            $approaches,
+            static fn (array $a): bool => (bool) ($a['hazardFlag'] ?? false),
+        ));
+    }
+
+    /**
+     * Verifica se o objeto corresponde a um asteroide com modelo 3D real disponível.
+     * Espelha exatamente os registros de REAL_ASTEROID_MODELS no frontend:
+     *   bennu (101955), ceres (1), itokawa (25143), eros (433), vesta (4)
+     */
+    private function hasFeaturedModel(array $approach): bool
+    {
+        // Números de catálogo canônicos dos asteroides com modelo 3D próprio
+        static $featuredNumbers = ['101955', '1', '25143', '433', '4'];
+
+        // Aliases textuais correspondentes
+        static $featuredAliases = ['bennu', 'rq36', 'ceres', 'itokawa', 'eros', 'vesta'];
+
+        $fields = array_filter([
+            $approach['name'] ?? null,
+            $approach['displayName'] ?? null,
+            $approach['rawName'] ?? null,
+            $approach['properName'] ?? null,
+            $approach['designation'] ?? null,
+            $approach['provisionalDesignation'] ?? null,
+            $approach['detailIdentifier'] ?? null,
+        ]);
+
+        $lowerFields = array_map('strtolower', array_map('trim', $fields));
+
+        foreach ($featuredAliases as $alias) {
+            foreach ($lowerFields as $field) {
+                if (preg_match('/(^|[^a-z0-9])' . preg_quote($alias, '/') . '([^a-z0-9]|$)/i', $field)) {
+                    return true;
+                }
+            }
+        }
+
+        $numberFields = array_filter([
+            (string) ($approach['permanentNumber'] ?? ''),
+            (string) ($approach['spkId'] ?? ''),
+        ]);
+
+        foreach ($featuredNumbers as $number) {
+            foreach ($numberFields as $field) {
+                $clean = trim(preg_replace('/^\((\d+)\)$/', '$1', $field));
+                if ($clean === $number) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -334,82 +444,6 @@ final class ClosestNowSelector
         if (! $aFuture && $bFuture) return 1;
 
         return abs($aDate->diffInSeconds($now)) <=> abs($bDate->diffInSeconds($now));
-    }
-
-    /**
-     * Comparador para modo 'attention': PHAs primeiro, depois por distância atual.
-     * Dentro de cada grupo (PHA / não-PHA) ordena pela distância atual do Horizons.
-     */
-    private function compareByAttention(array $a, array $b): int
-    {
-        $aHazard = (bool) ($a['approach']['hazardFlag'] ?? false);
-        $bHazard = (bool) ($b['approach']['hazardFlag'] ?? false);
-
-        // PHAs têm precedência absoluta sobre não-PHAs
-        if ($aHazard !== $bHazard) {
-            return $aHazard ? -1 : 1;
-        }
-
-        // Dentro do mesmo grupo: mais próximo agora primeiro
-        return $this->compareByCurrentDistance($a, $b);
-    }
-
-    /**
-     * Comparador para modo 'featured': objetos da lista curada primeiro (por nome/designação),
-     * depois os demais por distância atual. Permite destacar asteroides famosos ou relevantes
-     * mesmo que não sejam os mais próximos no momento.
-     */
-    private function compareByFeatured(array $a, array $b): int
-    {
-        $aFeatured = $this->isFeaturedObject($a['approach']);
-        $bFeatured = $this->isFeaturedObject($b['approach']);
-
-        if ($aFeatured !== $bFeatured) {
-            return $aFeatured ? -1 : 1;
-        }
-
-        // Dentro do mesmo grupo: mais próximo agora primeiro
-        return $this->compareByCurrentDistance($a, $b);
-    }
-
-    /**
-     * Verifica se o objeto é "em destaque" — lista curada de asteroides conhecidos.
-     * Matching por nome normalizado (sem prefixo, sem espaços extras, case-insensitive).
-     */
-    private function isFeaturedObject(array $approach): bool
-    {
-        static $featured = [
-            '99942', 'apophis',
-            '101955', 'bennu',
-            '162173', 'ryugu',
-            '25143', 'itokawa',
-            '433', 'eros',
-            '3122', 'florence',
-            '1862', 'apollo',
-            '1566', 'icarus',
-            '4179', 'toutatis',
-            '4769', 'castalia',
-            '2340', 'hathor',
-            '1036', 'ganymed',
-        ];
-
-        $name = strtolower(trim((string) ($approach['name'] ?? '')));
-        $displayName = strtolower(trim((string) ($approach['displayName'] ?? '')));
-        $spkId = trim((string) ($approach['spkId'] ?? ''));
-        $designation = strtolower(trim((string) ($approach['provisionalDesignation'] ?? $approach['designation'] ?? '')));
-
-        foreach ($featured as $token) {
-            if (
-                str_contains($name, $token)
-                || str_contains($displayName, $token)
-                || str_contains($designation, $token)
-                || ($spkId !== '' && str_contains($spkId, $token))
-            ) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
