@@ -198,8 +198,12 @@ export type ClosestNowObject = {
     hasRealCurrentDistance: boolean;
 };
 
+export type ObjectLimit = 5 | 15 | 30;
+export type SelectionMode = 'nearest' | 'upcoming' | 'featured' | 'attention';
+
 export type ClosestNowResponse = {
     mode: 'closest_now';
+    selectionMode: SelectionMode;
     generatedAt: string;
     window: { dateMin: string; dateMax: string };
     requestedLimit: number;
