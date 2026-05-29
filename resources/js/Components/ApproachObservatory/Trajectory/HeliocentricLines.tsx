@@ -288,3 +288,45 @@ export function DisplayedVenusOrbitGuide({ sunDirection }: { sunDirection: [numb
     if (points.length === 0) return null;
     return <primitive object={lineObject} />;
 }
+
+const MARS_SEMI_MAJOR_AU = 1.524;
+
+/**
+ * Guia visual da órbita de Marte ao redor do Sol na cena geocêntrica.
+ *
+ * Mesmo padrão dos outros planetas — anel centrado no Sol com
+ * raio = MARS_SEMI_MAJOR_AU × SUN_DISPLAY_DL.
+ * Marte fica além da Terra, portanto o anel envolve todos os outros.
+ * Cor vermelha-ferrugem para identidade clara com o Planeta Vermelho.
+ */
+export function DisplayedMarsOrbitGuide({ sunDirection }: { sunDirection: [number, number, number] }) {
+    const points = useMemo(() => {
+        const sunPos = sunEclipticDisplayPosition(sunDirection);
+        const marsOrbitRadius = MARS_SEMI_MAJOR_AU * SUN_DISPLAY_DL;
+
+        const earthDir = sunPos.clone().multiplyScalar(-1).normalize();
+        const tangent = new THREE.Vector3(-earthDir.z, 0, earthDir.x);
+        if (tangent.lengthSq() < 1e-6) tangent.set(1, 0, 0);
+        else tangent.normalize();
+
+        const pts: number[] = [];
+        for (let i = 0; i <= ORBIT_LINE_SEGMENTS; i += 1) {
+            const a = (i / ORBIT_LINE_SEGMENTS) * Math.PI * 2;
+            const pt = sunPos.clone()
+                .add(earthDir.clone().multiplyScalar(Math.cos(a) * marsOrbitRadius))
+                .add(tangent.clone().multiplyScalar(Math.sin(a) * marsOrbitRadius));
+            pts.push(pt.x, pt.y, pt.z);
+        }
+        return new Float32Array(pts);
+    }, [sunDirection]);
+
+    const lineObject = useMemo(
+        () => createOrbitLine(points, '#c0501a', 0.13),
+        [points],
+    );
+
+    useEffect(() => () => disposeOrbitLine(lineObject), [lineObject]);
+
+    if (points.length === 0) return null;
+    return <primitive object={lineObject} />;
+}

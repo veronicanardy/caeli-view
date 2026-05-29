@@ -85,3 +85,26 @@ export const VENUS: PlanetDatum = {
     texturePath: '/images/venus/venus-2k.jpg',
     fallbackColor: '#c8a84a',                           // âmbar dourado — cor das nuvens de CO₂
 };
+
+/**
+ * Mars's physical constants.
+ *
+ * physicalRadiusDl = 3389.5 km / 384400 km/DL = 0.00882 DL
+ *
+ * Visual exaggeration: Marte é ~53% do raio terrestre.
+ * Renderizamos em 0.048 DL (~54× físico) — maior que Vênus (0.038), menor que Terra (0.11),
+ * preservando a proporção relativa: Marte < Vênus < Terra no radar.
+ *
+ * Rotation: 1.02596 Earth days (prograde — mesmo sentido que a Terra).
+ * Axial tilt: 25.19° — muito próxima da Terra (23.44°), Marte tem estações reais.
+ *
+ * Textura: superfície rochosa avermelhada de óxido de ferro (2K).
+ */
+export const MARS: PlanetDatum = {
+    physicalRadiusDl: 3_389.5 / KM_PER_LD,           // 0.00882 DL — true radius
+    visualRadiusDl: 0.048,                              // rendered radius (~54× exaggeration)
+    rotationPeriodS: 1.02596 * 24 * 3600,              // 88,643 s ≈ 1.026 days (sol marciano)
+    axialTiltDeg: 25.19,                                // obliquity (IAU WGCCRE 2015)
+    texturePath: '/images/mars/mars-2k.jpg',
+    fallbackColor: '#c0501a',                           // vermelho-ferrugem — óxido de ferro
+};

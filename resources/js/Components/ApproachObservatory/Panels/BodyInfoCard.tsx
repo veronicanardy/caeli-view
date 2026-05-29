@@ -23,7 +23,7 @@ interface BodyConfig {
     facts: BodyFact[];
 }
 
-const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus', BodyConfig> = {
+const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars', BodyConfig> = {
     earth: {
         namePt: 'Terra',
         nameEn: 'Earth',
@@ -77,8 +77,8 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus', BodyConfig> = {
         nameEn: 'Venus',
         subtitlePt: 'Planeta · Sistema Solar Interno',
         subtitleEn: 'Planet · Inner Solar System',
-        contextPt: 'Segundo planeta do Sol e o mais brilhante no céu noturno da Terra. Coberto por nuvens densas de CO₂. Exibido como contexto espacial — não é o foco do CaeliView. Posição em tempo real via JPL.',
-        contextEn: 'Second planet from the Sun and the brightest object in the Earth\'s night sky. Covered in thick CO₂ clouds. Shown for spatial context — not CaeliView\'s focus. Real-time position via JPL.',
+        contextPt: 'Segundo planeta mais próximo do Sol e o mais brilhante no céu noturno da Terra. Coberto por nuvens densas de CO₂. Exibido como contexto espacial — não é o foco do CaeliView. Posição em tempo real via JPL.',
+        contextEn: 'Second closest planet to the Sun and the brightest object in the Earth\'s night sky. Covered in thick CO₂ clouds. Shown for spatial context — not CaeliView\'s focus. Real-time position via JPL.',
         dotColor: '#c8b870',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '108,2 mi km (0,723 UA) / 108.2M km (0.723 AU)' },
@@ -88,10 +88,26 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus', BodyConfig> = {
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Nenhum / None' },
         ],
     },
+    mars: {
+        namePt: 'Marte',
+        nameEn: 'Mars',
+        subtitlePt: 'Planeta · Sistema Solar Interno',
+        subtitleEn: 'Planet · Inner Solar System',
+        contextPt: 'Quarto planeta mais próximo do Sol e planeta o mais avermelhado no céu noturno da Terra. Exibido como contexto espacial — não é o foco do CaeliView. Posição em tempo real via JPL.',
+        contextEn: 'Fourth closest planet to the Sun and the reddest planet in the Earth\'s night sky. Shown for spatial context — not CaeliView\'s focus. Real-time position via JPL.',
+        dotColor: '#c87070',
+        facts: [
+            { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '227,9 mi km (1,524 UA) / 227.9M km (1.524 AU)' },
+            { labelPt: 'Diâmetro',            labelEn: 'Diameter',             value: '6.779 km (53% da Terra)' },
+            { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '687 dias / 687 days' },
+            { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '24,6 horas / 24.6 hours' },
+            { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Dois / Two' },
+        ],
+    }
 };
 
 interface BodyInfoCardProps {
-    body: 'earth' | 'moon' | 'mercury' | 'venus';
+    body: 'earth' | 'moon' | 'mercury' | 'venus' | 'mars';
     onClose: () => void;
     locale: 'pt-BR' | 'en';
 }

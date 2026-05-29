@@ -108,6 +108,12 @@ export type SceneEphemeris = {
      * at VENUS_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
      */
     venusScenePosition: [number, number, number];
+    /**
+     * Mars's scene position, same convention as mercuryScenePosition.
+     * Derived from HelioVector(Body.Mars) → ecliptic J2000 → placed on the heliocentric ring
+     * at MARS_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
+     */
+    marsScenePosition: [number, number, number];
 };
 
 let modulePromise: Promise<typeof Astronomy> | null = null;
@@ -275,6 +281,20 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             sunEclZ + (vRawZ / vLen) * venusOrbitRadius,
         ];
 
+        // Mars: same pipeline — heliocentric vector → ecliptic XZ direction → ring.
+        // Semi-major axis: 1.524 AU (IAU / NASA Planetary Fact Sheet).
+        const marsHelioEqj = A.HelioVector(A.Body.Mars, date);
+        const marsHelioEcl = A.RotateVector(eqjToEclMatrix(A), marsHelioEqj);
+        const maRawX = marsHelioEcl.x;
+        const maRawZ = marsHelioEcl.y;   // ecliptic Y → scene Z
+        const maLen = Math.hypot(maRawX, maRawZ) || 1;
+        const marsOrbitRadius = 1.524 * SUN_DISPLAY_DL;
+        const marsScenePosition: [number, number, number] = [
+            sunEclX + (maRawX / maLen) * marsOrbitRadius,
+            0,
+            sunEclZ + (maRawZ / maLen) * marsOrbitRadius,
+        ];
+
         return {
             sunDirection,
             sunScenePosition,
@@ -287,6 +307,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             earthHelioPositionAU,
             mercuryScenePosition,
             venusScenePosition,
+            marsScenePosition,
         };
     } catch {
         return null;
