@@ -39,7 +39,7 @@ final class JplHttpClient
         }
 
         if ($response->serverError()) {
-            Log::warning('JPL API server error.', ['path' => $path, 'status' => $response->status()]);
+            Log::warning('JPL API server error.', ['path' => $path, 'status' => $response->status(), 'body' => $response->body()]);
             throw new JplUnavailableException();
         }
 

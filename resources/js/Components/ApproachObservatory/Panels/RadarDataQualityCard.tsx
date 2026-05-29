@@ -1,8 +1,9 @@
-import { Database, Eye, Moon, SatelliteDish, Target } from 'lucide-react';
+import { AlertTriangle, Clock, Database, Eye, Moon, SatelliteDish, Target } from 'lucide-react';
 import type { Translator } from '@/i18n';
 import { compactKm, formatNumber, lunarDistanceLabel } from '@/lib/format';
 import type { RadarObject } from '@/lib/radarData';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
+import type { HorizonsFailureKind } from '@/types';
 
 type Props = {
     objects: RadarObject[];
@@ -16,6 +17,9 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
     const withinLunar = objects.filter((object) => object.classification === 'within-lunar');
     const withHorizons = objects.filter((object) => object.hasHorizonsPosition).length;
     const symbolic = objects.filter((object) => object.isSymbolicFallback).length;
+    const transient = objects.filter((o) => o.horizonsFailureKind === 'horizons_transient').length;
+    const noEphemeris = objects.filter((o) => o.horizonsFailureKind === 'no_ephemeris').length;
+    const noOrbitalData = objects.filter((o) => o.horizonsFailureKind === 'no_orbital_data').length;
 
     return (
         <section className="grid gap-3 rounded-lg border border-white/10 bg-white/[0.035] p-4 sm:grid-cols-3" aria-label={t('observatory.radar.quality.aria')}>
@@ -61,6 +65,15 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
                 <dl className="space-y-1 text-xs text-white/65">
                     <Row icon={<SatelliteDish className="size-3" aria-hidden="true" />} label={t('observatory.radar.quality.withHorizons')} value={withHorizons} />
                     <Row icon={<Eye className="size-3" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic')} value={symbolic} />
+                    {transient > 0 ? (
+                        <Row icon={<AlertTriangle className="size-3 text-amber-400/80" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.horizons_transient')} value={transient} />
+                    ) : null}
+                    {noEphemeris > 0 ? (
+                        <Row icon={<Clock className="size-3 text-sky-400/80" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_ephemeris')} value={noEphemeris} />
+                    ) : null}
+                    {noOrbitalData > 0 ? (
+                        <Row icon={<Eye className="size-3 text-white/40" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_orbital_data')} value={noOrbitalData} />
+                    ) : null}
                 </dl>
                 <p className="mt-2 text-[11px] leading-4 text-white/45">{t('observatory.radar.quality.sourceFooter')}</p>
             </Block>

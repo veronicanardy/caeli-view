@@ -21,6 +21,7 @@ import {
 } from '@/lib/radarLayout';
 import {
     AsteroidTrajectory,
+    HorizonsFailureKind,
     HomeEarthImage,
     HorizonsPositionResult,
     HorizonsReferenceMode,
@@ -767,7 +768,7 @@ function ObjectMarker({ object, onSelect, referenceMode, t, locale }: {
                             ? (referenceMode === 'current'
                                 ? t('observatory.radar.tooltip.horizonsCurrent').replace('{time}', formatDateTimeUTC(object.source.currentPositionTime, locale))
                                 : t('observatory.radar.tooltip.horizonsClosest').replace('{time}', formatDateTimeUTC(object.source.currentPositionTime, locale)))
-                            : t('observatory.radar.tooltip.symbolic')}
+                            : symbolicTooltipText(object.source.horizonsFailureKind, t)}
                     </p>
                     <dl className="mt-2 space-y-0.5 text-[11px]">
                         <Row label={t('observatory.radar.tooltip.closestTime')}>{formatDateTimeUTC(object.source.closestApproachTime, locale)}</Row>
@@ -1001,4 +1002,11 @@ function formatSelectedDay(value: string, locale: 'pt-BR' | 'en'): string {
 function formatRingHoverLabel(ld: number): string {
     const value = ld >= 1 ? String(ld) : ld.toString().replace('.', ',');
     return `${value} DL`;
+}
+
+function symbolicTooltipText(kind: HorizonsFailureKind | null, t: Translator): string {
+    if (kind === 'horizons_transient') return t('observatory.radar.tooltip.symbolic.horizons_transient');
+    if (kind === 'no_ephemeris') return t('observatory.radar.tooltip.symbolic.no_ephemeris');
+    if (kind === 'no_orbital_data') return t('observatory.radar.tooltip.symbolic.no_orbital_data');
+    return t('observatory.radar.tooltip.symbolic');
 }

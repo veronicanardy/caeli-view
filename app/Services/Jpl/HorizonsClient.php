@@ -18,6 +18,14 @@ final class HorizonsClient
     }
 
     /**
+     * Single attempt with no internal retry — lets callers implement their own backoff.
+     */
+    public function vectorsOnce(string $command, string $startTime, string $stopTime, string $stepSize, string $objectData = 'NO'): string
+    {
+        return $this->getSingleAttempt($this->vectorQuery($command, $startTime, $stopTime, $stepSize, $objectData));
+    }
+
+    /**
      * @param  array<string, string>  $query
      */
     private function get(array $query): string
@@ -35,6 +43,25 @@ final class HorizonsClient
                 ->get($path, $query);
         } catch (ConnectionException) {
             Log::warning('JPL Horizons API connection failed.', ['path' => $path]);
+            throw new JplUnavailableException();
+        }
+
+        return $this->decode($response, $path);
+    }
+
+    /**
+     * @param  array<string, string>  $query
+     */
+    private function getSingleAttempt(array $query): string
+    {
+        $path = '/horizons.api';
+
+        try {
+            $response = Http::baseUrl((string) config('services.jpl.horizons_base_url', 'https://ssd.jpl.nasa.gov/api'))
+                ->timeout((int) config('services.jpl.timeout', 10))
+                ->get($path, $query);
+        } catch (ConnectionException) {
+            Log::warning('JPL Horizons API connection failed (single attempt).', ['path' => $path]);
             throw new JplUnavailableException();
         }
 

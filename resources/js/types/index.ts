@@ -169,6 +169,7 @@ export type AsteroidTrajectory = {
      * object's full orbit around the Sun. Null when Horizons didn't provide them. */
     orbitalElements?: OrbitalElements | null;
     status: 'available' | 'unavailable' | 'fallback';
+    horizonsFailureKind?: HorizonsFailureKind | null;
     note?: string;
 };
 
@@ -246,6 +247,19 @@ export type HorizonsPositionFailureReason =
     | 'http_error'
     | 'invalid_target';
 
+/**
+ * UI-facing classification of why Horizons position is unavailable.
+ * - horizons_transient: 503/timeout/rate-limit — worth retrying, already attempted with backoff.
+ * - no_ephemeris: Horizons responded but has no published ephemeris for this object yet (too new).
+ * - no_orbital_data: no valid Horizons identifier exists (no designation, no SPKID).
+ * - symbolic: generic fallback — distance-only, reason unclear.
+ */
+export type HorizonsFailureKind =
+    | 'horizons_transient'
+    | 'no_ephemeris'
+    | 'no_orbital_data'
+    | 'symbolic';
+
 export type HorizonsPositionResult = {
     id: string;
     status: 'available' | 'unavailable';
@@ -263,6 +277,7 @@ export type HorizonsPositionResult = {
     distanceSource: 'JPL Horizons' | 'NeoWs' | 'CAD' | 'fallback';
     positionSource: 'JPL Horizons' | 'symbolic' | 'unavailable';
     failureReason: HorizonsPositionFailureReason | null;
+    horizonsFailureKind: HorizonsFailureKind | null;
     note: string | null;
 };
 

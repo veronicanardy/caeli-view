@@ -12,12 +12,16 @@ use App\Support\HorizonsCommandBuilder;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Sleep;
 
 final class HorizonsTrajectoryService
 {
     private const TRAJECTORY_CACHE_VERSION = 'command-v4';
     private const POSITION_CACHE_VERSION = 'reftime-v3';
     private const NOW_TRAJECTORY_CACHE_VERSION = 'now-traj-v2-elements';
+
+    /** Backoff delays (ms) between Horizons retry attempts after a transient failure. */
+    private const TRANSIENT_RETRY_DELAYS_MS = [800, 2000];
     private const CURRENT_MODE_BUCKET_MINUTES = 15;
     private const NOW_TRAJECTORY_BUCKET_MINUTES = 30;
     private const CURRENT_MODE_SUCCESS_TTL_SECONDS = 900;            // 15 min
@@ -28,6 +32,7 @@ final class HorizonsTrajectoryService
     public function __construct(
         private readonly HorizonsClient $client,
         private readonly HorizonsTextParser $parser,
+        private readonly SmallBodyService $smallBodies,
     ) {
     }
 
@@ -210,13 +215,26 @@ final class HorizonsTrajectoryService
     private function noteForFailure(string $reason, string $mode): string
     {
         return match ($reason) {
-            'timeout' => 'Tempo esgotado ao consultar a JPL Horizons. Representação simbólica baseada na distância.',
-            'http_error' => 'Falha de comunicação com a JPL Horizons nesta tentativa. Representação simbólica baseada na distância.',
-            'rate_limit' => 'Limite de requisições da JPL Horizons atingido. Representação simbólica baseada na distância.',
+            'timeout', 'http_error', 'rate_limit' => 'Horizons temporariamente indisponível para este objeto. Representação simbólica baseada na distância.',
             'invalid_target', 'no_command_candidates' => 'Sem identificador Horizons válido para este objeto. Representação simbólica baseada na distância.',
+            'no_ephemeris' => 'Objeto sem efemérides publicadas no Horizons neste momento. Pode ser muito recente. Representação simbólica baseada na distância.',
             default => $mode === 'current'
-                ? 'Sem efemérides Horizons disponíveis nesta tentativa para o horário atual. Representação simbólica baseada na distância.'
-                : 'Sem efemérides Horizons disponíveis nesta tentativa para o instante da máxima aproximação. Representação simbólica baseada na distância.',
+                ? 'Sem efemérides Horizons disponíveis para o horário atual. Representação simbólica baseada na distância.'
+                : 'Sem efemérides Horizons disponíveis para o instante da máxima aproximação. Representação simbólica baseada na distância.',
+        };
+    }
+
+    /**
+     * Maps the low-level failure reason to a UI-facing kind string the frontend uses
+     * to select the right status label (rather than parsing note text).
+     */
+    private function failureKind(string $reason): string
+    {
+        return match ($reason) {
+            'timeout', 'http_error', 'rate_limit' => 'horizons_transient',
+            'no_ephemeris' => 'no_ephemeris',
+            'invalid_target', 'no_command_candidates' => 'no_orbital_data',
+            default => 'symbolic',
         };
     }
 
@@ -296,6 +314,7 @@ final class HorizonsTrajectoryService
                 'Trajetória indisponível para este objeto no momento.',
                 $objectId,
                 $approachTime,
+                $reason,
             );
             Cache::put($key, $result, $this->negativeCacheTtl());
 
@@ -390,15 +409,17 @@ final class HorizonsTrajectoryService
             $windowEnd = $now->addHours(6);
         }
 
-        $points = $this->fetchVectorsForObject(
+        $fetch = $this->fetchVectorsWithDiagnostics(
             $object,
             $windowStart->format('Y-M-d H:i'),
             $windowEnd->format('Y-M-d H:i'),
             '1 hours',
         );
+        $points = $fetch->pointsToArray();
 
         if ($points === null || count($points) < 3) {
-            return $this->unavailableTrajectory($object, 'Trajetória atual indisponível para este objeto; exibindo apenas a aproximação registrada.', $objectId, $approachTime);
+            $reason = $fetch->failureReason ?? 'no_ephemeris';
+            return $this->unavailableTrajectory($object, 'Trajetória atual indisponível para este objeto; exibindo apenas a aproximação registrada.', $objectId, $approachTime, $reason);
         }
 
         $referencePoint = $this->closestPointTo($points, $now);
@@ -420,22 +441,15 @@ final class HorizonsTrajectoryService
     }
 
     /**
-     * Tries each command candidate sequentially until one returns ephemerides.
-     * Returns null if every candidate failed.
-     *
-     * @return array<int, array<string, mixed>>|null
-     */
-    private function fetchVectorsForObject(array $object, string $startTime, string $stopTime, string $stepSize): ?array
-    {
-        return $this->fetchVectorsWithDiagnostics($object, $startTime, $stopTime, $stepSize)->pointsToArray();
-    }
-
-    /**
      * Same as fetchVectorsForObject, but also returns a failure reason when no points are produced,
-     * plus the osculating orbital elements parsed from the response header (free — Horizons always
-     * prints them in the VECTORS header, no extra request needed).
+     * plus the osculating orbital elements parsed from the response header.
      *
-     * @return HorizonsVectorFetchResultData
+     * Pipeline for transient failures (503/timeout):
+     *   1. Try each command candidate once.
+     *   2. If all failed transiently, retry each with backoff (TRANSIENT_RETRY_DELAYS_MS).
+     *   3. If still failing, look up the SPKID via SBDB and add it as an additional candidate.
+     *   4. Try the SPKID candidate.
+     *   5. Only then fall back to symbolic.
      */
     private function fetchVectorsWithDiagnostics(array $object, string $startTime, string $stopTime, string $stepSize): HorizonsVectorFetchResultData
     {
@@ -446,17 +460,56 @@ final class HorizonsTrajectoryService
             return HorizonsVectorFetchResultData::unavailable('no_command_candidates');
         }
 
+        // Phase 1: first pass through all candidates.
         $lastFailureReason = null;
+        $hadTransientFailure = false;
 
+        $result = $this->tryCommands($commands, $startTime, $stopTime, $stepSize, $lastFailureReason, $hadTransientFailure);
+        if ($result !== null) {
+            return $result;
+        }
+
+        // Phase 2: if every failure was transient (503/timeout), retry with backoff before giving up.
+        if ($hadTransientFailure) {
+            foreach (self::TRANSIENT_RETRY_DELAYS_MS as $delayMs) {
+                Sleep::usleep($delayMs * 1000);
+                $result = $this->tryCommands($commands, $startTime, $stopTime, $stepSize, $lastFailureReason, $hadTransientFailure);
+                if ($result !== null) {
+                    Log::info('Horizons succeeded after transient retry.', ['commands' => $commands, 'delay_ms' => $delayMs]);
+                    return $result;
+                }
+            }
+
+            // Phase 3: fetch SPKID from SBDB and add as an additional candidate.
+            $designation = $this->designationFor($object, $identity);
+            if ($designation !== null) {
+                $spkId = $this->smallBodies->spkIdFor($designation);
+                if ($spkId !== null && ! in_array($spkId, $commands, true) && ! in_array($spkId.';', $commands, true)) {
+                    Log::info('Horizons fallback: trying SBDB SPKID after transient failure.', ['designation' => $designation, 'spkId' => $spkId]);
+                    $result = $this->tryCommands([$spkId], $startTime, $stopTime, $stepSize, $lastFailureReason, $hadTransientFailure);
+                    if ($result !== null) {
+                        Log::info('Horizons succeeded via SBDB SPKID.', ['spkId' => $spkId]);
+                        return $result;
+                    }
+                }
+            }
+        }
+
+        return HorizonsVectorFetchResultData::unavailable($lastFailureReason ?? 'no_ephemeris');
+    }
+
+    /**
+     * Attempts each command once using a single-shot HTTP call (no internal retry).
+     * Updates $lastFailureReason and $hadTransientFailure by reference.
+     * Returns a successful result or null.
+     *
+     * @param  array<int, string>  $commands
+     */
+    private function tryCommands(array $commands, string $startTime, string $stopTime, string $stepSize, ?string &$lastFailureReason, bool &$hadTransientFailure): ?HorizonsVectorFetchResultData
+    {
         foreach ($commands as $command) {
             try {
-                $content = $this->client->vectors(
-                    $command,
-                    $startTime,
-                    $stopTime,
-                    $stepSize,
-                    'NO',
-                );
+                $content = $this->client->vectorsOnce($command, $startTime, $stopTime, $stepSize, 'NO');
 
                 if (! $this->parser->hasEphemeris($content)) {
                     $lastFailureReason = 'no_ephemeris';
@@ -468,19 +521,32 @@ final class HorizonsTrajectoryService
                     return HorizonsVectorFetchResultData::available($points, $this->parser->parseOrbitalElements($content));
                 }
                 $lastFailureReason = 'parse_error';
-            } catch (JplRateLimitException $exception) {
+            } catch (JplRateLimitException) {
                 Log::info('Horizons candidate hit rate limit.', ['command' => $command]);
                 $lastFailureReason = 'rate_limit';
-            } catch (JplUnavailableException $exception) {
+                $hadTransientFailure = true;
+            } catch (JplUnavailableException) {
                 Log::info('Horizons candidate unavailable.', ['command' => $command]);
                 $lastFailureReason = 'timeout';
-            } catch (JplApiException $exception) {
-                Log::info('Horizons candidate failed.', ['command' => $command, 'message' => $exception->getMessage()]);
+                $hadTransientFailure = true;
+            } catch (JplApiException $e) {
+                Log::info('Horizons candidate failed.', ['command' => $command, 'message' => $e->getMessage()]);
                 $lastFailureReason = 'http_error';
+                $hadTransientFailure = true;
             }
         }
 
-        return HorizonsVectorFetchResultData::unavailable($lastFailureReason ?? 'no_ephemeris');
+        return null;
+    }
+
+    private function designationFor(array $object, array $identity): ?string
+    {
+        $provisional = $identity['provisionalDesignation'] ?? null;
+        if ($provisional !== null) {
+            return $provisional;
+        }
+        $des = trim((string) ($object['designation'] ?? $object['detailIdentifier'] ?? ''));
+        return $des !== '' ? $des : null;
     }
 
     private function commandCandidates(array $object, array $identity): array
@@ -500,7 +566,7 @@ final class HorizonsTrajectoryService
         return preg_match('/^\d{4,}$/', $spkId) === 1 ? $spkId : null;
     }
 
-    private function unavailableTrajectory(array $object, string $note, ?string $objectId = null, ?CarbonImmutable $approachTime = null): array
+    private function unavailableTrajectory(array $object, string $note, ?string $objectId = null, ?CarbonImmutable $approachTime = null, string $failureReason = 'no_ephemeris'): array
     {
         return [
             'objectId' => $objectId ?? $this->objectId($object),
@@ -513,6 +579,7 @@ final class HorizonsTrajectoryService
             'referencePoint' => null,
             'motionState' => 'unknown',
             'status' => 'unavailable',
+            'horizonsFailureKind' => $this->failureKind($failureReason),
             'note' => $note,
         ];
     }
@@ -540,6 +607,7 @@ final class HorizonsTrajectoryService
             'distanceSource' => $this->distanceSourceFor($object, $distanceKm),
             'positionSource' => 'unavailable',
             'failureReason' => $failureReason,
+            'horizonsFailureKind' => $this->failureKind($failureReason),
             'note' => $note,
         ];
     }

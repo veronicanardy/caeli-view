@@ -1,4 +1,4 @@
-import { HorizonsPositionResult, UnifiedApproach } from '@/types';
+import { HorizonsFailureKind, HorizonsPositionResult, UnifiedApproach } from '@/types';
 import { LUNAR_DISTANCE_KM, lunarDistanceFromKm } from '@/lib/format';
 
 export type RadarClassification = 'within-lunar' | 'near-moon' | 'beyond-moon' | 'far';
@@ -28,6 +28,7 @@ export type RadarObject = {
     positionSource: HorizonsPositionResult['positionSource'];
     distanceSource: HorizonsPositionResult['distanceSource'];
     failureReason: HorizonsPositionResult['failureReason'];
+    horizonsFailureKind: HorizonsFailureKind | null;
 
     currentPositionTime: string | null;
 
@@ -110,6 +111,7 @@ export function buildRadarObjects(
             positionSource: pos?.positionSource ?? 'unavailable',
             distanceSource: pos?.distanceSource ?? 'fallback',
             failureReason: pos?.failureReason ?? null,
+            horizonsFailureKind: pos?.horizonsFailureKind ?? null,
             currentPositionTime: pos?.currentPositionTime ?? null,
             note: pos?.note ?? null,
         };

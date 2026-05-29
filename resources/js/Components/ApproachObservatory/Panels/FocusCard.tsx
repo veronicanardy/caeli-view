@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AsteroidTrajectory, ClosestNowObject, UnifiedApproach } from '@/types';
+import type { AsteroidTrajectory, ClosestNowObject, HorizonsFailureKind, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { formatDistanceAU, formatTimestamp } from '@/lib/observatory/format';
 
@@ -41,6 +41,7 @@ export function FocusCard({
     const motion = motionLabel(object.trajectory?.motionState, en);
     const risk = riskAssessment(a, en);
     const summary = humanSummary(object, en);
+    const trajectoryStatus = trajectoryStatusBadge(object.trajectory, en);
 
     return (
         <div className="pointer-events-auto absolute left-3 top-[56%] z-20 flex max-h-[76%] w-[min(24rem,48%)] -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-signal-cyan/25 bg-space-950/92 shadow-glow backdrop-blur-xl">
@@ -79,6 +80,16 @@ export function FocusCard({
                     </div>
                 </div>
             </div>
+
+            {/* Trajectory status — only shown when Horizons data is not available. */}
+            {trajectoryStatus ? (
+                <div className="mt-1.5 px-3">
+                    <div className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] ${trajectoryStatus.className}`}>
+                        <span aria-hidden="true">{trajectoryStatus.icon}</span>
+                        {trajectoryStatus.text}
+                    </div>
+                </div>
+            ) : null}
 
             {/* Tabs */}
             <div className="mt-2.5 flex gap-1 border-b border-white/10 px-3">
@@ -272,6 +283,61 @@ function sizeComparison(meters: number | null, en: boolean): string {
     if (meters < 500) return en ? 'a cruise ship' : 'um navio de cruzeiro';
     if (meters < 1000) return en ? 'a small mountain' : 'uma pequena montanha';
     return en ? 'larger than a kilometer' : 'maior que um quilômetro';
+}
+
+/**
+ * Returns a badge descriptor when Horizons trajectory is unavailable, describing why.
+ * Returns null when trajectory is available (nothing to show — good path).
+ */
+function trajectoryStatusBadge(
+    trajectory: AsteroidTrajectory | null | undefined,
+    en: boolean,
+): { icon: string; text: string; className: string } | null {
+    if (trajectory?.status === 'available') {
+        return null;
+    }
+
+    const kind: HorizonsFailureKind | null | undefined = trajectory?.horizonsFailureKind;
+
+    if (kind === 'horizons_transient') {
+        return {
+            icon: '⚡',
+            text: en
+                ? 'Horizons temporarily unavailable — symbolic distance only.'
+                : 'Horizons temporariamente indisponível — apenas distância simbólica.',
+            className: 'border-amber-400/30 bg-amber-500/10 text-amber-200/80',
+        };
+    }
+
+    if (kind === 'no_ephemeris') {
+        return {
+            icon: '🕐',
+            text: en
+                ? 'Recently discovered — ephemeris not yet in Horizons. Distance from catalog.'
+                : 'Descoberto recentemente — efeméride ainda não disponível no Horizons. Distância do catálogo.',
+            className: 'border-sky-400/30 bg-sky-500/10 text-sky-200/80',
+        };
+    }
+
+    if (kind === 'no_orbital_data') {
+        return {
+            icon: '—',
+            text: en
+                ? 'No Horizons identifier available for this object.'
+                : 'Sem identificador Horizons disponível para este objeto.',
+            className: 'border-white/15 bg-white/5 text-white/50',
+        };
+    }
+
+    if (trajectory === null || trajectory === undefined) {
+        return null;
+    }
+
+    return {
+        icon: '○',
+        text: en ? 'Symbolic placement — approach distance only.' : 'Posição simbólica — apenas distância da aproximação.',
+        className: 'border-white/15 bg-white/5 text-white/50',
+    };
 }
 
 function motionLabel(

@@ -4,6 +4,9 @@ namespace App\DTOs\Jpl\Horizons;
 
 final readonly class HorizonsVectorFetchResultData
 {
+    /** Transient failures: worth retrying or escalating to SBDB SPKID lookup. */
+    public const TRANSIENT_REASONS = ['timeout', 'http_error', 'rate_limit'];
+
     /**
      * @param  array<int, HorizonsVectorPointData>|null  $points
      */
@@ -25,6 +28,13 @@ final readonly class HorizonsVectorFetchResultData
     public static function unavailable(?string $failureReason): self
     {
         return new self(null, $failureReason, null);
+    }
+
+    public function isTransientFailure(): bool
+    {
+        return $this->points === null
+            && $this->failureReason !== null
+            && in_array($this->failureReason, self::TRANSIENT_REASONS, true);
     }
 
     /**
