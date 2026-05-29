@@ -7,7 +7,7 @@ use App\Http\Requests\ApproachObservatoryRequest;
 use App\Services\Approaches\AsteroidModelResolverService;
 use App\Services\Approaches\ApproachObservatoryService;
 use App\Services\Approaches\ClosestNowSelector;
-use App\Services\Jpl\HorizonsTrajectoryService;
+use App\Services\Jpl\Horizons\HorizonsTrajectoryService;
 use App\Services\Nasa\EpicService;
 use App\Support\SunDirectionCalculator;
 use Carbon\CarbonImmutable;

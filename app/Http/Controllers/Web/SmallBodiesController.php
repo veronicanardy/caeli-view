@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Web;
 use App\Exceptions\JplApiException;
 use App\Http\Requests\JplCloseApproachRequest;
 use App\Http\Requests\SmallBodyLookupRequest;
-use App\Services\Jpl\CloseApproachService;
-use App\Services\Jpl\SmallBodyService;
+use App\Services\Jpl\Cad\CloseApproachService;
+use App\Services\Jpl\Sbdb\SmallBodyService;
 use Inertia\Inertia;
 use Inertia\Response;
 

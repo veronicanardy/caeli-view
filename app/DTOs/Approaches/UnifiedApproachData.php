@@ -2,7 +2,7 @@
 
 namespace App\DTOs\Approaches;
 
-use App\Support\AsteroidIdentityNormalizer;
+use App\Support\Horizons\AsteroidIdentityNormalizer;
 use App\Support\DistancePresenter;
 
 final readonly class UnifiedApproachData
