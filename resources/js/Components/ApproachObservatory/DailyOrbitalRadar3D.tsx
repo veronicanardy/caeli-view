@@ -285,11 +285,8 @@ export function DailyOrbitalRadar3D({
                             <div className="px-1 pb-1.5 text-[11px] uppercase tracking-wide text-white/45">
                                 {listTitle(closestNowObjects.length, selectionMode, en)}
                             </div>
-                            {radarLoading ? (
-                                <div className="flex items-center gap-2 px-1 py-3 text-[12px] text-white/40">
-                                    <span className="size-1.5 animate-pulse rounded-full bg-signal-cyan/60" aria-hidden />
-                                    {en ? 'Updating…' : 'Atualizando…'}
-                                </div>
+                            {radarLoading ? null : closestNowObjects.length === 0 ? (
+                                <EmptyModeMessage selectionMode={selectionMode} locale={locale} />
                             ) : (
                                 <ul className={[
                                     'space-y-0.5',
@@ -349,20 +346,14 @@ export function DailyOrbitalRadar3D({
                     />
                 ) : null}
 
-                {/* Overlay de transição entre modos (radar ↔ órbita): mascara salto de câmera. */}
-                {sceneTransitioning ? (
+                {/* Overlay de carregamento — mesmo visual para transição de modo e atualização de filtros. */}
+                {(sceneTransitioning || radarLoading) ? (
                     <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
                         <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-space-950/90 px-4 py-2.5 text-[13px] text-white/70 shadow-glow">
                             <span className="size-2 animate-pulse rounded-full bg-signal-cyan" aria-hidden />
                             {en ? 'Loading…' : 'Carregando…'}
                         </div>
                     </div>
-                ) : null}
-
-                {/* Overlay de atualização de filtros: borda pulsante discreta enquanto
-                    o novo lote de objetos carrega. Não bloqueia a cena — stale data visível. */}
-                {radarLoading ? (
-                    <div className="pointer-events-none absolute inset-0 z-20 rounded-lg ring-1 ring-inset ring-signal-cyan/20 animate-pulse" aria-hidden />
                 ) : null}
 
                 {/* Toasts de boas-vindas — primeira visita ao radar e à vista orbital. */}
@@ -381,10 +372,32 @@ export function DailyOrbitalRadar3D({
 // --------------- Funções puras ---------------
 
 function listTitle(count: number, mode: SelectionMode, en: boolean): string {
-    if (mode === 'upcoming') return en ? `${count} upcoming passes` : `${count} próximas aproximações`;
-    if (mode === 'featured') return en ? 'Featured objects' : 'Objetos em destaque';
-    if (mode === 'attention') return en ? `${count} watch-list objects` : `${count} objetos em maior atenção`;
+    if (mode === 'upcoming')  return en ? `${count} upcoming passes`     : `${count} próximas aproximações`;
+    if (mode === 'featured')  return en ? 'Featured objects'              : 'Objetos em destaque';
+    if (mode === 'attention') return en ? `${count} watch-list objects`   : `${count} objetos em maior atenção`;
     return en ? `${count} closest objects now` : `${count} objetos mais próximos agora`;
+}
+
+const EMPTY_MODE_MESSAGES: Record<SelectionMode, { pt: string; en: string }> = {
+    nearest:   { pt: 'Nenhum objeto próximo encontrado agora.', en: 'No nearby objects found right now.' },
+    upcoming:  { pt: 'Nenhuma aproximação prevista para hoje.', en: 'No close approaches scheduled for today.' },
+    featured:  {
+        pt: 'Nenhum objeto em destaque visível agora. Bennu, Eros, Ceres, Itokawa e Vesta não aparecem nesta janela de datas.',
+        en: 'No featured objects visible right now. Bennu, Eros, Ceres, Itokawa and Vesta are not in this date window.',
+    },
+    attention: {
+        pt: 'Nenhum objeto monitorado pela NASA/JPL encontrado nesta janela. Tente ampliar o intervalo de datas.',
+        en: 'No NASA/JPL-monitored objects found in this window. Try widening the date range.',
+    },
+};
+
+function EmptyModeMessage({ selectionMode, locale }: { selectionMode: SelectionMode; locale: 'pt-BR' | 'en' }) {
+    const msg = EMPTY_MODE_MESSAGES[selectionMode];
+    return (
+        <p className="px-1 py-2 text-[11px] leading-relaxed text-white/40">
+            {locale === 'en' ? msg.en : msg.pt}
+        </p>
+    );
 }
 
 const LIMITS_OPTIONS: ObjectLimit[] = [5, 15, 30];
