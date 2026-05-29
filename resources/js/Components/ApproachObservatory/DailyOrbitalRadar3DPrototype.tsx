@@ -167,17 +167,28 @@ export function DailyOrbitalRadar3DPrototype({
     }, [orbitMode, focusedObject]);
 
     return (
-        <section className="space-y-3">
-            <div>
-                <h2 className="text-lg font-bold text-white">
-                    {en ? 'Orbital radar of the day' : 'Radar orbital do dia'}
-                </h2>
-                <p className="text-sm text-white/60">
-                    <span className="mr-2 font-medium text-white/80">{en ? 'Current position' : 'Posição atual'}</span>
-                    {en
-                        ? `Showing the 5 closest objects to Earth right now.`
-                        : `Mostrando os 5 objetos mais próximos da Terra agora.`}
-                </p>
+        <section className="space-y-4 transition-all duration-500 ease-out">
+            <div className="rounded-xl border border-white/10 bg-white/[0.035] p-4 shadow-glow transition-all duration-500 ease-out sm:p-5">
+                <header className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                            <h2 className="text-xl font-semibold text-white">
+                                {en ? 'Orbital radar of the day' : 'Radar orbital do dia'}
+                            </h2>
+                            <span className="inline-flex items-center gap-1 rounded-full border border-signal-cyan/45 bg-signal-cyan/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-signal-cyan">
+                                {en ? 'Live · 3D' : 'Ao vivo · 3D'}
+                            </span>
+                        </div>
+                        <p className="mt-1 text-xs text-white/60">
+                            <span className="mr-1.5 font-medium text-white/80">
+                                {en ? 'Current position' : 'Posição atual'}
+                            </span>
+                            {en
+                                ? `Showing the ${closestNowObjects.length} closest objects to Earth right now.`
+                                : `Mostrando os ${closestNowObjects.length} objetos mais próximos da Terra agora.`}
+                        </p>
+                    </div>
+                </header>
             </div>
 
             <div className="relative h-[72vh] min-h-[640px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d] sm:h-[78vh] sm:min-h-[760px]">
