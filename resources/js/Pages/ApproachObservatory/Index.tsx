@@ -38,8 +38,8 @@ import {
 const DailyOrbitalRadar = lazy(() =>
     import('@/Components/ApproachObservatory/DailyOrbitalRadar').then((module) => ({ default: module.DailyOrbitalRadar })),
 );
-const DailyOrbitalRadar3DPrototype = lazy(() =>
-    import('@/Components/ApproachObservatory/DailyOrbitalRadar3DPrototype').then((module) => ({ default: module.DailyOrbitalRadar3DPrototype })),
+const DailyOrbitalRadar3D = lazy(() =>
+    import('@/Components/ApproachObservatory/DailyOrbitalRadar3D').then((module) => ({ default: module.DailyOrbitalRadar3D })),
 );
 const UnifiedApproachTable = lazy(() =>
     import('@/Components/ApproachObservatory/Lists/UnifiedApproachTable').then((module) => ({ default: module.UnifiedApproachTable })),
@@ -533,7 +533,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
 
                         {use3DPrototype && radarMode === 'closest-5-now' && closestNowData && lunarReference ? (
                             <Suspense fallback={<ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />}>
-                                <DailyOrbitalRadar3DPrototype
+                                <DailyOrbitalRadar3D
                                     closestNowObjects={closestNowData.objects}
                                     selectedId={focusApproach?.id ?? null}
                                     onSelect={(approach) => {

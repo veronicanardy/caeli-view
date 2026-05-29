@@ -16,9 +16,9 @@ export const CAMERA_VIEWS = {
 } as const;
 export type CameraViewKey = keyof typeof CAMERA_VIEWS;
 /**
- * Builds a camera framing centered on a single body (Earth or Moon) at scene position `center`
- * with visual radius `radius`. Used for the "click Earth/Moon" view shortcut. Backs off along a
- * gentle 3/4 angle far enough to see the body comfortably without clipping it.
+ * Monta um enquadramento de câmera centrado em um corpo celeste (Terra ou Lua) na posição de
+ * cena `center` com raio visual `radius`. Usado pelo atalho de clique na Terra/Lua. Recua ao
+ * longo de um ângulo 3/4 suave longe o suficiente para ver o corpo confortavelmente sem cortá-lo.
  */
 export function framingForBody(center: THREE.Vector3, radius: number): FocusFraming {
     const dir = new THREE.Vector3(0.4, 0.45, 0.8).normalize();
@@ -40,15 +40,14 @@ export type FocusFraming = {
 };
 
 /**
- * Inertial zoom toward the current focus. Replaces OrbitControls' built-in wheel zoom (disabled
- * above) so the dolly has momentum: each wheel notch adds to a velocity that decays exponentially,
- * so the camera keeps gliding a moment after you stop scrolling, and easing back out gives a
- * little push too. In a big 3D volume that coasting makes traversal feel less twitchy.
+ * Zoom inercial em direção ao foco atual. Substitui o zoom de roda do OrbitControls (desabilitado)
+ * para que o dolly tenha momentum: cada clique da roda adiciona a uma velocidade que decai
+ * exponencialmente — a câmera continua deslizando um momento após parar de rolar.
  *
- * Direction: the dolly always moves along the camera → OrbitControls-target ray. By default that
- * target is Earth (the scene origin), so zoom heads toward Earth. When the user selects the Moon
- * or an asteroid, CameraRig moves the target onto that body, so the zoom then heads toward it —
- * exactly the requested behavior, with no cursor aiming. Distance is clamped to [min, max].
+ * Direção: o dolly sempre se move ao longo do raio câmera → alvo do OrbitControls. Por padrão
+ * esse alvo é a Terra (origem da cena), então o zoom vai em direção à Terra. Quando o usuário
+ * seleciona a Lua ou um asteroide, o CameraRig move o alvo para aquele corpo — o zoom passa
+ * a apontar para ele automaticamente, sem precisar mirar o cursor. Distância limitada a [min, max].
  */
 export function InertialZoom({ minDistance, maxDistance }: { minDistance: number; maxDistance: number }) {
     const { camera } = useThree();
@@ -57,21 +56,21 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
         | { target: THREE.Vector3; update: () => void; dispatchEvent?: (e: { type: string }) => void }
         | null;
 
-    // Accumulated zoom velocity in "log-distance" units (negative = zooming in).
+    // Velocidade de zoom acumulada em unidades de log-distância (negativo = aproximando).
     const velocity = useRef(0);
 
     useEffect(() => {
         const el = gl.domElement;
 
         const onWheel = (event: WheelEvent) => {
-            event.preventDefault(); // don't scroll the page while zooming the scene
+            event.preventDefault(); // impede scroll da página durante zoom na cena
 
-            // Treat a scroll as user interaction so CameraRig (which listens for 'start') hands
-            // control back mid-transition instead of fighting the dolly.
+            // Tratar scroll como interação do usuário para que o CameraRig (que escuta 'start')
+            // devolva o controle durante uma transição em andamento, evitando conflito com o dolly.
             controls?.dispatchEvent?.({ type: 'start' });
 
-            // deltaY is ~±100 per notch; scale into a gentle per-notch velocity bump. Normalizing
-            // by line/page delta modes keeps trackpads and mice comparable.
+            // deltaY é ~±100 por clique; escala para um incremento suave de velocidade por clique.
+            // Normalizar pelo modo de delta (linha/página) mantém trackpads e mouses comparáveis.
             const rect = el.getBoundingClientRect();
             const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rect.height : 1;
             velocity.current += (event.deltaY * unit) * 0.00018;
@@ -89,8 +88,8 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
 
         const target = controls?.target ?? new THREE.Vector3();
 
-        // Dolly straight along the camera → target ray. Exponential step so the feel is uniform at
-        // any scale (a notch zooms by the same %, whether you're close or far).
+        // Dolly ao longo do raio câmera → alvo. Passo exponencial para sensação uniforme em
+        // qualquer escala (um clique amplia a mesma % independente de estar perto ou longe).
         const toTarget = camera.position.clone().sub(target);
         const dist = toTarget.length();
         const newDist = THREE.MathUtils.clamp(dist * Math.exp(velocity.current), minDistance, maxDistance);
@@ -99,7 +98,7 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
         }
         controls?.update();
 
-        // Exponential decay → the "coast". Lower = glides longer.
+        // Decaimento exponencial → o "deslize". Menor = desliza mais tempo.
         velocity.current *= 0.82;
     });
 
@@ -107,13 +106,13 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
 }
 
 /**
- * Drives the camera ONLY during an explicit transition (a view-shortcut click or an object/body
- * focus). Outside a transition it does nothing, so OrbitControls owns the camera completely and
- * there's zero fighting on small drags.
+ * Controla a câmera APENAS durante uma transição explícita (clique em atalho de visão ou foco
+ * em objeto/corpo). Fora de uma transição não faz nada, então o OrbitControls é o dono completo
+ * da câmera — sem conflito em pequenos arrastos.
  *
- * A transition starts when `viewNonce`/`focusNonce`/`focusTarget` change. It ends when either the
- * camera arrives near the goal OR the user grabs the controls (the OrbitControls 'start' event).
- * That's what fixes the "it snaps back when I nudge it" feeling.
+ * Uma transição começa quando `viewNonce`/`focusNonce`/`focusTarget` mudam. Termina quando a
+ * câmera chega perto do destino OU o usuário toca os controles (evento 'start' do OrbitControls).
+ * Isso corrige o efeito de "volta ao lugar quando empurro um pouco".
  */
 export function CameraRig({
     view,
@@ -126,17 +125,17 @@ export function CameraRig({
     focusTarget: FocusFraming | null;
     focusNonce: number;
 }) {
-    // OrbitControls registers itself here via `makeDefault`. Typed loosely because R3F's default
-    // `controls` slot is intentionally untyped (it can host any controls implementation).
+    // OrbitControls se registra aqui via `makeDefault`. Tipado de forma frouxa porque o slot
+    // `controls` do R3F é intencionalmente sem tipo (pode hospedar qualquer implementação).
     const controls = useThree((s) => s.controls) as unknown as
         | { target: THREE.Vector3; update: () => void; addEventListener: (t: string, fn: () => void) => void; removeEventListener: (t: string, fn: () => void) => void }
         | null;
 
-    // Desired camera position + look target for the current transition.
+    // Posição e alvo desejados da câmera para a transição atual.
     const desired = useMemo(() => {
         if (focusTarget) return { position: focusTarget.position.clone(), target: focusTarget.target.clone() };
         return { position: CAMERA_VIEWS[view].clone(), target: new THREE.Vector3(0, 0, 0) };
-        // nonces participate so re-issuing the same intent restarts the tween.
+        // Os nonces participam para que reeditar a mesma intenção reinicie o tween.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view, viewNonce, focusTarget, focusNonce]);
 
@@ -145,7 +144,7 @@ export function CameraRig({
         tweening.current = true; // a new intent → start steering
     }, [desired]);
 
-    // Any user interaction immediately cancels the tween and hands control back.
+    // Qualquer interação do usuário cancela o tween imediatamente e devolve o controle.
     useEffect(() => {
         if (!controls?.addEventListener) return undefined;
         const cancel = () => { tweening.current = false; };
@@ -164,7 +163,7 @@ export function CameraRig({
             camera.lookAt(desired.target);
         }
 
-        // Arrived close enough → stop steering and release the camera to the user.
+        // Chegou perto o suficiente → para de conduzir e libera a câmera para o usuário.
         const posClose = camera.position.distanceToSquared(desired.position) < 1e-4;
         const tgtClose = !controls?.target || controls.target.distanceToSquared(desired.target) < 1e-4;
         if (posClose && tgtClose) tweening.current = false;
@@ -174,11 +173,11 @@ export function CameraRig({
 }
 
 /**
- * Camera framing for a selected asteroid.
- *   - orbitMode = false: a CLOSE-UP on the geocentric rock — the radar (log) scene is in play.
- *   - orbitMode = true: frame the object's full Kepler orbit around the Sun in the HELIOCENTRIC
- *     scene (Sun at origin, linear AU). The bounding sphere covers the orbit ellipse, the Sun,
- *     Earth's heliocentric position (if known), and the asteroid's propagated position.
+ * Enquadramento de câmera para um asteroide selecionado.
+ *   - orbitMode = false: close-up geocêntrico na rocha — cena de radar (escala logarítmica) ativa.
+ *   - orbitMode = true: enquadra a órbita Kepleriana completa ao redor do Sol na cena HELIOCÊNTRICA
+ *     (Sol na origem, escala linear em UA). A esfera limitante cobre a elipse orbital, o Sol,
+ *     a posição heliocêntrica da Terra (se conhecida) e a posição propagada do asteroide.
  */
 export function computeFocusFraming(
     object: ClosestNowObject,
@@ -194,14 +193,14 @@ export function computeFocusFraming(
                 box.expandByPoint(new THREE.Vector3(orbitPoints[i], orbitPoints[i + 1], orbitPoints[i + 2]));
             }
 
-            // Sun (origin) and Earth (~1 AU on its orbit) are scene anchors in the heliocentric layer.
+            // Sol (origem) e Terra (~1 UA) são âncoras de cena na camada heliocêntrica.
             box.expandByPoint(new THREE.Vector3(0, 0, 0));
             if (earthHelioPositionAU) {
                 const earth = helioAUToSunCenteredScene(earthHelioPositionAU);
                 box.expandByPoint(new THREE.Vector3(earth[0], earth[1], earth[2]));
             }
-            // Asteroid current position — by construction it sits on the ellipse, but include it
-            // explicitly so the framing never misses it under degenerate elements.
+            // Posição atual do asteroide — por construção está sobre a elipse, mas inclui
+            // explicitamente para que o enquadramento nunca o perca sob elementos degenerados.
             const asteroidHelio = heliocentricPositionAU(elements, new Date());
             if (asteroidHelio) {
                 const a = helioAUToSunCenteredScene(asteroidHelio);
@@ -220,11 +219,11 @@ export function computeFocusFraming(
             return { target: sphere.center, position: sphere.center.clone().add(dir.multiplyScalar(distance)) };
         }
 
-        // Elements rejected the orbit builder. Fall through to the close-up so something is shown.
+        // Elementos rejeitados pelo construtor de órbita. Cai para o close-up para mostrar algo.
     }
 
-    // Geocentric close-up on the rock. The radar (log) scene is in play, so we use the same
-    // log-compressed position the marker uses.
+    // Close-up geocêntrico na rocha. A cena de radar (log) está ativa, então usamos a mesma
+    // posição log-comprimida que o marcador usa.
     const current = currentPositionInScene(object);
     if (!current) return null;
     const target = new THREE.Vector3(...current);

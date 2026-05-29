@@ -30,7 +30,7 @@ import {
     UnifiedApproach,
 } from '@/types';
 import { EarthGlobe } from '@/Components/Nasa/EarthGlobe';
-import { Moon3D } from './Scene/Moon3D';
+import { Moon3D } from './Bodies/Moon/Moon3D';
 import { AsteroidMarkerShape } from './Presenters/AsteroidMarkerShape';
 import { ObjectTypeBadge } from './Presenters/ObjectTypeBadge';
 import { RadarFilters } from './Controls/RadarFilters';

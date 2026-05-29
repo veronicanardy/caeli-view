@@ -4,7 +4,8 @@ import { createContext, useContext, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 /**
- * Pixel thresholds shared by label-layout hooks. Kept here so the label module is self-contained.
+ * Limiares de pixel compartilhados pelos hooks de layout de rótulo. Mantidos aqui para que o
+ * módulo de labels seja autossuficiente.
  */
 const COMPACT_LABEL_THRESHOLD_PX = 92;
 const LABEL_HIDE_MIN_RADIUS_PX = 56;
@@ -13,19 +14,19 @@ const LABEL_HIDE_BODY_PADDING_PX = 72;
 export type LabelOccluder = { center: THREE.Vector3; radius: number } | null;
 
 /**
- * Tells <SceneLabel> / <ScreenLabel> / <FocusProtectedHtml> which 3D body, if any, currently has
- * the camera's full attention. Labels within the occluder's projected silhouette + padding are
- * hidden so the focused body never reads as a cluttered name pile.
+ * Informa a <SceneLabel> / <ScreenLabel> / <FocusProtectedHtml> qual corpo 3D, se algum, está
+ * com a atenção total da câmera. Labels dentro da silhueta projetada do oclusor + margem são
+ * ocultados para que o corpo em foco nunca apareça como uma pilha confusa de nomes.
  */
 export const LabelOccluderContext = createContext<LabelOccluder>(null);
 
 // --------------- Scene label (DOM overlay; always faces the screen) ---------------
 
 /**
- * A 3D-anchored text label rendered as an <Html> overlay. We deliberately avoid drei's <Text>
- * (troika-three-text) because it fetches a default font from a CDN on first paint — the project
- * forbids frontend fetches to third parties. <Html> uses plain DOM/CSS, scales with distance via
- * `distanceFactor`, and always faces the camera for free.
+ * Label de texto ancorado em 3D, renderizado como overlay <Html>. Deliberadamente evitamos o
+ * <Text> do drei (troika-three-text) porque ele busca uma fonte padrão de CDN na primeira
+ * renderização — o projeto proíbe fetches de frontend para terceiros. <Html> usa DOM/CSS puro,
+ * escala com a distância via `distanceFactor` e sempre fica voltado para a câmera gratuitamente.
  */
 export function SceneLabel({
     position,
@@ -87,10 +88,10 @@ export function SceneLabel({
 }
 
 /**
- * A label anchored to a 3D point but with SCREEN-STABLE size — it does NOT shrink when the object
- * is far away (no `distanceFactor`). This is what keeps a distant asteroid's hover/selection label
- * readable: the text stays a fixed CSS size on screen regardless of depth, while still tracking the
- * marker's projected position.
+ * Label ancorado a um ponto 3D mas com tamanho ESTÁVEL NA TELA — não encolhe quando o objeto fica
+ * longe (sem `distanceFactor`). É isso que mantém o label de hover/seleção de um asteroide
+ * distante legível: o texto fica em tamanho CSS fixo na tela independente da profundidade, mas
+ * ainda acompanha a posição projetada do marcador.
  */
 export function ScreenLabel({
     position,
@@ -191,9 +192,9 @@ export function FocusProtectedHtml({
 }
 
 /**
- * Reports true when the projected Moon orbit (1 DL ring) shrinks below COMPACT_LABEL_THRESHOLD_PX
- * on screen — i.e. the user is zoomed out far enough that the long primary labels would crowd the
- * Earth-Moon neighbourhood. Labels switch to their compact form when this returns true.
+ * Retorna true quando a órbita projetada da Lua (anel de 1 DL) encolhe abaixo de
+ * COMPACT_LABEL_THRESHOLD_PX na tela — ou seja, o usuário afastou o suficiente para que os
+ * labels primários longos entulhem a vizinhança Terra-Lua. Os labels mudam para forma compacta.
  */
 export function useCompactLabelMode(): boolean {
     const { camera, size } = useThree();
@@ -220,9 +221,9 @@ export function useCompactLabelMode(): boolean {
 }
 
 /**
- * Watches the camera each frame and returns true when this label sits inside the projected
- * silhouette of the current LabelOccluderContext body (with padding). Used by SceneLabel/
- * ScreenLabel/FocusProtectedHtml to keep the focused body free of overlapping label clutter.
+ * Observa a câmera a cada frame e retorna true quando este label está dentro da silhueta projetada
+ * do corpo atual do LabelOccluderContext (com margem). Usado por SceneLabel/ScreenLabel/
+ * FocusProtectedHtml para manter o corpo em foco livre de labels sobrepostos.
  */
 function useLabelHiddenByFocusRef(
     labelRef: React.RefObject<THREE.Object3D | null>,

@@ -1,5 +1,5 @@
 import { compactKm, formatNumber } from '@/lib/format';
-import { Moon3D } from '../Scene/Moon3D';
+import { Moon3D } from '../Bodies/Moon/Moon3D';
 
 type Props = {
     lunarDistance: number | null;

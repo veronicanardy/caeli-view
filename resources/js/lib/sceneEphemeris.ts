@@ -1,7 +1,7 @@
 /**
  * Lightweight ephemeris helpers for the 3D radar's lighting + Moon placement.
  *
- * Frame contract, matching DailyOrbitalRadar3DPrototype.horizonsToScene:
+ * Frame contract, matching DailyOrbitalRadar3D.horizonsToScene:
  * - Astronomy Engine returns Sun/Moon data in EQJ, the J2000 equatorial frame.
  * - JPL Horizons asteroid vectors are rendered in J2000 ecliptic coordinates.
  * - The scene maps ecliptic (x, y, z) to Three.js (x, y, z) as (x, z, y):

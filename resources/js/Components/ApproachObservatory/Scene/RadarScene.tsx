@@ -44,38 +44,38 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
         [closestNowObjects, selectedId],
     );
-    // Selection shows the local geocentric trajectory. The solar Kepler orbit appears only after
-    // the user asks for the pulled-back orbit framing.
+    // A seleção exibe a trajetória geocêntrica local. A órbita Kepleriana solar aparece somente
+    // após o usuário solicitar o enquadramento recuado de órbita.
     const selectedHasOrbit = useMemo(
         () => closestNowObjects.some((object) => object.approach.id === selectedId && Boolean(object.trajectory?.orbitalElements)),
         [closestNowObjects, selectedId],
     );
-    // Real Sun direction (Earth→Sun, unit). Falls back to a fixed pleasant angle until the
-    // ephemeris resolves. This single vector drives the directional light AND the day/night
-    // terminator on Earth and the Moon phase, so everything stays consistent.
+    // Direção real do Sol (Terra→Sol, unitário). Usa um ângulo fixo agradável até a efeméride
+    // resolver. Este único vetor conduz a luz direcional E o terminador dia/noite na Terra e a
+    // fase da Lua — tudo permanece consistente.
     const sunDir = useMemo<[number, number, number]>(
         () => ephemeris?.sunDirection ?? fallbackSunDirection,
         [ephemeris, fallbackSunDirection],
     );
-    // Real Moon position (scene units). Falls back to the +X / 1 DL placeholder until resolved.
+    // Posição real da Lua em unidades de cena. Usa placeholder +X / 1 DL até resolver.
     const moonPos = useMemo<[number, number, number]>(() => {
         const p = ephemeris?.moonScenePosition;
-        // moonScenePosition is in LINEAR DL (~1). Run it through the shared radial log compression,
-        // same as the asteroid vectors and the heliocentric orbit, so one rule governs everything.
+        // moonScenePosition está em DL LINEAR (~1). Passa pela compressão log radial compartilhada,
+        // igual aos vetores de asteroide e à órbita heliocêntrica — uma só regra governa tudo.
         if (!p) return [compressDistanceDl(1), 0, 0];
         return compressSceneVector(p);
     }, [ephemeris]);
-    // Real orbital-plane normal of the Moon. Fallback: ecliptic-north (flat ring) until resolved.
+    // Normal real do plano orbital da Lua. Fallback: norte eclíptico (anel plano) até resolver.
     const moonOrbitNormal = useMemo<[number, number, number]>(
         () => ephemeris?.moonOrbitNormal ?? [0, 1, 0],
         [ephemeris],
     );
     const compactLabels = useCompactLabelMode();
 
-    // Clicking Earth or Moon re-frames the camera on that body without "selecting" it. Both use the
-    // same close framing (framingForBody) so the behavior is identical whether triggered from the
-    // 3D scene, the ring buttons, or the side list. An object selection (focusTarget) always wins
-    // and clears any body focus.
+    // Clicar na Terra ou na Lua re-enquadra a câmera naquele corpo sem "selecioná-lo". Ambos usam
+    // o mesmo enquadramento próximo (framingForBody), então o comportamento é idêntico seja
+    // disparado da cena 3D, dos botões de anel ou da lista lateral. Uma seleção de objeto
+    // (focusTarget) sempre vence e limpa qualquer foco de corpo.
     const [bodyFocus, setBodyFocus] = useState<{ body: 'earth' | 'moon'; framing: FocusFraming; nonce: number } | null>(null);
     const focusEarth = () => {
         onClearSelection();
@@ -83,8 +83,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     };
     const focusMoon = () => setBodyFocus({ body: 'moon', framing: framingForBody(new THREE.Vector3(...moonPos), MOON_RADIUS_DL), nonce: Date.now() });
 
-    // React to an Earth/Moon focus requested from outside the scene. Keyed by the intent nonce so
-    // the same body can be re-focused; uses the close framing for both (the list means "take me there").
+    // Reagir a um foco de Terra/Lua solicitado de fora da cena. Chaveado pelo nonce de intenção
+    // para que o mesmo corpo possa ser re-focado; usa o enquadramento próximo para ambos.
     useEffect(() => {
         if (cameraIntent.kind !== 'body') return;
         if (cameraIntent.body === 'earth') {
@@ -95,19 +95,19 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cameraIntent.kind === 'body' ? cameraIntent.nonce : -1]);
 
-    // Selecting an object clears any pending body focus so the two don't fight.
+    // Selecionar um objeto limpa qualquer foco de corpo pendente para os dois não conflitarem.
     useEffect(() => {
         if (focusTarget) setBodyFocus(null);
     }, [focusTarget]);
 
-    // Picking a preset view (Top/Side/Reset) clears any active body focus so the view buttons win.
+    // Escolher uma visão predefinida (Superior/Lateral/Resetar) limpa qualquer foco de corpo ativo.
     useEffect(() => {
         if (cameraIntent.kind !== 'preset') return;
         setBodyFocus(null);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cameraIntent.kind === 'preset' ? cameraIntent.nonce : -1]);
 
-    // Object selection takes precedence; otherwise a body focus; otherwise the preset view.
+    // Seleção de objeto tem precedência; depois foco de corpo; depois a visão predefinida.
     const activeFocus = focusTarget ?? bodyFocus?.framing ?? null;
     const focusNonce = focusTarget ? cameraIntent.nonce : bodyFocus?.nonce ?? 0;
     const orbitLabelsOnly = orbitMode && selectedHasOrbit;
@@ -120,11 +120,11 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
             ? { center: new THREE.Vector3(...focusedObjectPosition), radius: 0.18 }
           : null;
 
-    // Mode arbitration: orbit-solar takes over the whole scene when (a) the user asked for orbit
-    // mode AND (b) the selected object has osculating elements with a usable epoch (tpJd ≠ 0).
-    // Otherwise we stay in the geocentric radar layer. Mixing both layers in the same frame was
-    // the bug fixed by the modes-separation effort: the asteroid would never sit on its drawn
-    // ellipse because they lived in two different rulers.
+    // Arbitragem de modo: a cena solar-orbital toma conta quando (a) o usuário pediu modo órbita
+    // E (b) o objeto selecionado tem elementos osculadores com época utilizável (tpJd ≠ 0).
+    // Caso contrário permanece na camada de radar geocêntrico. Misturar ambas as camadas no mesmo
+    // frame era o bug corrigido pela separação de modos: o asteroide nunca ficava sobre sua elipse
+    // desenhada pois viviam em regras de escala diferentes.
     const focusedElements = focusedObject?.trajectory?.orbitalElements ?? null;
     const focusedPalette = focusedObject
         ? OBJECT_PALETTE[Math.max(0, closestNowObjects.findIndex((o) => o.approach.id === focusedObject.approach.id)) % OBJECT_PALETTE.length]
@@ -171,7 +171,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         <DisplayedEarthOrbitGuide sunDirection={sunDir} />
                     ) : null}
 
-                    {/* Geocentric markers (near Earth). Selection never moves the rock. */}
+                    {/* Marcadores geocêntricos (próximos à Terra). A seleção nunca move a rocha. */}
                     {closestNowObjects.map((object, index) => (
                         <AsteroidMarker
                             key={object.approach.id}
@@ -187,7 +187,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         />
                     ))}
 
-                    {/* Local geocentric "now" trajectories — only meaningful in the radar layer. */}
+                    {/* Trajetórias geocêntricas locais "agora" — só fazem sentido na camada de radar. */}
                     {closestNowObjects
                         .map((object, index) => ({ object, palette: OBJECT_PALETTE[index % OBJECT_PALETTE.length] }))
                         .filter(({ object }) => object.trajectory && object.trajectory.status === 'available')
@@ -211,14 +211,14 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                 makeDefault
                 enablePan
                 enableDamping
-                // Lower damping = longer, smoother glide after rotate/pan input.
+                // Menor damping = deslize mais longo e suave após rotação/pan.
                 dampingFactor={0.05}
-                // Zoom is handled by <InertialZoom> below (coasting dolly toward the cursor), so the
-                // built-in wheel zoom is disabled to avoid two systems fighting over the dolly.
+                // O zoom é tratado pelo <InertialZoom> abaixo (dolly deslizante), então o zoom
+                // de roda nativo está desabilitado para evitar dois sistemas conflitando no dolly.
                 enableZoom={false}
-                // Don't let the camera dive into Earth: keep min distance above the Earth glow.
+                // Não deixa a câmera mergulhar na Terra: mantém distância mínima acima do brilho.
                 minDistance={EARTH_RADIUS_DL * 2.2}
-                // Pull back far enough to see complete selected asteroid orbits.
+                // Recua o suficiente para ver órbitas completas de asteroides selecionados.
                 maxDistance={MAX_CAMERA_DISTANCE}
                 target={[0, 0, 0]}
                 rotateSpeed={0.8}

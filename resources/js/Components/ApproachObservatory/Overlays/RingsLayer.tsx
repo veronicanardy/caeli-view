@@ -2,19 +2,19 @@ import * as THREE from 'three';
 import { compressDistanceDl } from '@/lib/sceneEphemeris';
 import { SceneLabel } from './SceneLabels';
 
-// Primary DL rings are disabled here; the local 1 DL cue belongs to the Moon orbit itself.
+// Anéis primários de DL desabilitados aqui; a referência de 1 DL pertence à órbita da Lua.
 const RING_STOPS_DL: number[] = [];
 const GUIDE_RING_STOPS_DL = [50];
 
 /**
- * Faint guide rings beyond the Moon plus their distance labels. The 1 DL ring lives on the Moon
- * orbit line itself — only broader guide labels live here. Rings lie in the ecliptic plane
- * (group rotation rotates the geometry into XZ).
+ * Anéis guia tênues além da Lua com seus rótulos de distância. O anel de 1 DL fica na linha de
+ * órbita da Lua — apenas rótulos guia de distâncias maiores vivem aqui. Os anéis ficam no plano
+ * eclíptico (a rotação do grupo posiciona a geometria no plano XZ).
  */
 export function RingsLayer({ onEarthFocus, showLabels }: { onEarthFocus: () => void; showLabels: boolean }) {
     return (
         <group rotation={[Math.PI / 2, 0, 0]}>
-            {/* Optional inner rings (currently none). */}
+            {/* Anéis internos opcionais (atualmente nenhum). */}
             {RING_STOPS_DL.map((ld) => (
                 <mesh key={ld}>
                     <ringGeometry
@@ -32,8 +32,8 @@ export function RingsLayer({ onEarthFocus, showLabels }: { onEarthFocus: () => v
                     />
                 </mesh>
             ))}
-            {/* Faint guide rings beyond 1 DL so distant asteroids still have a distance cue,
-                without competing visually with the Earth-Moon zone. */}
+            {/* Anéis guia tênues além de 1 DL para que asteroides distantes ainda tenham referência
+                de distância, sem competir visualmente com a zona Terra-Lua. */}
             {GUIDE_RING_STOPS_DL.map((ld) => (
                 <mesh key={`guide-${ld}`}>
                     <ringGeometry

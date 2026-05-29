@@ -58,7 +58,7 @@ type Props = {
  */
 // --------------- Component ---------------
 
-export function DailyOrbitalRadar3DPrototype({
+export function DailyOrbitalRadar3D({
     closestNowObjects,
     selectedId,
     onSelect,
