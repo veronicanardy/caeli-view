@@ -159,21 +159,27 @@ class ApproachObservatoryController
     }
 
     /**
-     * Returns the 5 (or N) objects that are actually the closest to Earth right now,
-     * each with the full Horizons-derived trajectory (past/current/future).
+     * Retorna os N objetos mais próximos da Terra agora, com trajetória completa do Horizons.
+     *
+     * Parâmetros aceitos:
+     *   - limit : 1–30 (padrão 5). Aumentar o limite aumenta candidatos avaliados e tempo de resposta.
+     *   - mode  : 'nearest' | 'upcoming' | 'featured' | 'attention' (padrão 'nearest').
+     *             Controla o critério de seleção e ordenação dos objetos retornados.
      */
     public function closestNow(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'date_min' => ['nullable', 'date_format:Y-m-d'],
             'date_max' => ['nullable', 'date_format:Y-m-d'],
-            'limit' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'limit'    => ['nullable', 'integer', 'min:1', 'max:30'],
+            'mode'     => ['nullable', 'string', 'in:nearest,upcoming,featured,attention'],
         ]);
 
         $defaults = $this->observatory->defaultFilters();
         $anchorMin = (string) ($validated['date_min'] ?? $defaults['date_min']);
         $anchorMax = (string) ($validated['date_max'] ?? $defaults['date_max']);
         $limit = (int) ($validated['limit'] ?? 5);
+        $mode  = (string) ($validated['mode'] ?? 'nearest');
 
         // "Closest right now" is not the same as "approaches that peak today". An object that had
         // its peak 2 days ago can still be one of the 5 closest to Earth right now, and so can one
@@ -186,7 +192,7 @@ class ApproachObservatoryController
             $dateMax = $anchorMax;
         }
 
-        $payload = $this->closestNow->select($dateMin, $dateMax, $limit);
+        $payload = $this->closestNow->select($dateMin, $dateMax, $limit, $mode);
 
         return response()->json($payload)
             ->header('Cache-Control', 'public, max-age=900, stale-while-revalidate=900');

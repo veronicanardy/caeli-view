@@ -28,11 +28,20 @@ use Illuminate\Support\Facades\Concurrency;
  */
 final class ClosestNowSelector
 {
-    /** Quantos candidatos avaliar no Horizons antes de cortar para o limite final */
-    private const TOP_CANDIDATES = 15;
+    /**
+     * Quantos candidatos avaliar no Horizons antes de cortar para o limite final.
+     *
+     * Precisa ser maior que o maior `limit` aceito pelo controller (30) mais margem para PHAs
+     * extras. 45 garante que mesmo com limit=30 haja candidatos suficientes para ordenar por
+     * distância real e ainda sobrar PHAs que não estavam no top-30 por miss_distance.
+     */
+    private const TOP_CANDIDATES = 45;
 
     /** Número padrão de objetos retornados ao chamador */
     private const TOP_RESULT_LIMIT = 5;
+
+    /** Modos de seleção válidos — o critério que define quais objetos são priorizados */
+    private const VALID_MODES = ['nearest', 'upcoming', 'featured', 'attention'];
 
     /**
      * Janela temporal enviada ao Horizons: -30d passado / +90d futuro com passo de 2 dias (~60 pontos).
@@ -63,25 +72,27 @@ final class ClosestNowSelector
     }
 
     /**
-     * Retorna os objetos mais próximos da Terra agora dentro da janela de datas informada.
+     * Retorna os objetos selecionados para o radar dentro da janela de datas informada.
      *
      * @param  string  $dateMin  Data inicial ISO (Y-m-d), inclusive
      * @param  string  $dateMax  Data final ISO (Y-m-d), inclusive
-     * @param  int     $limit    Quantos objetos retornar (padrão 5, máx 10)
+     * @param  int     $limit    Quantos objetos retornar (padrão 5, máx 30)
+     * @param  string  $mode     Critério de seleção: 'nearest' | 'upcoming' | 'featured' | 'attention'
      */
-    public function select(string $dateMin, string $dateMax, int $limit = self::TOP_RESULT_LIMIT): array
+    public function select(string $dateMin, string $dateMax, int $limit = self::TOP_RESULT_LIMIT, string $mode = 'nearest'): array
     {
-        $limit = max(1, min($limit, 10));
+        $limit = max(1, min($limit, 30));
+        $mode  = in_array($mode, self::VALID_MODES, true) ? $mode : 'nearest';
 
-        // A assinatura da janela faz parte da chave de cache para que uma mudança de configuração
-        // (ex: ampliar o horizonte temporal) invalide resultados antigos imediatamente.
+        // A assinatura da janela + mode faz parte da chave de cache para que uma mudança de
+        // configuração (ex: ampliar o horizonte temporal) invalide resultados antigos imediatamente.
         $windowSignature = implode(',', self::HORIZONS_WINDOW);
-        $cacheKey        = 'closest-now:' . md5($dateMin . '|' . $dateMax . '|' . $limit . '|' . $windowSignature);
+        $cacheKey        = 'closest-now:' . md5($dateMin . '|' . $dateMax . '|' . $limit . '|' . $mode . '|' . $windowSignature);
 
         return Cache::flexible(
             $cacheKey,
             [self::RESULT_CACHE_TTL_SECONDS, self::RESULT_CACHE_TTL_SECONDS + 900],
-            fn (): array => $this->resolve($dateMin, $dateMax, $limit),
+            fn (): array => $this->resolve($dateMin, $dateMax, $limit, $mode),
         );
     }
 
@@ -92,7 +103,7 @@ final class ClosestNowSelector
     /**
      * Executa o pipeline completo de resolução sem cache.
      */
-    private function resolve(string $dateMin, string $dateMax, int $limit): array
+    private function resolve(string $dateMin, string $dateMax, int $limit, string $mode): array
     {
         // Passo 1: candidatos do CAD + NeoWs (já deduplicados e filtrados por dist_max)
         $data = $this->observatory->observe([
@@ -107,26 +118,31 @@ final class ClosestNowSelector
         $approaches = is_array($data['approaches'] ?? null) ? $data['approaches'] : [];
 
         if ($approaches === []) {
-            return $this->emptyResult($dateMin, $dateMax, 'Nenhum candidato encontrado no período.');
+            return $this->emptyResult($dateMin, $dateMax, $limit, $mode, 'Nenhum candidato encontrado no período.');
         }
 
         // Passo 2: seleciona top-N por miss_distance + todos os PHAs do período
-        $candidates = $this->pickCandidates($approaches);
+        $candidates = $this->pickCandidates($approaches, $mode);
 
         if ($candidates === []) {
-            return $this->emptyResult($dateMin, $dateMax, 'Nenhum candidato com dados suficientes para projeção.');
+            return $this->emptyResult($dateMin, $dateMax, $limit, $mode, 'Nenhum candidato com dados suficientes para projeção.');
         }
 
         // Passo 3: busca trajetórias do Horizons em paralelo para cada candidato
         $trajectories = $this->fetchTrajectoriesParallel($candidates);
 
-        // Passo 4: monta resultado por objeto com distância atual e reordena
+        // Passo 4: monta resultado por objeto com distância atual e reordena pelo critério do mode
         $objects = $this->buildObjects($candidates, $trajectories);
 
-        usort($objects, $this->compareByCurrentDistance(...));
+        $comparator = $mode === 'upcoming'
+            ? $this->compareByUpcomingApproach(...)
+            : $this->compareByCurrentDistance(...);
+
+        usort($objects, $comparator);
 
         return [
             'mode'                => 'closest_now',
+            'selectionMode'       => $mode,
             'generatedAt'         => CarbonImmutable::now('UTC')->toIso8601String(),
             'window'              => ['dateMin' => $dateMin, 'dateMax' => $dateMax],
             'requestedLimit'      => $limit,
@@ -148,14 +164,17 @@ final class ClosestNowSelector
     /**
      * Seleciona os candidatos que serão consultados no Horizons.
      *
-     * Critério: top-N por miss_distance (proximidade na data de aproximação)
-     * + união com todos os PHAs (potencialmente perigosos) da janela, mesmo que
-     * estejam fora do top-N por distância — PHAs sempre merecem avaliação real.
+     * Critério base: top-N por miss_distance + união com todos os PHAs da janela.
+     * PHAs sempre entram independentemente do ranking — merecem avaliação real.
+     *
+     * No modo 'attention' os PHAs entram primeiro na lista de candidatos, garantindo
+     * que sejam priorizados mesmo quando o pool total excede TOP_CANDIDATES.
      *
      * @param  array<int, array<string, mixed>>  $approaches
+     * @param  string                            $mode
      * @return array<int, array<string, mixed>>
      */
-    private function pickCandidates(array $approaches): array
+    private function pickCandidates(array $approaches, string $mode): array
     {
         $withDistance = array_filter(
             $approaches,
@@ -168,6 +187,19 @@ final class ClosestNowSelector
         );
 
         $byId = [];
+
+        // No modo 'attention' PHAs entram primeiro para terem precedência no pool de candidatos
+        if ($mode === 'attention') {
+            foreach ($approaches as $approach) {
+                if (! (bool) ($approach['hazardFlag'] ?? false)) {
+                    continue;
+                }
+                $id = (string) ($approach['id'] ?? '');
+                if ($id !== '') {
+                    $byId[$id] = $approach;
+                }
+            }
+        }
 
         foreach (array_slice($withDistance, 0, self::TOP_CANDIDATES) as $approach) {
             $id = (string) ($approach['id'] ?? '');
@@ -251,8 +283,8 @@ final class ClosestNowSelector
     }
 
     /**
-     * Comparador de ordenação: prioriza objetos com distância real do Horizons.
-     * Objetos sem distância real vão para o final e são comparados pela miss_distance nominal.
+     * Comparador para modo 'nearest': prioriza distância atual real do Horizons.
+     * Objetos sem efeméride vão para o final, ordenados pela miss_distance nominal.
      */
     private function compareByCurrentDistance(array $a, array $b): int
     {
@@ -266,27 +298,52 @@ final class ClosestNowSelector
             return $aFallback <=> $bFallback;
         }
 
-        if ($aKm === null) {
-            return 1;
-        }
-
-        if ($bKm === null) {
-            return -1;
-        }
+        if ($aKm === null) return 1;
+        if ($bKm === null) return -1;
 
         return $aKm <=> $bKm;
     }
 
     /**
+     * Comparador para modo 'upcoming': prioriza objetos cuja data de aproximação é mais próxima
+     * do instante atual (passado imediato ou futuro próximo). Ordena por |approachDate - now|.
+     * Objetos sem data de aproximação vão para o final.
+     */
+    private function compareByUpcomingApproach(array $a, array $b): int
+    {
+        $now   = CarbonImmutable::now('UTC');
+        $aDate = isset($a['approach']['approachDate'])
+            ? CarbonImmutable::parse($a['approach']['approachDate'], 'UTC')
+            : null;
+        $bDate = isset($b['approach']['approachDate'])
+            ? CarbonImmutable::parse($b['approach']['approachDate'], 'UTC')
+            : null;
+
+        if ($aDate === null && $bDate === null) return 0;
+        if ($aDate === null) return 1;
+        if ($bDate === null) return -1;
+
+        // Prioriza datas no futuro; para datas passadas usa distância absoluta
+        $aFuture = $aDate->greaterThan($now);
+        $bFuture = $bDate->greaterThan($now);
+
+        if ($aFuture && ! $bFuture) return -1;
+        if (! $aFuture && $bFuture) return 1;
+
+        return abs($aDate->diffInSeconds($now)) <=> abs($bDate->diffInSeconds($now));
+    }
+
+    /**
      * Resultado vazio padronizado para quando não há candidatos viáveis.
      */
-    private function emptyResult(string $dateMin, string $dateMax, string $note): array
+    private function emptyResult(string $dateMin, string $dateMax, int $limit, string $mode, string $note): array
     {
         return [
             'mode'                => 'closest_now',
+            'selectionMode'       => $mode,
             'generatedAt'         => CarbonImmutable::now('UTC')->toIso8601String(),
             'window'              => ['dateMin' => $dateMin, 'dateMax' => $dateMax],
-            'requestedLimit'      => self::TOP_RESULT_LIMIT,
+            'requestedLimit'      => $limit,
             'candidatesEvaluated' => 0,
             'objects'             => [],
             'note'                => $note,
