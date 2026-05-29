@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { AsteroidTrajectory } from '@/types';
 import { compactKm } from '@/lib/format';
@@ -24,9 +24,6 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
         () => (trajectory.pastPoints ?? []).map(toVec3),
         [trajectory.pastPoints],
     );
-    // Same source points whether selected or not — the non-selected "stub" is literally the FIRST
-    // part of the very same curve. Only the length clip below differs, so selecting an object just
-    // grows the stub into the full arc (no jump, no different geometry).
     const futureVecs = useMemo(
         () => (trajectory.futurePoints ?? []).map(toVec3),
         [trajectory.futurePoints],
@@ -36,38 +33,27 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
         [trajectory.currentPoint],
     );
 
-    // Closest-approach marker: scan ALL points (past + future) and pick the one with the
-    // smallest distanceKm. This is what the user wants to see — the moment of closest approach
-    // — and Horizons already tags each point with its range, so we just take the minimum.
     const closestApproach = useMemo(() => findClosestApproachPoint(trajectory), [trajectory]);
 
-    // The Horizons window is now ~50 days (-15d/+35d), wide enough that the trajectory visibly
-    // CURVES. We draw essentially the whole arc — the cap is large and only exists so a very fast
-    // outlier can't shoot infinitely off-scene. Showing the full arc also keeps the closest-
-    // approach marker ON the drawn line instead of floating off as an orphan dot.
-    // Non-selected objects show only a SHORT direction-of-travel stub, just enough to read which way
-    // they're heading without long vectors streaking across the whole scene. The selected one gets
-    // the full arc. Both clip the SAME curve, so the stub is exactly its opening segment.
-    //
-    // NOTE: the clip length is measured in SCENE UNITS (the points are already log-compressed), not
-    // raw DL — so this is a visual length on screen, kept small so the stub barely leaves the marker.
-    const PAST_REACH_DL = 1.25;
-    // Non-selected: a short lead of the SAME curve (just clipped short) so the grey dashed stub in
-    // front of the cone matches the full orbit you see once it's selected.
-    const FUTURE_REACH_DL = 1.8;
+    // Line reaches further for selected objects; non-selected get a shorter but still visible arc.
+    // Both clip the same underlying Catmull-Rom curve so selecting just extends what's already drawn.
+    const PAST_REACH_SELECTED = 3.5;
+    const FUTURE_REACH_SELECTED = 4.5;
+    const PAST_REACH_OTHER = 1.8;
+    const FUTURE_REACH_OTHER = 2.2;
 
-    // Bridge past[-1] → current → future[0] so the curve has no visible break at "now". Past is
-    // chronological (oldest → newest); future is chronological (now → later).
+    const pastReach  = emphasized ? PAST_REACH_SELECTED  : PAST_REACH_OTHER;
+    const futureReach = emphasized ? FUTURE_REACH_SELECTED : FUTURE_REACH_OTHER;
+
     const fullPast = useMemo(() => {
         const joined = currentVec && pastVecs.length > 0 ? [...pastVecs, currentVec] : pastVecs;
-        // Clip from the "now" end backward, then restore chronological order.
-        return clipPolylineByLength([...joined].reverse(), PAST_REACH_DL).reverse();
-    }, [pastVecs, currentVec]);
+        return clipPolylineByLength([...joined].reverse(), pastReach).reverse();
+    }, [pastVecs, currentVec, pastReach]);
 
     const fullFuture = useMemo(() => {
         const joined = currentVec && futureVecs.length > 0 ? [currentVec, ...futureVecs] : futureVecs;
-        return clipPolylineByLength(joined, FUTURE_REACH_DL);
-    }, [futureVecs, currentVec]);
+        return clipPolylineByLength(joined, futureReach);
+    }, [futureVecs, currentVec, futureReach]);
 
     // Only show the closest-approach marker when its point actually falls within the drawn portion
     // of the trajectory — otherwise it reads as a floating orphan dot disconnected from any line.
@@ -111,22 +97,31 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
         );
     }, [emphasized, trajectory, fullPast, fullFuture]);
 
-    // Selected → strong & vivid (the full curved arc stands out). Everything else stays faint &
-    // discreet so the 5 long 50-day arcs don't clutter the scene. `dimmed` (another object is
-    // selected) pushes them even fainter so the selected arc clearly wins attention.
-    const pastDotOpacity = emphasized ? 0.34 : dimmed ? 0.1 : 0.2;
-    const futureDotOpacity = emphasized ? 0.42 : dimmed ? 0.16 : 0.3;
+    // Peak opacity at the rock end of each segment. Dimmed state (another object selected) pulls
+    // everything back so the selected arc clearly wins. Non-selected objects stay readable but quiet.
+    const pastPeakOpacity   = emphasized ? 0.55 : dimmed ? 0.12 : 0.32;
+    const futurePeakOpacity = emphasized ? 0.75 : dimmed ? 0.18 : 0.45;
     const coneOpacity = emphasized ? 0.95 : dimmed ? 0.5 : 0.85;
 
     return (
         <group>
             {/* coneOnly: só o cone de direção, sem linhas. Usado com 15/30 objetos. */}
             {!coneOnly && fullPast.length >= 2 ? (
-                <DashedLeadLine points={fullPast} color={palette.past} opacity={pastDotOpacity} dashSize={0.055} gapSize={0.13} />
+                <GradientLine
+                    points={fullPast}
+                    color={palette.past}
+                    peakOpacity={pastPeakOpacity}
+                    peakAtEnd
+                />
             ) : null}
 
             {!coneOnly && fullFuture.length >= 2 ? (
-                <DashedLeadLine points={fullFuture} color={palette.future} opacity={futureDotOpacity} dashSize={0.075} gapSize={0.12} />
+                <GradientLine
+                    points={fullFuture}
+                    color={palette.future}
+                    peakOpacity={futurePeakOpacity}
+                    peakAtEnd={false}
+                />
             ) : null}
 
             {endArrow ? (
@@ -154,47 +149,60 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
 }
 
 /**
- * A trajectory polyline. Horizons gives us only a handful of sparse samples, so drawing straight
- * segments between them looks like jagged "elbows" that aren't physically there. We fit a
- * Catmull-Rom curve through the real samples (passing through every one) and resample it densely,
- * so the rendered path reads as the smooth arc the object actually follows in 3D.
+ * Solid polyline with a linear opacity gradient along its length.
+ * `peakAtEnd = true`  → fades in from 0 at start to peakOpacity at the last point (past trail,
+ *                        anchored at the rock).
+ * `peakAtEnd = false` → peakOpacity at the first point fading out to 0 (future trail, leaving rock).
  *
- * `lineWidth` is a best-effort hint — WebGL core lines ignore width > 1 on most platforms — so
- * emphasis is carried mostly by opacity/color.
+ * Achieved with per-vertex colors (rgba via vertexColors) on a Catmull-Rom resampled curve so the
+ * sparse Horizons samples read as a smooth arc rather than jagged elbows.
  */
-function TrajectoryLine({
+function GradientLine({
     points,
     color,
-    opacity,
-    lineWidth,
+    peakOpacity,
+    peakAtEnd,
 }: {
     points: THREE.Vector3[];
     color: string;
-    opacity: number;
-    lineWidth: number;
+    peakOpacity: number;
+    peakAtEnd: boolean;
 }) {
-    const positions = useMemo(() => {
-        if (points.length < 3) {
-            return new Float32Array(points.flatMap((v) => [v.x, v.y, v.z]));
+    const { positions, colors } = useMemo(() => {
+        const base = new THREE.Color(color);
+        const sampled = points.length >= 3
+            ? new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.5)
+                .getPoints(Math.min(180, Math.max(40, points.length * 20)))
+            : points;
+        const n = sampled.length;
+        const pos = new Float32Array(n * 3);
+        const col = new Float32Array(n * 4); // rgba per vertex
+        for (let i = 0; i < n; i++) {
+            const v = sampled[i];
+            pos[i * 3]     = v.x;
+            pos[i * 3 + 1] = v.y;
+            pos[i * 3 + 2] = v.z;
+            // t=0 → tip away from rock, t=1 → near rock
+            const t = peakAtEnd ? i / (n - 1) : 1 - i / (n - 1);
+            // Ease-in so the fade starts slow and punches up near the rock
+            const alpha = peakOpacity * (t * t);
+            col[i * 4]     = base.r;
+            col[i * 4 + 1] = base.g;
+            col[i * 4 + 2] = base.b;
+            col[i * 4 + 3] = alpha;
         }
-        // centripetal Catmull-Rom avoids the cusps/overshoot the uniform variant produces on
-        // unevenly spaced samples — exactly our case near closest approach.
-        const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.5);
-        const divisions = Math.min(220, Math.max(40, points.length * 24));
-        const sampled = curve.getPoints(divisions);
-        return new Float32Array(sampled.flatMap((v) => [v.x, v.y, v.z]));
-    }, [points]);
+        return { positions: pos, colors: col };
+    }, [points, color, peakOpacity, peakAtEnd]);
 
-    // Key by vertex count so the geometry's draw range is rebuilt cleanly when the sample count
-    // changes (R3F otherwise can keep a stale count on the existing bufferAttribute).
     const count = positions.length / 3;
 
     return (
         <line key={count}>
             <bufferGeometry attach="geometry">
                 <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+                <bufferAttribute attach="attributes-color" args={[colors, 4]} />
             </bufferGeometry>
-            <lineBasicMaterial color={color} transparent opacity={opacity} linewidth={lineWidth} />
+            <lineBasicMaterial vertexColors transparent depthWrite={false} />
         </line>
     );
 }
@@ -236,54 +244,6 @@ function ElegantEndArrow({
     );
 }
 
-/**
- * A short grey, dashed lead line in front of a non-selected asteroid's direction cone. It traces the
- * opening of the SAME real trajectory curve drawn in full when the object is selected (it receives
- * those exact points, just clipped short) — so the little dashes read as a preview of the full path.
- *
- * Built as a real THREE.Line via <primitive>: LineDashedMaterial needs computeLineDistances(), and
- * the <line> JSX tag's TS types resolve to SVG (rejecting three.js props). frustumCulled stays on —
- * these are tiny and near the markers, so culling them when off-screen is fine.
- */
-function DashedLeadLine({
-    points,
-    color = '#9fb0bf',
-    opacity,
-    dashSize = 0.12,
-    gapSize = 0.1,
-}: {
-    points: THREE.Vector3[];
-    color?: string;
-    opacity: number;
-    dashSize?: number;
-    gapSize?: number;
-}) {
-    const lineObject = useMemo(() => {
-        // Smooth the sparse samples the same way TrajectoryLine does, so the dashes hug the curve.
-        const curve = points.length >= 3
-            ? new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.5)
-            : null;
-        const sampled = curve ? curve.getPoints(48) : points;
-        const geometry = new THREE.BufferGeometry().setFromPoints(sampled);
-        const material = new THREE.LineDashedMaterial({
-            color,
-            transparent: true,
-            opacity,
-            dashSize,
-            gapSize,
-            depthWrite: false,
-        });
-        const line = new THREE.Line(geometry, material);
-        line.computeLineDistances(); // required for the dashes to show
-        return line;
-    }, [points, color, opacity, dashSize, gapSize]);
-    useEffect(() => () => {
-        lineObject.geometry.dispose();
-        (lineObject.material as THREE.Material).dispose();
-    }, [lineObject]);
-
-    return <primitive object={lineObject} />;
-}
 
 function TimeTick({ vec, label, color }: { vec: THREE.Vector3; label: string; color: string }) {
     return (
