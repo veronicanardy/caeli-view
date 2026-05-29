@@ -28,7 +28,6 @@ interface EarthProps {
     subsolarLonDeg: number;
     showLabel: boolean;
     protectLabelFromFocus: boolean;
-    /** When true, the Earth is the current camera focus — disable click/hover. */
     isFocused?: boolean;
 }
 

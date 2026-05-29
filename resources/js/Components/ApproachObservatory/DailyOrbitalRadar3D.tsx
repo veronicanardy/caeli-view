@@ -8,6 +8,7 @@ import { computeSceneEphemeris, KM_PER_AU, type SceneEphemeris } from '@/lib/sce
 import { sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
 import { MapManualModal, type SceneMode } from './Controls/MapManualModal';
+import { OrbitWelcomeToast, RadarWelcomeToast } from './Controls/WelcomeToast';
 import { FocusCard } from './Panels/FocusCard';
 import { RadarScene } from './Scene/RadarScene';
 import {
@@ -135,6 +136,8 @@ export function DailyOrbitalRadar3D({
     // Modo ativo da cena. Heliocêntrico só quando o usuário pediu E o objeto tem
     // elementos orbitais com época de periélio válida (tpJd ≠ 0).
     const activeMode: SceneMode = deriveActiveMode(orbitMode, focusedObject);
+
+    const [manualOpen, setManualOpen] = useState(false);
 
     const pickView = (key: CameraViewKey) => {
         onClearSelection?.();
@@ -325,7 +328,14 @@ export function DailyOrbitalRadar3D({
                     </div>
                 ) : null}
 
-                <SceneLegend lunarReference={lunarReference} locale={locale} mode={activeMode} />
+                {/* Toasts de boas-vindas — primeira visita ao radar e à vista orbital. */}
+                <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+                    {activeMode === 'radar'
+                        ? <RadarWelcomeToast locale={locale} onOpenManual={() => setManualOpen(true)} />
+                        : <OrbitWelcomeToast locale={locale} onOpenManual={() => setManualOpen(true)} />}
+                </div>
+
+                <SceneLegend lunarReference={lunarReference} locale={locale} mode={activeMode} manualOpen={manualOpen} onManualOpenChange={setManualOpen} />
             </div>
         </section>
     );
@@ -411,13 +421,16 @@ function SceneLegend({
     lunarReference,
     locale,
     mode,
+    manualOpen,
+    onManualOpenChange,
 }: {
     lunarReference: LunarReference;
     locale: 'pt-BR' | 'en';
     mode: SceneMode;
+    manualOpen: boolean;
+    onManualOpenChange: (open: boolean) => void;
 }) {
     const en = locale === 'en';
-    const [manualOpen, setManualOpen] = useState(false);
     // Intl.NumberFormat é caro de instanciar — memoizado para não recriar a cada render.
     const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
@@ -442,7 +455,7 @@ function SceneLegend({
             {/* Botão que abre o manual completo via portal (fora do stacking context do canvas). */}
             <button
                 type="button"
-                onClick={() => setManualOpen(true)}
+                onClick={() => onManualOpenChange(true)}
                 className="mt-2 flex w-full items-center justify-between gap-2 border-t border-white/10 px-3 py-2.5 text-left text-[13px] font-semibold text-signal-cyan transition outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-signal-cyan"
             >
                 <span className="inline-flex items-center gap-2">
@@ -458,7 +471,7 @@ function SceneLegend({
                         mode={mode}
                         locale={locale}
                         lunarDistanceKm={lunarReference.distanceKm}
-                        onClose={() => setManualOpen(false)}
+                        onClose={() => onManualOpenChange(false)}
                     />,
                     document.body,
                 )

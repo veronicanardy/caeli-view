@@ -16,7 +16,6 @@ export interface MoonProps {
     protectLabelFromFocus: boolean;
     isApproximate: boolean;
     locale: 'pt-BR' | 'en';
-    /** When true, the Moon is the current camera focus — disable click/hover. */
     isFocused?: boolean;
 }
 
