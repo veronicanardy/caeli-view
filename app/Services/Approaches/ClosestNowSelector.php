@@ -108,15 +108,29 @@ final class ClosestNowSelector
      */
     private function resolve(string $dateMin, string $dateMax, int $limit, string $mode): array
     {
-        // Passo 1: candidatos do CAD + NeoWs (já deduplicados e filtrados por dist_max)
-        $data = $this->observatory->observe([
-            'date_min'      => $dateMin,
-            'date_max'      => $dateMax,
-            'type'          => 'all',
-            'dist_max'      => '0.2',
-            'sort'          => 'dist',
-            'distance_unit' => 'km',
-        ]);
+        // Passo 1: candidatos do CAD + NeoWs.
+        // 'featured' e 'attention' usam janela de ± 90 dias sem dist_max para garantir
+        // que objetos famosos (Bennu, Eros…) e PHAs sejam encontrados mesmo fora da janela diária.
+        $observeParams = match ($mode) {
+            'featured', 'attention' => [
+                'date_min'      => CarbonImmutable::parse($dateMin, 'UTC')->subDays(90)->toDateString(),
+                'date_max'      => CarbonImmutable::parse($dateMin, 'UTC')->addDays(90)->toDateString(),
+                'type'          => 'all',
+                'dist_max'      => '1.0',   // até 1 UA — inclui objetos famosos distantes
+                'sort'          => 'dist',
+                'distance_unit' => 'km',
+            ],
+            default => [
+                'date_min'      => $dateMin,
+                'date_max'      => $dateMax,
+                'type'          => 'all',
+                'dist_max'      => '0.2',
+                'sort'          => 'dist',
+                'distance_unit' => 'km',
+            ],
+        };
+
+        $data = $this->observatory->observe($observeParams);
 
         $approaches = is_array($data['approaches'] ?? null) ? $data['approaches'] : [];
 
