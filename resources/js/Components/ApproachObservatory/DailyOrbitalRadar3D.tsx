@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BookOpen, ChevronDown } from 'lucide-react';
 import type { ClosestNowObject, LunarReference, SunDirection, UnifiedApproach } from '@/types';
@@ -99,13 +99,28 @@ export function DailyOrbitalRadar3D({
     // Overlay translúcido de "Carregando…" exibido brevemente durante a troca de modo, para
     // mascarar o salto visual enquanto a câmera re-enquadra e a cena heliocêntrica carrega.
     const [sceneTransitioning, setSceneTransitioning] = useState(false);
+    const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const triggerTransition = (fn: () => void) => {
+    const triggerTransition = useCallback((fn: () => void) => {
+        // Cancela qualquer transição anterior ainda em andamento antes de iniciar uma nova,
+        // evitando que dois timers paralelos apaguem o overlay antes do tempo.
+        if (transitionTimerRef.current !== null) {
+            clearTimeout(transitionTimerRef.current);
+        }
         setSceneTransitioning(true);
         fn();
         // 420 ms é suficiente para esconder o salto de câmera sem parecer lento.
-        setTimeout(() => setSceneTransitioning(false), 420);
-    };
+        transitionTimerRef.current = setTimeout(() => {
+            setSceneTransitioning(false);
+            transitionTimerRef.current = null;
+        }, 420);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (transitionTimerRef.current !== null) clearTimeout(transitionTimerRef.current);
+        };
+    }, []);
 
     // Enquadramento de câmera derivado da seleção atual. Recalculado apenas em mudanças
     // explícitas de intenção (selecionar objeto, alternar modo órbita) — não a cada tick
@@ -119,15 +134,10 @@ export function DailyOrbitalRadar3D({
 
     // Modo ativo da cena. Heliocêntrico só quando o usuário pediu E o objeto tem
     // elementos orbitais com época de periélio válida (tpJd ≠ 0).
-    const activeMode: SceneMode = useMemo(() => {
-        if (!orbitMode || !focusedObject) return 'radar';
-        const els = focusedObject.trajectory?.orbitalElements;
-        if (!els || !Number.isFinite(els.tpJd) || els.tpJd === 0) return 'radar';
-        return 'orbit';
-    }, [orbitMode, focusedObject]);
+    const activeMode: SceneMode = deriveActiveMode(orbitMode, focusedObject);
 
     const pickView = (key: CameraViewKey) => {
-        clearSelection();
+        onClearSelection?.();
         setCameraIntent((intent) => ({ kind: 'preset', view: key, nonce: nextCameraNonce(intent) }));
     };
 
@@ -157,14 +167,8 @@ export function DailyOrbitalRadar3D({
         setCameraIntent((intent) => ({ kind: 'body', view: intent.view, body, nonce: nextCameraNonce(intent) }));
     };
 
-    // Limpa a seleção ativa. Se não há callback externo (onClearSelection não fornecido),
-    // é um no-op seguro — não tenta re-selecionar o objeto atual.
-    const clearSelection = () => {
-        onClearSelection?.();
-    };
-
     const resetView = () => {
-        clearSelection();
+        onClearSelection?.();
         pickView('perspective');
     };
 
@@ -220,7 +224,7 @@ export function DailyOrbitalRadar3D({
                             ephemeris={ephemeris}
                             fallbackSunDirection={fallbackSunDirection}
                             locale={locale}
-                            onClearSelection={clearSelection}
+                            onClearSelection={() => onClearSelection?.()}
                         />
                     </Suspense>
                 </Canvas>
@@ -260,48 +264,16 @@ export function DailyOrbitalRadar3D({
                                     : `${closestNowObjects.length} objetos mais próximos agora`}
                             </div>
                             <ul className="space-y-0.5">
-                                {closestNowObjects.map((o, index) => {
-                                    const pal = OBJECT_PALETTE[index % OBJECT_PALETTE.length];
-                                    const active = o.approach.id === selectedId;
-                                    const hasScenePosition = Boolean(o.trajectory?.currentPoint);
-                                    const hazard = o.approach.hazardFlag;
-                                    return (
-                                        <li key={o.approach.id}>
-                                            <button
-                                                type="button"
-                                                onClick={() => selectObject(o.approach)}
-                                                title={
-                                                    hasScenePosition
-                                                        ? undefined
-                                                        : en
-                                                          ? 'No live position from Horizons right now — not shown on the radar.'
-                                                          : 'Sem posição do Horizons no momento — não exibido no radar.'
-                                                }
-                                                className={[
-                                                    'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                                                    active ? 'bg-signal-cyan/15 text-white ring-1 ring-signal-cyan/40' : 'text-white/75 hover:bg-white/8 hover:text-white',
-                                                    hasScenePosition ? '' : 'opacity-50',
-                                                ].join(' ')}
-                                            >
-                                                <span className="h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white/10" style={{ backgroundColor: pal.future }} />
-                                                <span className="min-w-0 flex-1 truncate font-medium">
-                                                    {o.approach.displayName ?? o.approach.name}
-                                                </span>
-                                                {hazard ? (
-                                                    <span className="shrink-0 text-[12px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>⚠️</span>
-                                                ) : null}
-                                                {!hasScenePosition ? (
-                                                    <span className="shrink-0 text-[11px] text-amber-200/70" aria-hidden>
-                                                        {en ? 'no pos.' : 'sem pos.'}
-                                                    </span>
-                                                ) : null}
-                                                <span className="shrink-0 tabular-nums text-white/55">
-                                                    {compactKm(o.currentDistanceKm)}
-                                                </span>
-                                            </button>
-                                        </li>
-                                    );
-                                })}
+                                {closestNowObjects.map((o, index) => (
+                                    <ObjectListItem
+                                        key={o.approach.id}
+                                        object={o}
+                                        palette={OBJECT_PALETTE[index % OBJECT_PALETTE.length]}
+                                        isSelected={o.approach.id === selectedId}
+                                        onSelect={selectObject}
+                                        locale={locale}
+                                    />
+                                ))}
                             </ul>
                         </div>
                     </div>
@@ -359,6 +331,77 @@ export function DailyOrbitalRadar3D({
     );
 }
 
+// --------------- Funções puras ---------------
+
+/**
+ * Deriva o modo ativo da cena a partir do estado de seleção e modo de órbita.
+ * Heliocêntrico só quando o usuário pediu E o objeto tem elementos com época de periélio válida.
+ * Função pura extraída do componente para manter o corpo do useMemo sem lógica embutida.
+ */
+function deriveActiveMode(orbitMode: boolean, focusedObject: ClosestNowObject | null): SceneMode {
+    if (!orbitMode || !focusedObject) return 'radar';
+    const els = focusedObject.trajectory?.orbitalElements;
+    if (!els || !Number.isFinite(els.tpJd) || els.tpJd === 0) return 'radar';
+    return 'orbit';
+}
+
+// --------------- Sub-componentes locais ---------------
+
+type ObjectListItemProps = {
+    object: ClosestNowObject;
+    palette: { future: string };
+    isSelected: boolean;
+    onSelect: (approach: UnifiedApproach) => void;
+    locale: 'pt-BR' | 'en';
+};
+
+/**
+ * Item da lista de objetos próximos na barra lateral da cena.
+ * Exibe cor de paleta, nome, distância e indicadores de estado (sem posição, perigo).
+ */
+function ObjectListItem({ object: o, palette, isSelected, onSelect, locale }: ObjectListItemProps) {
+    const en = locale === 'en';
+    const hasScenePosition = Boolean(o.trajectory?.currentPoint);
+    const hazard = o.approach.hazardFlag;
+
+    return (
+        <li>
+            <button
+                type="button"
+                onClick={() => onSelect(o.approach)}
+                title={
+                    hasScenePosition
+                        ? undefined
+                        : en
+                          ? 'No live position from Horizons right now — not shown on the radar.'
+                          : 'Sem posição do Horizons no momento — não exibido no radar.'
+                }
+                className={[
+                    'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                    isSelected ? 'bg-signal-cyan/15 text-white ring-1 ring-signal-cyan/40' : 'text-white/75 hover:bg-white/8 hover:text-white',
+                    hasScenePosition ? '' : 'opacity-50',
+                ].join(' ')}
+            >
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white/10" style={{ backgroundColor: palette.future }} />
+                <span className="min-w-0 flex-1 truncate font-medium">
+                    {o.approach.displayName ?? o.approach.name}
+                </span>
+                {hazard ? (
+                    <span className="shrink-0 text-[12px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>⚠️</span>
+                ) : null}
+                {!hasScenePosition ? (
+                    <span className="shrink-0 text-[11px] text-amber-200/70" aria-hidden>
+                        {en ? 'no pos.' : 'sem pos.'}
+                    </span>
+                ) : null}
+                <span className="shrink-0 tabular-nums text-white/55">
+                    {compactKm(o.currentDistanceKm)}
+                </span>
+            </button>
+        </li>
+    );
+}
+
 /**
  * Legenda no canto inferior direito. Mantém as duas referências de escala sempre visíveis
  * (1 DL e 1 UA) e expande para o manual completo via portal quando o usuário pede.
@@ -375,7 +418,8 @@ function SceneLegend({
 }) {
     const en = locale === 'en';
     const [manualOpen, setManualOpen] = useState(false);
-    const nf = new Intl.NumberFormat(locale);
+    // Intl.NumberFormat é caro de instanciar — memoizado para não recriar a cada render.
+    const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
     return (
         <div className="pointer-events-auto absolute bottom-3 right-3 z-10 w-[min(22rem,46%)] overflow-hidden rounded-xl border border-white/18 bg-space-950/92 shadow-glow backdrop-blur-xl">
@@ -422,6 +466,8 @@ function SceneLegend({
         </div>
     );
 }
+
+// --------------- Hooks privados ---------------
 
 /**
  * Calcula direção do Sol + posição da Lua com astronomy-engine, em cadência lenta (10 s).
