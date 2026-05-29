@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ClosestNowResponse, ObjectLimit, SelectionMode } from '@/types';
 
 export interface UseClosestNowResult {
@@ -11,8 +11,11 @@ export interface UseClosestNowResult {
  * Busca os objetos selecionados para o radar via `/radar/closest-now`.
  *
  * Re-faz o fetch sempre que `dateMin`, `dateMax`, `limit` ou `mode` mudam.
- * Mantém os dados anteriores visíveis enquanto o novo lote carrega (stale-while-loading),
- * evitando o flash de tela vazia ao trocar quantidade ou critério.
+ * Mantém os dados anteriores visíveis enquanto o novo lote carrega (stale-while-loading).
+ *
+ * `loading` sobe para `true` de forma síncrona (via useMemo) assim que qualquer dep
+ * muda — antes mesmo do useEffect disparar o fetch. Isso garante que o overlay
+ * "Carregando…" apareça no mesmo frame que o usuário clica num chip ou muda o critério.
  */
 export function useClosestNow(
     dateMin:  string,
@@ -20,16 +23,29 @@ export function useClosestNow(
     limit:    ObjectLimit,
     mode:     SelectionMode,
 ): UseClosestNowResult {
-    const [data,    setData]    = useState<ClosestNowResponse | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error,   setError]   = useState<string | null>(null);
+    const [data,         setData]         = useState<ClosestNowResponse | null>(null);
+    const [fetchLoading, setFetchLoading] = useState(false);
+    const [error,        setError]        = useState<string | null>(null);
 
     // Ref para o dado anterior: mantido entre fetches para stale-while-loading.
     const staleDataRef = useRef<ClosestNowResponse | null>(null);
 
+    // Ref dos params atualmente resolvidos (pós-fetch bem-sucedido).
+    // Comparado com os params atuais para detectar mudança antes do useEffect.
+    const resolvedParamsRef = useRef<string | null>(null);
+    const currentParams = `${dateMin}|${dateMax}|${limit}|${mode}`;
+
+    // Síncrono: loading é true se os params atuais diferem dos últimos resolvidos
+    // OU se o fetch ainda está em andamento. Não depende do ciclo de useEffect.
+    const loading = useMemo(
+        () => fetchLoading || resolvedParamsRef.current !== currentParams,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [fetchLoading, currentParams],
+    );
+
     useEffect(() => {
         const controller = new AbortController();
-        setLoading(true);
+        setFetchLoading(true);
         setError(null);
 
         const params = new URLSearchParams({
@@ -50,22 +66,28 @@ export function useClosestNow(
             })
             .then((payload) => {
                 staleDataRef.current = payload;
+                resolvedParamsRef.current = currentParams;
                 setData(payload);
             })
             .catch((err: unknown) => {
                 if (err instanceof DOMException && err.name === 'AbortError') return;
+                // Em caso de erro marcamos como resolvido mesmo assim para não
+                // deixar o loading preso; o erro é exibido via prop `error`.
+                resolvedParamsRef.current = currentParams;
                 setError(
                     'Não foi possível carregar os dados do radar agora. ' +
                     'Os dados de posição em tempo real estão temporariamente indisponíveis.',
                 );
             })
             .finally(() => {
-                if (!controller.signal.aborted) setLoading(false);
+                if (!controller.signal.aborted) setFetchLoading(false);
             });
 
         return () => controller.abort();
+    // currentParams é derivado de dateMin/dateMax/limit/mode — usar as fontes diretas
+    // nas deps garante que o efeito re-dispara corretamente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dateMin, dateMax, limit, mode]);
 
-    // Enquanto carrega uma nova query, devolve os dados anteriores para não piscar a cena.
     return { data: data ?? staleDataRef.current, loading, error };
 }
