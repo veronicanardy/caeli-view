@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Support\AsteroidIdentityNormalizer;
-use App\Support\HorizonsCommandBuilder;
+use App\Support\Horizons\AsteroidIdentityNormalizer;
+use App\Support\Horizons\HorizonsCommandBuilder;
 use Tests\TestCase;
 
 class HorizonsCommandBuilderTest extends TestCase

@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Support\AsteroidIdentityNormalizer;
+use App\Support\Horizons\AsteroidIdentityNormalizer;
 use Tests\TestCase;
 
 class AsteroidIdentityNormalizerTest extends TestCase

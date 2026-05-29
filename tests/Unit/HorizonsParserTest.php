@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\DTOs\Jpl\Horizons\HorizonsVectorPointData;
-use App\Services\Jpl\HorizonsTextParser;
+use App\Services\Jpl\Horizons\HorizonsTextParser;
 use Tests\Fixtures\JplResponses;
 use Tests\TestCase;
 
