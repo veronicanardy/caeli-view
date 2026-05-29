@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BookOpen, Calculator, Compass, Eye, GripHorizontal, Maximize2, MousePointer2, Orbit, Radar, X } from 'lucide-react';
+import { BookOpen, Calculator, GripHorizontal, Orbit, Radar, X } from 'lucide-react';
 import { KM_PER_AU } from '@/lib/sceneEphemeris';
 
 export type SceneMode = 'radar' | 'orbit';
@@ -38,12 +38,7 @@ export function MapManualModal({
 }) {
     const en = locale === 'en';
     const [tab, setTab] = useState<ManualTab>('guide');
-    const title = mode === 'radar'
-        ? (en ? 'Radar mode · Earth-centred' : 'Modo radar · centrado na Terra')
-        : (en ? 'Orbit mode · Sun-centred' : 'Modo órbita · centrado no Sol');
 
-    // Position + size are tracked in viewport pixels so the user can drag the panel anywhere and
-    // resize it from the bottom-right corner.
     const [box, setBox] = useState(() => {
         const vw = typeof window === 'undefined' ? 1280 : window.innerWidth;
         const vh = typeof window === 'undefined' ? 800 : window.innerHeight;
@@ -62,17 +57,11 @@ export function MapManualModal({
             if (event.key === 'Escape') onClose();
         };
         document.addEventListener('keydown', onKeyDown);
-        return () => {
-            document.removeEventListener('keydown', onKeyDown);
-        };
+        return () => { document.removeEventListener('keydown', onKeyDown); };
     }, [onClose]);
 
-    // Re-clamp the panel if the viewport shrinks (eg. window resize / DevTools opens), so it never
-    // ends up parked off-screen and unreachable.
     useEffect(() => {
-        const onResize = () => {
-            setBox((b) => clampManualBox(b.x, b.y, b.width, b.height));
-        };
+        const onResize = () => { setBox((b) => clampManualBox(b.x, b.y, b.width, b.height)); };
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
     }, []);
@@ -81,15 +70,11 @@ export function MapManualModal({
         if (!dragging && !resizing) return;
         const onMove = (event: PointerEvent) => {
             if (dragging && dragRef.current) {
-                const nextX = event.clientX - dragRef.current.offsetX;
-                const nextY = event.clientY - dragRef.current.offsetY;
-                setBox((b) => clampManualBox(nextX, nextY, b.width, b.height));
+                setBox((b) => clampManualBox(event.clientX - dragRef.current!.offsetX, event.clientY - dragRef.current!.offsetY, b.width, b.height));
             } else if (resizing && resizeRef.current) {
                 const dx = event.clientX - resizeRef.current.startX;
                 const dy = event.clientY - resizeRef.current.startY;
-                const nextW = resizeRef.current.startWidth + dx;
-                const nextH = resizeRef.current.startHeight + dy;
-                setBox((b) => clampManualBox(b.x, b.y, nextW, nextH));
+                setBox((b) => clampManualBox(b.x, b.y, resizeRef.current!.startWidth + dx, resizeRef.current!.startHeight + dy));
             }
         };
         const onUp = () => {
@@ -108,8 +93,7 @@ export function MapManualModal({
 
     const startDrag = (event: React.PointerEvent<HTMLElement>) => {
         if (event.button !== 0) return;
-        const target = event.target as HTMLElement;
-        if (target.closest('button')) return;
+        if ((event.target as HTMLElement).closest('button')) return;
         dragRef.current = { offsetX: event.clientX - box.x, offsetY: event.clientY - box.y };
         setDragging(true);
     };
@@ -117,12 +101,7 @@ export function MapManualModal({
     const startResize = (event: React.PointerEvent<HTMLButtonElement>) => {
         if (event.button !== 0) return;
         event.stopPropagation();
-        resizeRef.current = {
-            startX: event.clientX,
-            startY: event.clientY,
-            startWidth: box.width,
-            startHeight: box.height,
-        };
+        resizeRef.current = { startX: event.clientX, startY: event.clientY, startWidth: box.width, startHeight: box.height };
         setResizing(true);
     };
 
@@ -134,9 +113,15 @@ export function MapManualModal({
         setBox(clampManualBox((vw - width) / 2, (vh - height) / 2, width, height));
     };
 
+    const modeLabel = mode === 'radar'
+        ? (en ? 'Radar mode' : 'Modo radar')
+        : (en ? 'Orbit mode' : 'Modo órbita');
+
+    const modeSubtitle = mode === 'radar'
+        ? (en ? 'Earth-centred · geocentric view' : 'Centrado na Terra · vista geocêntrica')
+        : (en ? 'Sun-centred · heliocentric view' : 'Centrado no Sol · vista heliocêntrica');
+
     return (
-        // The outer wrapper is non-blocking: clicks outside the panel pass straight through to the
-        // 3D scene below, so the manual can stay open while exploring.
         <div
             className="pointer-events-none fixed inset-0 z-50"
             role="dialog"
@@ -161,10 +146,10 @@ export function MapManualModal({
                     ].join(' ')}
                 >
                     <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <div className="inline-flex items-center gap-2 rounded-full border border-signal-cyan/25 bg-signal-cyan/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-signal-cyan">
                                 {mode === 'radar' ? <Radar className="size-3.5" aria-hidden /> : <Orbit className="size-3.5" aria-hidden />}
-                                {en ? 'Map manual' : 'Manual do mapa'}
+                                {modeLabel}
                             </div>
                             <span
                                 className="inline-flex items-center gap-1 text-[11px] text-white/40"
@@ -174,31 +159,15 @@ export function MapManualModal({
                                 {en ? 'drag' : 'arraste'}
                             </span>
                         </div>
-                        <h2 id="map-manual-title" className="mt-2 text-xl font-semibold text-white sm:text-2xl">{title}</h2>
-                        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-white/62">
-                            {tab === 'guide'
-                                ? (en
-                                    ? 'A friendly guide for reading the scene without needing astronomy vocabulary first.'
-                                    : 'Um guia amigável para ler a cena antes de entrar em palavras de astronomia.')
-                                : (en
-                                    ? 'The data pipeline, scale choices, and math used to draw this view.'
-                                    : 'A lógica dos dados, das escalas e da matemática usada para desenhar esta vista.')}
-                        </p>
+                        <h2 id="map-manual-title" className="mt-2 text-xl font-semibold text-white sm:text-2xl">
+                            {en ? 'Map manual' : 'Manual do mapa'}
+                        </h2>
+                        <p className="mt-0.5 text-sm text-white/45">{modeSubtitle}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2 self-end sm:self-start">
                         <button
                             type="button"
-                            onPointerDown={(event) => event.stopPropagation()}
-                            onClick={resetBox}
-                            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/12 bg-white/5 px-3 text-[12px] font-medium text-white/70 transition hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
-                            title={en ? 'Reset position and size' : 'Restaurar posição e tamanho'}
-                        >
-                            <Maximize2 className="size-3.5" aria-hidden />
-                            {en ? 'Reset' : 'Restaurar'}
-                        </button>
-                        <button
-                            type="button"
-                            onPointerDown={(event) => event.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
                             onClick={onClose}
                             className="inline-flex size-9 items-center justify-center rounded-full border border-white/12 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
                             aria-label={en ? 'Close manual' : 'Fechar manual'}
@@ -208,12 +177,12 @@ export function MapManualModal({
                     </div>
                 </header>
 
-                <div className="flex shrink-0 border-b border-white/10 bg-black/16 px-3 py-2 sm:px-5">
+                <div className="flex shrink-0 gap-1 border-b border-white/10 bg-black/16 px-3 py-2 sm:px-5">
                     <ManualTabButton active={tab === 'guide'} onClick={() => setTab('guide')} icon="guide">
-                        {en ? 'Basic guide' : 'Guia básico'}
+                        {en ? 'Reading guide' : 'Guia de leitura'}
                     </ManualTabButton>
                     <ManualTabButton active={tab === 'technical'} onClick={() => setTab('technical')} icon="technical">
-                        {en ? 'Technical guide' : 'Guia técnico'}
+                        {en ? 'Under the hood' : 'Por dentro'}
                     </ManualTabButton>
                 </div>
 
@@ -239,12 +208,7 @@ export function MapManualModal({
     );
 }
 
-function ManualTabButton({
-    active,
-    onClick,
-    icon,
-    children,
-}: {
+function ManualTabButton({ active, onClick, icon, children }: {
     active: boolean;
     onClick: () => void;
     icon: ManualTab;
@@ -266,326 +230,473 @@ function ManualTabButton({
     );
 }
 
+// ─── Friendly / Reading guide ───────────────────────────────────────────────
+
 function FriendlyManual({ mode, locale, lunarDistanceKm }: { mode: SceneMode; locale: 'pt-BR' | 'en'; lunarDistanceKm: number }) {
     const en = locale === 'en';
-    const nf = new Intl.NumberFormat(locale);
-    const auKm = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(KM_PER_AU));
+    const nf = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
 
-    if (mode === 'radar') {
-        return (
-            <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-                <div className="space-y-4">
-                    <section className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
-                        <div className="flex items-start gap-3">
-                            <Compass className="mt-0.5 size-5 shrink-0 text-signal-cyan" aria-hidden />
-                            <div>
-                                <h3 className="text-base font-semibold text-white">{en ? 'A map of the local space neighbourhood' : 'Um mapa da vizinhança espacial'}</h3>
-                                <p className="mt-1 text-sm leading-relaxed text-white/68">
-                                    {en
-                                        ? 'Earth is the protagonist. Each marker is an object passing nearby right now. The map answers three questions: where is it, how far is it, and which way is it moving.'
-                                        : 'A Terra é a protagonista. Cada marcador é um objeto passando por perto agora. O mapa responde a três perguntas: onde está, a que distância está e para que lado está indo.'}
-                                </p>
-                            </div>
-                        </div>
-                    </section>
+    if (mode === 'radar') return <RadarFriendly en={en} nf={nf} lunarDistanceKm={lunarDistanceKm} />;
+    return <OrbitFriendly en={en} />;
+}
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        <ManualStep
-                            number="1"
-                            title={en ? 'Start at Earth' : 'Comece pela Terra'}
-                            text={en ? 'Distances are read from the centre outward. The closer to Earth, the closer to the middle of the scene.' : 'As distâncias são lidas do centro para fora. Quanto mais perto da Terra, mais perto do meio da cena.'}
-                        />
-                        <ManualStep
-                            number="2"
-                            title={en ? 'Trust the numbers, not the spacing' : 'Confie nos números, não no espaçamento'}
-                            text={en ? 'The visual spacing is compressed so distant objects stay visible. The real distance in km, LD and AU is always shown on the focus card.' : 'O espaçamento visual é comprimido para que objetos distantes fiquem visíveis. A distância real em km, DL e UA está sempre no painel de foco.'}
-                        />
-                        <ManualStep
-                            number="3"
-                            title={en ? 'The cone shows direction' : 'O cone mostra a direção'}
-                            text={en ? 'Each object carries a small cone pointing where it is heading next. The grey dashes are the short path nearby.' : 'Cada objeto carrega um cone pequeno apontando para onde está indo. Os traços cinza são o caminho próximo.'}
-                        />
-                        <ManualStep
-                            number="4"
-                            title={en ? 'Rotate the view to read depth' : 'Gire a vista para ler a profundidade'}
-                            text={en ? 'The 2D radar flattened the vertical axis. Use Top and Side to check if an object sits above or below the Moon’s plane.' : 'O radar 2D achatava o eixo vertical. Use Superior e Lateral para conferir se um objeto está acima ou abaixo do plano da Lua.'}
-                        />
-                    </div>
-
-                    <section className="rounded-lg border border-amber-200/14 bg-amber-200/[0.045] p-4 text-sm leading-relaxed text-white/70">
-                        {en
-                            ? `LD is the lunar distance — the Earth-Moon gap, currently ${nf.format(lunarDistanceKm)} km. AU is the Earth-Sun distance, about ${auKm} km. Both are standard rulers in astronomy.`
-                            : `DL é a distância lunar — a separação Terra-Lua, hoje em ${nf.format(lunarDistanceKm)} km. UA é a distância Terra-Sol, cerca de ${auKm} km. Ambas são réguas padrão na astronomia.`}
-                    </section>
-                </div>
-
-                <div className="space-y-4">
-                    <RadarGuideDiagram locale={locale} />
-                    <section className="rounded-lg border border-white/10 bg-black/18 p-4">
-                        <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-white">
-                            <MousePointer2 className="size-4 text-signal-cyan" aria-hidden />
-                            {en ? 'Suggested reading order' : 'Ordem sugerida de leitura'}
-                        </h3>
-                        <ol className="mt-3 space-y-2 text-sm leading-relaxed text-white/66">
-                            <li>{en ? '1. Pick an object from the list on the left.' : '1. Escolha um objeto na lista à esquerda.'}</li>
-                            <li>{en ? '2. Read the real distance in the focus card — that is the trustworthy number.' : '2. Leia a distância real no painel de foco — esse é o número confiável.'}</li>
-                            <li>{en ? '3. Look at the cone and the grey trail to understand the motion.' : '3. Olhe para o cone e a trilha cinza para entender o movimento.'}</li>
-                            <li>{en ? '4. Switch to orbit mode only when the question is about the full path around the Sun.' : '4. Mude para o modo órbita só quando a pergunta for sobre o caminho completo ao redor do Sol.'}</li>
-                        </ol>
-                    </section>
-                </div>
-            </div>
-        );
-    }
+function RadarFriendly({ en, nf, lunarDistanceKm }: { en: boolean; nf: Intl.NumberFormat; lunarDistanceKm: number }) {
+    const ldKm = nf.format(Math.round(lunarDistanceKm));
 
     return (
-        <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="space-y-4">
-                <section className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
-                    <div className="flex items-start gap-3">
-                        <Orbit className="mt-0.5 size-5 shrink-0 text-signal-cyan" aria-hidden />
-                        <div>
-                            <h3 className="text-base font-semibold text-white">{en ? 'The full journey around the Sun' : 'A jornada completa ao redor do Sol'}</h3>
-                            <p className="mt-1 text-sm leading-relaxed text-white/68">
-                                {en
-                                    ? 'The Sun anchors the scene. The bright ellipse is the road the asteroid travels around the Sun, and the marker shows where it sits on that road today.'
-                                    : 'O Sol ancora a cena. A elipse brilhante é a estrada que o asteroide percorre ao redor do Sol, e o marcador mostra onde ele está nessa estrada hoje.'}
-                            </p>
-                        </div>
-                    </div>
-                </section>
+        <div className="space-y-6">
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                    <ManualStep
-                        number="1"
-                        title={en ? 'The Sun is the reference' : 'O Sol é a referência'}
-                        text={en ? 'This view is not about the close approach. It shows the long-term path that gravity from the Sun keeps the asteroid on.' : 'Esta vista não é sobre a aproximação. Ela mostra o caminho de longo prazo que a gravidade do Sol mantém o asteroide seguindo.'}
-                    />
-                    <ManualStep
-                        number="2"
-                        title={en ? 'Shape tells the story' : 'A forma conta a história'}
-                        text={en ? 'A round ellipse means the distance to the Sun stays steady. A stretched ellipse means the asteroid varies a lot between near and far.' : 'Uma elipse redonda indica distância estável até o Sol. Uma elipse alongada indica grande variação entre perto e longe.'}
-                    />
-                    <ManualStep
-                        number="3"
-                        title={en ? 'Compare with Earth’s 1 AU ring' : 'Compare com o anel de 1 UA da Terra'}
-                        text={en ? 'The blue ring is Earth’s orbit. If the ellipse crosses it, the asteroid passes through the neighbourhood Earth lives in.' : 'O anel azul é a órbita da Terra. Se a elipse cruza esse anel, o asteroide passa pela vizinhança da Terra.'}
-                    />
-                    <ManualStep
-                        number="4"
-                        title={en ? 'Check the tilt' : 'Confira a inclinação'}
-                        text={en ? 'An orbit tilted relative to Earth’s plane may look close from above but pass well over or under it in reality.' : 'Uma órbita inclinada em relação ao plano da Terra pode parecer próxima vista de cima, mas passar bem acima ou abaixo na realidade.'}
-                    />
+            <Callout icon="radar">
+                <p className="text-sm leading-relaxed text-white/80">
+                    {en
+                        ? 'Each dot on this map is a real rock flying through space near Earth right now. Earth is in the centre. The further a dot is from the centre, the further that rock is from us.'
+                        : 'Cada ponto nesse mapa é uma rocha real voando pelo espaço perto da Terra agora. A Terra fica no centro. Quanto mais longe do centro, mais longe essa rocha está de nós.'}
+                </p>
+            </Callout>
+
+            <div className="grid gap-5 lg:grid-cols-[1fr_0.9fr]">
+                <div className="space-y-5">
+
+                    <Section title={en ? 'The map squishes distances to fit the screen' : 'O mapa comprime as distâncias para caber na tela'}>
+                        <p className="text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'Space is so vast that if this map were to scale, all the asteroids would be crammed into a single pixel near Earth. To make them visible, the map squishes everything — nearby objects look much closer to the Earth than they really are.'
+                                : 'O espaço é tão grande que se esse mapa fosse em escala real, todos os asteroides estariam espremidos num único pixel perto da Terra. Para deixá-los visíveis, o mapa comprime tudo — objetos próximos parecem muito mais perto da Terra do que realmente estão.'}
+                        </p>
+                        <HighlightBox>
+                            {en
+                                ? <><strong className="text-white">The visual positions are not to scale.</strong> To know the real distance, look at the numbers in the panel on the left — those are always accurate.</>
+                                : <><strong className="text-white">As posições visuais não são em escala.</strong> Para saber a distância real, olhe os números no painel à esquerda — esses são sempre precisos.</>}
+                        </HighlightBox>
+                    </Section>
+
+                    <Section title={en ? 'What the numbers mean' : 'O que os números significam'}>
+                        <div className="space-y-2">
+                            <RulerRow
+                                label="km"
+                                color="text-white/80"
+                                value=""
+                                desc={en
+                                    ? 'Kilometres — the same unit used on Earth. For reference, the Moon is about 384,000 km away.'
+                                    : 'Quilômetros — a mesma unidade usada aqui na Terra. Para referência, a Lua fica a cerca de 384.000 km.'}
+                            />
+                            <RulerRow
+                                label="DL"
+                                color="text-violet-300"
+                                value={en ? `= ${ldKm} km today` : `= ${ldKm} km hoje`}
+                                desc={en
+                                    ? 'Lunar Distance — 1 DL means "as far as the Moon". An object at 2 DL is twice that distance.'
+                                    : 'Distância Lunar — 1 DL significa "tão longe quanto a Lua". Um objeto a 2 DL está duas vezes essa distância.'}
+                            />
+                            <RulerRow
+                                label="UA"
+                                color="text-amber-300"
+                                value={en ? '≈ 150 million km' : '≈ 150 milhões de km'}
+                                desc={en
+                                    ? 'Astronomical Unit — the distance from Earth to the Sun. Used when objects are very far away.'
+                                    : 'Unidade Astronômica — a distância da Terra ao Sol. Usada quando os objetos estão muito longe.'}
+                            />
+                        </div>
+                    </Section>
+
+                    <Section title={en ? 'What you see on the map' : 'O que você vê no mapa'}>
+                        <div className="space-y-2">
+                            <VisualKey color="bg-violet-400" label={en ? 'Coloured dot' : 'Ponto colorido'} desc={en ? 'One asteroid or comet. The colour indicates how closely it has been monitored for impact risk.' : 'Um asteroide ou cometa. A cor indica o quão de perto ele foi monitorado quanto ao risco de impacto.'} />
+                            <VisualKey color="bg-cyan-400" shape="cone" label={en ? 'Small cone on the dot' : 'Cone pequeno no ponto'} desc={en ? 'Shows which direction the object is heading.' : 'Mostra em qual direção o objeto está indo.'} />
+                            <VisualKey color="bg-slate-400" shape="dashed" label={en ? 'Grey dashed trail' : 'Rastro tracejado cinza'} desc={en ? 'The path the object travelled to get here — like a wake behind a boat.' : 'O caminho que o objeto percorreu até chegar aqui — como o rastro atrás de um barco.'} />
+                            <VisualKey color="bg-yellow-400" label={en ? 'Yellow dot' : 'Ponto amarelo'} desc={en ? 'The Moon. Useful to compare how far the asteroids are relative to it.' : 'A Lua. Útil para comparar o quão longe os asteroides estão em relação a ela.'} />
+                        </div>
+                    </Section>
                 </div>
 
-                <section className="rounded-lg border border-amber-200/14 bg-amber-200/[0.045] p-4 text-sm leading-relaxed text-white/70">
-                    {en
-                        ? 'Orbit mode is the wide-angle view. Switch back to radar mode for the question "how close to Earth is it right now?".'
-                        : 'O modo órbita é a visão ampla. Volte para o modo radar para a pergunta "a que distância da Terra está agora?".'}
-                </section>
-            </div>
+                <div className="space-y-5">
+                    <RadarGuideDiagram locale={en ? 'en' : 'pt-BR'} />
 
-            <div className="space-y-4">
-                <OrbitGuideDiagram locale={locale} />
-                <section className="rounded-lg border border-white/10 bg-black/18 p-4">
-                    <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-white">
-                        <Eye className="size-4 text-signal-cyan" aria-hidden />
-                        {en ? 'What to look for' : 'O que observar'}
-                    </h3>
-                    <ol className="mt-3 space-y-2 text-sm leading-relaxed text-white/66">
-                        <li>{en ? '1. Does the ellipse cross or skim Earth’s ring?' : '1. A elipse cruza ou tangencia o anel da Terra?'}</li>
-                        <li>{en ? '2. Is the marker close to that crossing or far from it on this date?' : '2. O marcador está perto desse cruzamento ou longe dele nesta data?'}</li>
-                        <li>{en ? '3. How stretched is the ellipse? Stretched orbits mean big swings in speed and distance.' : '3. Quão alongada é a elipse? Órbitas alongadas significam grandes variações de velocidade e distância.'}</li>
-                        <li>{en ? '4. Is the orbit tilted? A tilted orbit may not actually meet Earth’s, even if it looks close in the top view.' : '4. A órbita é inclinada? Uma órbita inclinada pode não encontrar a da Terra de verdade, mesmo parecendo próxima de cima.'}</li>
-                    </ol>
-                </section>
+                    <Section title={en ? 'Rotate to see depth' : 'Gire para ver a profundidade'}>
+                        <p className="text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'Space is 3D, not flat. An object that looks close on the map might actually be passing far above or below Earth. Drag the scene to rotate it and check from different angles.'
+                                : 'O espaço é 3D, não plano. Um objeto que parece próximo no mapa pode estar passando bem acima ou abaixo da Terra. Arraste a cena para girá-la e checar de ângulos diferentes.'}
+                        </p>
+                        <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-white/65">
+                            <li><span className="font-medium text-white/80">{en ? 'Top' : 'Superior'}</span>{en ? ' — view from above, like a bird\'s eye.' : ' — vista de cima, como olho de pássaro.'}</li>
+                            <li><span className="font-medium text-white/80">{en ? 'Side' : 'Lateral'}</span>{en ? ' — view from the side, to see if objects are above or below Earth.' : ' — vista de lado, para ver se os objetos estão acima ou abaixo da Terra.'}</li>
+                        </ul>
+                    </Section>
+
+                    <SwitchModeHint en={en} targetMode="orbit" />
+                </div>
             </div>
         </div>
     );
 }
 
-function ManualStep({ number, title, text }: { number: string; title: string; text: string }) {
+function OrbitFriendly({ en }: { en: boolean }) {
     return (
-        <section className="rounded-lg border border-white/10 bg-black/18 p-3">
-            <div className="flex items-start gap-3">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-signal-cyan text-[12px] font-bold text-space-950">{number}</span>
-                <div>
-                    <h4 className="text-sm font-semibold text-white">{title}</h4>
-                    <p className="mt-1 text-[13px] leading-relaxed text-white/62">{text}</p>
+        <div className="space-y-6">
+
+            <Callout icon="orbit">
+                <p className="text-sm leading-relaxed text-white/80">
+                    {en
+                        ? "Now the Sun is in the centre. You are seeing the full path this asteroid takes as it travels around the Sun — like seeing the whole racetrack instead of just where the car is right now."
+                        : 'Agora o Sol está no centro. Você está vendo o caminho completo que esse asteroide faz ao redor do Sol — como ver toda a pista de corrida em vez de só onde o carro está agora.'}
+                </p>
+            </Callout>
+
+            <div className="grid gap-5 lg:grid-cols-[1fr_0.9fr]">
+                <div className="space-y-5">
+
+                    <Section title={en ? 'What changed from the radar view?' : 'O que mudou em relação ao radar?'}>
+                        <p className="text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'The radar showed how close the asteroid is to Earth right now. This view zooms out and shows the whole journey — a loop around the Sun that repeats every few years.'
+                                : 'O radar mostrava o quão perto o asteroide está da Terra agora. Esta vista dá um zoom out e mostra a jornada inteira — uma volta ao redor do Sol que se repete a cada alguns anos.'}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'Here the distances are true to scale, so what you see actually reflects the real shape of the orbit.'
+                                : 'Aqui as distâncias são em escala real, então o que você vê reflete de verdade a forma da órbita.'}
+                        </p>
+                    </Section>
+
+                    <Section title={en ? 'How to read this view' : 'Como ler essa vista'}>
+                        <div className="space-y-2.5">
+                            <ReadingStep
+                                label={en ? "1. The oval is the asteroid's road" : '1. O oval é a estrada do asteroide'}
+                                text={en
+                                    ? 'The asteroid goes around the Sun in a loop — that oval is its full path. Some ovals are nearly circular, others are very stretched. The shape stays the same year after year.'
+                                    : 'O asteroide vai ao redor do Sol em um loop — esse oval é o caminho completo dele. Alguns ovals são quase circulares, outros são muito esticados. A forma é a mesma ano após ano.'}
+                            />
+                            <ReadingStep
+                                label={en ? '2. The dot is where it is right now' : '2. O ponto é onde ele está agora'}
+                                text={en
+                                    ? "The bright dot on the oval marks today's position. As days pass, this dot moves along the path."
+                                    : 'O ponto brilhante no oval marca a posição de hoje. Com o passar dos dias, esse ponto avança pelo caminho.'}
+                            />
+                            <ReadingStep
+                                label={en ? '3. Does the path come close to where Earth orbits?' : '3. O caminho passa pela região onde a Terra orbita?'}
+                                text={en
+                                    ? 'Earth orbits the Sun at about 1 AU. If the oval passes through that region (roughly the same distance from the Sun as Earth), the asteroid can come close to us at some point on its loop.'
+                                    : 'A Terra orbita o Sol a cerca de 1 UA. Se o oval passa por essa região (aproximadamente à mesma distância do Sol que a Terra), o asteroide pode se aproximar de nós em algum ponto do seu loop.'}
+                            />
+                            <ReadingStep
+                                label={en ? '4. Rotate to check the tilt' : '4. Gire para checar a inclinação'}
+                                text={en
+                                    ? "An orbit that looks close to Earth from above might actually pass well above or below it. Drag to rotate and see from the side."
+                                    : 'Uma órbita que parece próxima da Terra vista de cima pode na verdade passar bem acima ou abaixo dela. Arraste para girar e ver de lado.'}
+                            />
+                        </div>
+                    </Section>
+                </div>
+
+                <div className="space-y-5">
+                    <OrbitGuideDiagram locale={en ? 'en' : 'pt-BR'} />
+
+                    <Section title={en ? 'What you see on the map' : 'O que você vê no mapa'}>
+                        <div className="space-y-2">
+                            <VisualKey color="bg-orange-400" label={en ? 'Big glowing sphere' : 'Grande esfera brilhante'} desc={en ? 'The Sun, at the centre.' : 'O Sol, no centro.'} />
+                            <VisualKey color="bg-violet-400" shape="ellipse" label={en ? 'Bright oval line' : 'Linha oval brilhante'} desc={en ? "The asteroid's full path around the Sun." : 'O caminho completo do asteroide ao redor do Sol.'} />
+                            <VisualKey color="bg-white" label={en ? 'Dot on the oval' : 'Ponto no oval'} desc={en ? "The asteroid's position today." : 'A posição do asteroide hoje.'} />
+                        </div>
+                    </Section>
+
+                    <SwitchModeHint en={en} targetMode="radar" />
                 </div>
             </div>
-        </section>
+        </div>
     );
 }
+
+// ─── Technical / Under the hood ─────────────────────────────────────────────
 
 function TechnicalManual({ mode, locale, lunarDistanceKm }: { mode: SceneMode; locale: 'pt-BR' | 'en'; lunarDistanceKm: number }) {
     const en = locale === 'en';
-    const nf = new Intl.NumberFormat(locale);
+    const nf = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+    const auKm = nf.format(KM_PER_AU);
+    const ldKm = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(lunarDistanceKm));
+
+    if (mode === 'radar') return <RadarTechnical en={en} auKm={auKm} ldKm={ldKm} lunarDistanceKm={lunarDistanceKm} locale={locale} />;
+    return <OrbitTechnical en={en} locale={locale} />;
+}
+
+function RadarTechnical({ en, ldKm, lunarDistanceKm, locale }: { en: boolean; auKm: string; ldKm: string; lunarDistanceKm: number; locale: 'pt-BR' | 'en' }) {
+    const nf = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
     const auKm = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(KM_PER_AU);
-
-    if (mode === 'radar') {
-        return (
-            <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
-                <div className="space-y-4">
-                    <RadarGuideDiagram locale={locale} technical />
-                    <TechnicalBlock
-                        title={en ? 'Design rationale' : 'Justificativa do design'}
-                        lines={en
-                            ? [
-                                'The radar answers a local question: the geocentric position of each object at the current instant.',
-                                'A linear ruler centred on Earth would place the Moon at 1 LD and the Sun near 389 LD, collapsing the near-Earth band into a few pixels.',
-                                'The scene applies a logarithmic radial compression so the Earth-Moon-asteroid band stays readable, while the numeric distances reported to the UI remain the original measurements.',
-                                'Direction and inclination are preserved exactly — only the radial spacing is rescaled.',
-                            ]
-                            : [
-                                'O radar responde a uma pergunta local: a posição geocêntrica de cada objeto no instante atual.',
-                                'Uma régua linear centrada na Terra colocaria a Lua a 1 DL e o Sol perto de 389 DL, comprimindo a faixa próxima à Terra em poucos pixels.',
-                                'A cena aplica uma compressão radial logarítmica para manter a faixa Terra-Lua-asteroide legível, enquanto as distâncias numéricas exibidas na interface continuam sendo as medidas originais.',
-                                'Direção e inclinação são preservadas exatamente — apenas o espaçamento radial é reescalonado.',
-                            ]}
-                    />
-                </div>
-                <div className="space-y-4">
-                    <FormulaPanel
-                        title={en ? 'Geocentric state and distance' : 'Estado geocêntrico e distância'}
-                        formulas={[
-                            'r = (x, y, z),   v = (vx, vy, vz)',
-                            'd_km = ||r||',
-                            `d_DL = d_km / ${nf.format(lunarDistanceKm)}`,
-                            `${en ? 'd_AU' : 'd_UA'} = d_km / ${auKm}`,
-                        ]}
-                        note={en
-                            ? 'Position and velocity vectors come from JPL Horizons in the geocentric J2000 frame. The three distance units (km, LD, AU) shown in the UI are derived from the same Euclidean norm.'
-                            : 'Vetores de posição e velocidade vêm do JPL Horizons no referencial geocêntrico J2000. As três unidades de distância (km, DL, UA) exibidas na interface derivam da mesma norma euclidiana.'}
-                    />
-                    <FormulaPanel
-                        title={en ? 'Radial log compression' : 'Compressão radial logarítmica'}
-                        formulas={[
-                            'R0 = 8 DL',
-                            'K = 1 / ln(1 + 1/R0)',
-                            'f(r) = K · ln(1 + r/R0)',
-                            'r_scene = f(d_DL) · r / ||r||',
-                        ]}
-                        note={en
-                            ? 'R0 is the transition distance below which the mapping is approximately linear. K is fixed so the Moon (1 LD) lands at exactly 1 scene unit. The function is monotonic, so relative ordering of distances is preserved.'
-                            : 'R0 é a distância de transição abaixo da qual o mapeamento é aproximadamente linear. K é fixado de modo que a Lua (1 DL) caia exatamente em 1 unidade de cena. A função é monotônica, portanto a ordem relativa das distâncias é preservada.'}
-                    />
-                    <FormulaPanel
-                        title={en ? 'Motion vector and trail' : 'Vetor de movimento e trilha'}
-                        formulas={[
-                            'u = v / ||v||',
-                            en ? 'cone direction = u' : 'direção do cone = u',
-                            en ? 'trail = nearby trajectory samples' : 'trilha = amostras próximas da trajetória',
-                        ]}
-                        note={en
-                            ? 'The cone follows the unit velocity vector, so its orientation is physically meaningful. The grey dashed trail samples the geocentric trajectory near the current epoch — it is the same compression applied to nearby positions.'
-                            : 'O cone segue o vetor velocidade unitário, portanto sua orientação tem significado físico. A trilha tracejada cinza amostra a trajetória geocêntrica próxima à época atual — é a mesma compressão aplicada a posições próximas.'}
-                    />
-                    <TechnicalBlock
-                        title={en ? '3D models and visual scale' : 'Modelos 3D e escala visual'}
-                        lines={en
-                            ? [
-                                'When a NASA shape model exists for a body (Bennu, Ceres, Eros, Itokawa, Vesta), the matching asset is loaded.',
-                                'Bodies without a dedicated model are rendered as representative rocks chosen by estimated diameter.',
-                                'Body radii are amplified for legibility because true sizes would be sub-pixel at scene scale. Distances remain the trustworthy measurement layer.',
-                            ]
-                            : [
-                                'Quando existe um modelo de forma da NASA para um corpo (Bennu, Ceres, Eros, Itokawa, Vesta), o asset correspondente é carregado.',
-                                'Corpos sem modelo dedicado são renderizados como rochas representativas escolhidas pelo diâmetro estimado.',
-                                'Os raios visuais são amplificados para leitura porque os tamanhos reais seriam sub-pixel na escala da cena. As distâncias permanecem a camada confiável de medição.',
-                            ]}
-                    />
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
-            <div className="space-y-4">
-                <OrbitGuideDiagram locale={locale} technical />
-                <TechnicalBlock
-                    title={en ? 'Design rationale' : 'Justificativa do design'}
-                    lines={en
-                        ? [
-                            'The long-term motion of an asteroid is dominated by solar gravity, so the orbit view uses the Sun as the dynamical centre.',
-                            'Keeping the radar (geocentric) and orbit (heliocentric) modes strictly separated prevents the two scales from being read off the same ruler.',
-                            'Distances in this mode are drawn linearly in AU so the ellipse shape is faithful — no log compression is applied.',
-                            'The asteroid position is obtained by propagating Kepler’s equation from the perihelion epoch, so the marker lies on the drawn ellipse by construction.',
-                        ]
-                        : [
-                            'O movimento de longo prazo de um asteroide é dominado pela gravidade solar, portanto a vista orbital usa o Sol como centro dinâmico.',
-                            'Manter os modos radar (geocêntrico) e órbita (heliocêntrico) estritamente separados evita que as duas escalas sejam lidas pela mesma régua.',
-                            'As distâncias neste modo são desenhadas linearmente em UA, preservando fielmente a forma da elipse — nenhuma compressão logarítmica é aplicada.',
-                            'A posição do asteroide é obtida propagando a equação de Kepler a partir da época do periélio, de modo que o marcador cai exatamente sobre a elipse desenhada.',
+        <div className="space-y-6">
+            <p className="text-sm leading-relaxed text-white/65">
+                {en
+                    ? 'This section explains the data pipeline and the math behind what you see. Switch to the reading guide if you just need to interpret the scene.'
+                    : 'Esta seção explica o pipeline de dados e a matemática por trás do que você vê. Mude para o guia de leitura se você só precisa interpretar a cena.'}
+            </p>
+
+            <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="space-y-5">
+                    <RadarGuideDiagram locale={locale} technical />
+
+                    <TechSection title={en ? 'Why log compression?' : 'Por que compressão logarítmica?'}>
+                        <p className="text-sm leading-relaxed text-white/70">
+                            {en
+                                ? `The Sun is ≈ 389 LD from Earth. On a linear scale, the Lunar-distance band — where near-Earth asteroids live — would span less than 0.3 % of the canvas. Objects beyond 2 LD would be invisible.`
+                                : `O Sol está a ≈ 389 DL da Terra. Em escala linear, a faixa de distância lunar — onde os asteroides próximos à Terra vivem — ocuparia menos de 0,3 % do canvas. Objetos além de 2 DL seriam invisíveis.`}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'The log function stretches the near region and compresses the far region, keeping both visible at once. The transition radius R₀ = 8 LD is chosen so the mapping is nearly linear below 1 LD (where precision matters most), and K is calibrated so the Moon always lands at exactly 1 scene unit.'
+                                : 'A função logarítmica estica a região próxima e comprime a região distante, mantendo ambas visíveis ao mesmo tempo. O raio de transição R₀ = 8 DL é escolhido para que o mapeamento seja quase linear abaixo de 1 DL (onde a precisão importa mais), e K é calibrado para que a Lua sempre caia exatamente em 1 unidade de cena.'}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'Direction and inclination are preserved exactly — only the radial distance is remapped. The numeric distances in the UI are always the original, uncompressed values.'
+                                : 'Direção e inclinação são preservadas exatamente — apenas a distância radial é remapeada. As distâncias numéricas na interface são sempre os valores originais, sem compressão.'}
+                        </p>
+                    </TechSection>
+                </div>
+
+                <div className="space-y-4">
+                    <FormulaPanel
+                        title={en ? '1. Geocentric state vectors (input from JPL Horizons)' : '1. Vetores de estado geocêntricos (entrada do JPL Horizons)'}
+                        formulas={[
+                            'r = (x, y, z)   [km, J2000 geocentric]',
+                            'v = (vx, vy, vz) [km/s]',
+                            'd_km  = ||r||',
+                            `d_DL  = d_km / ${ldKm}`,
+                            `d_AU  = d_km / ${auKm}`,
                         ]}
-                />
-            </div>
-            <div className="space-y-4">
-                <FormulaPanel
-                    title={en ? 'Osculating elements (input)' : 'Elementos osculadores (entrada)'}
-                    formulas={[
-                        'q = perihelion distance',
-                        'e = eccentricity',
-                        'i = inclination',
-                        'Ω = longitude of ascending node',
-                        'ω = argument of perihelion',
-                        'Tp = time of perihelion passage',
-                    ]}
-                    note={en
-                        ? 'These six classical elements come from JPL Horizons and describe the osculating Keplerian orbit at the current solution epoch.'
-                        : 'Esses seis elementos clássicos vêm do JPL Horizons e descrevem a órbita Kepleriana osculadora na época da solução atual.'}
-                />
-                <FormulaPanel
-                    title={en ? 'Kepler propagation' : 'Propagação Kepleriana'}
-                    formulas={[
-                        'a = q / (1 - e)',
-                        'k = 0.01720209895',
-                        'GM_sol = k²',
-                        'n = sqrt(GM_sol / a³)',
-                        'M = n · (JD_now - Tp)',
-                        'E - e · sin(E) = M',
-                    ]}
-                    note={en
-                        ? 'k is the Gaussian gravitational constant; the resulting GM_sol expresses the standard heliocentric two-body problem. Kepler’s equation is solved for the eccentric anomaly E by Newton iteration.'
-                        : 'k é a constante gravitacional Gaussiana; o GM_sol resultante expressa o problema padrão dos dois corpos heliocêntrico. A equação de Kepler é resolvida para a anomalia excêntrica E por iteração de Newton.'}
-                />
-                <FormulaPanel
-                    title={en ? 'Position in the orbital plane' : 'Posição no plano orbital'}
-                    formulas={[
-                        'x = a · (cos E - e)',
-                        'y = a · sqrt(1 - e²) · sin E',
-                        'R = Rz(Ω) · Rx(i) · Rz(ω)',
-                        'p_ecl = R · (x, y, 0)',
-                    ]}
-                    note={en
-                        ? 'The point is first expressed in the orbital plane (Sun at the focus), then rotated into the J2000 ecliptic frame by the composite rotation R.'
-                        : 'O ponto é expresso primeiro no plano orbital (Sol no foco), depois rotacionado para o referencial eclíptico J2000 pela rotação composta R.'}
-                />
-                <FormulaPanel
-                    title={en ? 'Scene mapping' : 'Mapeamento para a cena'}
-                    formulas={[
-                        '1 AU = ORBIT_AU_SCALE units',
-                        'scene(x, y, z) = (x, z, y) · ORBIT_AU_SCALE',
-                        en ? 'Earth = real heliocentric position' : 'Terra = posição heliocêntrica real',
-                    ]}
-                    note={en
-                        ? 'The axis swap aligns the J2000 ecliptic with the scene convention (ecliptic Z becomes scene Y). Earth is placed from the local ephemeris and lit by the real Sun direction; only its rendered radius is amplified.'
-                        : 'A troca de eixos alinha o eclíptico J2000 com a convenção da cena (Z eclíptico vira Y da cena). A Terra é posicionada pela efeméride local e iluminada pela direção real do Sol; apenas seu raio renderizado é amplificado.'}
-                />
+                        note={en
+                            ? 'JPL Horizons delivers position and velocity in the geocentric J2000 equatorial frame. All three distance units (km, LD, AU) derive from the same Euclidean norm of r — they are consistent by construction.'
+                            : 'O JPL Horizons entrega posição e velocidade no referencial equatorial geocêntrico J2000. As três unidades de distância (km, DL, UA) derivam da mesma norma euclidiana de r — são consistentes por construção.'}
+                    />
+
+                    <FormulaPanel
+                        title={en ? '2. Radial log compression (scene placement)' : '2. Compressão radial logarítmica (posicionamento na cena)'}
+                        formulas={[
+                            `R₀ = 8 DL  (= ${nf.format(8 * lunarDistanceKm)} km)`,
+                            'K  = 1 / ln(1 + 1/R₀)',
+                            'f(r) = K · ln(1 + r/R₀)',
+                            'r_scene = f(d_DL) · r̂     where r̂ = r/||r||',
+                        ]}
+                        note={en
+                            ? 'f maps real distance d_DL → scene radius. K forces f(1) = 1, so the Moon always lands at 1 scene unit regardless of its actual km value that day. The direction unit vector r̂ is applied after compression, so angles are never distorted.'
+                            : 'f mapeia a distância real d_DL → raio de cena. K força f(1) = 1, de modo que a Lua sempre cai em 1 unidade de cena independente do valor km do dia. O vetor unitário de direção r̂ é aplicado após a compressão, portanto ângulos nunca são distorcidos.'}
+                    />
+
+                    <FormulaPanel
+                        title={en ? '3. Motion cone and trajectory trail' : '3. Cone de movimento e trilha de trajetória'}
+                        formulas={[
+                            'û = v / ||v||           (unit velocity)',
+                            en ? 'cone direction ← û' : 'direção do cone ← û',
+                            en ? 'trail ← geocentric positions near t_now' : 'trilha ← posições geocêntricas próximas a t_now',
+                            en ? 'trail_scene = same f compression per point' : 'trilha_cena = mesma compressão f por ponto',
+                        ]}
+                        note={en
+                            ? 'The cone orientation is physically meaningful — it points where the object is heading, at the true velocity direction. The trail samples the geocentric ephemeris at a few nearby epochs and applies the same log compression, so its shape is visually consistent with the object position.'
+                            : 'A orientação do cone tem significado físico — aponta para onde o objeto está indo, na direção de velocidade real. A trilha amostra a efeméride geocêntrica em algumas épocas próximas e aplica a mesma compressão logarítmica, portanto sua forma é visualmente consistente com a posição do objeto.'}
+                    />
+
+                    <TechSection title={en ? '3D body models' : 'Modelos 3D de corpos'}>
+                        <p className="text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'When NASA has a published shape model for a body (Bennu, Ceres, Eros, Itokawa, Vesta), the corresponding asset is loaded. All other bodies are rendered as representative rock meshes selected by estimated diameter.'
+                                : 'Quando a NASA tem um modelo de forma publicado para um corpo (Bennu, Ceres, Eros, Itokawa, Vesta), o asset correspondente é carregado. Todos os outros corpos são renderizados como meshes de rocha representativas selecionadas pelo diâmetro estimado.'}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'Body radii are amplified for legibility — true diameters would be sub-pixel at scene scale. This affects only the visual size; distances remain the uncompressed measurement layer and are always printed from the original data.'
+                                : 'Os raios dos corpos são amplificados para legibilidade — os diâmetros reais seriam sub-pixel na escala da cena. Isso afeta apenas o tamanho visual; as distâncias permanecem a camada de medição sem compressão e são sempre impressas a partir dos dados originais.'}
+                        </p>
+                    </TechSection>
+                </div>
             </div>
         </div>
     );
 }
 
-function TechnicalBlock({ title, lines }: { title: string; lines: string[] }) {
+function OrbitTechnical({ en, locale }: { en: boolean; locale: 'pt-BR' | 'en' }) {
     return (
-        <section className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
-            <h3 className="text-sm font-semibold text-white">{title}</h3>
-            <ul className="mt-3 space-y-2 text-sm leading-relaxed text-white/64">
-                {lines.map((line) => <li key={line}>{line}</li>)}
-            </ul>
+        <div className="space-y-6">
+            <p className="text-sm leading-relaxed text-white/65">
+                {en
+                    ? 'This section explains how the orbital ellipse is computed and drawn. Switch to the reading guide to understand what you are looking at visually.'
+                    : 'Esta seção explica como a elipse orbital é calculada e desenhada. Mude para o guia de leitura para entender o que você está vendo visualmente.'}
+            </p>
+
+            <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="space-y-5">
+                    <OrbitGuideDiagram locale={locale} technical />
+
+                    <TechSection title={en ? 'Why a separate heliocentric view?' : 'Por que uma vista heliocêntrica separada?'}>
+                        <p className="text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'The radar uses logarithmic compression calibrated for the Earth neighbourhood (LD scale). The orbit uses a linear AU scale calibrated for the solar system. Mixing the two would mean the same ruler represents different physical distances depending on the mode — guaranteed confusion.'
+                                : 'O radar usa compressão logarítmica calibrada para a vizinhança da Terra (escala DL). A órbita usa escala linear em UA calibrada para o sistema solar. Misturar os dois significaria que a mesma régua representa distâncias físicas diferentes dependendo do modo — confusão garantida.'}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'Keeping modes strictly separated means each view has one consistent scale. The radar answers "how close is it now?" The orbit answers "what path does gravity hold it on?"'
+                                : 'Manter os modos estritamente separados significa que cada vista tem uma escala consistente. O radar responde "quão perto está agora?" A órbita responde "em que caminho a gravidade o mantém?"'}
+                        </p>
+                    </TechSection>
+                </div>
+
+                <div className="space-y-4">
+                    <FormulaPanel
+                        title={en ? '1. Osculating orbital elements (input from JPL Horizons)' : '1. Elementos orbitais osculadores (entrada do JPL Horizons)'}
+                        formulas={[
+                            'q  — perihelion distance [AU]',
+                            'e  — eccentricity',
+                            'i  — inclination [deg]',
+                            'Ω  — longitude of ascending node [deg]',
+                            'ω  — argument of perihelion [deg]',
+                            'Tₚ — time of perihelion passage [JD]',
+                        ]}
+                        note={en
+                            ? 'These six classical Keplerian elements define a unique conic section in 3D space. They come from JPL Horizons as the osculating orbit at the current solution epoch — the best-fit ellipse to the actual numerical trajectory at this moment in time.'
+                            : 'Esses seis elementos Keplerianos clássicos definem uma seção cônica única no espaço 3D. Vêm do JPL Horizons como a órbita osculadora na época da solução atual — a elipse de melhor ajuste à trajetória numérica real neste momento.'}
+                    />
+
+                    <FormulaPanel
+                        title={en ? '2. Kepler propagation — finding position on the ellipse' : '2. Propagação Kepleriana — encontrando a posição na elipse'}
+                        formulas={[
+                            'a  = q / (1 − e)          (semi-major axis)',
+                            'k  = 0.01720209895        (Gaussian grav. const.)',
+                            'n  = sqrt(k² / a³)        (mean motion)',
+                            'M  = n · (JD_now − Tₚ)   (mean anomaly)',
+                            'E − e·sin(E) = M          (Kepler\'s equation)',
+                        ]}
+                        note={en
+                            ? 'M grows linearly with time; E is the eccentric anomaly, which together with a and e gives the actual position on the ellipse. Kepler\'s equation has no closed-form solution — it is solved iteratively by Newton\'s method, converging in 3–5 iterations for typical eccentricities.'
+                            : 'M cresce linearmente com o tempo; E é a anomalia excêntrica, que junto com a e e dá a posição real na elipse. A equação de Kepler não tem solução analítica fechada — é resolvida iterativamente pelo método de Newton, convergindo em 3–5 iterações para excentricidades típicas.'}
+                    />
+
+                    <FormulaPanel
+                        title={en ? '3. 3D position from the orbital plane to the ecliptic' : '3. Posição 3D do plano orbital para o eclíptico'}
+                        formulas={[
+                            'x = a·(cos E − e)',
+                            'y = a·sqrt(1 − e²)·sin E',
+                            'R = Rz(Ω) · Rx(i) · Rz(ω)   (Euler rotation)',
+                            'p_ecl = R · (x, y, 0)        [AU, J2000 ecliptic]',
+                        ]}
+                        note={en
+                            ? 'x,y are computed in the orbital plane with the Sun at the origin. The composite rotation R applies three sequential rotations — argument of perihelion ω, inclination i, ascending node Ω — to tilt and orient the ellipse in the J2000 ecliptic frame.'
+                            : 'x,y são calculados no plano orbital com o Sol na origem. A rotação composta R aplica três rotações sequenciais — argumento do periélio ω, inclinação i, nodo ascendente Ω — para inclinar e orientar a elipse no referencial eclíptico J2000.'}
+                    />
+
+                    <FormulaPanel
+                        title={en ? '4. Mapping to the 3D scene' : '4. Mapeamento para a cena 3D'}
+                        formulas={[
+                            '1 AU = ORBIT_AU_SCALE scene units',
+                            'scene(x,y,z) = (x, z, y) · ORBIT_AU_SCALE',
+                            en ? 'Earth ← real heliocentric ephemeris' : 'Terra ← efeméride heliocêntrica real',
+                        ]}
+                        note={en
+                            ? 'The axis swap (y↔z) aligns the J2000 ecliptic convention — where Z points to the ecliptic north pole — with the scene convention where Y is up. Earth is placed from the same local ephemeris used for lighting, so the Sun direction is physically correct. Only Earth\'s rendered radius is amplified for visibility.'
+                            : 'A troca de eixos (y↔z) alinha a convenção eclíptica J2000 — onde Z aponta para o polo norte eclíptico — com a convenção da cena onde Y é para cima. A Terra é posicionada pela mesma efeméride local usada para iluminação, então a direção do Sol é fisicamente correta. Apenas o raio renderizado da Terra é amplificado para visibilidade.'}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Shared sub-components ──────────────────────────────────────────────────
+
+function Callout({ icon, children }: { icon: 'radar' | 'orbit'; children: React.ReactNode }) {
+    const Icon = icon === 'radar' ? Radar : Orbit;
+    return (
+        <div className="flex items-start gap-3 rounded-xl border border-signal-cyan/20 bg-signal-cyan/[0.07] px-4 py-3.5">
+            <Icon className="mt-0.5 size-5 shrink-0 text-signal-cyan" aria-hidden />
+            <div>{children}</div>
+        </div>
+    );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <section className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+            <h3 className="mb-3 text-sm font-semibold text-white">{title}</h3>
+            {children}
         </section>
+    );
+}
+
+function TechSection({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <section className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+            <h3 className="mb-3 text-sm font-semibold text-white">{title}</h3>
+            {children}
+        </section>
+    );
+}
+
+function HighlightBox({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="mt-3 rounded-md border border-amber-300/15 bg-amber-300/[0.06] px-3.5 py-2.5 text-[13px] leading-relaxed text-white/70">
+            {children}
+        </div>
+    );
+}
+
+function RulerRow({ label, color, value, desc }: { label: string; color: string; value: string; desc: string }) {
+    return (
+        <div className="flex gap-3 rounded-md border border-white/8 bg-black/15 px-3 py-2.5">
+            <span className={`mt-0.5 shrink-0 font-mono text-sm font-bold ${color}`}>{label}</span>
+            <div>
+                <span className="text-[13px] font-medium text-white/80">{value}</span>
+                <p className="mt-0.5 text-[12px] leading-relaxed text-white/55">{desc}</p>
+            </div>
+        </div>
+    );
+}
+
+function VisualKey({ color, shape, label, desc }: { color: string; shape?: 'cone' | 'dashed' | 'ring' | 'ellipse'; label: string; desc: string }) {
+    return (
+        <div className="flex items-start gap-2.5 rounded-md border border-white/8 bg-black/15 px-3 py-2">
+            <span className="mt-1 shrink-0">
+                {shape === 'dashed'
+                    ? <span className="inline-block h-0.5 w-5 border-t-2 border-dashed border-slate-400/80" />
+                    : shape === 'ring'
+                        ? <span className={`inline-block size-3.5 rounded-full border-2 ${color.replace('bg-', 'border-')} bg-transparent`} />
+                        : shape === 'ellipse'
+                            ? <span className={`inline-block h-2.5 w-4 rounded-full border-2 ${color.replace('bg-', 'border-')} bg-transparent`} />
+                            : shape === 'cone'
+                                ? <span className={`inline-block size-0 border-b-[10px] border-l-[5px] border-r-[5px] border-b-cyan-400 border-l-transparent border-r-transparent`} />
+                                : <span className={`inline-block size-3 rounded-full ${color}`} />}
+            </span>
+            <div>
+                <span className="text-[13px] font-medium text-white/85">{label}</span>
+                <p className="text-[12px] leading-relaxed text-white/55">{desc}</p>
+            </div>
+        </div>
+    );
+}
+
+function ReadingStep({ label, text }: { label: string; text: string }) {
+    return (
+        <div className="rounded-md border border-white/8 bg-black/15 px-3 py-2.5">
+            <p className="text-[13px] font-semibold text-white/85">{label}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-white/62">{text}</p>
+        </div>
+    );
+}
+
+function SwitchModeHint({ en, targetMode }: { en: boolean; targetMode: 'radar' | 'orbit' }) {
+    const isRadar = targetMode === 'radar';
+    return (
+        <div className="rounded-lg border border-white/8 bg-black/20 p-4">
+            <p className="text-[13px] font-semibold text-white/70">
+                {en ? 'When to switch mode' : 'Quando trocar de modo'}
+            </p>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-white/55">
+                {isRadar
+                    ? (en
+                        ? 'Switch back to radar when you want to know the real distance to Earth right now, check the approach direction, or read the km/LD/AU numbers.'
+                        : 'Volte para o radar quando quiser saber a distância real da Terra agora, checar a direção da aproximação ou ler os números em km/DL/UA.')
+                    : (en
+                        ? 'Switch to orbit mode when you want to see the full ellipse, compare the orbit shape with Earth\'s, or understand whether the orbit intersects Earth\'s path at all.'
+                        : 'Mude para o modo órbita quando quiser ver a elipse completa, comparar a forma da órbita com a da Terra ou entender se a órbita intersecta o caminho da Terra.')}
+            </p>
+        </div>
     );
 }
 
@@ -593,7 +704,7 @@ function FormulaPanel({ title, formulas, note }: { title: string; formulas: stri
     return (
         <section className="rounded-lg border border-white/10 bg-black/20 p-4">
             <h3 className="text-sm font-semibold text-white">{title}</h3>
-            <div className="mt-3 space-y-1 rounded-md border border-signal-cyan/15 bg-signal-cyan/[0.055] px-3 py-2 font-mono text-[12px] leading-relaxed text-cyan-100/88">
+            <div className="mt-3 space-y-0.5 rounded-md border border-signal-cyan/15 bg-signal-cyan/[0.055] px-3 py-2.5 font-mono text-[12px] leading-relaxed text-cyan-100/88">
                 {formulas.map((formula) => <div key={formula}>{formula}</div>)}
             </div>
             <p className="mt-3 text-[13px] leading-relaxed text-white/62">{note}</p>
@@ -601,48 +712,87 @@ function FormulaPanel({ title, formulas, note }: { title: string; formulas: stri
     );
 }
 
+// ─── SVG Diagrams ────────────────────────────────────────────────────────────
+
 function RadarGuideDiagram({ locale, technical = false }: { locale: 'pt-BR' | 'en'; technical?: boolean }) {
     const en = locale === 'en';
     return (
         <figure className="overflow-hidden rounded-lg border border-white/10 bg-[#050b15]">
-            <svg viewBox="0 0 520 360" className="h-auto w-full" role="img" aria-label={en ? 'Earth-centred radar diagram' : 'Diagrama do radar centrado na Terra'}>
+            <svg viewBox="0 0 540 380" className="h-auto w-full" role="img" aria-label={en ? 'Earth-centred radar diagram' : 'Diagrama do radar centrado na Terra'}>
                 <defs>
-                    <radialGradient id="earthGlow" cx="50%" cy="50%" r="55%">
+                    <radialGradient id="rg-earth" cx="50%" cy="50%" r="55%">
                         <stop offset="0%" stopColor="#7dd3fc" />
                         <stop offset="55%" stopColor="#2563eb" />
                         <stop offset="100%" stopColor="#0f172a" />
                     </radialGradient>
-                    <marker id="arrowCyan" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                    <radialGradient id="rg-moon" cx="50%" cy="50%" r="60%">
+                        <stop offset="0%" stopColor="#e2e8f0" />
+                        <stop offset="100%" stopColor="#64748b" />
+                    </radialGradient>
+                    <marker id="rg-arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
                         <path d="M0,0 L0,6 L8,3 z" fill="#67e8f9" />
                     </marker>
+                    <filter id="rg-glow">
+                        <feGaussianBlur stdDeviation="2" result="blur" />
+                        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                    </filter>
                 </defs>
-                <rect width="520" height="360" fill="#050b15" />
-                <circle cx="260" cy="180" r="58" fill="none" stroke="#94a3b8" strokeOpacity="0.18" strokeWidth="1" />
-                <circle cx="260" cy="180" r="116" fill="none" stroke="#94a3b8" strokeOpacity="0.12" strokeWidth="1" strokeDasharray="6 8" />
-                <circle cx="260" cy="180" r="174" fill="none" stroke="#94a3b8" strokeOpacity="0.08" strokeWidth="1" strokeDasharray="2 10" />
-                <path d="M260 180 C300 124 365 108 424 82" fill="none" stroke="#94a3b8" strokeOpacity="0.45" strokeWidth="3" strokeDasharray="7 9" />
-                <line x1="382" y1="110" x2="442" y2="78" stroke="#67e8f9" strokeWidth="4" markerEnd="url(#arrowCyan)" />
-                <circle cx="260" cy="180" r="30" fill="url(#earthGlow)" />
-                <circle cx="330" cy="146" r="8" fill="#d8b4fe" />
-                <circle cx="382" cy="110" r="11" fill="#f8fafc" />
-                <circle cx="178" cy="228" r="7" fill="#facc15" />
-                <text x="260" y="224" textAnchor="middle" fill="#e0f2fe" fontSize="15" fontWeight="700">{en ? 'Earth' : 'Terra'}</text>
-                <text x="385" y="139" textAnchor="middle" fill="#e2e8f0" fontSize="13">{en ? 'object now' : 'objeto agora'}</text>
-                <text x="427" y="67" fill="#67e8f9" fontSize="13" fontWeight="700">{en ? 'movement' : 'movimento'}</text>
-                <text x="82" y="42" fill="#cbd5e1" fontSize="14" fontWeight="700">{en ? 'Read from Earth outward' : 'Leia saindo da Terra'}</text>
-                <text x="82" y="64" fill="#94a3b8" fontSize="12">{en ? 'distance numbers stay real' : 'os números de distância são reais'}</text>
-                {technical ? (
+
+                <rect width="540" height="380" fill="#050b15" />
+
+                {/* Distance rings */}
+                <circle cx="270" cy="195" r="54" fill="none" stroke="#94a3b8" strokeOpacity="0.22" strokeWidth="1" />
+                <circle cx="270" cy="195" r="108" fill="none" stroke="#94a3b8" strokeOpacity="0.13" strokeWidth="1" strokeDasharray="5 7" />
+                <circle cx="270" cy="195" r="162" fill="none" stroke="#94a3b8" strokeOpacity="0.08" strokeWidth="1" strokeDasharray="2 9" />
+
+                {/* Moon */}
+                <circle cx="270" cy="141" r="9" fill="url(#rg-moon)" />
+                <text x="285" y="136" fill="#94a3b8" fontSize="11">{en ? 'Moon (1 LD)' : 'Lua (1 DL)'}</text>
+
+                {/* Asteroid trail */}
+                <path d="M270 195 C306 130 372 112 432 88" fill="none" stroke="#94a3b8" strokeOpacity="0.40" strokeWidth="2.5" strokeDasharray="6 8" />
+
+                {/* Asteroid cone + position */}
+                <circle cx="396" cy="112" r="12" fill="#d8b4fe" filter="url(#rg-glow)" />
+                {/* Cone shape pointing in velocity direction */}
+                <polygon points="396,100 388,120 404,120" fill="#67e8f9" opacity="0.85" transform="rotate(-40 396 112)" />
+                {/* Arrow for movement */}
+                <line x1="396" y1="112" x2="450" y2="80" stroke="#67e8f9" strokeWidth="3" markerEnd="url(#rg-arrow)" />
+
+                {/* Second object, farther out */}
+                <circle cx="190" cy="290" r="8" fill="#fb923c" opacity="0.8" />
+                <polygon points="190,278 183,296 197,296" fill="#67e8f9" opacity="0.6" transform="rotate(150 190 290)" />
+
+                {/* Earth */}
+                <circle cx="270" cy="195" r="28" fill="url(#rg-earth)" />
+                <text x="270" y="239" textAnchor="middle" fill="#e0f2fe" fontSize="14" fontWeight="700">{en ? 'Earth' : 'Terra'}</text>
+
+                {/* Technical overlays */}
+                {technical && (
                     <>
-                        <line x1="260" y1="180" x2="382" y2="110" stroke="#fbbf24" strokeWidth="2" strokeOpacity="0.8" />
-                        <text x="286" y="133" fill="#fef3c7" fontSize="12">r = (x,y,z)</text>
-                        <text x="315" y="264" fill="#bae6fd" fontSize="12">r_cena = f(||r||) · r/||r||</text>
+                        <line x1="270" y1="195" x2="396" y2="112" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.85" strokeDasharray="3 4" />
+                        <text x="308" y="142" fill="#fef3c7" fontSize="11.5" fontStyle="italic">r = (x,y,z)</text>
+                        <text x="270" y="358" textAnchor="middle" fill="#bae6fd" fontSize="11.5">r_cena = f(d_DL) · r̂</text>
+                        <text x="270" y="373" textAnchor="middle" fill="#bae6fd" fontSize="11" opacity="0.7">f(r) = K·ln(1 + r/R₀)</text>
                     </>
-                ) : null}
+                )}
+
+                {/* Labels — title + ring labels */}
+                <text x="20" y="30" fill="#cbd5e1" fontSize="13" fontWeight="700">{en ? 'Read outward from Earth' : 'Leia saindo da Terra'}</text>
+                <text x="20" y="48" fill="#64748b" fontSize="11">{en ? '— numbers in the focus panel are uncompressed' : '— números no painel de foco são descomprimidos'}</text>
+
+                {/* Ring labels */}
+                <text x="327" y="192" fill="#475569" fontSize="10">1 DL</text>
+                <text x="381" y="192" fill="#334155" fontSize="10">2 DL</text>
+
+                {/* Object labels */}
+                <text x="412" y="105" fill="#e2e8f0" fontSize="12">{en ? 'object' : 'objeto'}</text>
+                <text x="448" y="72" fill="#67e8f9" fontSize="12" fontWeight="600">{en ? 'moving' : 'movimento'}</text>
             </svg>
-            <figcaption className="border-t border-white/10 px-4 py-3 text-[13px] leading-relaxed text-white/62">
+            <figcaption className="border-t border-white/10 px-4 py-3 text-[12px] leading-relaxed text-white/55">
                 {en
-                    ? 'The centre is Earth. Dots are nearby objects, the cone shows motion, and the grey dashes show the short path around us.'
-                    : 'O centro é a Terra. Os pontos são objetos próximos, o cone mostra o movimento e os traços cinza mostram o caminho curto ao nosso redor.'}
+                    ? 'Earth at centre. Grey rings are distance bands (logarithmically spaced in the real view). The cone points in the direction of motion. The grey dashed line is the recent trajectory.'
+                    : 'Terra no centro. Anéis cinzas são faixas de distância (com espaçamento logarítmico na vista real). O cone aponta na direção do movimento. A linha tracejada cinza é a trajetória recente.'}
             </figcaption>
         </figure>
     );
@@ -652,42 +802,65 @@ function OrbitGuideDiagram({ locale, technical = false }: { locale: 'pt-BR' | 'e
     const en = locale === 'en';
     return (
         <figure className="overflow-hidden rounded-lg border border-white/10 bg-[#050b15]">
-            <svg viewBox="0 0 520 360" className="h-auto w-full" role="img" aria-label={en ? 'Sun-centred orbit diagram' : 'Diagrama orbital centrado no Sol'}>
+            <svg viewBox="0 0 540 380" className="h-auto w-full" role="img" aria-label={en ? 'Sun-centred orbit diagram' : 'Diagrama orbital centrado no Sol'}>
                 <defs>
-                    <radialGradient id="sunGlowManual" cx="50%" cy="50%" r="55%">
-                        <stop offset="0%" stopColor="#fff7ad" />
-                        <stop offset="45%" stopColor="#fb923c" />
+                    <radialGradient id="og-sun" cx="50%" cy="50%" r="55%">
+                        <stop offset="0%" stopColor="#fef9c3" />
+                        <stop offset="40%" stopColor="#fb923c" />
                         <stop offset="100%" stopColor="#7c2d12" />
                     </radialGradient>
-                    <marker id="arrowCyanOrbit" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                    <radialGradient id="og-earth" cx="50%" cy="50%" r="60%">
+                        <stop offset="0%" stopColor="#7dd3fc" />
+                        <stop offset="100%" stopColor="#1e40af" />
+                    </radialGradient>
+                    <marker id="og-arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
                         <path d="M0,0 L0,6 L8,3 z" fill="#67e8f9" />
                     </marker>
+                    <filter id="og-glow">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                    </filter>
                 </defs>
-                <rect width="520" height="360" fill="#050b15" />
-                <ellipse cx="260" cy="180" rx="94" ry="94" fill="none" stroke="#60a5fa" strokeOpacity="0.45" strokeWidth="2" />
-                <ellipse cx="288" cy="180" rx="178" ry="82" fill="none" stroke="#d8b4fe" strokeOpacity="0.82" strokeWidth="3" transform="rotate(-18 288 180)" />
-                <circle cx="260" cy="180" r="24" fill="url(#sunGlowManual)" />
-                <circle cx="354" cy="180" r="9" fill="#7dd3fc" />
-                <circle cx="420" cy="119" r="11" fill="#f8fafc" />
-                <path d="M408 128 L445 96" stroke="#67e8f9" strokeWidth="4" markerEnd="url(#arrowCyanOrbit)" />
-                <text x="260" y="220" textAnchor="middle" fill="#fed7aa" fontSize="15" fontWeight="700">{en ? 'Sun' : 'Sol'}</text>
-                <text x="354" y="203" textAnchor="middle" fill="#bfdbfe" fontSize="12">{en ? 'Earth (1 AU)' : 'Terra (1 UA)'}</text>
-                <text x="420" y="146" textAnchor="middle" fill="#e2e8f0" fontSize="13">{en ? 'object now' : 'objeto agora'}</text>
-                <text x="72" y="44" fill="#cbd5e1" fontSize="14" fontWeight="700">{en ? 'Read the whole orbit' : 'Leia a órbita inteira'}</text>
-                <text x="72" y="66" fill="#94a3b8" fontSize="12">{en ? 'compare with Earth’s 1 AU path' : 'compare com o caminho da Terra em 1 UA'}</text>
-                {technical ? (
+
+                <rect width="540" height="380" fill="#050b15" />
+
+                {/* Asteroid orbit — tilted ellipse, offset focus */}
+                <ellipse
+                    cx="290" cy="190" rx="185" ry="88"
+                    fill="none" stroke="#a78bfa" strokeOpacity="0.85" strokeWidth="2.5"
+                    transform="rotate(-15 290 190)"
+                />
+
+                {/* Sun */}
+                <circle cx="270" cy="190" r="22" fill="url(#og-sun)" filter="url(#og-glow)" />
+                <text x="270" y="228" textAnchor="middle" fill="#fed7aa" fontSize="14" fontWeight="700">{en ? 'Sun' : 'Sol'}</text>
+
+                {/* Asteroid position */}
+                <circle cx="448" cy="128" r="11" fill="#f8fafc" filter="url(#og-glow)" />
+                <path d="M436 136 L468 102" stroke="#67e8f9" strokeWidth="3" markerEnd="url(#og-arrow)" />
+
+                {/* Technical overlays */}
+                {technical && (
                     <>
-                        <line x1="260" y1="180" x2="420" y2="119" stroke="#fbbf24" strokeWidth="2" strokeOpacity="0.75" />
-                        <text x="310" y="140" fill="#fef3c7" fontSize="12">p_ecl</text>
-                        <text x="90" y="304" fill="#bae6fd" fontSize="12">E - e·sin(E) = M</text>
-                        <text x="90" y="326" fill="#bae6fd" fontSize="12">a = q/(1-e)</text>
+                        <line x1="270" y1="190" x2="448" y2="128" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.8" strokeDasharray="3 4" />
+                        <text x="340" y="148" fill="#fef3c7" fontSize="11.5" fontStyle="italic">p_ecl</text>
+                        <text x="20" y="355" fill="#bae6fd" fontSize="11.5">E − e·sin(E) = M</text>
+                        <text x="20" y="372" fill="#bae6fd" fontSize="11" opacity="0.7">a = q/(1−e)</text>
                     </>
-                ) : null}
+                )}
+
+                {/* Labels */}
+                <text x="20" y="30" fill="#cbd5e1" fontSize="13" fontWeight="700">{en ? 'Read the whole orbit' : 'Leia a órbita inteira'}</text>
+                <text x="20" y="48" fill="#64748b" fontSize="11">{en ? '— find where Earth and the asteroid are today' : '— encontre onde a Terra e o asteroide estão hoje'}</text>
+
+                {/* Object label */}
+                <text x="454" y="122" fill="#e2e8f0" fontSize="12">{en ? 'asteroid now' : 'asteroide agora'}</text>
+                <text x="468" y="98" fill="#67e8f9" fontSize="11" fontWeight="600">{en ? 'moving' : 'movimento'}</text>
             </svg>
-            <figcaption className="border-t border-white/10 px-4 py-3 text-[13px] leading-relaxed text-white/62">
+            <figcaption className="border-t border-white/10 px-4 py-3 text-[12px] leading-relaxed text-white/55">
                 {en
-                    ? 'The Sun anchors the view. Earth’s ring gives you a familiar ruler; the asteroid ellipse shows the larger path.'
-                    : 'O Sol ancora a vista. O anel da Terra dá uma régua familiar; a elipse do asteroide mostra o caminho maior.'}
+                    ? 'Sun at centre (orange). The purple oval is the asteroid\'s full orbit around the Sun. The white dot is where the asteroid is today.'
+                    : 'Sol no centro (laranja). O oval roxo é a órbita completa do asteroide ao redor do Sol. O ponto branco é onde o asteroide está hoje.'}
             </figcaption>
         </figure>
     );

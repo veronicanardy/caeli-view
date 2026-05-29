@@ -447,7 +447,7 @@ function SceneLegend({
             >
                 <span className="inline-flex items-center gap-2">
                     <BookOpen className="size-4" aria-hidden />
-                    {en ? 'Manual' : 'Manual'}
+                    {en ? (mode === 'radar' ? 'Radar guide' : 'Orbit guide') : (mode === 'radar' ? 'Guia do radar' : 'Guia da órbita')}
                 </span>
                 <ChevronDown className="-rotate-90 size-4" aria-hidden />
             </button>

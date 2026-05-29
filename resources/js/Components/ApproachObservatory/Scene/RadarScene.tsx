@@ -139,10 +139,6 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
             {useHelioScene && focusedElements && focusedObject ? (
                 <HeliocentricScene
                     elements={focusedElements}
-                    earthHelioPositionAU={ephemeris?.earthHelioPositionAU ?? null}
-                    fallbackSunDirection={fallbackSunDirection}
-                    subsolarLatDeg={ephemeris?.subsolarLatDeg ?? 0}
-                    subsolarLonDeg={ephemeris?.subsolarLonDeg ?? 0}
                     asteroidName={focusedObject.approach.displayName ?? focusedObject.approach.name}
                     color={focusedPalette.future}
                     locale={locale}
