@@ -12,7 +12,6 @@ import { FocusCard } from './Panels/FocusCard';
 import { RadarScene } from './Scene/RadarScene';
 import {
     CAMERA_FOV_DEG,
-    CAMERA_VIEWS,
     MAX_CAMERA_DISTANCE,
     computeFocusFraming,
     type CameraViewKey,
@@ -21,16 +20,18 @@ import {
 import { nextCameraNonce, type CameraIntent } from './Scene/cameraIntent';
 
 /**
- * Isolated 3D prototype of the orbital radar. Lives alongside the SVG radar — it does NOT
- * replace it. Toggled on via a button in the page header.
+ * Radar orbital 3D — visualização principal da aproximação diária.
  *
- * Why this exists: the SVG radar projects the ecliptic plane orthographically, which collapses
- * the Z axis. Asteroids with high orbital inclination (e.g. 2018 CX at i ≈ 25°) end up looking
- * misplaced — their 3D range is 60 DL, but their (x, y) projection sits between 1 and 5 DL.
- * This 3D scene keeps the real X/Y/Z so depth reads honestly.
+ * Por que existe: o radar SVG projeta o plano eclíptico ortograficamente, colapsando
+ * o eixo Z. Asteroides com alta inclinação orbital (ex.: 2018 CX, i ≈ 25°) aparecem
+ * mal posicionados: sua distância 3D real é 60 DL, mas a projeção (x, y) cai entre
+ * 1 e 5 DL. Esta cena preserva os eixos X/Y/Z reais para que a profundidade seja honesta.
  *
- * Out of scope for the prototype: solar-context mode, all modes besides closest-5-now, raycast
- * interaction on the rings, mobile gesture polish.
+ * Dois modos de visualização coexistem:
+ *   - 'radar'  : geocêntrico, escala logarítmica comprimida (Terra na origem).
+ *   - 'orbit'  : heliocêntrico, escala linear em UA (Sol na origem).
+ * A troca só ocorre quando um objeto selecionado tem elementos orbitais com época de
+ * periélio válida (tpJd ≠ 0) — sem isso a posição Kepleriana não é computável.
  */
 
 type Props = {
@@ -42,21 +43,13 @@ type Props = {
     lunarReference: LunarReference;
     locale: 'pt-BR' | 'en';
     /**
-     * Sun direction (geocentric ecliptic) for the current instant, computed server-side via
-     * SunDirectionCalculator and passed through Inertia. We use it as the SYNCHRONOUS fallback for
-     * the directional light, so the scene never starts with an arbitrary cardinal vector while
-     * astronomy-engine is still resolving its lazy import.
+     * Direção do Sol (eclíptica geocêntrica) para o instante atual, calculada no servidor
+     * via SunDirectionCalculator e transmitida pelo Inertia. Usada como fallback SÍNCRONO
+     * para a luz direcional — a cena nunca parte de um vetor cardinal arbitrário enquanto
+     * o astronomy-engine ainda está resolvendo seu import lazy.
      */
     initialSunDirection: SunDirection;
 };
-
-/**
- * Two semantically distinct viewing modes the user can switch between:
- *   - 'radar': geocentric, log-compressed scale.
- *   - 'orbit': heliocentric, linear AU scale centred on the Sun.
- * SceneMode is defined in ./MapManualModal so the modal and the scene agree on the same union.
- */
-// --------------- Component ---------------
 
 export function DailyOrbitalRadar3D({
     closestNowObjects,
@@ -70,22 +63,26 @@ export function DailyOrbitalRadar3D({
 }: Props) {
     const en = locale === 'en';
 
-    // Honest synchronous fallback for the Sun direction: the server already knows the current Sun
-    // longitude (Meeus, SunDirectionCalculator) and ships it through Inertia. Until astronomy-engine
-    // resolves its lazy import, the scene lights from this vector — never from an arbitrary one.
+    // Fallback síncrono para a direção do Sol: o servidor já conhece a longitude solar atual
+    // (Meeus, SunDirectionCalculator) e a envia pelo Inertia. Até o astronomy-engine resolver
+    // seu import lazy, a cena ilumina a partir deste vetor — nunca de um cardinal arbitrário.
     const fallbackSunDirection = useMemo<[number, number, number]>(
         () => sunDirectionFromIncoming(initialSunDirection),
         [initialSunDirection],
     );
 
-    // Sun direction + Moon position for this instant, computed locally with astronomy-engine.
-    // Null until the (lazy-loaded) library resolves; the scene uses the server-seeded direction
-    // above until then. Recomputed every few minutes so day/night and the Moon drift realistically.
+    // Efeméride calculada localmente com astronomy-engine (direção do Sol + posição da Lua).
+    // Null até a biblioteca (carregada de forma lazy) resolver. A cena usa o fallback do servidor
+    // até então. Recalculada a cada 10 s para que dia/noite e a Lua derivem realisticamente.
     const ephemeris = useSceneEphemeris();
 
-    // One explicit camera state-machine input. The discriminant tells the scene whether the next
-    // tween should honor a preset view, a selected asteroid framing, or an Earth/Moon body focus.
-    const [cameraIntent, setCameraIntent] = useState<CameraIntent>({ kind: 'preset', view: 'perspective', nonce: 0 });
+    // Máquina de estados da câmera. O discriminante ('preset' | 'object' | 'body') informa
+    // ao RadarScene qual tipo de transição executar no próximo tween.
+    const [cameraIntent, setCameraIntent] = useState<CameraIntent>({
+        kind: 'preset',
+        view: 'perspective',
+        nonce: 0,
+    });
     const view = cameraIntent.view;
 
     const focusedObject = useMemo(
@@ -93,29 +90,41 @@ export function DailyOrbitalRadar3D({
         [closestNowObjects, selectedId],
     );
 
-    // Two viewing modes for a selected asteroid:
-    //   - close-up (orbitMode = false): the camera flies IN to the rock, showing its focus card.
-    //   - orbit (orbitMode = true): the camera pulls BACK to frame its full orbit around the Sun.
-    // Selecting any object always starts in close-up; the "Ver órbita" button switches to orbit.
+    // Dois modos de visualização para um asteroide selecionado:
+    //   - close-up (orbitMode = false): câmera voa ATÉ a rocha, exibindo o painel de foco.
+    //   - órbita  (orbitMode = true) : câmera recua para enquadrar a órbita completa ao redor do Sol.
+    // Selecionar qualquer objeto sempre começa em close-up; o botão "Ver órbita" alterna.
     const [orbitMode, setOrbitMode] = useState(false);
+
+    // Overlay translúcido de "Carregando…" exibido brevemente durante a troca de modo, para
+    // mascarar o salto visual enquanto a câmera re-enquadra e a cena heliocêntrica carrega.
     const [sceneTransitioning, setSceneTransitioning] = useState(false);
 
     const triggerTransition = (fn: () => void) => {
         setSceneTransitioning(true);
         fn();
+        // 420 ms é suficiente para esconder o salto de câmera sem parecer lento.
         setTimeout(() => setSceneTransitioning(false), 420);
     };
 
-    // When an object is selected, compute a framing that keeps Earth + object + (a slice of) the
-    // trajectory all in view. Null when nothing is selected → fall back to the preset view.
-    // Camera focus is tied to explicit selection intent. The Sun/Moon ephemeris keeps updating the
-    // scene, but those refreshes must not restart camera tweens after the user has placed the view.
+    // Enquadramento de câmera derivado da seleção atual. Recalculado apenas em mudanças
+    // explícitas de intenção (selecionar objeto, alternar modo órbita) — não a cada tick
+    // de efeméride, para evitar que atualizações de Sol/Lua reiniciem tweens em andamento.
     const focusTarget = useSelectionFocusFraming(
         focusedObject,
         cameraIntent.kind === 'object' ? cameraIntent.nonce : 0,
         orbitMode,
         ephemeris?.earthHelioPositionAU ?? null,
     );
+
+    // Modo ativo da cena. Heliocêntrico só quando o usuário pediu E o objeto tem
+    // elementos orbitais com época de periélio válida (tpJd ≠ 0).
+    const activeMode: SceneMode = useMemo(() => {
+        if (!orbitMode || !focusedObject) return 'radar';
+        const els = focusedObject.trajectory?.orbitalElements;
+        if (!els || !Number.isFinite(els.tpJd) || els.tpJd === 0) return 'radar';
+        return 'orbit';
+    }, [orbitMode, focusedObject]);
 
     const pickView = (key: CameraViewKey) => {
         clearSelection();
@@ -125,37 +134,33 @@ export function DailyOrbitalRadar3D({
     const selectObject = (approach: UnifiedApproach) => {
         const newObject = closestNowObjects.find((o) => o.approach.id === approach.id);
         const newHasOrbit = Boolean(newObject?.trajectory?.orbitalElements);
-        // Stay in orbit mode if the new object also has orbital data; otherwise reset to close-up.
-        if (!orbitMode || !newHasOrbit) {
-            setOrbitMode(false);
-        }
+        // Se o novo objeto não tem órbita, volta para o close-up para não mostrar tela vazia.
+        if (!orbitMode || !newHasOrbit) setOrbitMode(false);
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
         onSelect(approach);
     };
 
-    // Toggle to the orbit framing (or back to the close-up) for the currently focused object.
     const showOrbit = () => triggerTransition(() => {
         setOrbitMode(true);
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
     });
+
     const showCloseUp = () => triggerTransition(() => {
         setOrbitMode(false);
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
     });
 
-    // Lets the side list focus Earth/Moon (the camera work lives in <RadarScene>). We bump the
-    // intent nonce so the same body can be re-focused, and clear any object selection first.
+    // Foca Terra ou Lua via lista lateral — o trabalho de câmera vive no RadarScene.
+    // Bumpamos o nonce para que o mesmo corpo possa ser re-focado sem mudança de kind.
     const focusBody = (body: 'earth' | 'moon') => {
-        if (onClearSelection) onClearSelection();
+        onClearSelection?.();
         setCameraIntent((intent) => ({ kind: 'body', view: intent.view, body, nonce: nextCameraNonce(intent) }));
     };
 
+    // Limpa a seleção ativa. Se não há callback externo (onClearSelection não fornecido),
+    // é um no-op seguro — não tenta re-selecionar o objeto atual.
     const clearSelection = () => {
-        if (onClearSelection) {
-            onClearSelection();
-        } else if (focusedObject) {
-            selectObject(focusedObject.approach);
-        }
+        onClearSelection?.();
     };
 
     const resetView = () => {
@@ -163,15 +168,12 @@ export function DailyOrbitalRadar3D({
         pickView('perspective');
     };
 
-    // The active visualisation mode. The orbit-solar (heliocentric) layer takes over the whole
-    // scene only when (a) the user asked for it AND (b) the selected object has osculating elements
-    // with a usable perihelion epoch. Anything else stays in the geocentric radar layer.
-    const activeMode: SceneMode = useMemo(() => {
-        if (!orbitMode || !focusedObject) return 'radar';
-        const els = focusedObject.trajectory?.orbitalElements;
-        if (!els || !Number.isFinite(els.tpJd) || els.tpJd === 0) return 'radar';
-        return 'orbit';
-    }, [orbitMode, focusedObject]);
+    // Se o objeto selecionado tem elementos orbitais com época de periélio, a posição
+    // Kepleriana é computável e o botão de órbita pode ser habilitado.
+    const canShowOrbitPosition = useMemo(() => {
+        const tp = focusedObject?.trajectory?.orbitalElements?.tpJd;
+        return Number.isFinite(tp) && tp !== 0;
+    }, [focusedObject]);
 
     return (
         <section className="space-y-4 transition-all duration-500 ease-out">
@@ -223,11 +225,11 @@ export function DailyOrbitalRadar3D({
                     </Suspense>
                 </Canvas>
 
-                {/* Top-bar: object count + camera view shortcuts. The scene stays fully explorable;
-                    these only nudge the camera to a starting angle. */}
+                {/* Barra superior: contagem de objetos + atalhos de visão de câmera.
+                    A cena continua totalmente explorável; esses botões apenas sugerem um ângulo inicial. */}
                 <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-3">
                     <div className="pointer-events-auto w-[min(18rem,48%)] overflow-hidden rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl">
-                        {/* Reference bodies — Earth & Moon — clickable to fly the camera to them. */}
+                        {/* Corpos de referência: Terra e Lua clicáveis para voar a câmera até eles. */}
                         <div className="border-b border-white/10 px-2 py-2">
                             <div className="px-1 pb-1 text-[11px] uppercase tracking-wide text-white/45">
                                 {en ? 'Reference' : 'Referência'}
@@ -250,7 +252,7 @@ export function DailyOrbitalRadar3D({
                             </div>
                         </div>
 
-                        {/* Closest objects — clicking flies the camera to that asteroid. */}
+                        {/* Lista dos objetos mais próximos: clicar voa a câmera até o asteroide. */}
                         <div className="px-2 py-2">
                             <div className="px-1 pb-1.5 text-[11px] uppercase tracking-wide text-white/45">
                                 {en
@@ -303,6 +305,9 @@ export function DailyOrbitalRadar3D({
                             </ul>
                         </div>
                     </div>
+
+                    {/* Botões de visão de câmera — ocultos no modo órbita, onde a câmera é gerenciada
+                        automaticamente pelo enquadramento heliocêntrico. */}
                     {activeMode !== 'orbit' ? (
                         <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
                             <ViewButton active={view === 'top' && !focusedObject} onClick={() => pickView('top')}>
@@ -322,8 +327,8 @@ export function DailyOrbitalRadar3D({
                     ) : null}
                 </div>
 
-                {/* Inline focus card — slides in from the left when an object is selected. Hands the
-                    user the same kind of metrics the SVG radar shows, without leaving the 3D experience. */}
+                {/* Painel de foco inline — desliza da esquerda quando um objeto é selecionado.
+                    Mostra as mesmas métricas do radar SVG sem sair da experiência 3D. */}
                 {focusedObject ? (
                     <FocusCard
                         object={focusedObject}
@@ -331,16 +336,14 @@ export function DailyOrbitalRadar3D({
                         onClose={() => selectObject(focusedObject.approach)}
                         orbitMode={orbitMode}
                         hasOrbit={Boolean(focusedObject.trajectory?.orbitalElements)}
-                        canShowOrbitPosition={(() => {
-                            const tp = focusedObject.trajectory?.orbitalElements?.tpJd;
-                            return Number.isFinite(tp) && tp !== 0;
-                        })()}
+                        canShowOrbitPosition={canShowOrbitPosition}
                         onShowOrbit={showOrbit}
                         onShowCloseUp={showCloseUp}
                         locale={locale}
                     />
                 ) : null}
 
+                {/* Overlay de transição entre modos: mascara o salto visual de câmera/cena. */}
                 {sceneTransitioning ? (
                     <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
                         <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-space-950/90 px-4 py-2.5 text-[13px] text-white/70 shadow-glow">
@@ -357,19 +360,26 @@ export function DailyOrbitalRadar3D({
 }
 
 /**
- * Bottom-right legend. A compact, human-friendly card: the two key scale references are always
- * visible, and a one-tap "How to read this map" panel unfolds the richer (otherwise intimidating)
- * explanation of the dual log/linear scale and the interaction hints — kept out of the way until
- * the curious user asks for it.
+ * Legenda no canto inferior direito. Mantém as duas referências de escala sempre visíveis
+ * (1 DL e 1 UA) e expande para o manual completo via portal quando o usuário pede.
+ * O manual fica fora do caminho principal para não intimidar à primeira vista.
  */
-function SceneLegend({ lunarReference, locale, mode }: { lunarReference: LunarReference; locale: 'pt-BR' | 'en'; mode: SceneMode }) {
+function SceneLegend({
+    lunarReference,
+    locale,
+    mode,
+}: {
+    lunarReference: LunarReference;
+    locale: 'pt-BR' | 'en';
+    mode: SceneMode;
+}) {
     const en = locale === 'en';
     const [manualOpen, setManualOpen] = useState(false);
     const nf = new Intl.NumberFormat(locale);
 
     return (
         <div className="pointer-events-auto absolute bottom-3 right-3 z-10 w-[min(22rem,46%)] overflow-hidden rounded-xl border border-white/18 bg-space-950/92 shadow-glow backdrop-blur-xl">
-            {/* Always-on header: the two distance references, the info users glance at most. */}
+            {/* Referências de distância sempre visíveis — o que o usuário consulta com mais frequência. */}
             <div className="space-y-2 px-3 pt-3">
                 <div className="flex items-baseline justify-between gap-2 text-[13px]">
                     <span className="font-medium text-white/75">
@@ -385,7 +395,7 @@ function SceneLegend({ lunarReference, locale, mode }: { lunarReference: LunarRe
                 </div>
             </div>
 
-            {/* Expand/collapse toggle for the deeper explanation. */}
+            {/* Botão que abre o manual completo via portal (fora do stacking context do canvas). */}
             <button
                 type="button"
                 onClick={() => setManualOpen(true)}
@@ -413,17 +423,12 @@ function SceneLegend({ lunarReference, locale, mode }: { lunarReference: LunarRe
     );
 }
 
-
-
 /**
- * Computes Sun direction + Moon position with astronomy-engine, refreshing on a short cadence so
- * the Moon's position, the Earth-Sun line and the day/night terminator track real time as it
- * actually passes. Returns null until the lazy library resolves.
+ * Calcula direção do Sol + posição da Lua com astronomy-engine, em cadência lenta (10 s).
  *
- * Cadence note: the bodies move slowly in reality (the Moon ~0.5°/h, the subsolar point 15°/h), so
- * a 10s tick already gives smooth, honest real-time drift — no need to recompute per frame, which
- * would put the heavy library on the render loop for no visible gain. This is "real time fiel":
- * positions always equal the current instant, just sampled every 10s.
+ * Os corpos se movem devagar na realidade (Lua ≈ 0,5°/h, ponto subsolar ≈ 15°/h), então
+ * 10 s já dá deriva em tempo real honesta sem colocar o cálculo pesado no loop de render.
+ * Retorna null até a biblioteca (lazy-loaded) resolver.
  */
 function useSceneEphemeris(): SceneEphemeris | null {
     const [ephemeris, setEphemeris] = useState<SceneEphemeris | null>(null);
@@ -437,12 +442,25 @@ function useSceneEphemeris(): SceneEphemeris | null {
         };
         update();
         const id = window.setInterval(update, 10 * 1000);
-        return () => { active = false; window.clearInterval(id); };
+        return () => {
+            active = false;
+            window.clearInterval(id);
+        };
     }, []);
 
     return ephemeris;
 }
 
+/**
+ * Deriva o enquadramento de câmera para o objeto selecionado.
+ *
+ * Recalcula apenas quando há mudança explícita de intenção de seleção (selectionFocusNonce
+ * ou orbitMode mudam) — nunca a cada tick de efeméride. Isso evita que atualizações de
+ * Sol/Lua reiniciem um tween de câmera já em andamento enquanto o usuário explora a cena.
+ *
+ * A posição heliocêntrica da Terra (earthHelioPositionAU) é lida via ref no momento do
+ * cálculo para sempre usar o valor mais recente, sem torná-la dependência do effect.
+ */
 function useSelectionFocusFraming(
     focusedObject: ClosestNowObject | null,
     selectionFocusNonce: number,
@@ -461,23 +479,29 @@ function useSelectionFocusFraming(
             setFraming(null);
             return;
         }
-
         setFraming(computeFocusFraming(focusedObject, orbitMode, latestEarthHelio.current));
-        // Camera framing should react to explicit selection intent only (selection + orbit toggle).
-        // Ephemeris refreshes keep Sun/orbit geometry current, but must not restart a camera tween.
+        // earthHelioPositionAU é lida via ref — intencionalmente fora das dependências.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [focusedObject?.approach.id, selectionFocusNonce, orbitMode]);
 
     return framing;
 }
 
-function ViewButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function ViewButton({
+    active,
+    onClick,
+    children,
+}: {
+    active: boolean;
+    onClick: () => void;
+    children: React.ReactNode;
+}) {
     return (
         <button
             type="button"
             onClick={onClick}
             className={[
-                    'rounded-full px-3 py-1 text-[12px] font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                'rounded-full px-3 py-1 text-[12px] font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                 active ? 'bg-white/15 text-white' : 'text-white/70 hover:text-white',
             ].join(' ')}
         >
