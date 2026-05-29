@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { CalendarClock, Gauge, MoveRight, Ruler, ShieldAlert, Target } from 'lucide-react';
 import type { Translator } from '@/i18n';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
-import { ObjectTypeBadge } from './ObjectTypeBadge';
+import { ObjectTypeBadge } from '../Presenters/ObjectTypeBadge';
 import { CuratedHighlight, CuratedRole } from '@/lib/approachInterpretation';
 
 const ROLE_ICON: Record<CuratedRole, typeof Target> = {

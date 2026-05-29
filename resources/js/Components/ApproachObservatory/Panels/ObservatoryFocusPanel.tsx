@@ -8,8 +8,8 @@ import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { humanizeVelocity } from '@/lib/approachInterpretation';
 import { compactKm, formatNumber } from '@/lib/format';
 import type { AsteroidModelMetadata, UnifiedApproach } from '@/types';
-import { AsteroidFidelityModel } from './AsteroidFidelityModel';
-import { ObjectTypeBadge } from './ObjectTypeBadge';
+import { AsteroidFidelityModel } from '../Presenters/AsteroidFidelityModel';
+import { ObjectTypeBadge } from '../Presenters/ObjectTypeBadge';
 
 const AsteroidScaleComparison = lazy(() =>
     import('@/Components/SmallBodies/AsteroidScaleComparison').then((module) => ({ default: module.AsteroidScaleComparison })),

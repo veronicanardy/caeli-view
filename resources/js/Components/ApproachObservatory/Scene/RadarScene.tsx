@@ -6,12 +6,12 @@ import { compressDistanceDl, compressSceneVector, SUN_DISPLAY_DL, type SceneEphe
 import { currentPositionInScene } from '@/lib/observatory/trajectorySampling';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
 import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
-import { Sun } from '../Bodies/Sun';
-import { Earth } from '../Bodies/Earth';
-import { Moon } from '../Bodies/Moon';
-import { MoonOrbit } from '../Bodies/MoonOrbit';
-import { SunOrbitGuide } from '../Bodies/HeliocentricLines';
-import { AsteroidMarker } from '../Bodies/AsteroidMarker';
+import { Sun } from '../Bodies/Sun/Sun';
+import { Earth } from '../Bodies/Earth/Earth';
+import { Moon } from '../Bodies/Moon/Moon';
+import { MoonOrbit } from '../Bodies/Moon/MoonOrbit';
+import { DisplayedEarthOrbitGuide } from '../Bodies/HeliocentricLines';
+import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { RingsLayer } from '../Overlays/RingsLayer';
 import { LabelOccluderContext, useCompactLabelMode } from '../Overlays/SceneLabels';
 import { NowTrajectory } from '../Trajectory/NowTrajectory';
@@ -167,7 +167,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     <MoonOrbit moonPos={moonPos} orbitNormal={moonOrbitNormal} />
                     <RingsLayer onEarthFocus={focusEarth} showLabels={!compactLabels && !orbitLabelsOnly} />
                     {!orbitLabelsOnly ? (
-                        <SunOrbitGuide sunDirection={sunDir} />
+                        <DisplayedEarthOrbitGuide sunDirection={sunDir} />
                     ) : null}
 
                     {/* Geocentric markers (near Earth). Selection never moves the rock. */}

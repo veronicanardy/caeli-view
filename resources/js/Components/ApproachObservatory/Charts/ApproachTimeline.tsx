@@ -6,7 +6,7 @@ import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { compactKm, lunarDistanceFromKm, lunarDistanceLabel } from '@/lib/format';
 import { UnifiedApproach } from '@/types';
 import { buildDailySummary, groupApproachesByDay } from '@/lib/approachInterpretation';
-import { ObjectTypeBadge } from './ObjectTypeBadge';
+import { ObjectTypeBadge } from '../Presenters/ObjectTypeBadge';
 
 type Props = {
     approaches: UnifiedApproach[];

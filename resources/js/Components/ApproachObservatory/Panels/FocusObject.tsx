@@ -7,8 +7,8 @@ import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { compactKm, formatNumber, lunarDistanceFromKm, lunarDistanceLabel } from '@/lib/format';
 import { UnifiedApproach } from '@/types';
 import { DistanceBand, FocusReason, distanceBand, humanizeSize, humanizeVelocity, pickFocusReasons } from '@/lib/approachInterpretation';
-import { EarthMoonRuler } from './EarthMoonRuler';
-import { ObjectTypeBadge } from './ObjectTypeBadge';
+import { EarthMoonRuler } from '../Presenters/EarthMoonRuler';
+import { ObjectTypeBadge } from '../Presenters/ObjectTypeBadge';
 
 type Props = {
     approach: UnifiedApproach;

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import type { TranslationKey, Translator } from '@/i18n';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import type { AsteroidModelMetadata, AsteroidTrajectory, UnifiedApproach } from '@/types';
-import { AsteroidFidelityModel } from './AsteroidFidelityModel';
+import { AsteroidFidelityModel } from '../Presenters/AsteroidFidelityModel';
 
 const AsteroidScaleComparison = lazy(() =>
     import('@/Components/SmallBodies/AsteroidScaleComparison').then((module) => ({ default: module.AsteroidScaleComparison })),

@@ -5,8 +5,8 @@ import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } fro
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
 import { EARTH_RADIUS_DL } from '@/lib/observatory/bodyScale';
 import { FocusProtectedHtml, ScreenLabel } from '../Overlays/SceneLabels';
-import { Earth } from '../Bodies/Earth';
-import { Sun } from '../Bodies/Sun';
+import { Earth } from '../Bodies/Earth/Earth';
+import { Sun } from '../Bodies/Sun/Sun';
 import { EarthOrbitRingHelio, OrbitLineHelio } from '../Bodies/HeliocentricLines';
 
 const KM_PER_LD = 384_400;

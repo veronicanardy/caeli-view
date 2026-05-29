@@ -7,8 +7,8 @@ import { compactKm } from '@/lib/format';
 import { computeSceneEphemeris, KM_PER_AU, type SceneEphemeris } from '@/lib/sceneEphemeris';
 import { sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
-import { MapManualModal, type SceneMode } from './MapManualModal';
-import { FocusCard } from './FocusCard';
+import { MapManualModal, type SceneMode } from './Controls/MapManualModal';
+import { FocusCard } from './Panels/FocusCard';
 import { RadarScene } from './Scene/RadarScene';
 import {
     CAMERA_FOV_DEG,

@@ -2,15 +2,15 @@ import { Head, router } from '@inertiajs/react';
 import { FormEvent, lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AppLayout } from '@/Components/AppLayout';
-import { ApproachTimeline } from '@/Components/ApproachObservatory/ApproachTimeline';
-import { CompactConsoleBar } from '@/Components/ApproachObservatory/CompactConsoleBar';
-import { CuratedHighlights } from '@/Components/ApproachObservatory/CuratedHighlights';
-import { DailyProximityList } from '@/Components/ApproachObservatory/DailyProximityList';
-import { ObservatoryDetailOverlay } from '@/Components/ApproachObservatory/ObservatoryDetailOverlay';
-import { ObservatoryFocusPanel } from '@/Components/ApproachObservatory/ObservatoryFocusPanel';
-import { RadarDataQualityCard } from '@/Components/ApproachObservatory/RadarDataQualityCard';
-import { RangeInsightsCards } from '@/Components/ApproachObservatory/RangeInsightsCards';
-import { TechnicalDataPanel } from '@/Components/ApproachObservatory/TechnicalDataPanel';
+import { ApproachTimeline } from '@/Components/ApproachObservatory/Charts/ApproachTimeline';
+import { CompactConsoleBar } from '@/Components/ApproachObservatory/Controls/CompactConsoleBar';
+import { CuratedHighlights } from '@/Components/ApproachObservatory/Lists/CuratedHighlights';
+import { DailyProximityList } from '@/Components/ApproachObservatory/Lists/DailyProximityList';
+import { ObservatoryDetailOverlay } from '@/Components/ApproachObservatory/Panels/ObservatoryDetailOverlay';
+import { ObservatoryFocusPanel } from '@/Components/ApproachObservatory/Panels/ObservatoryFocusPanel';
+import { RadarDataQualityCard } from '@/Components/ApproachObservatory/Panels/RadarDataQualityCard';
+import { RangeInsightsCards } from '@/Components/ApproachObservatory/Lists/RangeInsightsCards';
+import { TechnicalDataPanel } from '@/Components/ApproachObservatory/Panels/TechnicalDataPanel';
 import { ErrorMessage } from '@/Components/ErrorMessage';
 import { bestDistanceKm, buildRadarObjects } from '@/lib/radarData';
 import type { Translator } from '@/i18n';
@@ -42,7 +42,7 @@ const DailyOrbitalRadar3DPrototype = lazy(() =>
     import('@/Components/ApproachObservatory/DailyOrbitalRadar3DPrototype').then((module) => ({ default: module.DailyOrbitalRadar3DPrototype })),
 );
 const UnifiedApproachTable = lazy(() =>
-    import('@/Components/ApproachObservatory/UnifiedApproachTable').then((module) => ({ default: module.UnifiedApproachTable })),
+    import('@/Components/ApproachObservatory/Lists/UnifiedApproachTable').then((module) => ({ default: module.UnifiedApproachTable })),
 );
 
 type ObservatoryData = {

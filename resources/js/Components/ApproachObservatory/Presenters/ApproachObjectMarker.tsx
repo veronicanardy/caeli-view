@@ -5,8 +5,8 @@ import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { compactMeters, formatNumber, lunarDistanceFromKm, lunarDistanceLabel } from '@/lib/format';
 import { UnifiedApproach } from '@/types';
 import { AsteroidMarkerShape } from './AsteroidMarkerShape';
-import { DistancePresenter } from './Presenters/DistancePresenter';
-import { ObjectTypeBadge } from './Presenters/ObjectTypeBadge';
+import { DistancePresenter } from './DistancePresenter';
+import { ObjectTypeBadge } from './ObjectTypeBadge';
 
 type Props = {
     approach: UnifiedApproach;

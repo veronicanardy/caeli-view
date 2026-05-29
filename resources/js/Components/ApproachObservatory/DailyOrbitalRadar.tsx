@@ -30,10 +30,10 @@ import {
     UnifiedApproach,
 } from '@/types';
 import { EarthGlobe } from '@/Components/Nasa/EarthGlobe';
-import { Moon3D } from './Moon3D';
-import { AsteroidMarkerShape } from './AsteroidMarkerShape';
-import { ObjectTypeBadge } from './ObjectTypeBadge';
-import { RadarFilters } from './RadarFilters';
+import { Moon3D } from './Scene/Moon3D';
+import { AsteroidMarkerShape } from './Presenters/AsteroidMarkerShape';
+import { ObjectTypeBadge } from './Presenters/ObjectTypeBadge';
+import { RadarFilters } from './Controls/RadarFilters';
 
 type Props = {
     approaches: UnifiedApproach[];

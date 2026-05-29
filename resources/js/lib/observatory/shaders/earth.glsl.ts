@@ -1,77 +1,150 @@
 /**
- * GLSL shaders for the Earth surface (day/night with sun-driven terminator + city lights) and the
- * cloud shell (greyscale map drives both brightness and opacity; clouds vanish on the night side).
+ * Shaders GLSL da superfície da Terra e da camada de nuvens.
  *
- * sRGB note: Earth's day and night maps are loaded as RAW (no THREE.SRGBColorSpace), and the shader
- * itself converts sRGB → linear for shading and back to sRGB on output. Doing the conversion by
- * hand is what stops the day side from rendering near-black; tagging the textures as sRGB would
- * cause a double-decode.
+ * A superfície mistura mapa diurno, mapa noturno e luzes urbanas usando a direção
+ * do Sol para definir o terminador entre dia e noite.
+ *
+ * A camada de nuvens usa um mapa em tons de cinza para controlar brilho e
+ * opacidade. As nuvens desaparecem gradualmente no lado noturno para evitar que
+ * pareçam brilhar no escuro.
+ *
+ * Observação sobre sRGB:
+ * os mapas diurno e noturno da Terra são carregados como RAW, sem
+ * THREE.SRGBColorSpace. O próprio shader faz a conversão sRGB → linear para
+ * calcular a iluminação e depois converte de volta para sRGB na saída.
+ *
+ * Isso evita que o lado diurno fique escuro demais. Se as texturas fossem
+ * marcadas como sRGB e o shader também fizesse a conversão manual, ocorreria
+ * double-decode.
  */
 
-/** Earth vertex shader: passes world-space normal to the fragment for honest lambertian lighting. */
+/**
+ * Vertex shader da Terra.
+ *
+ * Envia para o fragment shader:
+ * - UV da textura;
+ * - normal em espaço de mundo;
+ * - posição do vértice em espaço de mundo.
+ *
+ * A posição em espaço de mundo permite calcular a direção da câmera no fragment
+ * shader e aplicar escurecimento suave nas laterais do globo.
+ */
 export const EARTH_VERT = /* glsl */ `
     varying vec2 vUv;
     varying vec3 vWorldNormal;
+    varying vec3 vWorldPosition;
+
     void main() {
         vUv = uv;
+
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPosition.xyz;
+
         vWorldNormal = normalize(mat3(modelMatrix) * normal);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+        gl_Position = projectionMatrix * viewMatrix * worldPosition;
     }
 `;
 
 /**
- * Earth fragment shader: day/night blend driven by dot(worldNormal, sunDir).
- * - Tight ±0.05 terminator: matches the real ~0.5° solar penumbra at Earth's distance.
- * - City-lights mask: night map appears only on the dark hemisphere (multiplied by 1 - dayAmount).
- * - Ambient floor on the day side keeps the lit hemisphere readable when the Sun grazes the limb.
+ * Fragment shader da superfície da Terra.
+ *
+ * Responsabilidades:
+ * - calcular o lado diurno/noturno usando dot(worldNormal, sunDir);
+ * - suavizar o terminador entre dia e noite;
+ * - exibir luzes urbanas principalmente no hemisfério escuro;
+ * - manter um piso mínimo de iluminação no lado diurno;
+ * - escurecer suavemente as laterais da esfera para dar mais volume;
+ * - adicionar uma borda atmosférica azul discreta.
  */
 export const EARTH_FRAG = /* glsl */ `
     uniform sampler2D dayMap;
     uniform sampler2D nightMap;
     uniform vec3 sunDir;
+
     varying vec2 vUv;
     varying vec3 vWorldNormal;
+    varying vec3 vWorldPosition;
 
     vec3 toLinear(vec3 c) { return pow(c, vec3(2.2)); }
     vec3 toSRGB(vec3 c) { return pow(c, vec3(1.0 / 2.2)); }
 
     void main() {
-        float lambert = dot(normalize(vWorldNormal), normalize(sunDir));
-        float dayAmount = smoothstep(-0.05, 0.05, lambert);
+        vec3 normal = normalize(vWorldNormal);
+        vec3 sun = normalize(sunDir);
+
+        float lambert = dot(normal, sun);
+
+        // O lado diurno começa mais tarde e a transição fica mais longa.
+        // Isso faz o lado escuro "tomar" mais da Terra e evita corte duro.
+        float dayAmount = smoothstep(0.04, 0.30, lambert);
 
         vec3 dayColor = toLinear(texture2D(dayMap, vUv).rgb);
         vec3 nightTex = toLinear(texture2D(nightMap, vUv).rgb);
 
-        // Day side: bright daylight with a higher ambient floor; gentle gamma on lambert keeps the
-        // terminator soft.
+        // Lado diurno: mantém leitura, mas sem estourar demais.
         float lit = clamp(lambert, 0.0, 1.0);
-        vec3 dayLit = dayColor * (0.62 + 0.95 * pow(lit, 0.7));
+        vec3 dayLit = dayColor * (0.48 + 0.95 * pow(lit, 0.78));
 
-        // Night side: very dim base + city lights, only on the dark hemisphere.
-        vec3 cityLights = nightTex * (1.0 - dayAmount) * 1.2;
-        vec3 nightLit = dayColor * 0.025 + cityLights;
+        // Lado noturno: permanece por mais área e some de forma mais gradual.
+        float nightAmount = 1.0 - smoothstep(-0.04, 0.22, lambert);
+        vec3 cityLights = nightTex * nightAmount * 1.18;
+        vec3 nightLit = dayColor * 0.012 + cityLights;
 
         vec3 color = mix(nightLit, dayLit, dayAmount);
+
+        // Escurecimento lateral sem adicionar brilho.
+        // Isso dá volume, mas não cria aura azul na borda.
+        vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+        float viewFacing = max(dot(normal, viewDir), 0.0);
+        float limb = smoothstep(0.0, 0.82, viewFacing);
+
+        color *= mix(0.42, 1.0, limb);
+
         gl_FragColor = vec4(toSRGB(color), 1.0);
     }
 `;
 
 /**
- * Cloud shell fragment shader. The greyscale cloud map's brightness is BOTH the cloud color and
- * its opacity, so the sky-areas of the map render fully transparent. Clouds are lit by the same
- * sun dot as the surface and fade out on the night side so they never glow in the dark.
+ * Fragment shader da camada de nuvens.
+ *
+ * O mapa de nuvens em tons de cinza controla tanto a cor quanto a opacidade:
+ * - regiões escuras do mapa ficam transparentes;
+ * - regiões claras aparecem como nuvens.
+ *
+ * As nuvens usam a mesma direção do Sol da superfície. Elas ficam mais visíveis
+ * no lado diurno e desaparecem gradualmente no lado noturno para não parecerem
+ * iluminadas artificialmente.
+ *
+ * Também há um esmaecimento leve nas laterais para acompanhar o volume da Terra.
  */
 export const CLOUDS_FRAG = /* glsl */ `
     uniform sampler2D cloudMap;
     uniform vec3 sunDir;
+
     varying vec2 vUv;
     varying vec3 vWorldNormal;
+    varying vec3 vWorldPosition;
+
     void main() {
-        float c = texture2D(cloudMap, vUv).r;          // cloud density 0..1
-        float lambert = dot(normalize(vWorldNormal), normalize(sunDir));
-        float dayAmount = smoothstep(-0.05, 0.3, lambert);
-        float light = 0.15 + 0.9 * clamp(lambert, 0.0, 1.0);
-        float alpha = c * dayAmount * 0.85;            // transparent where no cloud / on night side
+        vec3 normal = normalize(vWorldNormal);
+        vec3 sun = normalize(sunDir);
+
+        float cloudDensity = texture2D(cloudMap, vUv).r;
+        float lambert = dot(normal, sun);
+
+        // A nuvem continua existindo no planeta todo.
+        // A iluminação muda com o Sol, mas ela não desaparece no lado noturno.
+        float light = 0.22 + 0.78 * clamp(lambert, 0.0, 1.0);
+
+        // Esmaecimento leve nas laterais da esfera.
+        vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+        float viewFacing = max(dot(normal, viewDir), 0.0);
+        float limb = smoothstep(0.0, 0.72, viewFacing);
+
+        // Alpha não depende mais do lado diurno.
+        float alpha = cloudDensity * 0.72 * mix(0.36, 1.0, limb);
+
         gl_FragColor = vec4(vec3(light), alpha);
     }
 `;

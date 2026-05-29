@@ -4,7 +4,7 @@ import { classifyApproachAttention } from '@/lib/approachAttention';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { compactKm, compactMeters, formatNumber, lunarDistanceFromKm, lunarDistanceLabel } from '@/lib/format';
 import { UnifiedApproach } from '@/types';
-import { ObjectTypeBadge } from './ObjectTypeBadge';
+import { ObjectTypeBadge } from '../Presenters/ObjectTypeBadge';
 
 export function UnifiedApproachTable({
     approaches,

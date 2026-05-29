@@ -2,38 +2,41 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { SUN_FRAG, SUN_GLOW_FRAG, SUN_GLOW_VERT, SUN_VERT } from '@/lib/observatory/shaders/sun.glsl';
-import { ScreenLabel } from '../Overlays/SceneLabels';
+import { ScreenLabel } from '../../Overlays/SceneLabels';
+
+interface SunProps {
+    position: [number, number, number];
+    radius: number;
+    locale: 'pt-BR' | 'en';
+    /**
+     * Quando verdadeiro, anexa uma luz direcional e uma luz pontual em `position`
+     * para que o Sol ilumine o restante da cena. A camada heliocêntrica injeta sua
+     * própria iluminação separadamente e passa `false` para evitar luzes duplicadas.
+     */
+    withLighting?: boolean;
+}
 
 /**
- * The visual Sun. Unified component that powers both:
- *  - the radar scene (passing the projected SUN_DISPLAY_DL position and enabling the directional
- *    light + warm point light along the real Sun direction);
- *  - the heliocentric scene (passing the origin [0, 0, 0] without the lighting — the heliocentric
- *    scene supplies its own lighting at the Sun position).
+ * O Sol visual. Componente unificado usado por:
+ *  - a cena de radar (passa a posição projetada em SUN_DISPLAY_DL e ativa a luz
+ *    direcional + ponto quente na direção real do Sol);
+ *  - a cena heliocêntrica (passa a origem [0, 0, 0] sem iluminação — a cena
+ *    heliocêntrica fornece sua própria iluminação na posição do Sol).
  *
- * Previously this was two near-identical components (Sun and SunAtOrigin). Unifying them removed a
- * ~50-line duplication.
+ * Anteriormente havia dois componentes quase idênticos (Sun e SunAtOrigin).
+ * Unificá-los removeu cerca de 50 linhas de duplicação.
  */
 export function Sun({
     position,
     radius,
     locale,
     withLighting = false,
-}: {
-    position: [number, number, number];
-    radius: number;
-    locale: 'pt-BR' | 'en';
-    /**
-     * When true, attaches a directional light + point light at `position` so the Sun illuminates
-     * the rest of the scene. The heliocentric layer wires its own lighting separately and passes
-     * false to avoid duplicate lights.
-     */
-    withLighting?: boolean;
-}) {
+}: SunProps) {
     const en = locale === 'en';
     const surfaceMat = useRef<THREE.ShaderMaterial>(null);
 
-    // Animated photosphere (granulation + sunspots) — a star with life, not a flat disc.
+    // Fotosfera animada (granulação + manchas solares) — uma estrela com vida, não
+    // um disco plano.
     const surfaceMaterial = useMemo(
         () => new THREE.ShaderMaterial({
             uniforms: { uTime: { value: 0 } },
@@ -43,9 +46,10 @@ export function Sun({
         [],
     );
 
-    // Corona glow as a single fresnel shell: a back-facing sphere whose opacity falls off smoothly
-    // toward the rim. This gives a soft halo that fades to nothing — no hard translucent disc that
-    // smears across the screen as a yellow blob when the Sun sits off-frame.
+    // Brilho da corona como uma única casca fresnel: uma esfera de faces voltadas para
+    // dentro cuja opacidade cai suavemente em direção à borda. Isso produz um halo suave
+    // que some gradualmente — sem um disco translúcido duro que se espalha como uma mancha
+    // amarela quando o Sol está fora do quadro.
     const glowMaterial = useMemo(
         () => new THREE.ShaderMaterial({
             uniforms: { uColor: { value: new THREE.Color('#ffb84d') } },
@@ -58,6 +62,13 @@ export function Sun({
         }),
         [],
     );
+
+    useEffect(() => {
+        return () => {
+            surfaceMaterial.dispose();
+            glowMaterial.dispose();
+        };
+    }, [surfaceMaterial, glowMaterial]);
 
     useFrame(({ clock }) => {
         if (surfaceMat.current) surfaceMat.current.uniforms.uTime.value = clock.getElapsedTime();
@@ -94,6 +105,11 @@ export function Sun({
     );
 }
 
+/**
+ * Prominências solares animadas.
+ *
+ * Geradas proceduralmente como linhas que orbitam suavemente em torno do Sol.
+ */
 function SunProminences({ radius }: { radius: number }) {
     const groupRef = useRef<THREE.Group>(null);
     const arcs = useMemo(() => {
