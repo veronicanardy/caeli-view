@@ -190,18 +190,16 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         />
                     ))}
 
-                    {/* Trajetórias geocêntricas locais "agora" — só fazem sentido na camada de radar.
-                        Com 30 objetos renderiza trajetória apenas para o selecionado para evitar
-                        poluição visual e manter performance (~1800 vértices se todos renderizassem). */}
+                    {/* Trajetórias geocêntricas locais "agora".
+                        - objectLimit 5  : trajetória completa para todos.
+                        - objectLimit 15 : cone de direção para não-selecionados, trajetória completa para o selecionado.
+                        - objectLimit 30 : cone de direção para não-selecionados, trajetória completa para o selecionado. */}
                     {closestNowObjects
                         .map((object, index) => ({ object, palette: OBJECT_PALETTE[index % OBJECT_PALETTE.length] }))
-                        .filter(({ object }) => {
-                            if (!object.trajectory || object.trajectory.status !== 'available') return false;
-                            if (objectLimit === 30 && object.approach.id !== selectedId) return false;
-                            return true;
-                        })
+                        .filter(({ object }) => object.trajectory && object.trajectory.status === 'available')
                         .map(({ object, palette }) => {
                             const activeTrajectory = object.approach.id === selectedId;
+                            const coneOnly = objectLimit >= 15 && !activeTrajectory;
                             return (
                                 <NowTrajectory
                                     key={`traj-${object.approach.id}`}
@@ -209,6 +207,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                                     palette={palette}
                                     emphasized={activeTrajectory}
                                     dimmed={hasSelection && !activeTrajectory}
+                                    coneOnly={coneOnly}
                                     locale={locale}
                                 />
                             );

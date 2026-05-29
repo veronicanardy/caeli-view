@@ -56,7 +56,7 @@ type AsteroidMarkerProps = {
  */
 export function AsteroidMarker({
     object,
-    palette,
+    palette: _palette,
     isSelected,
     dimmed,
     onSelect,
@@ -76,8 +76,6 @@ export function AsteroidMarker({
     }, []);
 
     const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
-    // Cor da paleta para o anel de destaque — memoizada para evitar recriar THREE.Color a cada frame.
-    const glowColor = useMemo(() => new THREE.Color(palette.future), [palette.future]);
 
     useFrame((_, delta) => {
         if (rockRef.current) {
@@ -98,19 +96,6 @@ export function AsteroidMarker({
 
     return (
         <group position={position}>
-            {!isSelected && !showLabel ? (
-                <mesh renderOrder={-1}>
-                    <ringGeometry args={[ASTEROID_ROCK_SCALE * 1.6, ASTEROID_ROCK_SCALE * 2.2, 24]} />
-                    <meshBasicMaterial
-                        color={glowColor}
-                        transparent
-                        opacity={hovered ? 0.9 : 0.5}
-                        side={THREE.DoubleSide}
-                        depthWrite={false}
-                    />
-                </mesh>
-            ) : null}
-
             <group ref={rockRef} scale={rockScale}>
                 <pointLight position={LIGHT_POSITION} intensity={LIGHT_INTENSITY} distance={LIGHT_DISTANCE} color={LIGHT_COLOR} />
                 {renderModel.kind === 'real' ? (

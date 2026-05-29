@@ -14,9 +14,12 @@ type NowTrajectoryProps = {
     emphasized: boolean;
     dimmed: boolean;
     locale: 'pt-BR' | 'en';
+    /** Quando true, renderiza apenas o cone de direção — sem linhas de trajetória.
+     *  Usado com 15/30 objetos para indicar direção sem poluir a cena. */
+    coneOnly?: boolean;
 };
 
-export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale }: NowTrajectoryProps) {
+export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale, coneOnly = false }: NowTrajectoryProps) {
     const pastVecs = useMemo(
         () => (trajectory.pastPoints ?? []).map(toVec3),
         [trajectory.pastPoints],
@@ -117,30 +120,26 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale 
 
     return (
         <group>
-            {fullPast.length >= 2 ? (
+            {/* coneOnly: só o cone de direção, sem linhas. Usado com 15/30 objetos. */}
+            {!coneOnly && fullPast.length >= 2 ? (
                 <DashedLeadLine points={fullPast} color={palette.past} opacity={pastDotOpacity} dashSize={0.055} gapSize={0.13} />
             ) : null}
 
-            {/* Dotted future direction, shown for selected and non-selected objects. */}
-            {fullFuture.length >= 2 ? (
+            {!coneOnly && fullFuture.length >= 2 ? (
                 <DashedLeadLine points={fullFuture} color={palette.future} opacity={futureDotOpacity} dashSize={0.075} gapSize={0.12} />
             ) : null}
 
-            {/* Selected → several "->" arrows along the future path.
-                Others → a direction cone at the asteroid + a short grey dashed lead in front of it,
-                tracing the start of the very same curve the full orbit shows when selected. */}
             {endArrow ? (
                 <ElegantEndArrow tip={endArrow.tip} direction={endArrow.direction} color={palette.future} opacity={coneOpacity} />
             ) : null}
 
-            {/* Temporal ticks — only on the emphasized (selected) object, to avoid clutter. */}
-            {emphasized
+            {!coneOnly && emphasized
                 ? timeTicks.map((tick) => (
                       <TimeTick key={tick.label} vec={tick.vec} label={tick.label} color={palette.future} />
                   ))
                 : null}
 
-            {closestApproach && (emphasized || closestApproachOnPath) ? (
+            {!coneOnly && closestApproach && (emphasized || closestApproachOnPath) ? (
                 <ClosestApproachMarker
                     point={closestApproach}
                     color={palette.current}
