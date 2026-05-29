@@ -191,7 +191,10 @@ export function DailyOrbitalRadar3DPrototype({
                 </header>
             </div>
 
-            <div className="relative h-[72vh] min-h-[640px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d] sm:h-[78vh] sm:min-h-[760px]">
+            <div
+                className="relative h-[72vh] min-h-[640px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d] sm:h-[78vh] sm:min-h-[760px]"
+                onContextMenu={(e) => e.preventDefault()}
+            >
                 <Canvas
                     camera={{ position: [0, 4.5, 9], fov: CAMERA_FOV_DEG, near: 0.01, far: MAX_CAMERA_DISTANCE * 3 }}
                     dpr={[1, 1.6]}
