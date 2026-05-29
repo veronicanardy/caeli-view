@@ -419,37 +419,7 @@ function RadarControls({
 
     return (
         <div className="space-y-1.5">
-            {/* Linha 1: chips de quantidade */}
-            <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-wide text-white/40 select-none w-12 shrink-0">
-                    {en ? 'Show' : 'Exibir'}
-                </span>
-                <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-0.5">
-                    {LIMITS_OPTIONS.map((limit) => (
-                        <button
-                            key={limit}
-                            type="button"
-                            disabled={loading}
-                            onClick={() => onLimitChange(limit)}
-                            aria-pressed={objectLimit === limit}
-                            className={[
-                                'rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-all outline-none',
-                                'disabled:cursor-wait focus-visible:ring-1 focus-visible:ring-signal-cyan',
-                                objectLimit === limit
-                                    ? 'bg-signal-cyan/20 text-signal-cyan ring-1 ring-signal-cyan/40'
-                                    : 'text-white/50 hover:text-white/80',
-                            ].join(' ')}
-                        >
-                            {limit}
-                        </button>
-                    ))}
-                </div>
-                {loading && (
-                    <span className="size-1.5 animate-pulse rounded-full bg-signal-cyan/60 shrink-0" aria-hidden />
-                )}
-            </div>
-
-            {/* Linha 2: select de critério */}
+            {/* Linha 1: critério de seleção */}
             <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-wide text-white/40 select-none w-12 shrink-0">
                     {en ? 'Criterion' : 'Critério'}
@@ -473,7 +443,39 @@ function RadarControls({
                         </option>
                     ))}
                 </select>
+                {loading && (
+                    <span className="size-1.5 animate-pulse rounded-full bg-signal-cyan/60 shrink-0" aria-hidden />
+                )}
             </div>
+
+            {/* Linha 2: chips de quantidade — só visíveis no modo 'nearest' */}
+            {selectionMode === 'nearest' ? (
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wide text-white/40 select-none w-12 shrink-0">
+                        {en ? 'Show' : 'Exibir'}
+                    </span>
+                    <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-0.5">
+                        {LIMITS_OPTIONS.map((limit) => (
+                            <button
+                                key={limit}
+                                type="button"
+                                disabled={loading}
+                                onClick={() => onLimitChange(limit)}
+                                aria-pressed={objectLimit === limit}
+                                className={[
+                                    'rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-all outline-none',
+                                    'disabled:cursor-wait focus-visible:ring-1 focus-visible:ring-signal-cyan',
+                                    objectLimit === limit
+                                        ? 'bg-signal-cyan/20 text-signal-cyan ring-1 ring-signal-cyan/40'
+                                        : 'text-white/50 hover:text-white/80',
+                                ].join(' ')}
+                            >
+                                {limit}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }
