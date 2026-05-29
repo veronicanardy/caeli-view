@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { AppLayout } from '@/Components/AppLayout';
 import { ApproachTimeline } from '@/Components/ApproachObservatory/Charts/ApproachTimeline';
 import { CompactConsoleBar } from '@/Components/ApproachObservatory/Controls/CompactConsoleBar';
+import { RadarObjectControls } from '@/Components/ApproachObservatory/Controls/RadarObjectControls';
 import { CuratedHighlights } from '@/Components/ApproachObservatory/Lists/CuratedHighlights';
 import { DailyProximityList } from '@/Components/ApproachObservatory/Lists/DailyProximityList';
 import { ObservatoryDetailOverlay } from '@/Components/ApproachObservatory/Panels/ObservatoryDetailOverlay';
@@ -17,13 +18,14 @@ import type { Translator } from '@/i18n';
 import { useTranslation } from '@/i18n';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { buildCuratedHighlights, buildRangeInsights } from '@/lib/approachInterpretation';
+import { useClosestNow } from '@/hooks/useClosestNow';
+import { useRadarControls } from '@/hooks/useRadarControls';
 import {
     ApproachObservatoryCharts,
     ApproachObservatoryFilters,
     ApproachObservatorySummary,
     AsteroidModelMetadata,
     AsteroidTrajectory,
-    ClosestNowResponse,
     HomeEarthImage,
     HorizonsPositionResult,
     HorizonsPositionsResponse,
@@ -91,15 +93,14 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     const [sunDirection, setSunDirection] = useState<SunDirection | null>(null);
     const [positionsLoading, setPositionsLoading] = useState(false);
     const [radarMode, setRadarMode] = useState<RadarMode>('closest-5-now');
-    const [closestNowData, setClosestNowData] = useState<ClosestNowResponse | null>(null);
-    const [closestNowLoading, setClosestNowLoading] = useState(false);
     const [use3DPrototype, setUse3DPrototype] = useState(true);
+
+    const { objectLimit, selectionMode, setObjectLimit, setSelectionMode } = useRadarControls();
 
     // Reset reference mode to the date-appropriate default whenever the selected date changes.
     useEffect(() => {
         setReferenceMode(defaultReferenceMode(filters.date_min));
         setPositionsById({});
-        setClosestNowData(null);
     }, [filters.date_min]);
 
     useEffect(() => {
@@ -170,42 +171,18 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
         return () => controller.abort();
     }, [dataWindow.date_min, dataWindow.date_max, filters.type, filters.dist_max, filters.sort, filters.distance_unit, en, radarMode]);
 
-    // closest-5-now mode: hits the dedicated endpoint that ranks candidates and returns the 5
-    // objects actually closest to Earth right now, with real past/current/future trajectories.
-    useEffect(() => {
-        if (radarMode !== 'closest-5-now') return undefined;
-
-        const controller = new AbortController();
-        setClosestNowLoading(true);
-
-        const params = new URLSearchParams({
-            date_min: filters.date_min,
-            date_max: filters.date_max,
-            limit: '5',
-        });
-
-        fetch(`/radar/closest-now?${params.toString()}`, {
-            signal: controller.signal,
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
-        })
-            .then((response) => {
-                if (!response.ok) throw new Error('Closest-now unavailable.');
-                return response.json() as Promise<ClosestNowResponse>;
-            })
-            .then((payload) => {
-                setClosestNowData(payload);
-            })
-            .catch((err: unknown) => {
-                if (err instanceof DOMException && err.name === 'AbortError') return;
-                setClosestNowData(null);
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setClosestNowLoading(false);
-            });
-
-        return () => controller.abort();
-    }, [filters.date_min, filters.date_max, radarMode]);
+    // Fetch do closest-now encapsulado no hook — reage a mudanças de limit, mode e data.
+    // Só activo no modo 'closest-5-now'; nos outros modos o hook fica ocioso (limit/mode irrelevantes).
+    const {
+        data:    closestNowData,
+        loading: closestNowLoading,
+        error:   closestNowError,
+    } = useClosestNow(
+        filters.date_min,
+        filters.date_max,
+        radarMode === 'closest-5-now' ? objectLimit : 5,
+        radarMode === 'closest-5-now' ? selectionMode : 'nearest',
+    );
 
     useEffect(() => {
         // Skip positions fetch in closest-5-now mode — trajectories carry the positional data.
@@ -507,6 +484,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
             <section className="mx-auto max-w-[1800px] space-y-4 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
                 {Object.values(errorsBySource).map((message) => <ErrorMessage key={message} message={message} />)}
                 <ErrorMessage message={fetchError} />
+                <ErrorMessage message={closestNowError} />
 
                 {loading && radarMode !== 'closest-5-now' ? (
                     <ObservatoryLoadingSkeleton t={t} />
@@ -531,11 +509,26 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                             </div>
                         ) : null}
 
+                        {use3DPrototype && radarMode === 'closest-5-now' ? (
+                            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                                <RadarObjectControls
+                                    objectLimit={objectLimit}
+                                    selectionMode={selectionMode}
+                                    onLimitChange={setObjectLimit}
+                                    onModeChange={setSelectionMode}
+                                    locale={locale}
+                                    loading={closestNowLoading}
+                                />
+                            </div>
+                        ) : null}
+
                         {use3DPrototype && radarMode === 'closest-5-now' && closestNowData && lunarReference ? (
                             <Suspense fallback={<ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />}>
                                 <DailyOrbitalRadar3D
                                     closestNowObjects={closestNowData.objects}
                                     selectedId={focusApproach?.id ?? null}
+                                    objectLimit={objectLimit}
+                                    selectionMode={selectionMode}
                                     onSelect={(approach) => {
                                         // Click toggles selection — clicking the same object again deselects.
                                         setSelectedFocusId((current) => (current === approach.id ? null : approach.id));
