@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BookOpen, ChevronDown } from 'lucide-react';
-import type { ClosestNowObject, LunarReference, SunDirection, UnifiedApproach } from '@/types';
+import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { computeSceneEphemeris, KM_PER_AU, type SceneEphemeris } from '@/lib/sceneEphemeris';
 import { sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
@@ -43,6 +43,8 @@ type Props = {
     onOpenFocus?: (approach: UnifiedApproach) => void;
     lunarReference: LunarReference;
     locale: 'pt-BR' | 'en';
+    objectLimit: ObjectLimit;
+    selectionMode: SelectionMode;
     /**
      * Direção do Sol (eclíptica geocêntrica) para o instante atual, calculada no servidor
      * via SunDirectionCalculator e transmitida pelo Inertia. Usada como fallback SÍNCRONO
@@ -60,6 +62,8 @@ export function DailyOrbitalRadar3D({
     onOpenFocus,
     lunarReference,
     locale,
+    objectLimit,
+    selectionMode,
     initialSunDirection,
 }: Props) {
     const en = locale === 'en';
@@ -227,6 +231,7 @@ export function DailyOrbitalRadar3D({
                             ephemeris={ephemeris}
                             fallbackSunDirection={fallbackSunDirection}
                             locale={locale}
+                            objectLimit={objectLimit}
                             onClearSelection={() => onClearSelection?.()}
                         />
                     </Suspense>
@@ -259,14 +264,15 @@ export function DailyOrbitalRadar3D({
                             </div>
                         </div>
 
-                        {/* Lista dos objetos mais próximos: clicar voa a câmera até o asteroide. */}
+                        {/* Lista dos objetos: clicar voa a câmera até o asteroide. */}
                         <div className="px-2 py-2">
                             <div className="px-1 pb-1.5 text-[11px] uppercase tracking-wide text-white/45">
-                                {en
-                                    ? `${closestNowObjects.length} closest objects now`
-                                    : `${closestNowObjects.length} objetos mais próximos agora`}
+                                {listTitle(closestNowObjects.length, selectionMode, en)}
                             </div>
-                            <ul className="space-y-0.5">
+                            <ul className={[
+                                'space-y-0.5',
+                                objectLimit >= 15 ? 'max-h-[52vh] overflow-y-auto pr-0.5 scrollbar-thin scrollbar-thumb-white/10' : '',
+                            ].join(' ')}>
                                 {closestNowObjects.map((o, index) => (
                                     <ObjectListItem
                                         key={o.approach.id}
@@ -275,6 +281,7 @@ export function DailyOrbitalRadar3D({
                                         isSelected={o.approach.id === selectedId}
                                         onSelect={selectObject}
                                         locale={locale}
+                                        compact={objectLimit === 30}
                                     />
                                 ))}
                             </ul>
@@ -343,6 +350,13 @@ export function DailyOrbitalRadar3D({
 
 // --------------- Funções puras ---------------
 
+function listTitle(count: number, mode: SelectionMode, en: boolean): string {
+    if (mode === 'upcoming') return en ? `${count} upcoming passes` : `${count} próximas aproximações`;
+    if (mode === 'featured') return en ? 'Featured objects' : 'Objetos em destaque';
+    if (mode === 'attention') return en ? `${count} watch-list objects` : `${count} objetos em maior atenção`;
+    return en ? `${count} closest objects now` : `${count} objetos mais próximos agora`;
+}
+
 /**
  * Deriva o modo ativo da cena a partir do estado de seleção e modo de órbita.
  * Heliocêntrico só quando o usuário pediu E o objeto tem elementos com época de periélio válida.
@@ -363,13 +377,15 @@ type ObjectListItemProps = {
     isSelected: boolean;
     onSelect: (approach: UnifiedApproach) => void;
     locale: 'pt-BR' | 'en';
+    /** Modo compacto: oculta distância e reduz padding — usado com 30 objetos. */
+    compact?: boolean;
 };
 
 /**
  * Item da lista de objetos próximos na barra lateral da cena.
  * Exibe cor de paleta, nome, distância e indicadores de estado (sem posição, perigo).
  */
-function ObjectListItem({ object: o, palette, isSelected, onSelect, locale }: ObjectListItemProps) {
+function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, compact = false }: ObjectListItemProps) {
     const en = locale === 'en';
     const hasScenePosition = Boolean(o.trajectory?.currentPoint);
     const hazard = o.approach.hazardFlag;
@@ -387,26 +403,29 @@ function ObjectListItem({ object: o, palette, isSelected, onSelect, locale }: Ob
                           : 'Sem posição do Horizons no momento — não exibido no radar.'
                 }
                 className={[
-                    'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                    'flex w-full items-center gap-2 rounded-lg text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                    compact ? 'px-2 py-1' : 'px-2 py-2',
                     isSelected ? 'bg-signal-cyan/15 text-white ring-1 ring-signal-cyan/40' : 'text-white/75 hover:bg-white/8 hover:text-white',
                     hasScenePosition ? '' : 'opacity-50',
                 ].join(' ')}
             >
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white/10" style={{ backgroundColor: palette.future }} />
+                <span className="h-2 w-2 shrink-0 rounded-full ring-1 ring-white/10" style={{ backgroundColor: palette.future }} />
                 <span className="min-w-0 flex-1 truncate font-medium">
                     {o.approach.displayName ?? o.approach.name}
                 </span>
                 {hazard ? (
-                    <span className="shrink-0 text-[12px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>⚠️</span>
+                    <span className="shrink-0 text-[11px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>⚠️</span>
                 ) : null}
                 {!hasScenePosition ? (
-                    <span className="shrink-0 text-[11px] text-amber-200/70" aria-hidden>
+                    <span className="shrink-0 text-[10px] text-amber-200/60" aria-hidden>
                         {en ? 'no pos.' : 'sem pos.'}
                     </span>
                 ) : null}
-                <span className="shrink-0 tabular-nums text-white/55">
-                    {compactKm(o.currentDistanceKm)}
-                </span>
+                {!compact ? (
+                    <span className="shrink-0 tabular-nums text-white/55">
+                        {compactKm(o.currentDistanceKm)}
+                    </span>
+                ) : null}
             </button>
         </li>
     );
