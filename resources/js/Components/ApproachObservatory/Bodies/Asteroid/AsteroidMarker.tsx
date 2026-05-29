@@ -131,8 +131,8 @@ export function AsteroidMarker({
                     position={LABEL_POSITION}
                     emphasized={isSelected || hovered}
                     protectFromFocus={protectLabelFromFocus}
-                    onClick={() => onSelect(object.approach)}
-                    title={`Focar ${object.approach.displayName ?? object.approach.name}`}
+                    onClick={isSelected ? undefined : () => onSelect(object.approach)}
+                    title={isSelected ? undefined : `Focar ${object.approach.displayName ?? object.approach.name}`}
                 >
                     <div className="font-semibold">
                         {object.approach.displayName ?? object.approach.name}

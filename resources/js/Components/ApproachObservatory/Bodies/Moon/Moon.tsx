@@ -123,8 +123,8 @@ export function Moon({
                     position={moonLabelOffset(position, compactLabel)}
                     emphasized={hovered}
                     protectFromFocus={protectLabelFromFocus}
-                    onClick={onFocus}
-                    title={title}
+                    onClick={isFocused ? undefined : onFocus}
+                    title={isFocused ? undefined : title}
                 >
                     <span className="font-semibold">{labelName}</span>
                     {labelStatus}

@@ -289,8 +289,8 @@ export function Earth({
                     position={LABEL_POSITION}
                     emphasized={hovered}
                     protectFromFocus={protectLabelFromFocus}
-                    onClick={onFocus}
-                    title="Voltar para a visão geral"
+                    onClick={isFocused ? undefined : onFocus}
+                    title={isFocused ? undefined : 'Voltar para a visão geral'}
                 >
                     <span className="font-semibold">Terra</span>
                 </ScreenLabel>
