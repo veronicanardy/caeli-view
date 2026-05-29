@@ -260,8 +260,8 @@ function RadarFriendly({ en, nf, lunarDistanceKm }: { en: boolean; nf: Intl.Numb
                     <Section title={en ? 'The map squishes distances to fit the screen' : 'O mapa comprime as distâncias para caber na tela'}>
                         <p className="text-sm leading-relaxed text-white/70">
                             {en
-                                ? 'Space is so vast that if this map were to scale, all the asteroids would be crammed into a single pixel near Earth. To make them visible, the map squishes everything — nearby objects look much closer to the Earth than they really are.'
-                                : 'O espaço é tão grande que se esse mapa fosse em escala real, todos os asteroides estariam espremidos num único pixel perto da Terra. Para deixá-los visíveis, o mapa comprime tudo — objetos próximos parecem muito mais perto da Terra do que realmente estão.'}
+                                ? 'Space is so vast that if this map were to scale, the visualization would be impossible. To make them visible, the map squishes everything — nearby objects look much closer to the Earth than they really are.'
+                                : 'O espaço é tão grande que se esse mapa fosse em escala real, a visualização seria impossível. Para deixá-los visíveis, o mapa comprime tudo — objetos próximos parecem muito mais perto da Terra do que realmente estão.'}
                         </p>
                         <HighlightBox>
                             {en
