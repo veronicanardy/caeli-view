@@ -45,6 +45,9 @@ type Props = {
     locale: 'pt-BR' | 'en';
     objectLimit: ObjectLimit;
     selectionMode: SelectionMode;
+    onLimitChange: (limit: ObjectLimit) => void;
+    onModeChange: (mode: SelectionMode) => void;
+    radarLoading?: boolean;
     /**
      * Direção do Sol (eclíptica geocêntrica) para o instante atual, calculada no servidor
      * via SunDirectionCalculator e transmitida pelo Inertia. Usada como fallback SÍNCRONO
@@ -64,6 +67,9 @@ export function DailyOrbitalRadar3D({
     locale,
     objectLimit,
     selectionMode,
+    onLimitChange,
+    onModeChange,
+    radarLoading = false,
     initialSunDirection,
 }: Props) {
     const en = locale === 'en';
@@ -203,9 +209,7 @@ export function DailyOrbitalRadar3D({
                             <span className="mr-1.5 font-medium text-white/80">
                                 {en ? 'Current position' : 'Posição atual'}
                             </span>
-                            {en
-                                ? `Showing the ${closestNowObjects.length} closest objects to Earth right now.`
-                                : `Mostrando os ${closestNowObjects.length} objetos mais próximos da Terra agora.`}
+                            {listTitle(closestNowObjects.length, selectionMode, en)}
                         </p>
                     </div>
                 </header>
@@ -237,10 +241,22 @@ export function DailyOrbitalRadar3D({
                     </Suspense>
                 </Canvas>
 
-                {/* Barra superior: contagem de objetos + atalhos de visão de câmera.
-                    A cena continua totalmente explorável; esses botões apenas sugerem um ângulo inicial. */}
+                {/* Barra superior: painel lateral + botões de câmera. */}
                 <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-3">
                     <div className="pointer-events-auto w-[min(18rem,48%)] overflow-hidden rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl">
+
+                        {/* Controles de seleção: quantidade + critério — integrados no painel lateral. */}
+                        <div className="border-b border-white/10 px-2 py-2">
+                            <RadarControls
+                                objectLimit={objectLimit}
+                                selectionMode={selectionMode}
+                                onLimitChange={onLimitChange}
+                                onModeChange={onModeChange}
+                                locale={locale}
+                                loading={radarLoading}
+                            />
+                        </div>
+
                         {/* Corpos de referência: Terra e Lua clicáveis para voar a câmera até eles. */}
                         <div className="border-b border-white/10 px-2 py-2">
                             <div className="px-1 pb-1 text-[11px] uppercase tracking-wide text-white/45">
@@ -269,22 +285,30 @@ export function DailyOrbitalRadar3D({
                             <div className="px-1 pb-1.5 text-[11px] uppercase tracking-wide text-white/45">
                                 {listTitle(closestNowObjects.length, selectionMode, en)}
                             </div>
-                            <ul className={[
-                                'space-y-0.5',
-                                objectLimit >= 15 ? 'max-h-[52vh] overflow-y-auto pr-0.5 scrollbar-thin scrollbar-thumb-white/10' : '',
-                            ].join(' ')}>
-                                {closestNowObjects.map((o, index) => (
-                                    <ObjectListItem
-                                        key={o.approach.id}
-                                        object={o}
-                                        palette={OBJECT_PALETTE[index % OBJECT_PALETTE.length]}
-                                        isSelected={o.approach.id === selectedId}
-                                        onSelect={selectObject}
-                                        locale={locale}
-                                        compact={objectLimit === 30}
-                                    />
-                                ))}
-                            </ul>
+                            {radarLoading ? (
+                                <div className="flex items-center gap-2 px-1 py-3 text-[12px] text-white/40">
+                                    <span className="size-1.5 animate-pulse rounded-full bg-signal-cyan/60" aria-hidden />
+                                    {en ? 'Updating…' : 'Atualizando…'}
+                                </div>
+                            ) : (
+                                <ul className={[
+                                    'space-y-0.5',
+                                    objectLimit === 15 ? 'max-h-48 overflow-y-auto' : '',
+                                    objectLimit === 30 ? 'max-h-36 overflow-y-auto' : '',
+                                ].join(' ')}>
+                                    {closestNowObjects.map((o, index) => (
+                                        <ObjectListItem
+                                            key={o.approach.id}
+                                            object={o}
+                                            palette={OBJECT_PALETTE[index % OBJECT_PALETTE.length]}
+                                            isSelected={o.approach.id === selectedId}
+                                            onSelect={selectObject}
+                                            locale={locale}
+                                            compact={objectLimit === 30}
+                                        />
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                     </div>
 
@@ -325,7 +349,7 @@ export function DailyOrbitalRadar3D({
                     />
                 ) : null}
 
-                {/* Overlay de transição entre modos: mascara o salto visual de câmera/cena. */}
+                {/* Overlay de transição entre modos (radar ↔ órbita): mascara salto de câmera. */}
                 {sceneTransitioning ? (
                     <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
                         <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-space-950/90 px-4 py-2.5 text-[13px] text-white/70 shadow-glow">
@@ -333,6 +357,12 @@ export function DailyOrbitalRadar3D({
                             {en ? 'Loading…' : 'Carregando…'}
                         </div>
                     </div>
+                ) : null}
+
+                {/* Overlay de atualização de filtros: borda pulsante discreta enquanto
+                    o novo lote de objetos carrega. Não bloqueia a cena — stale data visível. */}
+                {radarLoading ? (
+                    <div className="pointer-events-none absolute inset-0 z-20 rounded-lg ring-1 ring-inset ring-signal-cyan/20 animate-pulse" aria-hidden />
                 ) : null}
 
                 {/* Toasts de boas-vindas — primeira visita ao radar e à vista orbital. */}
@@ -355,6 +385,97 @@ function listTitle(count: number, mode: SelectionMode, en: boolean): string {
     if (mode === 'featured') return en ? 'Featured objects' : 'Objetos em destaque';
     if (mode === 'attention') return en ? `${count} watch-list objects` : `${count} objetos em maior atenção`;
     return en ? `${count} closest objects now` : `${count} objetos mais próximos agora`;
+}
+
+const LIMITS_OPTIONS: ObjectLimit[] = [5, 15, 30];
+
+const MODE_LABELS: Record<SelectionMode, { pt: string; en: string }> = {
+    nearest:   { pt: 'Mais próximos agora', en: 'Closest now' },
+    upcoming:  { pt: 'Próximas aproximações', en: 'Upcoming passes' },
+    featured:  { pt: 'Em destaque', en: 'Featured' },
+    attention: { pt: 'Maior atenção', en: 'Watch list' },
+};
+
+/**
+ * Controles compactos de quantidade e critério — integrados no painel lateral da cena.
+ * Usa <select> nativo com background explicitamente escuro para funcionar em todos os OS.
+ */
+function RadarControls({
+    objectLimit,
+    selectionMode,
+    onLimitChange,
+    onModeChange,
+    locale,
+    loading,
+}: {
+    objectLimit: ObjectLimit;
+    selectionMode: SelectionMode;
+    onLimitChange: (l: ObjectLimit) => void;
+    onModeChange: (m: SelectionMode) => void;
+    locale: 'pt-BR' | 'en';
+    loading: boolean;
+}) {
+    const en = locale === 'en';
+
+    return (
+        <div className="space-y-1.5">
+            {/* Linha 1: chips de quantidade */}
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wide text-white/40 select-none w-12 shrink-0">
+                    {en ? 'Show' : 'Exibir'}
+                </span>
+                <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04] p-0.5">
+                    {LIMITS_OPTIONS.map((limit) => (
+                        <button
+                            key={limit}
+                            type="button"
+                            disabled={loading}
+                            onClick={() => onLimitChange(limit)}
+                            aria-pressed={objectLimit === limit}
+                            className={[
+                                'rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-all outline-none',
+                                'disabled:cursor-wait focus-visible:ring-1 focus-visible:ring-signal-cyan',
+                                objectLimit === limit
+                                    ? 'bg-signal-cyan/20 text-signal-cyan ring-1 ring-signal-cyan/40'
+                                    : 'text-white/50 hover:text-white/80',
+                            ].join(' ')}
+                        >
+                            {limit}
+                        </button>
+                    ))}
+                </div>
+                {loading && (
+                    <span className="size-1.5 animate-pulse rounded-full bg-signal-cyan/60 shrink-0" aria-hidden />
+                )}
+            </div>
+
+            {/* Linha 2: select de critério */}
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wide text-white/40 select-none w-12 shrink-0">
+                    {en ? 'Criterion' : 'Critério'}
+                </span>
+                <select
+                    value={selectionMode}
+                    disabled={loading}
+                    onChange={(e) => onModeChange(e.target.value as SelectionMode)}
+                    aria-label={en ? 'Selection criterion' : 'Critério de seleção'}
+                    style={{ colorScheme: 'dark' }}
+                    className={[
+                        'flex-1 min-w-0 rounded-lg border border-white/15 px-2 py-0.5',
+                        'bg-space-950 text-[11px] text-white/80 outline-none',
+                        'focus-visible:ring-1 focus-visible:ring-signal-cyan',
+                        'hover:border-white/25 cursor-pointer disabled:cursor-wait disabled:opacity-50',
+                    ].join(' ')}
+                >
+                    {(Object.entries(MODE_LABELS) as [SelectionMode, { pt: string; en: string }][]).map(([value, labels]) => (
+                        <option key={value} value={value} className="bg-[#0a0e1a] text-white">
+                            {en ? labels.en : labels.pt}
+                        </option>
+                    ))}
+                </select>
+            </div>
+        </div>
+    );
 }
 
 /**

@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { AppLayout } from '@/Components/AppLayout';
 import { ApproachTimeline } from '@/Components/ApproachObservatory/Charts/ApproachTimeline';
 import { CompactConsoleBar } from '@/Components/ApproachObservatory/Controls/CompactConsoleBar';
-import { RadarObjectControls } from '@/Components/ApproachObservatory/Controls/RadarObjectControls';
 import { CuratedHighlights } from '@/Components/ApproachObservatory/Lists/CuratedHighlights';
 import { DailyProximityList } from '@/Components/ApproachObservatory/Lists/DailyProximityList';
 import { ObservatoryDetailOverlay } from '@/Components/ApproachObservatory/Panels/ObservatoryDetailOverlay';
@@ -509,19 +508,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                             </div>
                         ) : null}
 
-                        {use3DPrototype && radarMode === 'closest-5-now' ? (
-                            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                                <RadarObjectControls
-                                    objectLimit={objectLimit}
-                                    selectionMode={selectionMode}
-                                    onLimitChange={setObjectLimit}
-                                    onModeChange={setSelectionMode}
-                                    locale={locale}
-                                    loading={closestNowLoading}
-                                />
-                            </div>
-                        ) : null}
-
                         {use3DPrototype && radarMode === 'closest-5-now' && closestNowData && lunarReference ? (
                             <Suspense fallback={<ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />}>
                                 <DailyOrbitalRadar3D
@@ -529,6 +515,9 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                                     selectedId={focusApproach?.id ?? null}
                                     objectLimit={objectLimit}
                                     selectionMode={selectionMode}
+                                    onLimitChange={setObjectLimit}
+                                    onModeChange={setSelectionMode}
+                                    radarLoading={closestNowLoading}
                                     onSelect={(approach) => {
                                         // Click toggles selection — clicking the same object again deselects.
                                         setSelectedFocusId((current) => (current === approach.id ? null : approach.id));
