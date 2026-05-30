@@ -196,6 +196,15 @@ export function DailyOrbitalRadar3D({
 
     const pickView = (key: CameraViewKey) => {
         onClearSelection?.();
+        setBodyCardOpen(null);
+        setSunFocusTarget(null);
+        setMercuryFocusTarget(null);
+        setVenusFocusTarget(null);
+        setMarsFocusTarget(null);
+        setJupiterFocusTarget(null);
+        setSaturnFocusTarget(null);
+        setUranusFocusTarget(null);
+        setNeptuneFocusTarget(null);
         setCameraIntent((intent) => ({ kind: 'preset', view: key, nonce: nextCameraNonce(intent) }));
     };
 
