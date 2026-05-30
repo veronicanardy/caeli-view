@@ -114,6 +114,18 @@ export type SceneEphemeris = {
      * at MARS_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
      */
     marsScenePosition: [number, number, number];
+    /**
+     * Jupiter's scene position, same convention as mercuryScenePosition.
+     * Derived from HelioVector(Body.Jupiter) → ecliptic J2000 → placed on the heliocentric ring
+     * at JUPITER_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
+     */
+    jupiterScenePosition: [number, number, number];
+    /**
+     * Saturn's scene position, same convention as mercuryScenePosition.
+     * Derived from HelioVector(Body.Saturn) → ecliptic J2000 → placed on the heliocentric ring
+     * at SATURN_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
+     */
+    saturnScenePosition: [number, number, number];
 };
 
 let modulePromise: Promise<typeof Astronomy> | null = null;
@@ -295,6 +307,34 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             sunEclZ + (maRawZ / maLen) * marsOrbitRadius,
         ];
 
+        // Jupiter: same pipeline — heliocentric vector → ecliptic XZ direction → ring.
+        // Semi-major axis: 5.2028 AU (IAU / NASA Planetary Fact Sheet).
+        const jupiterHelioEqj = A.HelioVector(A.Body.Jupiter, date);
+        const jupiterHelioEcl = A.RotateVector(eqjToEclMatrix(A), jupiterHelioEqj);
+        const juRawX = jupiterHelioEcl.x;
+        const juRawZ = jupiterHelioEcl.y;  // ecliptic Y → scene Z
+        const juLen = Math.hypot(juRawX, juRawZ) || 1;
+        const jupiterOrbitRadius = 5.2028 * SUN_DISPLAY_DL;
+        const jupiterScenePosition: [number, number, number] = [
+            sunEclX + (juRawX / juLen) * jupiterOrbitRadius,
+            0,
+            sunEclZ + (juRawZ / juLen) * jupiterOrbitRadius,
+        ];
+
+        // Saturn: same pipeline — heliocentric vector → ecliptic XZ direction → ring.
+        // Semi-major axis: 9.5392 AU (IAU / NASA Planetary Fact Sheet).
+        const saturnHelioEqj = A.HelioVector(A.Body.Saturn, date);
+        const saturnHelioEcl = A.RotateVector(eqjToEclMatrix(A), saturnHelioEqj);
+        const saRawX = saturnHelioEcl.x;
+        const saRawZ = saturnHelioEcl.y;  // ecliptic Y → scene Z
+        const saLen = Math.hypot(saRawX, saRawZ) || 1;
+        const saturnOrbitRadius = 9.5392 * SUN_DISPLAY_DL;
+        const saturnScenePosition: [number, number, number] = [
+            sunEclX + (saRawX / saLen) * saturnOrbitRadius,
+            0,
+            sunEclZ + (saRawZ / saLen) * saturnOrbitRadius,
+        ];
+
         return {
             sunDirection,
             sunScenePosition,
@@ -308,6 +348,8 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             mercuryScenePosition,
             venusScenePosition,
             marsScenePosition,
+            jupiterScenePosition,
+            saturnScenePosition,
         };
     } catch {
         return null;

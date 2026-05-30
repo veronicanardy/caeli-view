@@ -13,7 +13,9 @@ import { MoonOrbit } from '../Bodies/Moon/MoonOrbit';
 import { Mercury } from '../Bodies/Mercury/Mercury';
 import { Venus } from '../Bodies/Venus/Venus';
 import { Mars } from '../Bodies/Mars/Mars';
-import { DisplayedEarthOrbitGuide, DisplayedMercuryOrbitGuide, DisplayedVenusOrbitGuide, DisplayedMarsOrbitGuide } from '../Trajectory/HeliocentricLines';
+import { Jupiter } from '../Bodies/Jupiter/Jupiter';
+import { Saturn } from '../Bodies/Saturn/Saturn';
+import { DisplayedEarthOrbitGuide, DisplayedMercuryOrbitGuide, DisplayedVenusOrbitGuide, DisplayedMarsOrbitGuide, DisplayedJupiterOrbitGuide, DisplayedSaturnOrbitGuide } from '../Trajectory/HeliocentricLines';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { RingsLayer } from '../Overlays/RingsLayer';
 import { LabelOccluderContext, useCompactLabelMode, useHideAsteroidLabelsMode } from '../Overlays/SceneLabels';
@@ -45,11 +47,15 @@ type RadarSceneProps = {
     isVenusFocused: boolean;
     onFocusMars: () => void;
     isMarsFocused: boolean;
+    onFocusJupiter: () => void;
+    isJupiterFocused: boolean;
+    onFocusSaturn: () => void;
+    isSaturnFocused: boolean;
     /** Chamado quando Terra ou Lua são focados de dentro da cena (clique no label/hitbox). */
     onFocusBody: (body: 'earth' | 'moon') => void;
 };
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusBody }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusBody }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -93,6 +99,14 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     );
     const marsPos = useMemo<[number, number, number] | null>(
         () => ephemeris?.marsScenePosition ?? null,
+        [ephemeris],
+    );
+    const jupiterPos = useMemo<[number, number, number] | null>(
+        () => ephemeris?.jupiterScenePosition ?? null,
+        [ephemeris],
+    );
+    const saturnPos = useMemo<[number, number, number] | null>(
+        () => ephemeris?.saturnScenePosition ?? null,
         [ephemeris],
     );
     const compactLabels = useCompactLabelMode();
@@ -199,6 +213,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     {mercuryPos ? <Mercury position={mercuryPos} sunDirection={sunDir} locale={locale} onFocus={onFocusMercury} isFocused={isMercuryFocused} /> : null}
                     {venusPos ? <Venus position={venusPos} sunDirection={sunDir} locale={locale} onFocus={onFocusVenus} isFocused={isVenusFocused} /> : null}
                     {marsPos ? <Mars position={marsPos} sunDirection={sunDir} locale={locale} onFocus={onFocusMars} isFocused={isMarsFocused} /> : null}
+                    {jupiterPos ? <Jupiter position={jupiterPos} sunDirection={sunDir} locale={locale} onFocus={onFocusJupiter} isFocused={isJupiterFocused} /> : null}
+                    {saturnPos ? <Saturn position={saturnPos} sunDirection={sunDir} locale={locale} onFocus={onFocusSaturn} isFocused={isSaturnFocused} /> : null}
                     <RingsLayer onEarthFocus={focusEarth} showLabels={!compactLabels && !orbitLabelsOnly} />
                     {!orbitLabelsOnly ? (
                         <>
@@ -206,6 +222,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                             <DisplayedMercuryOrbitGuide sunDirection={sunDir} />
                             <DisplayedVenusOrbitGuide sunDirection={sunDir} />
                             <DisplayedMarsOrbitGuide sunDirection={sunDir} />
+                            <DisplayedJupiterOrbitGuide sunDirection={sunDir} />
+                            <DisplayedSaturnOrbitGuide sunDirection={sunDir} />
                         </>
                     ) : null}
 

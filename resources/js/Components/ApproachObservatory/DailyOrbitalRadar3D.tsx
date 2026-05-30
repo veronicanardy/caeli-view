@@ -206,6 +206,8 @@ export function DailyOrbitalRadar3D({
         setMercuryFocusTarget(null);
         setVenusFocusTarget(null);
         setMarsFocusTarget(null);
+        setJupiterFocusTarget(null);
+        setSaturnFocusTarget(null);
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
         onSelect(approach);
     };
@@ -220,10 +222,12 @@ export function DailyOrbitalRadar3D({
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
     });
 
-    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | null>(null);
+    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | null>(null);
     const [mercuryFocusTarget, setMercuryFocusTarget] = useState<FocusFraming | null>(null);
     const [venusFocusTarget, setVenusFocusTarget] = useState<FocusFraming | null>(null);
     const [marsFocusTarget, setMarsFocusTarget] = useState<FocusFraming | null>(null);
+    const [jupiterFocusTarget, setJupiterFocusTarget] = useState<FocusFraming | null>(null);
+    const [saturnFocusTarget, setSaturnFocusTarget] = useState<FocusFraming | null>(null);
 
     // Foca Terra ou Lua. Se estiver em modo órbita, dispara o overlay de transição antes de
     // re-enquadrar — o mesmo tratamento dado ao botão "Voltar ao Asteroide".
@@ -233,6 +237,8 @@ export function DailyOrbitalRadar3D({
         setMercuryFocusTarget(null);
         setVenusFocusTarget(null);
         setMarsFocusTarget(null);
+        setJupiterFocusTarget(null);
+        setSaturnFocusTarget(null);
         const doFocus = () => setCameraIntent((intent) => ({ kind: 'body', view: intent.view, body, nonce: nextCameraNonce(intent) }));
         if (orbitMode) {
             triggerTransition(() => { setOrbitMode(false); doFocus(); });
@@ -246,6 +252,8 @@ export function DailyOrbitalRadar3D({
         setBodyCardOpen('mercury');
         setVenusFocusTarget(null);
         setMarsFocusTarget(null);
+        setJupiterFocusTarget(null);
+        setSaturnFocusTarget(null);
         const pos = ephemeris?.mercuryScenePosition;
         if (pos) setMercuryFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.028));
     }, [ephemeris, onClearSelection]);
@@ -255,6 +263,8 @@ export function DailyOrbitalRadar3D({
         setBodyCardOpen('venus');
         setMercuryFocusTarget(null);
         setMarsFocusTarget(null);
+        setJupiterFocusTarget(null);
+        setSaturnFocusTarget(null);
         const pos = ephemeris?.venusScenePosition;
         if (pos) setVenusFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.038));
     }, [ephemeris, onClearSelection]);
@@ -264,13 +274,39 @@ export function DailyOrbitalRadar3D({
         setBodyCardOpen('mars');
         setMercuryFocusTarget(null);
         setVenusFocusTarget(null);
+        setJupiterFocusTarget(null);
+        setSaturnFocusTarget(null);
         const pos = ephemeris?.marsScenePosition;
         if (pos) setMarsFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.048));
+    }, [ephemeris, onClearSelection]);
+
+    const focusJupiter = useCallback(() => {
+        onClearSelection?.();
+        setBodyCardOpen('jupiter');
+        setMercuryFocusTarget(null);
+        setVenusFocusTarget(null);
+        setMarsFocusTarget(null);
+        setSaturnFocusTarget(null);
+        const pos = ephemeris?.jupiterScenePosition;
+        if (pos) setJupiterFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.19));
+    }, [ephemeris, onClearSelection]);
+
+    const focusSaturn = useCallback(() => {
+        onClearSelection?.();
+        setBodyCardOpen('saturn');
+        setMercuryFocusTarget(null);
+        setVenusFocusTarget(null);
+        setMarsFocusTarget(null);
+        setJupiterFocusTarget(null);
+        const pos = ephemeris?.saturnScenePosition;
+        if (pos) setSaturnFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.16));
     }, [ephemeris, onClearSelection]);
 
     const mercuryFocused = bodyCardOpen === 'mercury';
     const venusFocused = bodyCardOpen === 'venus';
     const marsFocused = bodyCardOpen === 'mars';
+    const jupiterFocused = bodyCardOpen === 'jupiter';
+    const saturnFocused = bodyCardOpen === 'saturn';
 
     const resetView = () => {
         onClearSelection?.();
@@ -307,9 +343,9 @@ export function DailyOrbitalRadar3D({
                             closestNowObjects={sceneObjects}
                             selectedId={selectedId}
                             orbitMode={orbitMode}
-                            onSelect={(approach) => { setBodyCardOpen(null); setMercuryFocusTarget(null); setVenusFocusTarget(null); setMarsFocusTarget(null); selectObject(approach); }}
+                            onSelect={(approach) => { setBodyCardOpen(null); setMercuryFocusTarget(null); setVenusFocusTarget(null); setMarsFocusTarget(null); setJupiterFocusTarget(null); setSaturnFocusTarget(null); selectObject(approach); }}
                             cameraIntent={cameraIntent}
-                            focusTarget={focusTarget ?? mercuryFocusTarget ?? venusFocusTarget ?? marsFocusTarget}
+                            focusTarget={focusTarget ?? mercuryFocusTarget ?? venusFocusTarget ?? marsFocusTarget ?? jupiterFocusTarget ?? saturnFocusTarget}
                             ephemeris={ephemeris}
                             fallbackSunDirection={fallbackSunDirection}
                             locale={locale}
@@ -320,6 +356,10 @@ export function DailyOrbitalRadar3D({
                             isVenusFocused={venusFocused}
                             onFocusMars={focusMars}
                             isMarsFocused={marsFocused}
+                            onFocusJupiter={focusJupiter}
+                            isJupiterFocused={jupiterFocused}
+                            onFocusSaturn={focusSaturn}
+                            isSaturnFocused={saturnFocused}
                             onFocusBody={focusBody}
                         />
                     </Suspense>
@@ -347,11 +387,15 @@ export function DailyOrbitalRadar3D({
                             mercuryFocused={mercuryFocused}
                             venusFocused={venusFocused}
                             marsFocused={marsFocused}
+                            jupiterFocused={jupiterFocused}
+                            saturnFocused={saturnFocused}
                             onFocusEarth={() => focusBody('earth')}
                             onFocusMoon={() => focusBody('moon')}
                             onFocusMercury={focusMercury}
                             onFocusVenus={focusVenus}
                             onFocusMars={focusMars}
+                            onFocusJupiter={focusJupiter}
+                            onFocusSaturn={focusSaturn}
                         />
 
                         {/* Lista dos objetos: ocupa o espaço restante do painel com scroll. */}
@@ -736,21 +780,29 @@ function ReferenceSection({
     mercuryFocused,
     venusFocused,
     marsFocused,
+    jupiterFocused,
+    saturnFocused,
     onFocusEarth,
     onFocusMoon,
     onFocusMercury,
     onFocusVenus,
     onFocusMars,
+    onFocusJupiter,
+    onFocusSaturn,
 }: {
     en: boolean;
     mercuryFocused: boolean;
     venusFocused: boolean;
     marsFocused: boolean;
+    jupiterFocused: boolean;
+    saturnFocused: boolean;
     onFocusEarth: () => void;
     onFocusMoon: () => void;
     onFocusMercury: () => void;
     onFocusVenus: () => void;
     onFocusMars: () => void;
+    onFocusJupiter: () => void;
+    onFocusSaturn: () => void;
 }) {
     const [planetsOpen, setPlanetsOpen] = useState(false);
 
@@ -824,6 +876,32 @@ function ReferenceSection({
                         {/* Pontinho vermelho-ferrugem — identidade visual de Marte */}
                         <span className="inline-block size-2 rounded-full bg-[#c0501a] ring-1 ring-white/20" />
                         <span className="font-medium">{en ? 'Mars' : 'Marte'}</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onFocusJupiter}
+                        className={[
+                            btnCls,
+                            'w-full',
+                            jupiterFocused ? 'text-white' : '',
+                        ].join(' ')}
+                    >
+                        {/* Pontinho laranja-bege — identidade visual de Júpiter */}
+                        <span className="inline-block size-2 rounded-full bg-[#c8a060] ring-1 ring-white/20" />
+                        <span className="font-medium">{en ? 'Jupiter' : 'Júpiter'}</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onFocusSaturn}
+                        className={[
+                            btnCls,
+                            'w-full',
+                            saturnFocused ? 'text-white' : '',
+                        ].join(' ')}
+                    >
+                        {/* Pontinho dourado-ocre — identidade visual de Saturno e seus anéis */}
+                        <span className="inline-block size-2 rounded-full bg-[#c8a840] ring-1 ring-white/20" />
+                        <span className="font-medium">{en ? 'Saturn' : 'Saturno'}</span>
                     </button>
                 </div>
             ) : null}

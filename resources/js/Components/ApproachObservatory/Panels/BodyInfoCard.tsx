@@ -23,7 +23,7 @@ interface BodyConfig {
     facts: BodyFact[];
 }
 
-const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars', BodyConfig> = {
+const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn', BodyConfig> = {
     earth: {
         namePt: 'Terra',
         nameEn: 'Earth',
@@ -103,11 +103,43 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars', BodyConfig
             { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '24,6 horas / 24.6 hours' },
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Dois / Two' },
         ],
-    }
+    },
+    jupiter: {
+        namePt: 'Júpiter',
+        nameEn: 'Jupiter',
+        subtitlePt: 'Planeta · Sistema Solar Externo',
+        subtitleEn: 'Planet · Outer Solar System',
+        contextPt: 'O maior planeta do Sistema Solar — mais de 11× o diâmetro da Terra e 318× a sua massa. Sua gravidade molda as órbitas de asteroides e cometas. Exibido como contexto espacial. Posição em tempo real via JPL.',
+        contextEn: 'The largest planet in the Solar System — over 11× Earth\'s diameter and 318× its mass. Its gravity shapes asteroid and comet orbits. Shown for spatial context. Real-time position via JPL.',
+        dotColor: '#c8a060',
+        facts: [
+            { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '778,5 mi km (5,203 UA) / 778.5M km (5.203 AU)' },
+            { labelPt: 'Diâmetro',            labelEn: 'Diameter',             value: '142.984 km (11,2× a Terra)' },
+            { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '11,86 anos / 11.86 years' },
+            { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '9h 55min (mais rápido do SS)' },
+            { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '95 (Io, Europa, Ganimedes, Calisto…)' },
+        ],
+    },
+    saturn: {
+        namePt: 'Saturno',
+        nameEn: 'Saturn',
+        subtitlePt: 'Planeta · Sistema Solar Externo',
+        subtitleEn: 'Planet · Outer Solar System',
+        contextPt: 'Famoso pelos seus anéis de gelo e rocha — o sistema de anéis mais extenso do Sistema Solar, com ~270.000 km de largura. Segundo maior planeta, com 95× a massa da Terra. Exibido como contexto espacial. Posição em tempo real via JPL.',
+        contextEn: 'Famous for its stunning ring system — the most extensive in the Solar System, ~270,000 km wide. Second largest planet, 95× Earth\'s mass. Shown for spatial context. Real-time position via JPL.',
+        dotColor: '#c8a840',
+        facts: [
+            { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '1.432 mi km (9,537 UA) / 1.432B km (9.537 AU)' },
+            { labelPt: 'Diâmetro',            labelEn: 'Diameter',             value: '120.536 km (9,45× a Terra)' },
+            { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '29,46 anos / 29.46 years' },
+            { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '10h 39min' },
+            { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '146 (Titã, Encélado, Réia…)' },
+        ],
+    },
 };
 
 interface BodyInfoCardProps {
-    body: 'earth' | 'moon' | 'mercury' | 'venus' | 'mars';
+    body: 'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn';
     onClose: () => void;
     locale: 'pt-BR' | 'en';
 }

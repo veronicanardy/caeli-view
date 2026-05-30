@@ -108,3 +108,58 @@ export const MARS: PlanetDatum = {
     texturePath: '/images/mars/mars-2k.jpg',
     fallbackColor: '#c0501a',                           // vermelho-ferrugem — óxido de ferro
 };
+
+/**
+ * Saturn's physical constants.
+ *
+ * physicalRadiusDl = 60268 km / 384400 km/DL = 0.15682 DL (raio equatorial)
+ *
+ * Saturno é o segundo maior planeta do Sistema Solar — raio equatorial 60268 km, ~9.45× a Terra.
+ * Renderizamos em 0.16 DL (~1.02× físico, quase sem exageração!) — como Júpiter, já é grande
+ * o suficiente para ser visível sem distorção. Fica menor que Júpiter (0.19 DL), refletindo
+ * a proporção real (Saturno é ~85% do raio equatorial de Júpiter).
+ *
+ * Rotation: 0.44401 Earth days (10 h 39 min — segunda rotação mais rápida do SS após Júpiter).
+ *   O achatamento polar é pronunciado (raio polar 54364 km vs equatorial 60268 km),
+ *   mas renderizamos como esfera — os anéis dominam a identidade visual.
+ * Axial tilt: 26.73° — mais inclinado que a Terra (23.44°); os anéis variam de abertos a
+ *   quase de fio à medida que Saturno orbita ao longo de seus ~29 anos.
+ *
+ * Textura: camada de nuvens de amônia na troposfera superior (2K).
+ *   Bandas amarelo-ocre mais apagadas e largas que as de Júpiter — identidade visual inconfundível.
+ */
+export const SATURN: PlanetDatum = {
+    physicalRadiusDl: 60_268 / KM_PER_LD,              // 0.15682 DL — true equatorial radius
+    visualRadiusDl: 0.16,                                // rendered radius (~1.02× — quase real!)
+    rotationPeriodS: 0.44401 * 24 * 3600,               // 38,362 s ≈ 10h 39min (sistema III IAU)
+    axialTiltDeg: 26.73,                                 // obliquity (IAU WGCCRE 2015)
+    texturePath: '/images/saturn/saturn-2k.jpg',
+    fallbackColor: '#c8b060',                            // dourado-ocre — bandas de amônia
+};
+
+/**
+ * Jupiter's physical constants.
+ *
+ * physicalRadiusDl = 71492 km / 384400 km/DL = 0.18596 DL (raio equatorial)
+ *
+ * Júpiter é o maior planeta do Sistema Solar — raio equatorial 71492 km, mais de 11× a Terra.
+ * Renderizamos em 0.19 DL (~1.02× físico, quase sem exageração!) — na escala do radar
+ * Júpiter já é grande o suficiente para ser visível sem distorção. Fica maior que a Terra
+ * (0.11 DL) e menor apenas que o próprio Sol, refletindo a proporção real.
+ *
+ * Rotation: 0.41354 Earth days (9 h 55 min — rotação mais rápida dos planetas do SS).
+ *   O achatamento polar é perceptível (raio polar 66854 km vs equatorial 71492 km),
+ *   mas renderizamos como esfera — o shader compensa visualmente com as bandas zonais.
+ * Axial tilt: 3.13° — quase perpendicular ao plano eclíptico, sem estações significativas.
+ *
+ * Textura: camada de nuvens de amônia e água na troposfera superior (2K).
+ *   As bandas laranja/bege/brancas e as zonas escuras são a face permanente visual de Júpiter.
+ */
+export const JUPITER: PlanetDatum = {
+    physicalRadiusDl: 71_492 / KM_PER_LD,             // 0.18596 DL — true equatorial radius
+    visualRadiusDl: 0.19,                               // rendered radius (~1.02× — quase real!)
+    rotationPeriodS: 0.41354 * 24 * 3600,              // 35,730 s ≈ 9h 55min (sistema III IAU)
+    axialTiltDeg: 3.13,                                 // obliquity (IAU WGCCRE 2015)
+    texturePath: '/images/jupiter/jupiter-2k.jpg',
+    fallbackColor: '#c8a878',                           // laranja-bege — bandas de amônia
+};

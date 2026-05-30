@@ -296,7 +296,7 @@ const MARS_SEMI_MAJOR_AU = 1.524;
  *
  * Mesmo padrão dos outros planetas — anel centrado no Sol com
  * raio = MARS_SEMI_MAJOR_AU × SUN_DISPLAY_DL.
- * Marte fica além da Terra, portanto o anel envolve todos os outros.
+ * Marte fica além da Terra, portanto o anel envolve todos os outros internos.
  * Cor vermelha-ferrugem para identidade clara com o Planeta Vermelho.
  */
 export function DisplayedMarsOrbitGuide({ sunDirection }: { sunDirection: [number, number, number] }) {
@@ -322,6 +322,98 @@ export function DisplayedMarsOrbitGuide({ sunDirection }: { sunDirection: [numbe
 
     const lineObject = useMemo(
         () => createOrbitLine(points, '#c0501a', 0.13),
+        [points],
+    );
+
+    useEffect(() => () => disposeOrbitLine(lineObject), [lineObject]);
+
+    if (points.length === 0) return null;
+    return <primitive object={lineObject} />;
+}
+
+/**
+ * Semi-major axis de Saturno em AU. Fonte: IAU / NASA Planetary Fact Sheet.
+ */
+const SATURN_SEMI_MAJOR_AU = 9.5392;
+
+/**
+ * Guia visual da órbita de Saturno ao redor do Sol na cena geocêntrica.
+ *
+ * Mesmo padrão dos outros planetas — anel centrado no Sol com
+ * raio = SATURN_SEMI_MAJOR_AU × SUN_DISPLAY_DL.
+ * Saturno fica além de Júpiter — o anel mais externo de todos os planetas exibidos.
+ * Cor dourado-ocre para identidade com os anéis de Saturno.
+ * Opacidade menor (0.09) pois é o mais distante e serve apenas como moldura extrema.
+ */
+export function DisplayedSaturnOrbitGuide({ sunDirection }: { sunDirection: [number, number, number] }) {
+    const points = useMemo(() => {
+        const sunPos = sunEclipticDisplayPosition(sunDirection);
+        const saturnOrbitRadius = SATURN_SEMI_MAJOR_AU * SUN_DISPLAY_DL;
+
+        const earthDir = sunPos.clone().multiplyScalar(-1).normalize();
+        const tangent = new THREE.Vector3(-earthDir.z, 0, earthDir.x);
+        if (tangent.lengthSq() < 1e-6) tangent.set(1, 0, 0);
+        else tangent.normalize();
+
+        const pts: number[] = [];
+        for (let i = 0; i <= ORBIT_LINE_SEGMENTS; i += 1) {
+            const a = (i / ORBIT_LINE_SEGMENTS) * Math.PI * 2;
+            const pt = sunPos.clone()
+                .add(earthDir.clone().multiplyScalar(Math.cos(a) * saturnOrbitRadius))
+                .add(tangent.clone().multiplyScalar(Math.sin(a) * saturnOrbitRadius));
+            pts.push(pt.x, pt.y, pt.z);
+        }
+        return new Float32Array(pts);
+    }, [sunDirection]);
+
+    const lineObject = useMemo(
+        () => createOrbitLine(points, '#c8a840', 0.09),
+        [points],
+    );
+
+    useEffect(() => () => disposeOrbitLine(lineObject), [lineObject]);
+
+    if (points.length === 0) return null;
+    return <primitive object={lineObject} />;
+}
+
+/**
+ * Semi-major axis de Júpiter em AU. Fonte: IAU / NASA Planetary Fact Sheet.
+ */
+const JUPITER_SEMI_MAJOR_AU = 5.2028;
+
+/**
+ * Guia visual da órbita de Júpiter ao redor do Sol na cena geocêntrica.
+ *
+ * Mesmo padrão dos outros planetas — anel centrado no Sol com
+ * raio = JUPITER_SEMI_MAJOR_AU × SUN_DISPLAY_DL.
+ * Júpiter fica bem além de Marte — o anel mais externo e maior de todos os planetas exibidos.
+ * Cor laranja-bege suave para identidade com as bandas de amônia do Gigante.
+ * Opacidade ligeiramente menor (0.11) pois é o mais distante e serve apenas como moldura.
+ */
+export function DisplayedJupiterOrbitGuide({ sunDirection }: { sunDirection: [number, number, number] }) {
+    const points = useMemo(() => {
+        const sunPos = sunEclipticDisplayPosition(sunDirection);
+        const jupiterOrbitRadius = JUPITER_SEMI_MAJOR_AU * SUN_DISPLAY_DL;
+
+        const earthDir = sunPos.clone().multiplyScalar(-1).normalize();
+        const tangent = new THREE.Vector3(-earthDir.z, 0, earthDir.x);
+        if (tangent.lengthSq() < 1e-6) tangent.set(1, 0, 0);
+        else tangent.normalize();
+
+        const pts: number[] = [];
+        for (let i = 0; i <= ORBIT_LINE_SEGMENTS; i += 1) {
+            const a = (i / ORBIT_LINE_SEGMENTS) * Math.PI * 2;
+            const pt = sunPos.clone()
+                .add(earthDir.clone().multiplyScalar(Math.cos(a) * jupiterOrbitRadius))
+                .add(tangent.clone().multiplyScalar(Math.sin(a) * jupiterOrbitRadius));
+            pts.push(pt.x, pt.y, pt.z);
+        }
+        return new Float32Array(pts);
+    }, [sunDirection]);
+
+    const lineObject = useMemo(
+        () => createOrbitLine(points, '#c8a060', 0.11),
         [points],
     );
 
