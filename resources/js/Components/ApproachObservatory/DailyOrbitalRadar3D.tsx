@@ -365,9 +365,8 @@ export function DailyOrbitalRadar3D({
         setSaturnFocusTarget(null);
         setUranusFocusTarget(null);
         setNeptuneFocusTarget(null);
-        const pos = ephemeris?.sunScenePosition;
         const doFocus = () => {
-            if (pos) setSunFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.5));
+            setSunFocusTarget(framingForBody(new THREE.Vector3(0, 0, 0), 0.5));
         };
         if (orbitMode) {
             triggerTransition(() => { setOrbitMode(false); doFocus(); });

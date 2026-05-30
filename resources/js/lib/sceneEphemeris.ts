@@ -224,7 +224,9 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         // heliocêntrica real. A Terra também é posicionada assim — earthScenePosition é o ponto
         // de ancoragem de tudo que é geocêntrico (Lua, asteroides).
         function helioToScene(ecl: { x: number; y: number; z: number }): [number, number, number] {
-            return [ecl.x * ORBIT_AU_SCALE, ecl.z * ORBIT_AU_SCALE, ecl.y * ORBIT_AU_SCALE];
+            // Eclíptica J2000 → cena Three.js: ecl.x→x, ecl.z→y (norte eclíptico), -ecl.y→z
+            // O sinal negativo em Z preserva a orientação anti-horária das órbitas vista de cima.
+            return [ecl.x * ORBIT_AU_SCALE, ecl.z * ORBIT_AU_SCALE, -ecl.y * ORBIT_AU_SCALE];
         }
 
         const earthScenePosition = helioToScene(earthHelioPositionAU);
