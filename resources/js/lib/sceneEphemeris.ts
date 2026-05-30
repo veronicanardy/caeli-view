@@ -126,6 +126,12 @@ export type SceneEphemeris = {
      * at SATURN_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
      */
     saturnScenePosition: [number, number, number];
+    /**
+     * Uranus's scene position, same convention as mercuryScenePosition.
+     * Derived from HelioVector(Body.Uranus) → ecliptic J2000 → placed on the heliocentric ring
+     * at URANUS_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
+     */
+    uranusScenePosition: [number, number, number];
 };
 
 let modulePromise: Promise<typeof Astronomy> | null = null;
@@ -335,6 +341,20 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             sunEclZ + (saRawZ / saLen) * saturnOrbitRadius,
         ];
 
+        // Uranus: same pipeline — heliocentric vector → ecliptic XZ direction → ring.
+        // Semi-major axis: 19.2184 AU (IAU / NASA Planetary Fact Sheet).
+        const uranusHelioEqj = A.HelioVector(A.Body.Uranus, date);
+        const uranusHelioEcl = A.RotateVector(eqjToEclMatrix(A), uranusHelioEqj);
+        const urRawX = uranusHelioEcl.x;
+        const urRawZ = uranusHelioEcl.y;  // ecliptic Y → scene Z
+        const urLen = Math.hypot(urRawX, urRawZ) || 1;
+        const uranusOrbitRadius = 19.2184 * SUN_DISPLAY_DL;
+        const uranusScenePosition: [number, number, number] = [
+            sunEclX + (urRawX / urLen) * uranusOrbitRadius,
+            0,
+            sunEclZ + (urRawZ / urLen) * uranusOrbitRadius,
+        ];
+
         return {
             sunDirection,
             sunScenePosition,
@@ -350,6 +370,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             marsScenePosition,
             jupiterScenePosition,
             saturnScenePosition,
+            uranusScenePosition,
         };
     } catch {
         return null;

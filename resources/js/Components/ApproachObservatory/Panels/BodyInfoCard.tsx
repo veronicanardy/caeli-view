@@ -23,7 +23,7 @@ interface BodyConfig {
     facts: BodyFact[];
 }
 
-const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn', BodyConfig> = {
+const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus', BodyConfig> = {
     earth: {
         namePt: 'Terra',
         nameEn: 'Earth',
@@ -136,10 +136,26 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '146 (Titã, Encélado, Réia…)' },
         ],
     },
+    uranus: {
+        namePt: 'Urano',
+        nameEn: 'Uranus',
+        subtitlePt: 'Planeta · Sistema Solar Externo',
+        subtitleEn: 'Planet · Outer Solar System',
+        contextPt: 'Gigante de gelo com inclinação axial extrema de 97,77° — Urano "rola" pela órbita com o polo apontando quase para o Sol. O metano em sua atmosfera absorve luz vermelha, dando a cor ciano característica. Exibido como contexto espacial. Posição em tempo real via JPL.',
+        contextEn: 'Ice giant with an extreme axial tilt of 97.77° — Uranus "rolls" along its orbit with its pole nearly pointing at the Sun. Methane in its atmosphere absorbs red light, giving it the characteristic cyan color. Shown for spatial context. Real-time position via JPL.',
+        dotColor: '#4ab8c8',
+        facts: [
+            { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '2.871 mi km (19,2 UA) / 2.871B km (19.2 AU)' },
+            { labelPt: 'Diâmetro',            labelEn: 'Diameter',             value: '51.118 km (4× a Terra)' },
+            { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '84 anos / 84 years' },
+            { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '17h 14min (retrógrado)' },
+            { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '28 (Titânia, Oberon, Ariel…)' },
+        ],
+    },
 };
 
 interface BodyInfoCardProps {
-    body: 'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn';
+    body: 'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus';
     onClose: () => void;
     locale: 'pt-BR' | 'en';
 }

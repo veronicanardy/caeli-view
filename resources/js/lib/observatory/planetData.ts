@@ -138,6 +138,32 @@ export const SATURN: PlanetDatum = {
 };
 
 /**
+ * Uranus's physical constants.
+ *
+ * physicalRadiusDl = 25559 km / 384400 km/DL = 0.06650 DL (raio equatorial)
+ *
+ * Urano é o terceiro maior planeta do Sistema Solar em raio — 25559 km, ~4× a Terra.
+ * Renderizamos em 0.13 DL (~1.96× físico) — um leve exageramento necessário pois Urano
+ * ficaria muito pequeno sem ele ao lado de Júpiter (0.19 DL) e Saturno (0.16 DL).
+ *
+ * Rotation: −0.71833 Earth days (17h 14min, retrógrado na convenção IAU).
+ *   A inclinação axial de 97.77° faz Urano "rolar" pela órbita — o polo aponta quase
+ *   para o Sol em certas épocas. A rotação aparece retrógrada nessa convenção.
+ * Axial tilt: 97.77° — o maior de todos os planetas (IAU WGCCRE 2015).
+ *
+ * Textura: atmosfera superior de H₂/He/CH₄ — o metano absorve vermelho, dando a cor ciano.
+ *   Aparência notavelmente uniforme, sem as bandas marcantes de Júpiter/Saturno.
+ */
+export const URANUS: PlanetDatum = {
+    physicalRadiusDl: 25_559 / KM_PER_LD,              // 0.06650 DL — true equatorial radius
+    visualRadiusDl: 0.13,                                // rendered radius (~1.96× — leve exagero)
+    rotationPeriodS: 0.71833 * 24 * 3600,               // magnitude; sinal negativo no spin
+    axialTiltDeg: 97.77,                                 // obliquity (IAU WGCCRE 2015) — extremo!
+    texturePath: '/images/uranus/uranus-2k.jpg',
+    fallbackColor: '#7ec8d8',                            // ciano-azulado — metano atmosférico
+};
+
+/**
  * Jupiter's physical constants.
  *
  * physicalRadiusDl = 71492 km / 384400 km/DL = 0.18596 DL (raio equatorial)

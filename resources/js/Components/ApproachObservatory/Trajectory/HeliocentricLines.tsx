@@ -332,6 +332,52 @@ export function DisplayedMarsOrbitGuide({ sunDirection }: { sunDirection: [numbe
 }
 
 /**
+ * Semi-major axis de Urano em AU. Fonte: IAU / NASA Planetary Fact Sheet.
+ */
+const URANUS_SEMI_MAJOR_AU = 19.2184;
+
+/**
+ * Guia visual da órbita de Urano ao redor do Sol na cena geocêntrica.
+ *
+ * Mesmo padrão dos outros planetas — anel centrado no Sol com
+ * raio = URANUS_SEMI_MAJOR_AU × SUN_DISPLAY_DL.
+ * Urano fica além de Saturno — segundo anel mais externo.
+ * Cor ciano-azulada para identidade com o metano atmosférico de Urano.
+ * Opacidade muito baixa (0.07) pois é distante e serve apenas como moldura externa.
+ */
+export function DisplayedUranusOrbitGuide({ sunDirection }: { sunDirection: [number, number, number] }) {
+    const points = useMemo(() => {
+        const sunPos = sunEclipticDisplayPosition(sunDirection);
+        const uranusOrbitRadius = URANUS_SEMI_MAJOR_AU * SUN_DISPLAY_DL;
+
+        const earthDir = sunPos.clone().multiplyScalar(-1).normalize();
+        const tangent = new THREE.Vector3(-earthDir.z, 0, earthDir.x);
+        if (tangent.lengthSq() < 1e-6) tangent.set(1, 0, 0);
+        else tangent.normalize();
+
+        const pts: number[] = [];
+        for (let i = 0; i <= ORBIT_LINE_SEGMENTS; i += 1) {
+            const a = (i / ORBIT_LINE_SEGMENTS) * Math.PI * 2;
+            const pt = sunPos.clone()
+                .add(earthDir.clone().multiplyScalar(Math.cos(a) * uranusOrbitRadius))
+                .add(tangent.clone().multiplyScalar(Math.sin(a) * uranusOrbitRadius));
+            pts.push(pt.x, pt.y, pt.z);
+        }
+        return new Float32Array(pts);
+    }, [sunDirection]);
+
+    const lineObject = useMemo(
+        () => createOrbitLine(points, '#4ab8c8', 0.07),
+        [points],
+    );
+
+    useEffect(() => () => disposeOrbitLine(lineObject), [lineObject]);
+
+    if (points.length === 0) return null;
+    return <primitive object={lineObject} />;
+}
+
+/**
  * Semi-major axis de Saturno em AU. Fonte: IAU / NASA Planetary Fact Sheet.
  */
 const SATURN_SEMI_MAJOR_AU = 9.5392;
