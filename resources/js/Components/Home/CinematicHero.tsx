@@ -6,7 +6,7 @@ import { useSkyObservation } from '@/hooks/useSkyObservation';
 import { locationStatusLabel, useUserLocation } from '@/hooks/useUserLocation';
 import { useVisibleObjects } from '@/hooks/useVisibleObjects';
 import { useTranslation } from '@/i18n';
-import { formatNumber, lunarDistanceFromKm, lunarDistanceLabel } from '@/lib/format';
+import { formatNumber } from '@/lib/format';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import type { Apod, SpaceNewsHighlight, UnifiedApproach } from '@/types';
 import type { VisibleObject } from '@/services/visibleObjectsService';
@@ -207,24 +207,18 @@ function EditorialQuadCards({
         ? new Intl.DateTimeFormat(en ? 'en' : 'pt-BR', { day: '2-digit', month: 'short' }).format(new Date(spaceNews.publishedAt))
         : null;
 
-    // ── Card 2: Nota de observação ────────────────────────────────────
+    // ── Card 2: Céu esta noite (merged: observação + resumo) ─────────
     const observationLine = buildObservationNote(skySummary, cloudCover, seeing, visibleNowPlanets, moonIllumination, en);
-    const moonLine = en
-        ? `Moon ${formatNumber(moonIllumination, 0)}% illuminated`
-        : `Lua ${formatNumber(moonIllumination, 0)}% iluminada`;
+    const moonPhaseLine = moonPhaseLabel(moonIllumination, en);
     const cloudLine = cloudCover !== null
         ? (en ? `Clouds: ${formatNumber(cloudCover, 0)}%` : `Nuvens: ${formatNumber(cloudCover, 0)}%`)
         : null;
-    // ── Card 3: Resumo do céu ─────────────────────────────────────────
     const visibilityLabel = formatObservingVisibility(cloudCover, seeing, en);
     const observingConditionLine = en ? `Visibility: ${visibilityLabel}` : `Visibilidade: ${visibilityLabel}`;
     const planetsLine = formatVisiblePlanetsLine(visibleNowPlanets.map((p) => en ? p.nameEn : p.namePt), en);
-    // ── Card 4: Próxima aproximação ───────────────────────────────────
+    // ── Card 3: Próxima aproximação ───────────────────────────────────
     const approachName = approach ? resolveApproachIdentity(approach).displayName : null;
     const approachDate = approach?.approachDate ? formatApproachDate(approach.approachDate, en) : null;
-    const approachLunar = approach
-        ? lunarDistanceLabel(lunarDistanceFromKm(approach.nominalDistanceKm) ?? approach.lunarDistance)
-        : null;
     const approachKm = approach?.nominalDistanceKm != null
         ? `${formatNumber(approach.nominalDistanceKm, 0)} km`
         : null;
@@ -265,28 +259,28 @@ function EditorialQuadCards({
                     </div>
                 </article>
 
-                {/* 2. Nota de observação — enriquecida com chips */}
+                {/* 2. Céu esta noite */}
                 <article className="editorial-card editorial-card-observe editorial-card-feature editorial-card-fixed-height">
                     <span className="editorial-card-icon editorial-card-icon-mint" aria-hidden="true">
                         <Eye className="size-4" />
                     </span>
                     <div className="editorial-card-body">
-                        <span className="editorial-card-label">{t('home.hero.observationNote')}</span>
+                        <span className="editorial-card-label">{en ? 'Tonight\'s sky' : 'Céu esta noite'}</span>
                         <h3 className="editorial-card-title editorial-card-title-note">{observationLine}</h3>
                     </div>
                 </article>
             </div>
 
-            {/* Row 2: sky and approach cards */}
+            {/* Row 2: sky data and approach cards */}
             <div className="editorial-quad-row editorial-quad-row-bottom">
-                {/* 3. Resumo do céu */}
+                {/* 3. Dados do céu */}
                 <article className="editorial-card editorial-card-data editorial-card-sky">
                     <span className="editorial-card-icon editorial-card-icon-purple" aria-hidden="true">
                         <Moon className="size-4" />
                     </span>
                     <div className="editorial-card-body">
-                        <span className="editorial-card-label">{en ? 'Sky summary' : 'Resumo do céu'}</span>
-                        <h3 className="editorial-card-title editorial-card-main-value">{moonLine}</h3>
+                        <span className="editorial-card-label">{en ? 'Sky data' : 'Dados do céu'}</span>
+                        <h3 className="editorial-card-title editorial-card-main-value">{moonPhaseLine}</h3>
                         <div className="editorial-sky-list">
                             {cloudLine ? <span>{cloudLine}</span> : null}
                             <span>{observingConditionLine}</span>
@@ -307,7 +301,6 @@ function EditorialQuadCards({
                                 <h3 className="editorial-card-title editorial-card-main-value">{approachName}</h3>
                                 <div className="editorial-approach-details">
                                     {approachDate ? <span className="editorial-approach-date">{approachDate}</span> : null}
-                                    {approachLunar ? <span className="editorial-approach-item editorial-approach-item-accent">{approachLunar}</span> : null}
                                     {approachKm ? <span className="editorial-approach-item editorial-approach-item-dim">{approachKm}</span> : null}
                                 </div>
                             </>
@@ -355,13 +348,14 @@ function buildObservationNote(
     if (cloudCover !== null && cloudCover >= 85) {
         const moonPct = Math.round(moonIllumination);
         const moonVisible = moonPct >= 20;
+        const phase = moonPhaseLabel(moonIllumination, en);
         if (en) {
             return moonVisible
-                ? `Heavy cloud cover. The Moon (${moonPct}% lit) may still appear through gaps, but planets and faint objects will be hard to see.`
+                ? `Heavy cloud cover. The ${phase} may still appear through gaps, but planets and faint objects will be hard to see.`
                 : 'Heavy cloud cover expected. Conditions are unfavorable for observation tonight.';
         }
         return moonVisible
-            ? `Céu com muitas nuvens. A Lua (${moonPct}% iluminada) pode aparecer em brechas, mas planetas e objetos fracos tendem a ficar ocultos.`
+            ? `Céu com muitas nuvens. A ${phase} pode aparecer em brechas, mas planetas e objetos fracos tendem a ficar ocultos.`
             : 'Cobertura de nuvens densa. Condições pouco favoráveis para observação esta noite.';
     }
     if (cloudCover !== null && cloudCover >= 50) {
@@ -524,14 +518,47 @@ function HeroEarthFallback({ expanded: _expanded = false }: { expanded?: boolean
 
 function formatApproachDate(value: string, en: boolean): string {
     try {
-        const date = new Date(`${value}T00:00:00`);
+        // NASA format: "2026-Jun-01 03:26" or ISO "2026-06-01T03:26:00"
+        const normalized = value
+            .replace(
+                /^(\d{4})-([A-Za-z]{3})-(\d{2})\s*(.*)$/,
+                (_, year, mon, day, rest) => {
+                    const months: Record<string, string> = {
+                        Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+                        Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+                    };
+                    const time = rest ? rest.trim() : '00:00';
+                    return `${year}-${months[mon] ?? '01'}-${day}T${time}:00`;
+                },
+            );
+        const date = new Date(normalized);
         if (Number.isNaN(date.getTime())) return value;
         return new Intl.DateTimeFormat(en ? 'en' : 'pt-BR', {
             day: '2-digit',
-            month: 'short',
+            month: 'long',
             year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'UTC',
         }).format(date);
     } catch {
         return value;
     }
+}
+
+function moonPhaseLabel(illumination: number, en: boolean): string {
+    const pct = Math.round(illumination);
+    let phase: string;
+    if (pct <= 2) {
+        phase = en ? 'New Moon' : 'Lua nova';
+    } else if (pct <= 48) {
+        phase = en ? 'Crescent Moon' : 'Lua crescente';
+    } else if (pct <= 52) {
+        phase = en ? 'Quarter Moon' : 'Quarto de Lua';
+    } else if (pct <= 97) {
+        phase = en ? 'Gibbous Moon' : 'Lua gibosa';
+    } else {
+        phase = en ? 'Full Moon' : 'Lua cheia';
+    }
+    return en ? `${phase} (${pct}%)` : `${phase} (${pct}%)`;
 }
