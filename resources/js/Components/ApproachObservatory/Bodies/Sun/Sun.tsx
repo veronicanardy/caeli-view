@@ -1,7 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { SUN_FRAG, SUN_GLOW_FRAG, SUN_GLOW_VERT, SUN_VERT } from '@/lib/observatory/shaders/sun.glsl';
+import { SUN_GLOW_FRAG, SUN_GLOW_VERT } from '@/lib/observatory/shaders/sun.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 
 interface SunProps {
@@ -32,18 +32,16 @@ export function Sun({
     sunDirection,
 }: SunProps) {
     const en = locale === 'en';
-    const surfaceMat = useRef<THREE.ShaderMaterial>(null);
+    const surfaceMesh = useRef<THREE.Mesh>(null);
 
-    // Fotosfera animada (granulação + manchas solares) — uma estrela com vida, não
-    // um disco plano.
-    const surfaceMaterial = useMemo(
-        () => new THREE.ShaderMaterial({
-            uniforms: { uTime: { value: 0 } },
-            vertexShader: SUN_VERT,
-            fragmentShader: SUN_FRAG,
-        }),
-        [],
-    );
+    const sunTexture = useMemo(() => {
+        const loader = new THREE.TextureLoader();
+        const tex = loader.load('/images/sun/sun-8k.jpg');
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+    }, []);
+
+    useEffect(() => () => sunTexture.dispose(), [sunTexture]);
 
     // Brilho da corona como uma única casca fresnel: uma esfera de faces voltadas para
     // dentro cuja opacidade cai suavemente em direção à borda. Isso produz um halo suave
@@ -62,23 +60,16 @@ export function Sun({
         [],
     );
 
-    useEffect(() => {
-        return () => {
-            surfaceMaterial.dispose();
-            glowMaterial.dispose();
-        };
-    }, [surfaceMaterial, glowMaterial]);
+    useEffect(() => () => glowMaterial.dispose(), [glowMaterial]);
 
-    useFrame(({ clock }) => {
-        if (surfaceMat.current) surfaceMat.current.uniforms.uTime.value = clock.getElapsedTime();
+    useFrame((_state: unknown, delta: number) => {
+        if (surfaceMesh.current) surfaceMesh.current.rotation.y += delta * 0.004;
     });
 
     return (
         <group>
             {withLighting ? (
                 <>
-                    {/* directionalLight usa position como direção, não como origem.
-                        Quando Sol está na origem [0,0,0], usa sunDirection invertido (Sol→Terra). */}
                     <directionalLight
                         position={position[0] === 0 && position[1] === 0 && position[2] === 0
                             ? (sunDirection ?? [1, 0, 0])
@@ -91,16 +82,20 @@ export function Sun({
             ) : null}
 
             <group position={position}>
-                <mesh>
-                    <sphereGeometry args={[radius, 160, 96]} />
-                    <primitive ref={surfaceMat} object={surfaceMaterial} attach="material" />
+                <mesh ref={surfaceMesh}>
+                    <sphereGeometry args={[radius, 64, 64]} />
+                    <meshStandardMaterial
+                        map={sunTexture}
+                        emissiveMap={sunTexture}
+                        emissive={new THREE.Color(1.0, 0.7, 0.3)}
+                        emissiveIntensity={1.2}
+                        roughness={1}
+                        metalness={0}
+                    />
                 </mesh>
-                <mesh scale={1.018}>
-                    <sphereGeometry args={[radius, 96, 64]} />
-                    <meshBasicMaterial color="#ffd27a" transparent opacity={0.1} depthWrite={false} blending={THREE.AdditiveBlending} />
-                </mesh>
-                <mesh scale={1.18}>
-                    <sphereGeometry args={[radius, 96, 64]} />
+                {/* Corona: BackSide esfera grande — o shader faz todo o fade internamente */}
+                <mesh scale={2.2}>
+                    <sphereGeometry args={[radius, 128, 96]} />
                     <primitive object={glowMaterial} attach="material" />
                 </mesh>
                 <SunProminences radius={radius} />
@@ -158,7 +153,7 @@ function SunProminences({ radius }: { radius: number }) {
         });
     }, [arcs]);
 
-    useFrame((_, delta) => {
+    useFrame((_state: unknown, delta: number) => {
         if (groupRef.current) groupRef.current.rotation.y += delta * 0.012;
     });
 
