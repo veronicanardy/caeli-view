@@ -2,7 +2,7 @@ import { OrbitControls } from '@react-three/drei';
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, ObjectLimit, UnifiedApproach } from '@/types';
-import { compressDistanceDl, compressSceneVector, SUN_DISPLAY_DL, type SceneEphemeris } from '@/lib/sceneEphemeris';
+import { compressDistanceDl, compressSceneVector, KM_PER_LD, SUN_DISPLAY_DL, type SceneEphemeris } from '@/lib/sceneEphemeris';
 import { currentPositionInScene } from '@/lib/observatory/trajectorySampling';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
 import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
@@ -26,7 +26,6 @@ import { HeliocentricScene } from './HeliocentricScene';
 import { CameraRig, InertialZoom, MAX_CAMERA_DISTANCE, type FocusFraming, framingForBody } from './CameraRig';
 import type { CameraIntent } from './cameraIntent';
 
-const KM_PER_LD = 384_400;
 const SUN_RADIUS_KM = 695_700;
 const SUN_RADIUS_SCENE = SUN_RADIUS_KM / KM_PER_LD;
 // --------------- Scene ---------------

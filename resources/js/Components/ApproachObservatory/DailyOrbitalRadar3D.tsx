@@ -25,6 +25,27 @@ import {
 } from './Scene/CameraRig';
 import { nextCameraNonce, type CameraIntent } from './Scene/cameraIntent';
 
+// --------------- Configuração de planetas ---------------
+
+type PlanetId = 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune';
+
+type PlanetCfg = {
+    ephemerisKey: keyof Pick<SceneEphemeris,
+        'mercuryScenePosition' | 'venusScenePosition' | 'marsScenePosition' |
+        'jupiterScenePosition' | 'saturnScenePosition' | 'uranusScenePosition' | 'neptuneScenePosition'>;
+    framingRadius: number;
+};
+
+const PLANET_CONFIG: Record<PlanetId, PlanetCfg> = {
+    mercury: { ephemerisKey: 'mercuryScenePosition', framingRadius: 0.028 },
+    venus:   { ephemerisKey: 'venusScenePosition',   framingRadius: 0.038 },
+    mars:    { ephemerisKey: 'marsScenePosition',     framingRadius: 0.048 },
+    jupiter: { ephemerisKey: 'jupiterScenePosition',  framingRadius: 0.19  },
+    saturn:  { ephemerisKey: 'saturnScenePosition',   framingRadius: 0.16  },
+    uranus:  { ephemerisKey: 'uranusScenePosition',   framingRadius: 0.13  },
+    neptune: { ephemerisKey: 'neptuneScenePosition',  framingRadius: 0.12  },
+};
+
 /**
  * Radar orbital 3D — visualização principal da aproximação diária.
  *
@@ -211,14 +232,7 @@ export function DailyOrbitalRadar3D({
     const pickView = (key: CameraViewKey) => {
         onClearSelection?.();
         setBodyCardOpen(null);
-        setSunFocusTarget(null);
-        setMercuryFocusTarget(null);
-        setVenusFocusTarget(null);
-        setMarsFocusTarget(null);
-        setJupiterFocusTarget(null);
-        setSaturnFocusTarget(null);
-        setUranusFocusTarget(null);
-        setNeptuneFocusTarget(null);
+        clearPlanetTargets();
         setCameraIntent((intent) => ({ kind: 'preset', view: key, nonce: nextCameraNonce(intent) }));
     };
 
@@ -227,14 +241,7 @@ export function DailyOrbitalRadar3D({
         const newHasOrbit = Boolean(newObject?.trajectory?.orbitalElements);
         if (!orbitMode || !newHasOrbit) setOrbitMode(false);
         setBodyCardOpen(null);
-        setSunFocusTarget(null);
-        setMercuryFocusTarget(null);
-        setVenusFocusTarget(null);
-        setMarsFocusTarget(null);
-        setJupiterFocusTarget(null);
-        setSaturnFocusTarget(null);
-        setUranusFocusTarget(null);
-        setNeptuneFocusTarget(null);
+        clearPlanetTargets();
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
         onSelect(approach);
     };
@@ -249,29 +256,21 @@ export function DailyOrbitalRadar3D({
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
     });
 
-    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune' | null>(null);
-    const [mercuryFocusTarget, setMercuryFocusTarget] = useState<FocusFraming | null>(null);
-    const [venusFocusTarget, setVenusFocusTarget] = useState<FocusFraming | null>(null);
-    const [marsFocusTarget, setMarsFocusTarget] = useState<FocusFraming | null>(null);
-    const [jupiterFocusTarget, setJupiterFocusTarget] = useState<FocusFraming | null>(null);
-    const [saturnFocusTarget, setSaturnFocusTarget] = useState<FocusFraming | null>(null);
-    const [uranusFocusTarget, setUranusFocusTarget] = useState<FocusFraming | null>(null);
-    const [neptuneFocusTarget, setNeptuneFocusTarget] = useState<FocusFraming | null>(null);
+    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'sun' | PlanetId | null>(null);
+    const [planetFocusTargets, setPlanetFocusTargets] = useState<Partial<Record<PlanetId, FocusFraming>>>({});
     const [sunFocusTarget, setSunFocusTarget] = useState<FocusFraming | null>(null);
+
+    const clearPlanetTargets = useCallback(() => {
+        setPlanetFocusTargets({});
+        setSunFocusTarget(null);
+    }, []);
 
     // Foca Terra ou Lua. Se estiver em modo órbita, dispara o overlay de transição antes de
     // re-enquadrar — o mesmo tratamento dado ao botão "Voltar ao Asteroide".
     const focusBody = (body: 'earth' | 'moon') => {
         onClearSelection?.();
         setBodyCardOpen(body);
-        setSunFocusTarget(null);
-        setMercuryFocusTarget(null);
-        setVenusFocusTarget(null);
-        setMarsFocusTarget(null);
-        setJupiterFocusTarget(null);
-        setSaturnFocusTarget(null);
-        setUranusFocusTarget(null);
-        setNeptuneFocusTarget(null);
+        clearPlanetTargets();
         const doFocus = () => setCameraIntent((intent) => ({ kind: 'body', view: intent.view, body, nonce: nextCameraNonce(intent) }));
         if (orbitMode) {
             triggerTransition(() => { setOrbitMode(false); doFocus(); });
@@ -280,114 +279,23 @@ export function DailyOrbitalRadar3D({
         }
     };
 
-    const focusMercury = useCallback(() => {
+    const focusPlanet = useCallback((id: PlanetId) => {
         onClearSelection?.();
-        setBodyCardOpen('mercury');
+        setBodyCardOpen(id);
         setSunFocusTarget(null);
-        setVenusFocusTarget(null);
-        setMarsFocusTarget(null);
-        setJupiterFocusTarget(null);
-        setSaturnFocusTarget(null);
-        setUranusFocusTarget(null);
-        setNeptuneFocusTarget(null);
-        const pos = ephemeris?.mercuryScenePosition;
-        if (pos) setMercuryFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.028));
-    }, [ephemeris, onClearSelection]);
-
-    const focusVenus = useCallback(() => {
-        onClearSelection?.();
-        setBodyCardOpen('venus');
-        setSunFocusTarget(null);
-        setMercuryFocusTarget(null);
-        setMarsFocusTarget(null);
-        setJupiterFocusTarget(null);
-        setSaturnFocusTarget(null);
-        setUranusFocusTarget(null);
-        setNeptuneFocusTarget(null);
-        const pos = ephemeris?.venusScenePosition;
-        if (pos) setVenusFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.038));
-    }, [ephemeris, onClearSelection]);
-
-    const focusMars = useCallback(() => {
-        onClearSelection?.();
-        setBodyCardOpen('mars');
-        setSunFocusTarget(null);
-        setMercuryFocusTarget(null);
-        setVenusFocusTarget(null);
-        setJupiterFocusTarget(null);
-        setSaturnFocusTarget(null);
-        setUranusFocusTarget(null);
-        setNeptuneFocusTarget(null);
-        const pos = ephemeris?.marsScenePosition;
-        if (pos) setMarsFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.048));
-    }, [ephemeris, onClearSelection]);
-
-    const focusJupiter = useCallback(() => {
-        onClearSelection?.();
-        setBodyCardOpen('jupiter');
-        setSunFocusTarget(null);
-        setMercuryFocusTarget(null);
-        setVenusFocusTarget(null);
-        setMarsFocusTarget(null);
-        setSaturnFocusTarget(null);
-        setUranusFocusTarget(null);
-        setNeptuneFocusTarget(null);
-        const pos = ephemeris?.jupiterScenePosition;
-        if (pos) setJupiterFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.19));
-    }, [ephemeris, onClearSelection]);
-
-    const focusSaturn = useCallback(() => {
-        onClearSelection?.();
-        setBodyCardOpen('saturn');
-        setSunFocusTarget(null);
-        setMercuryFocusTarget(null);
-        setVenusFocusTarget(null);
-        setMarsFocusTarget(null);
-        setJupiterFocusTarget(null);
-        setUranusFocusTarget(null);
-        setNeptuneFocusTarget(null);
-        const pos = ephemeris?.saturnScenePosition;
-        if (pos) setSaturnFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.16));
-    }, [ephemeris, onClearSelection]);
-
-    const focusUranus = useCallback(() => {
-        onClearSelection?.();
-        setBodyCardOpen('uranus');
-        setSunFocusTarget(null);
-        setMercuryFocusTarget(null);
-        setVenusFocusTarget(null);
-        setMarsFocusTarget(null);
-        setJupiterFocusTarget(null);
-        setSaturnFocusTarget(null);
-        setNeptuneFocusTarget(null);
-        const pos = ephemeris?.uranusScenePosition;
-        if (pos) setUranusFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.13));
-    }, [ephemeris, onClearSelection]);
-
-    const focusNeptune = useCallback(() => {
-        onClearSelection?.();
-        setBodyCardOpen('neptune');
-        setSunFocusTarget(null);
-        setMercuryFocusTarget(null);
-        setVenusFocusTarget(null);
-        setMarsFocusTarget(null);
-        setJupiterFocusTarget(null);
-        setSaturnFocusTarget(null);
-        setUranusFocusTarget(null);
-        const pos = ephemeris?.neptuneScenePosition;
-        if (pos) setNeptuneFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.12));
+        const cfg = PLANET_CONFIG[id];
+        const pos = ephemeris?.[cfg.ephemerisKey];
+        if (pos) {
+            setPlanetFocusTargets({ [id]: framingForBody(new THREE.Vector3(...pos), cfg.framingRadius) });
+        } else {
+            setPlanetFocusTargets({});
+        }
     }, [ephemeris, onClearSelection]);
 
     const focusSun = useCallback(() => {
         onClearSelection?.();
         setBodyCardOpen('sun');
-        setMercuryFocusTarget(null);
-        setVenusFocusTarget(null);
-        setMarsFocusTarget(null);
-        setJupiterFocusTarget(null);
-        setSaturnFocusTarget(null);
-        setUranusFocusTarget(null);
-        setNeptuneFocusTarget(null);
+        clearPlanetTargets();
         const doFocus = () => {
             setSunFocusTarget(framingForBody(new THREE.Vector3(0, 0, 0), 0.5));
         };
@@ -396,15 +304,7 @@ export function DailyOrbitalRadar3D({
         } else {
             doFocus();
         }
-    }, [ephemeris, onClearSelection, orbitMode, triggerTransition]);
-
-    const mercuryFocused = bodyCardOpen === 'mercury';
-    const venusFocused = bodyCardOpen === 'venus';
-    const marsFocused = bodyCardOpen === 'mars';
-    const jupiterFocused = bodyCardOpen === 'jupiter';
-    const saturnFocused = bodyCardOpen === 'saturn';
-    const uranusFocused = bodyCardOpen === 'uranus';
-    const neptuneFocused = bodyCardOpen === 'neptune';
+    }, [onClearSelection, orbitMode, triggerTransition, clearPlanetTargets]);
 
     const resetView = () => {
         onClearSelection?.();
@@ -441,9 +341,9 @@ export function DailyOrbitalRadar3D({
                             closestNowObjects={sceneObjects}
                             selectedId={selectedId}
                             orbitMode={orbitMode}
-                            onSelect={(approach) => { setBodyCardOpen(null); setSunFocusTarget(null); setMercuryFocusTarget(null); setVenusFocusTarget(null); setMarsFocusTarget(null); setJupiterFocusTarget(null); setSaturnFocusTarget(null); setUranusFocusTarget(null); setNeptuneFocusTarget(null); selectObject(approach); }}
+                            onSelect={(approach) => { setBodyCardOpen(null); clearPlanetTargets(); selectObject(approach); }}
                             cameraIntent={cameraIntent}
-                            focusTarget={focusTarget ?? sunFocusTarget ?? mercuryFocusTarget ?? venusFocusTarget ?? marsFocusTarget ?? jupiterFocusTarget ?? saturnFocusTarget ?? uranusFocusTarget ?? neptuneFocusTarget}
+                            focusTarget={focusTarget ?? sunFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null}
                             ephemeris={ephemeris}
                             fallbackSunDirection={fallbackSunDirection}
                             locale={locale}
@@ -451,20 +351,20 @@ export function DailyOrbitalRadar3D({
                             showLabels={showLabels}
                             onFocusSun={focusSun}
                             isSunFocused={bodyCardOpen === 'sun'}
-                            onFocusMercury={focusMercury}
-                            isMercuryFocused={mercuryFocused}
-                            onFocusVenus={focusVenus}
-                            isVenusFocused={venusFocused}
-                            onFocusMars={focusMars}
-                            isMarsFocused={marsFocused}
-                            onFocusJupiter={focusJupiter}
-                            isJupiterFocused={jupiterFocused}
-                            onFocusSaturn={focusSaturn}
-                            isSaturnFocused={saturnFocused}
-                            onFocusUranus={focusUranus}
-                            isUranusFocused={uranusFocused}
-                            onFocusNeptune={focusNeptune}
-                            isNeptuneFocused={neptuneFocused}
+                            onFocusMercury={() => focusPlanet('mercury')}
+                            isMercuryFocused={bodyCardOpen === 'mercury'}
+                            onFocusVenus={() => focusPlanet('venus')}
+                            isVenusFocused={bodyCardOpen === 'venus'}
+                            onFocusMars={() => focusPlanet('mars')}
+                            isMarsFocused={bodyCardOpen === 'mars'}
+                            onFocusJupiter={() => focusPlanet('jupiter')}
+                            isJupiterFocused={bodyCardOpen === 'jupiter'}
+                            onFocusSaturn={() => focusPlanet('saturn')}
+                            isSaturnFocused={bodyCardOpen === 'saturn'}
+                            onFocusUranus={() => focusPlanet('uranus')}
+                            isUranusFocused={bodyCardOpen === 'uranus'}
+                            onFocusNeptune={() => focusPlanet('neptune')}
+                            isNeptuneFocused={bodyCardOpen === 'neptune'}
                             onFocusBody={focusBody}
                         />
                     </Suspense>
@@ -545,20 +445,8 @@ export function DailyOrbitalRadar3D({
                                 </div>
                                 <PlanetFlyout
                                     en={en}
-                                    mercuryFocused={mercuryFocused}
-                                    venusFocused={venusFocused}
-                                    marsFocused={marsFocused}
-                                    jupiterFocused={jupiterFocused}
-                                    saturnFocused={saturnFocused}
-                                    uranusFocused={uranusFocused}
-                                    neptuneFocused={neptuneFocused}
-                                    onFocusMercury={focusMercury}
-                                    onFocusVenus={focusVenus}
-                                    onFocusMars={focusMars}
-                                    onFocusJupiter={focusJupiter}
-                                    onFocusSaturn={focusSaturn}
-                                    onFocusUranus={focusUranus}
-                                    onFocusNeptune={focusNeptune}
+                                    focusedId={bodyCardOpen as PlanetId | null}
+                                    onFocus={focusPlanet}
                                 />
                             </div>
                         ) : null}
@@ -981,56 +869,26 @@ function ReferenceSection({
     );
 }
 
-function PlanetFlyout({
-    en,
-    mercuryFocused,
-    venusFocused,
-    marsFocused,
-    jupiterFocused,
-    saturnFocused,
-    uranusFocused,
-    neptuneFocused,
-    onFocusMercury,
-    onFocusVenus,
-    onFocusMars,
-    onFocusJupiter,
-    onFocusSaturn,
-    onFocusUranus,
-    onFocusNeptune,
-}: {
-    en: boolean;
-    mercuryFocused: boolean;
-    venusFocused: boolean;
-    marsFocused: boolean;
-    jupiterFocused: boolean;
-    saturnFocused: boolean;
-    uranusFocused: boolean;
-    neptuneFocused: boolean;
-    onFocusMercury: () => void;
-    onFocusVenus: () => void;
-    onFocusMars: () => void;
-    onFocusJupiter: () => void;
-    onFocusSaturn: () => void;
-    onFocusUranus: () => void;
-    onFocusNeptune: () => void;
-}) {
+const PLANET_LIST = [
+    { id: 'mercury' as PlanetId, color: '#b0b8c8', labelPt: 'Mercúrio', labelEn: 'Mercury' },
+    { id: 'venus'   as PlanetId, color: '#c8b870', labelPt: 'Vênus',    labelEn: 'Venus'   },
+    { id: 'mars'    as PlanetId, color: '#c0501a', labelPt: 'Marte',    labelEn: 'Mars'    },
+    { id: 'jupiter' as PlanetId, color: '#c8a060', labelPt: 'Júpiter',  labelEn: 'Jupiter' },
+    { id: 'saturn'  as PlanetId, color: '#c8a840', labelPt: 'Saturno',  labelEn: 'Saturn'  },
+    { id: 'uranus'  as PlanetId, color: '#4ab8c8', labelPt: 'Urano',    labelEn: 'Uranus'  },
+    { id: 'neptune' as PlanetId, color: '#2878d8', labelPt: 'Netuno',   labelEn: 'Neptune' },
+];
+
+function PlanetFlyout({ en, focusedId, onFocus }: { en: boolean; focusedId: PlanetId | null; onFocus: (id: PlanetId) => void }) {
     const btnCls = 'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan';
     return (
         <div className="px-1 py-1 space-y-0.5">
-            {([
-                { key: 'mercury', color: '#b0b8c8', labelPt: 'Mercúrio', labelEn: 'Mercury', focused: mercuryFocused, onFocus: onFocusMercury },
-                { key: 'venus',   color: '#c8b870', labelPt: 'Vênus',    labelEn: 'Venus',   focused: venusFocused,   onFocus: onFocusVenus },
-                { key: 'mars',    color: '#c0501a', labelPt: 'Marte',    labelEn: 'Mars',    focused: marsFocused,    onFocus: onFocusMars },
-                { key: 'jupiter', color: '#c8a060', labelPt: 'Júpiter',  labelEn: 'Jupiter', focused: jupiterFocused, onFocus: onFocusJupiter },
-                { key: 'saturn',  color: '#c8a840', labelPt: 'Saturno',  labelEn: 'Saturn',  focused: saturnFocused,  onFocus: onFocusSaturn },
-                { key: 'uranus',  color: '#4ab8c8', labelPt: 'Urano',    labelEn: 'Uranus',  focused: uranusFocused,  onFocus: onFocusUranus },
-                { key: 'neptune', color: '#2878d8', labelPt: 'Netuno',   labelEn: 'Neptune', focused: neptuneFocused, onFocus: onFocusNeptune },
-            ] as const).map((p) => (
+            {PLANET_LIST.map((p) => (
                 <button
-                    key={p.key}
+                    key={p.id}
                     type="button"
-                    onClick={p.onFocus}
-                    className={[btnCls, p.focused ? 'text-white' : ''].join(' ')}
+                    onClick={() => onFocus(p.id)}
+                    className={[btnCls, p.id === focusedId ? 'text-white' : ''].join(' ')}
                 >
                     <span className="inline-block size-2 shrink-0 rounded-full ring-1 ring-white/20" style={{ backgroundColor: p.color }} />
                     <span className="font-medium">{en ? p.labelEn : p.labelPt}</span>

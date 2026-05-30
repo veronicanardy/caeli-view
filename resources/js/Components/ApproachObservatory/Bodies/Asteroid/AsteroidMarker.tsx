@@ -1,4 +1,5 @@
 ﻿import { useFrame } from '@react-three/fiber';
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
@@ -70,9 +71,7 @@ export function AsteroidMarker({
     const rockRef = useRef<THREE.Group>(null);
 
     useEffect(() => {
-        return () => {
-            document.body.style.cursor = '';
-        };
+        return () => { cursorPointerLeave(); };
     }, []);
 
     const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
@@ -110,11 +109,11 @@ export function AsteroidMarker({
                     onPointerOver={(e) => {
                         e.stopPropagation();
                         setHovered(true);
-                        document.body.style.cursor = 'pointer';
+                        cursorPointerEnter();
                     }}
                     onPointerOut={() => {
                         setHovered(false);
-                        document.body.style.cursor = '';
+                        cursorPointerLeave();
                     }}
                     onClick={(e) => {
                         e.stopPropagation();

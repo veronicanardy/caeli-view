@@ -22,7 +22,7 @@
  *   - Axial tilt:         IAU WGCCRE 2015 pole orientation (sub-degree for Mercury)
  */
 
-const KM_PER_LD = 384_400;
+import { KM_PER_LD } from '@/lib/sceneEphemeris';
 
 export interface PlanetDatum {
     /** IAU mean radius, km → DL. */

@@ -80,8 +80,8 @@ const BODIES: Record<'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | '
         nameEn: 'Mercury',
         subtitlePt: 'Planeta · Sistema Solar Interno',
         subtitleEn: 'Planet · Inner Solar System',
-        contextPt: 'Pequeno, veloz e extremo. Mercúrio dá uma volta ao redor do Sol em apenas 88 dias e quase não tem atmosfera para suavizar suas temperaturas.',
-        contextEn: 'Small, fast, and extreme. Mercury completes an orbit around the Sun in only 88 days and has almost no atmosphere to soften its temperatures.',
+        contextPt: 'Pequeno, veloz e extremo. Mercúrio dá uma volta ao redor do Sol em apenas 88 dias e segue a órbita mais elíptica entre os oito planetas — por isso, no CaeliView, seu caminho parece mais alongado que o dos demais.',
+        contextEn: 'Small, fast, and extreme. Mercury completes an orbit around the Sun in only 88 days and follows the most elliptical orbit among the eight planets — which is why, in CaeliView, its path looks more stretched than the others.',
         dotColor: '#b0b8c8',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '57,9 mi km (0,387 UA) / 57.9M km (0.387 AU)' },
@@ -114,8 +114,8 @@ const BODIES: Record<'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | '
         nameEn: 'Mars',
         subtitlePt: 'Planeta · Sistema Solar Interno',
         subtitleEn: 'Planet · Inner Solar System',
-        contextPt: 'O planeta vermelho. Sua cor vem do óxido de ferro na superfície, e seu brilho avermelhado é uma das presenças planetárias mais reconhecíveis no céu da Terra.',
-        contextEn: 'The Red Planet. Its color comes from iron oxide on the surface, and its reddish glow is one of the most recognizable planetary sights in Earth’s sky.',
+        contextPt: 'O planeta vermelho. Sua cor vem do óxido de ferro na superfície, e sua órbita é mais elíptica que a da Terra — por isso sua distância até nós varia bastante ao longo dos anos.',
+        contextEn: 'The Red Planet. Its color comes from iron oxide on the surface, and its orbit is more elliptical than Earth’s — which is why its distance from us varies significantly over the years.',
         dotColor: '#c87070',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '227,9 mi km (1,524 UA) / 227.9M km (1.524 AU)' },
@@ -194,6 +194,8 @@ const BODIES: Record<'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | '
         ],
     },
 };
+import { PanelShell } from './PanelShell';
+
 interface BodyInfoCardProps {
     body: 'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune';
     onClose: () => void;
@@ -211,34 +213,14 @@ export function BodyInfoCard({ body, onClose, locale }: BodyInfoCardProps) {
     };
 
     return (
-        <div className="pointer-events-auto absolute left-3 top-[54%] z-20 h-[19rem] w-[min(22rem,48%)] -translate-y-1/2 overflow-hidden rounded-xl border border-white/15 bg-space-950/92 shadow-glow backdrop-blur-xl">
-
-            {/* Header */}
-            <div className="flex items-start justify-between gap-2 px-3 pt-3">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <span
-                            className="inline-block size-2.5 rounded-full ring-1 ring-white/20"
-                            style={{ backgroundColor: cfg.dotColor }}
-                        />
-                        <div className="text-[11px] uppercase tracking-wide text-white/45">
-                            {en ? cfg.subtitleEn : cfg.subtitlePt}
-                        </div>
-                    </div>
-                    <div className="mt-0.5 text-base font-semibold text-white">
-                        {en ? cfg.nameEn : cfg.namePt}
-                    </div>
-                </div>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="-mr-1 -mt-1 rounded-full p-1 text-white/55 transition outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
-                    aria-label={en ? 'Close' : 'Fechar'}
-                >
-                    ×
-                </button>
-            </div>
-
+        <PanelShell
+            onClose={onClose}
+            closeLabel={en ? 'Close' : 'Fechar'}
+            eyebrow={en ? cfg.subtitleEn : cfg.subtitlePt}
+            title={en ? cfg.nameEn : cfg.namePt}
+            dotColor={cfg.dotColor}
+            className="h-[19rem] w-[min(22rem,48%)]"
+        >
             {/* Context note */}
             <div className="mt-2 px-3">
                 <p className="text-[13px] leading-relaxed text-white/55">
@@ -255,6 +237,6 @@ export function BodyInfoCard({ body, onClose, locale }: BodyInfoCardProps) {
                     </div>
                 ))}
             </dl>
-        </div>
+        </PanelShell>
     );
 }

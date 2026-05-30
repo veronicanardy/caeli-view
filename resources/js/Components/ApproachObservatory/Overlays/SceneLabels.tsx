@@ -1,4 +1,5 @@
 import { Html } from '@react-three/drei';
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { useFrame, useThree } from '@react-three/fiber';
 import { createContext, useContext, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -84,8 +85,8 @@ export function SceneLabel({
                             event.stopPropagation();
                             onClick?.();
                         }}
-                        onPointerEnter={() => { if (onClick) document.body.style.cursor = 'pointer'; }}
-                        onPointerLeave={() => { if (onClick) document.body.style.cursor = ''; }}
+                        onPointerEnter={() => { if (onClick) cursorPointerEnter(); }}
+                        onPointerLeave={() => { if (onClick) cursorPointerLeave(); }}
                         title={title}
                         aria-label={title}
                         disabled={!onClick}
@@ -134,8 +135,8 @@ export function ScreenLabel({
                             event.stopPropagation();
                             onClick?.();
                         }}
-                        onPointerEnter={() => { if (onClick) document.body.style.cursor = 'pointer'; }}
-                        onPointerLeave={() => { if (onClick) document.body.style.cursor = ''; }}
+                        onPointerEnter={() => { if (onClick) cursorPointerEnter(); }}
+                        onPointerLeave={() => { if (onClick) cursorPointerLeave(); }}
                         title={title}
                         aria-label={title}
                         disabled={!onClick}

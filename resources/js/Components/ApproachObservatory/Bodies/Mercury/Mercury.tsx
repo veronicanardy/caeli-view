@@ -13,6 +13,7 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { MERCURY } from '@/lib/observatory/planetData';
 import { MERCURY_FRAG, MERCURY_VERT } from '@/lib/observatory/shaders/mercury.glsl';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
@@ -52,11 +53,11 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         setHovered(true);
-        if (typeof document !== 'undefined') document.body.style.cursor = 'pointer';
+        cursorPointerEnter();
     };
     const handlePointerOut = () => {
         setHovered(false);
-        if (typeof document !== 'undefined') document.body.style.cursor = '';
+        cursorPointerLeave();
     };
     const handleClick = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();

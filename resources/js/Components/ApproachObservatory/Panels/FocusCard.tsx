@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AsteroidTrajectory, ClosestNowObject, HorizonsFailureKind, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { formatDistanceAU, formatTimestamp } from '@/lib/observatory/format';
+import { PanelShell } from './PanelShell';
 
 type FocusTab = 'summary' | 'physical' | 'approach';
 
@@ -44,31 +45,17 @@ export function FocusCard({
     const trajectoryStatus = trajectoryStatusBadge(object.trajectory, en);
 
     return (
-        <div className="pointer-events-auto absolute left-3 top-[54%] z-20 flex max-h-[76%] w-[min(24rem,48%)] -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-signal-cyan/25 bg-space-950/92 shadow-glow backdrop-blur-xl">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-2 px-3 pt-3">
-                <div className="min-w-0">
-                    <div className="text-[11px] uppercase tracking-wide text-white/45">
-                        {orbitMode
-                            ? (en ? 'On its orbit around the Sun' : 'Em sua órbita ao redor do Sol')
-                            : (en ? 'Approach in focus' : 'Aproximação em foco')}
-                    </div>
-                    <div className="mt-0.5 truncate text-base font-semibold text-white">
-                        {a.displayName ?? a.name}
-                    </div>
-                    {a.subtitle ? (
-                        <div className="truncate text-[12px] text-white/55">{a.subtitle}</div>
-                    ) : null}
-                </div>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="-mr-1 -mt-1 rounded-full p-1 text-white/55 transition outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
-                    aria-label={en ? 'Close focus card' : 'Fechar painel'}
-                >
-                    ×
-                </button>
-            </div>
+        <PanelShell
+            onClose={onClose}
+            closeLabel={en ? 'Close focus card' : 'Fechar painel'}
+            eyebrow={orbitMode
+                ? (en ? 'On its orbit around the Sun' : 'Em sua órbita ao redor do Sol')
+                : (en ? 'Approach in focus' : 'Aproximação em foco')}
+            title={a.displayName ?? a.name}
+            subtitle={a.subtitle ?? undefined}
+            borderClass="border-signal-cyan/25"
+            className="flex max-h-[76%] w-[min(24rem,48%)] flex-col"
+        >
 
             {/* Risk badge — prominent, color-coded by hazard. */}
             <div className="mt-2 px-3">
@@ -194,7 +181,7 @@ export function FocusCard({
                     </button>
                 ) : null}
             </div>
-        </div>
+        </PanelShell>
     );
 }
 

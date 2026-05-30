@@ -15,6 +15,7 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { MARS } from '@/lib/observatory/planetData';
 import { MARS_FRAG, MARS_VERT } from '@/lib/observatory/shaders/mars.glsl';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
@@ -50,11 +51,11 @@ export function Mars({ position, sunDirection, locale, onFocus, isFocused = fals
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         setHovered(true);
-        if (typeof document !== 'undefined') document.body.style.cursor = 'pointer';
+        cursorPointerEnter();
     };
     const handlePointerOut = () => {
         setHovered(false);
-        if (typeof document !== 'undefined') document.body.style.cursor = '';
+        cursorPointerLeave();
     };
     const handleClick = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();

@@ -1,6 +1,7 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { SUN_GLOW_FRAG, SUN_GLOW_VERT } from '@/lib/observatory/shaders/sun.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 
@@ -95,8 +96,8 @@ export function Sun({
                 {onFocus && !isFocused ? (
                     <mesh
                         onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onFocus(); }}
-                        onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
-                        onPointerOut={() => { document.body.style.cursor = ''; }}
+                        onPointerOver={() => { cursorPointerEnter(); }}
+                        onPointerOut={() => { cursorPointerLeave(); }}
                     >
                         <sphereGeometry args={[radius * 2.5, 12, 8]} />
                         <meshBasicMaterial transparent opacity={0} depthWrite={false} />

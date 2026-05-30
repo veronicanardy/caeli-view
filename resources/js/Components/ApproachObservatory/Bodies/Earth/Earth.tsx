@@ -31,11 +31,7 @@ interface EarthProps {
     isFocused?: boolean;
 }
 
-function safeSetCursor(value: string) {
-    if (typeof document !== 'undefined') {
-        document.body.style.cursor = value;
-    }
-}
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 
 function disposeMaterial(material: THREE.ShaderMaterial | null) {
     material?.dispose();
@@ -110,9 +106,7 @@ export function Earth({
      * enquanto o mouse ainda está sobre a hitbox.
      */
     useEffect(() => {
-        return () => {
-            safeSetCursor('');
-        };
+        return () => { cursorPointerLeave(); };
     }, []);
 
     // Shader da camada de nuvens: o mapa em tons de cinza controla brilho e opacidade.
@@ -204,12 +198,12 @@ export function Earth({
     const handlePointerOver = (event: { stopPropagation: () => void }) => {
         event.stopPropagation();
         setHovered(true);
-        safeSetCursor('pointer');
+        cursorPointerEnter();
     };
 
     const handlePointerOut = () => {
         setHovered(false);
-        safeSetCursor('');
+        cursorPointerLeave();
     };
 
     const handleClick = (event: { stopPropagation: () => void }) => {

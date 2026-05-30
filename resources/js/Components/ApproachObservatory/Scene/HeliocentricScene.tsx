@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { OrbitalElements } from '@/types';
-import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
+import { buildHeliocentricOrbit, helioAUToSunCenteredScene, KM_PER_LD, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
 import { FocusProtectedHtml, ScreenLabel } from '../Overlays/SceneLabels';
 import { Sun } from '../Bodies/Sun/Sun';
 import { OrbitLineHelio } from '../Trajectory/HeliocentricLines';
 
-const KM_PER_LD = 384_400;
 const SUN_RADIUS_KM = 695_700;
 const SUN_RADIUS_HELIO = SUN_RADIUS_KM / KM_PER_LD;
 const ASTEROID_RADIUS_HELIO = 0.06;

@@ -16,6 +16,7 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { JUPITER } from '@/lib/observatory/planetData';
 import { JUPITER_FRAG, JUPITER_VERT } from '@/lib/observatory/shaders/jupiter.glsl';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
@@ -51,11 +52,11 @@ export function Jupiter({ position, sunDirection, locale, onFocus, isFocused = f
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         setHovered(true);
-        if (typeof document !== 'undefined') document.body.style.cursor = 'pointer';
+        cursorPointerEnter();
     };
     const handlePointerOut = () => {
         setHovered(false);
-        if (typeof document !== 'undefined') document.body.style.cursor = '';
+        cursorPointerLeave();
     };
     const handleClick = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();

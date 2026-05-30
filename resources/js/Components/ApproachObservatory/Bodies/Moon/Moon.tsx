@@ -1,6 +1,7 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { orientMoonTidal } from '@/lib/observatory/earthOrientation';
 import { buildMoonBump } from '@/lib/observatory/moonTextures';
 import { MOON_HITBOX_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
@@ -74,12 +75,12 @@ export function Moon({
     const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
         event.stopPropagation();
         setHovered(true);
-        if (typeof document !== 'undefined') document.body.style.cursor = 'pointer';
+        cursorPointerEnter();
     };
 
     const handlePointerOut = () => {
         setHovered(false);
-        if (typeof document !== 'undefined') document.body.style.cursor = '';
+        cursorPointerLeave();
     };
 
     const handleClick = (event: ThreeEvent<PointerEvent>) => {
