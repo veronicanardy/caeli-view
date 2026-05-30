@@ -64,7 +64,7 @@ const CLOUD_FRAGMENT_SHADER = `
     }
 `;
 
-export function CinematicEarthScene() {
+export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) {
     const shellRef = useRef<HTMLDivElement | null>(null);
     const mountRef = useRef<HTMLDivElement | null>(null);
     const [ready, setReady] = useState(false);
@@ -634,6 +634,7 @@ export function CinematicEarthScene() {
                         console.debug('[earth] first valid frame rendered');
                         console.debug('[earth] fallback hidden after valid render');
                         setReady(true);
+                        onReady?.();
                     }
                 }
 

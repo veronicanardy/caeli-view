@@ -63,8 +63,10 @@ const TUNING = {
 // and the Earth sphere fills that canvas symmetrically.
 const EARTH_SHELL_SELECTOR = '.cinematic-earth-shell';
 
-export function CinematicSpaceBackdrop() {
+export function CinematicSpaceBackdrop({ earthReady = false }: { earthReady?: boolean }) {
     const mountRef = useRef<HTMLDivElement | null>(null);
+    const earthReadyRef = useRef(earthReady);
+    earthReadyRef.current = earthReady;
 
     useEffect(() => {
         const mount = mountRef.current;
@@ -126,6 +128,7 @@ export function CinematicSpaceBackdrop() {
 
             const halo = buildHalo(THREE);
             haloGroup.add(halo);
+            haloGroup.visible = false;
 
             // ── Comet (rare cinematic streak) ────────────────────────────────
             const comet = buildComet(THREE);
@@ -244,6 +247,7 @@ export function CinematicSpaceBackdrop() {
             // (in case Earth shell moves during expand/collapse transitions).
             let frame = 0;
             let recheckCounter = 0;
+            let haloOpacity = 0;
             const animate = () => {
                 pointer.x += (target.x - pointer.x) * TUNING.parallax.easing;
                 pointer.y += (target.y - pointer.y) * TUNING.parallax.easing;
@@ -253,6 +257,14 @@ export function CinematicSpaceBackdrop() {
                 // point sprites flicker pixel-to-pixel, which reads as twinkling.
                 // Leave them locked in place; the nebula and halo carry the depth cue.
                 haloGroup.position.set(-pointer.x * TUNING.parallax.haloStrength, pointer.y * TUNING.parallax.haloStrength, 0);
+
+                // Fade halo in only after Earth is ready.
+                const targetOpacity = earthReadyRef.current ? 1 : 0;
+                haloOpacity += (targetOpacity - haloOpacity) * 0.04;
+                haloGroup.visible = haloOpacity > 0.01;
+                if (haloGroup.visible) {
+                    (halo.material as import('three').ShaderMaterial).uniforms.uOpacity.value = haloOpacity;
+                }
 
                 // Re-place halo every ~10 frames — cheap and catches any CSS-driven
                 // movement that ResizeObserver doesn't (e.g. transforms during expand).
@@ -488,6 +500,7 @@ function buildHalo(THREE: typeof import('three')): import('three').Mesh<import('
             uResolution: { value: new THREE.Vector2(1, 1) },
             uIntensity: { value: TUNING.halo.intensity },
             uFalloff: { value: TUNING.halo.falloffPower },
+            uOpacity: { value: 0.0 },
         },
         vertexShader: `
             varying vec2 vUv;
@@ -505,6 +518,7 @@ function buildHalo(THREE: typeof import('three')): import('three').Mesh<import('
             uniform vec2 uResolution;
             uniform float uIntensity;
             uniform float uFalloff;
+            uniform float uOpacity;
             void main() {
                 vec2 fragPx = vUv * uResolution;
                 float dist = distance(fragPx, uCenterPx);
@@ -519,7 +533,7 @@ function buildHalo(THREE: typeof import('three')): import('three').Mesh<import('
                 float t = (dist - uInnerPx) / (uOuterPx - uInnerPx);
                 // Inverse power: brightest at the inner edge, soft fade outward.
                 float falloff = pow(1.0 - t, uFalloff);
-                float alpha = falloff * uIntensity;
+                float alpha = falloff * uIntensity * uOpacity;
                 gl_FragColor = vec4(uColor, alpha);
             }
         `,

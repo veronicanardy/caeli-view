@@ -55,6 +55,7 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
     const { locale, t } = useTranslation();
     const en = locale === 'en';
     const [optionsOpen, setOptionsOpen] = useState(false);
+    const [earthReady, setEarthReady] = useState(false);
     const sceneRef = useRef<HTMLElement | null>(null);
     const { location } = useUserLocation(locale);
     const sky = useSkyObservation(location);
@@ -98,10 +99,10 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                 <div className="home-scene-camera" aria-hidden="true">
                     <div className="home-scene-world">
                         <Suspense fallback={null}>
-                            <CinematicSpaceBackdrop />
+                            <CinematicSpaceBackdrop earthReady={earthReady} />
                         </Suspense>
                         <Suspense fallback={<HeroEarthFallback expanded={optionsOpen} />}>
-                            <CinematicEarthScene />
+                            <CinematicEarthScene onReady={() => setEarthReady(true)} />
                         </Suspense>
                     </div>
                 </div>
