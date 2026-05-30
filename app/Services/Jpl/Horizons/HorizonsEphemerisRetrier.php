@@ -107,7 +107,7 @@ final class HorizonsEphemerisRetrier
     ): ?HorizonsVectorFetchResultData {
         foreach ($commands as $command) {
             try {
-                $content = $this->client->vectorsOnce($command, $startTime, $stopTime, $stepSize, 'NO');
+                $content = $this->client->vectorsOnce($command, $startTime, $stopTime, $stepSize, 'YES');
 
                 if (! $this->parser->hasEphemeris($content)) {
                     $lastFailureReason = 'no_ephemeris';

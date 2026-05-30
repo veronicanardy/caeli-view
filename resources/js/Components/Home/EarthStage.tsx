@@ -1,26 +1,32 @@
+import { useState } from 'react';
 import { Earth, Orbit, Rotate3D, Satellite } from 'lucide-react';
 import { EarthGlobe } from '@/Components/Nasa/EarthGlobe';
 import { AtmosphereGlow } from './AtmosphereGlow';
 import { FloatingMissionCard } from './FloatingMissionCard';
 
 export function EarthStage() {
+    const [globeReady, setGlobeReady] = useState(false);
+
     return (
         <div className="earth-stage group/earth relative min-h-[30rem] overflow-visible lg:min-h-[42rem]">
             {/* Atmosphere glow layer */}
-            <div className="absolute inset-0 transition duration-700 group-hover/earth:translate-x-3 group-hover/earth:-translate-y-2" aria-hidden="true">
+            <div
+                className={`absolute inset-0 transition-opacity duration-700 group-hover/earth:translate-x-3 group-hover/earth:-translate-y-2 ${globeReady ? 'opacity-100' : 'opacity-0'}`}
+                aria-hidden="true"
+            >
                 <AtmosphereGlow />
             </div>
 
             {/* Cross-glow: bleeds left toward the text column — creates visual unity */}
-            <div className="earth-cross-glow pointer-events-none absolute inset-0" aria-hidden="true" />
+            <div className={`earth-cross-glow pointer-events-none absolute inset-0 transition-opacity duration-700 ${globeReady ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true" />
 
-            <div className="earth-orbit-ring absolute left-1/2 top-1/2 size-[21rem] -translate-x-1/2 -translate-y-1/2 sm:size-[30rem] lg:size-[44rem]" aria-hidden="true" />
-            <div className="earth-orbit-ring earth-orbit-ring-wide absolute left-1/2 top-1/2 size-[26rem] -translate-x-1/2 -translate-y-1/2 sm:size-[36rem] lg:size-[52rem]" aria-hidden="true" />
+            <div className={`earth-orbit-ring absolute left-1/2 top-1/2 size-[21rem] -translate-x-1/2 -translate-y-1/2 sm:size-[30rem] lg:size-[44rem] transition-opacity duration-700 ${globeReady ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true" />
+            <div className={`earth-orbit-ring earth-orbit-ring-wide absolute left-1/2 top-1/2 size-[26rem] -translate-x-1/2 -translate-y-1/2 sm:size-[36rem] lg:size-[52rem] transition-opacity duration-700 ${globeReady ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true" />
 
             <div className="relative z-10 mx-auto flex min-h-[30rem] items-center justify-center lg:min-h-[42rem] lg:justify-end">
                 <div className="earth-image-wrap relative size-[19rem] shrink-0 rounded-full sm:size-[28rem] lg:-mr-28 lg:size-[42rem] xl:-mr-40 xl:size-[48rem]">
-                    <EarthGlobe />
-                    <div className="earth-limb absolute inset-0 rounded-full" aria-hidden="true" />
+                    <EarthGlobe onReady={() => setGlobeReady(true)} />
+                    <div className={`earth-limb absolute inset-0 rounded-full transition-opacity duration-700 ${globeReady ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true" />
                 </div>
             </div>
 

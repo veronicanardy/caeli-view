@@ -32,6 +32,7 @@ type EarthGlobeProps = {
     autoRotate?: boolean;
     pointOfViewAltitude?: number;
     className?: string;
+    onReady?: () => void;
 };
 
 type GlobeComponent = ComponentType<
@@ -53,12 +54,14 @@ export function EarthGlobe({
     autoRotate = true,
     pointOfViewAltitude = 1.42,
     className = '',
+    onReady,
 }: EarthGlobeProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const globeRef = useRef<GlobeMethods | undefined>(undefined);
     const [Globe, setGlobe] = useState<GlobeComponent | null>(null);
     const [size, setSize] = useState<GlobeSize>({ width: 0, height: 0 });
     const [isGlobeReady, setIsGlobeReady] = useState(false);
+    const [hasError, setHasError] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -72,6 +75,8 @@ export function EarthGlobe({
                 setGlobe(() => module.default as GlobeComponent);
                 setIsGlobeReady(false);
             }
+        }).catch(() => {
+            if (isMounted) setHasError(true);
         });
 
         return () => {
@@ -129,12 +134,19 @@ export function EarthGlobe({
             role="img"
             aria-label="Globo 3D interativo da Terra"
         >
-            <div
-                className={`earth-globe-fallback earth-css-fallback absolute inset-0 z-0 size-full rounded-full transition-opacity duration-300 ${
-                    isGlobeReady ? 'invisible opacity-0' : 'visible opacity-100'
-                }`}
-                aria-hidden="true"
-            />
+            {hasError ? (
+                <div
+                    className="earth-globe-fallback earth-css-fallback absolute inset-0 z-0 size-full rounded-full"
+                    aria-hidden="true"
+                />
+            ) : (
+                <div
+                    className={`earth-globe-spinner absolute inset-0 z-0 flex size-full items-center justify-center transition-opacity duration-300 ${
+                        isGlobeReady ? 'invisible opacity-0' : 'visible opacity-100'
+                    }`}
+                    aria-hidden="true"
+                />
+            )}
 
             {Globe && size.width > 1 && size.height > 1 ? (
                 <div className="earth-globe-canvas">
@@ -172,6 +184,7 @@ export function EarthGlobe({
                         onGlobeReady={() => {
                             configureControls();
                             setIsGlobeReady(true);
+                            onReady?.();
                         }}
                     />
                 </div>

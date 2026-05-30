@@ -50,7 +50,7 @@ export function FocusCard({
             closeLabel={en ? 'Close focus card' : 'Fechar painel'}
             eyebrow={orbitMode
                 ? (en ? 'On its orbit around the Sun' : 'Em sua órbita ao redor do Sol')
-                : (en ? 'Approach in focus' : 'Aproximação em foco')}
+                : (en ? 'Object in focus' : 'Objeto em Foco')}
             title={a.displayName ?? a.name}
             subtitle={a.subtitle ?? undefined}
             borderClass="border-signal-cyan/25"
@@ -106,9 +106,9 @@ export function FocusCard({
                 {tab === 'physical' ? (
                     <dl className="space-y-1.5 text-[13px]">
                         <Row label={en ? 'Diameter' : 'Diâmetro'}>
-                            {a.diameterMeters
+                            {a.diameterMeters != null
                                 ? `${Math.round(a.diameterMeters)} m`
-                                : a.estimatedDiameterMinMeters !== null
+                                : a.estimatedDiameterMinMeters != null
                                   ? `${Math.round(a.estimatedDiameterMinMeters)}–${Math.round(a.estimatedDiameterMaxMeters ?? 0)} m`
                                   : '—'}
                         </Row>
@@ -116,7 +116,7 @@ export function FocusCard({
                             {sizeComparison(a.diameterMeters ?? a.estimatedDiameterMaxMeters, en)}
                         </Row>
                         <Row label={en ? 'Absolute magnitude (H)' : 'Magnitude absoluta (H)'}>
-                            {a.absoluteMagnitude !== null ? a.absoluteMagnitude.toFixed(1) : '—'}
+                            {a.absoluteMagnitude != null ? a.absoluteMagnitude.toFixed(1) : '—'}
                         </Row>
                         <Row label={en ? 'Type' : 'Tipo'}>
                             {a.objectType === 'comet' ? (en ? 'Comet' : 'Cometa') : (en ? 'Asteroid' : 'Asteroide')}
@@ -126,19 +126,23 @@ export function FocusCard({
 
                 {tab === 'approach' ? (
                     <dl className="space-y-1.5 text-[13px]">
-                        {a.relativeVelocityKph !== null ? (
-                            <Row label={en ? 'Velocity' : 'Velocidade'}>
-                                {new Intl.NumberFormat(locale).format(Math.round(a.relativeVelocityKph))} km/h
-                            </Row>
-                        ) : null}
+                        {(() => {
+                            const v = a.relativeVelocityKph ?? object.trajectory?.currentVelocityKph ?? null;
+                            return v != null ? (
+                                <Row label={en ? 'Velocity' : 'Velocidade'}>
+                                    {new Intl.NumberFormat(locale).format(Math.round(v))} km/h
+                                    {a.relativeVelocityKph == null ? <span className="text-white/45"> · {en ? 'from vectors' : 'dos vetores'}</span> : null}
+                                </Row>
+                            ) : null;
+                        })()}
                         {a.approachDate ? (
                             <Row label={en ? 'Closest approach' : 'Máxima aproximação'}>
                                 {formatTimestamp(a.approachDate, locale)}
                             </Row>
                         ) : null}
                         <Row label={en ? 'Min. distance' : 'Distância mínima'}>
-                            {a.nominalDistanceKm !== null ? compactKm(a.nominalDistanceKm) : '—'}
-                            {a.lunarDistance !== null ? <span className="text-white/55"> · {a.lunarDistance.toFixed(2)} DL</span> : null}
+                            {a.nominalDistanceKm != null ? compactKm(a.nominalDistanceKm) : '—'}
+                            {a.lunarDistance != null ? <span className="text-white/55"> · {a.lunarDistance.toFixed(2)} DL</span> : null}
                         </Row>
                         <Row label={en ? 'Source' : 'Fonte'}>JPL/Horizons</Row>
                     </dl>
@@ -237,15 +241,15 @@ function riskAssessment(a: UnifiedApproach, en: boolean): { icon: string; title:
  */
 function humanSummary(object: ClosestNowObject, en: boolean): string {
     const a = object.approach;
-    const d = a.diameterMeters ?? a.estimatedDiameterMaxMeters;
-    const sizePt = d ? `de cerca de ${Math.round(d)} metros` : 'de tamanho ainda incerto';
-    const sizeEn = d ? `about ${Math.round(d)} meters across` : 'of still-uncertain size';
+    const d = a.diameterMeters ?? a.estimatedDiameterMaxMeters ?? null;
+    const sizePt = d != null && isFinite(d) ? `de cerca de ${Math.round(d)} metros` : 'de tamanho ainda incerto';
+    const sizeEn = d != null && isFinite(d) ? `about ${Math.round(d)} meters across` : 'of still-uncertain size';
     const ld = object.currentDistanceLD;
-    const distPt = ld !== null ? `a ${ld.toFixed(1)} distâncias lunares da Terra` : 'a uma distância em apuração';
-    const distEn = ld !== null ? `${ld.toFixed(1)} lunar distances from Earth` : 'at a distance being refined';
-    const vel = a.relativeVelocityKph;
-    const velPt = vel !== null ? `, viajando a ${new Intl.NumberFormat('pt-BR').format(Math.round(vel))} km/h` : '';
-    const velEn = vel !== null ? `, traveling at ${new Intl.NumberFormat('en').format(Math.round(vel))} km/h` : '';
+    const distPt = ld != null && isFinite(ld) ? `a ${ld.toFixed(1)} distâncias lunares da Terra` : 'a uma distância em apuração';
+    const distEn = ld != null && isFinite(ld) ? `${ld.toFixed(1)} lunar distances from Earth` : 'at a distance being refined';
+    const vel = a.relativeVelocityKph ?? object.trajectory?.currentVelocityKph ?? null;
+    const velPt = vel != null && isFinite(vel) ? `, viajando a ${new Intl.NumberFormat('pt-BR').format(Math.round(vel))} km/h` : ', com velocidade não informada';
+    const velEn = vel != null && isFinite(vel) ? `, traveling at ${new Intl.NumberFormat('en').format(Math.round(vel))} km/h` : ', with velocity not on record';
     const motionPt = object.trajectory?.motionState === 'approaching' ? ' Está se aproximando agora.'
         : object.trajectory?.motionState === 'receding' ? ' Já está se afastando.'
         : object.trajectory?.motionState === 'near_closest' ? ' Está perto da máxima aproximação.' : '';

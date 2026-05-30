@@ -11,7 +11,7 @@ const en = {
     'language.en': 'EN',
     'home.title': 'Home',
     'home.hero.badge': 'Observation hub with NASA/JPL data',
-    'home.hero.heading': 'The sky around Earth',
+    'home.hero.heading': 'CaeliView',
     'home.hero.description': 'Track approaches, visible objects, and real astronomical data in a visual experience connected to NASA and JPL.',
     'home.hero.sources': 'Sources: NASA/JPL · Distances in km · Lunar reference: 384,400 km',
     'home.hero.openObservatory': 'Open Observatory',

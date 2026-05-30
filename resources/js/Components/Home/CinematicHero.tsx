@@ -513,11 +513,7 @@ function HeroEarthFallback({ expanded: _expanded = false }: { expanded?: boolean
     return (
         <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden" aria-hidden="true">
             <div className="cinematic-earth-shell absolute right-0 top-1/2 aspect-square -translate-y-1/2 translate-x-[18%] opacity-100 md:translate-x-[2%] lg:translate-x-[-14%] xl:translate-x-[-18%] 2xl:translate-x-[-20%]">
-                <div className="absolute -inset-[18%] rounded-full bg-signal-cyan/13 blur-3xl" />
-                <div className="absolute -inset-[9%] rounded-full border border-signal-cyan/12" />
-                <div className="earth-css-fallback absolute inset-0 rounded-full" />
-                <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_34%_26%,rgba(255,255,255,0.11),transparent_16%),linear-gradient(135deg,rgba(3,8,18,0),rgba(3,8,18,0.48))]" />
-                <div className="absolute inset-0 rounded-full shadow-[inset_38px_18px_58px_rgba(255,255,255,0.05),inset_-96px_-72px_120px_rgba(0,0,0,0.5),0_0_92px_rgba(84,214,214,0.16),0_0_220px_rgba(84,214,214,0.13)]" />
+                <div className="earth-loading-spinner absolute inset-0 rounded-full" />
             </div>
         </div>
     );

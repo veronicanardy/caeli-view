@@ -80,8 +80,8 @@ const BODIES: Record<'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | '
         nameEn: 'Mercury',
         subtitlePt: 'Planeta · Sistema Solar Interno',
         subtitleEn: 'Planet · Inner Solar System',
-        contextPt: 'Pequeno, veloz e extremo. Mercúrio dá uma volta ao redor do Sol em apenas 88 dias e segue a órbita mais elíptica entre os oito planetas — por isso, no CaeliView, seu caminho parece mais alongado que o dos demais.',
-        contextEn: 'Small, fast, and extreme. Mercury completes an orbit around the Sun in only 88 days and follows the most elliptical orbit among the eight planets — which is why, in CaeliView, its path looks more stretched than the others.',
+        contextPt: 'Pequeno, veloz e extremo. Mercúrio dá uma volta ao redor do Sol em apenas 88 dias e percorre a órbita mais elíptica entre os oito planetas — ora mais distante, ora perigosamente próximo do Sol, onde suas condições ficam ainda mais severas.',
+        contextEn: 'Small, fast, and extreme. Mercury completes an orbit around the Sun in only 88 days and follows the most elliptical orbit among the eight planets — at times farther away, at times dangerously close to the Sun, where its already harsh conditions become even more severe.',
         dotColor: '#b0b8c8',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '57,9 mi km (0,387 UA) / 57.9M km (0.387 AU)' },

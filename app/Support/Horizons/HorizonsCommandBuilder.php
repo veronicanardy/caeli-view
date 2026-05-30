@@ -44,14 +44,17 @@ final class HorizonsCommandBuilder
     {
         $commands = [];
 
-        // 1. SPK-ID tem precedência absoluta — identificador único no banco do JPL
-        self::push($commands, self::clean($spkId));
-
-        // 2. Número permanente com `;` força busca exata no Horizons
+        // 1. Número permanente com `;` força busca exata no Horizons pelo número do asteroide.
+        // Tem precedência sobre o SPK-ID porque o Horizons resolve SPK-IDs do formato 2000NNN
+        // de forma ambígua para alguns objetos, retornando corpos errados. O número permanente
+        // com `;` é inequívoco: busca exatamente o asteroide de número NNN.
         $permanentNumber = self::clean($identity['permanentNumber'] ?? null);
         if ($permanentNumber !== null && preg_match('/^\d+$/', $permanentNumber) === 1) {
             self::push($commands, $permanentNumber . ';');
         }
+
+        // 2. SPK-ID — fallback quando não há número permanente (objetos sem numeração oficial)
+        self::push($commands, self::clean($spkId));
 
         // 3. Designação provisória com prefixo DES= (formato canônico do Horizons)
         // Tenta na ordem: identidade normalizada → campo $designation → $detailIdentifier

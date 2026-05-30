@@ -681,8 +681,6 @@ export function CinematicEarthScene() {
         };
     }, []);
 
-    const showFallback = !ready || failed;
-
     return (
         <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden" aria-hidden="true">
             <div
@@ -694,13 +692,13 @@ export function CinematicEarthScene() {
                     className="absolute h-auto w-auto"
                     style={{
                         inset: `${EARTH_CANVAS_BLEED * -100}%`,
-                        opacity: showFallback ? 0 : 1,
-                        visibility: showFallback ? 'hidden' : 'visible',
-                        pointerEvents: showFallback ? 'none' : 'auto',
+                        opacity: ready && !failed ? 1 : 0,
+                        visibility: ready && !failed ? 'visible' : 'hidden',
+                        pointerEvents: ready && !failed ? 'auto' : 'none',
                     }}
                 />
 
-                {showFallback ? (
+                {failed ? (
                     <>
                         <div className="absolute -inset-[18%] rounded-full bg-signal-cyan/13 blur-3xl" />
                         <div className="absolute -inset-[9%] rounded-full border border-signal-cyan/12" />
@@ -708,6 +706,10 @@ export function CinematicEarthScene() {
                         <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_34%_26%,rgba(255,255,255,0.11),transparent_16%),linear-gradient(135deg,rgba(3,8,18,0),rgba(3,8,18,0.48))]" />
                         <div className="absolute inset-0 rounded-full shadow-[inset_38px_18px_58px_rgba(255,255,255,0.05),inset_-96px_-72px_120px_rgba(0,0,0,0.5),0_0_92px_rgba(84,214,214,0.16),0_0_220px_rgba(84,214,214,0.13)]" />
                     </>
+                ) : null}
+
+                {!ready && !failed ? (
+                    <div className="earth-loading-spinner absolute inset-0 rounded-full" aria-hidden="true" />
                 ) : null}
             </div>
         </div>

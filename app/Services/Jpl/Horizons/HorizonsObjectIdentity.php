@@ -60,6 +60,8 @@ final class HorizonsObjectIdentity
             (string) ($object['rawName'] ?? $object['name'] ?? '')
         );
 
+        $identity = $this->mergeExplicitPermanentNumber($identity, $object);
+
         return HorizonsCommandBuilder::build(
             $identity,
             $this->parseTrustedSpkId($object['spkId'] ?? null),
@@ -80,6 +82,8 @@ final class HorizonsObjectIdentity
             (string) ($object['rawName'] ?? $object['name'] ?? '')
         );
 
+        $identity = $this->mergeExplicitPermanentNumber($identity, $object);
+
         $commands = HorizonsCommandBuilder::build(
             $identity,
             $this->parseTrustedSpkId($object['spkId'] ?? null),
@@ -88,6 +92,29 @@ final class HorizonsObjectIdentity
         );
 
         return ['commands' => $commands, 'identity' => $identity];
+    }
+
+    /**
+     * Se o objeto carrega um `permanentNumber` explícito (ex: objetos sintéticos do modo featured
+     * que só têm rawName = 'Eros' mas têm permanentNumber = '433'), injeta-o na identidade
+     * normalizada quando o normalizador não o extraiu do rawName.
+     *
+     * @param  array<string, mixed>  $identity
+     * @param  array<string, mixed>  $object
+     * @return array<string, mixed>
+     */
+    private function mergeExplicitPermanentNumber(array $identity, array $object): array
+    {
+        if ($identity['permanentNumber'] !== null) {
+            return $identity;
+        }
+
+        $explicit = trim((string) ($object['permanentNumber'] ?? ''));
+        if ($explicit !== '' && preg_match('/^\d+$/', $explicit) === 1) {
+            $identity['permanentNumber'] = $explicit;
+        }
+
+        return $identity;
     }
 
     /**

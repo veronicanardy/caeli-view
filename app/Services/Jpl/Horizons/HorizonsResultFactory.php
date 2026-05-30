@@ -186,6 +186,13 @@ final class HorizonsResultFactory
             ? $currentDistanceKm / DistancePresenter::LUNAR_DISTANCE_KM
             : null;
 
+        $vx = $this->floatOrNull($currentPoint['vx'] ?? null);
+        $vy = $this->floatOrNull($currentPoint['vy'] ?? null);
+        $vz = $this->floatOrNull($currentPoint['vz'] ?? null);
+        $currentVelocityKph = ($vx !== null && $vy !== null && $vz !== null)
+            ? sqrt($vx ** 2 + $vy ** 2 + $vz ** 2) * 3600.0
+            : null;
+
         return [
             'objectId' => $objectId,
             'objectName' => (string) ($object['displayName'] ?? $object['name'] ?? $objectId),
@@ -201,6 +208,7 @@ final class HorizonsResultFactory
             'currentPoint' => $currentPoint,
             'currentDistanceKm' => $currentDistanceKm,
             'currentDistanceLD' => $currentDistanceLd,
+            'currentVelocityKph' => $currentVelocityKph,
             'referencePoint' => $currentPoint,
             'motionState' => $motionState,
             // Elementos orbitais osculadores heliocentricos do cabeçalho Horizons,

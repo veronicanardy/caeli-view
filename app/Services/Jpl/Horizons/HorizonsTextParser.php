@@ -89,7 +89,21 @@ final class HorizonsTextParser
 
             $rangeKm      = $this->floatOrNull($columns[self::COL_RANGE_KM] ?? null);
             $rangeRateKmS = $this->floatOrNull($columns[self::COL_RANGE_RATE] ?? null);
-            $distanceKm   = $rangeKm ?? sqrt($x ** 2 + $y ** 2 + $z ** 2);
+            $euclideanKm  = sqrt($x ** 2 + $y ** 2 + $z ** 2);
+            $distanceKm   = $rangeKm ?? $euclideanKm;
+
+            // Sanity check: geocentric distance > 750 M km (≈ 5 AU) is physically impossible for
+            // any inner-system object (Eros aphelion ≈ 1.78 AU + Earth ≈ 1 AU ≈ 418 M km max).
+            // Log when this happens so we can inspect the raw Horizons response.
+            if ($distanceKm > 750_000_000) {
+                \Illuminate\Support\Facades\Log::warning('[HorizonsTextParser] distância geocêntrica suspeita', [
+                    'distanceKm'  => $distanceKm,
+                    'rangeKm'     => $rangeKm,
+                    'euclideanKm' => $euclideanKm,
+                    'x' => $x, 'y' => $y, 'z' => $z,
+                    'raw_line'    => $line,
+                ]);
+            }
 
             $points[] = new HorizonsVectorPointData(
                 timestamp:    $this->normalizeTimestamp($columns[self::COL_TIMESTAMP] ?? $columns[0] ?? null),

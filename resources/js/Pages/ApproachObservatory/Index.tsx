@@ -490,7 +490,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                 {loading && radarMode !== 'closest-5-now' ? (
                     <ObservatoryLoadingSkeleton t={t} />
                 ) : closestNowLoading && radarMode === 'closest-5-now' && !closestNowData ? (
-                    <ObservatoryLoadingSkeleton t={t} />
+                    <ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />
                 ) : (
                     <>
                         {/* Prototype toggle: only available in closest-5-now mode (it's the only mode the 3D
