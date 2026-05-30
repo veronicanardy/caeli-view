@@ -45,9 +45,10 @@ interface VenusProps {
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
+    showLabel?: boolean;
 }
 
-export function Venus({ position, sunDirection, locale, onFocus, isFocused = false }: VenusProps) {
+export function Venus({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: VenusProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -80,7 +81,7 @@ export function Venus({ position, sunDirection, locale, onFocus, isFocused = fal
         meshRef.current.rotation.y = VENUS_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
+            const sunWorld = new THREE.Vector3(0, 0, 0);
             const venusWorld = new THREE.Vector3(...position);
             const dirToSun = sunWorld.sub(venusWorld).normalize();
             (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
@@ -152,9 +153,11 @@ export function Venus({ position, sunDirection, locale, onFocus, isFocused = fal
                     </mesh>
                 ) : null}
 
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Venus' : 'Vênus'}</span>
-                </ScreenLabel>
+                {showLabel ? (
+                    <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
+                        <span className="font-semibold">{locale === 'en' ? 'Venus' : 'Vênus'}</span>
+                    </ScreenLabel>
+                ) : null}
             </group>
         </>
     );

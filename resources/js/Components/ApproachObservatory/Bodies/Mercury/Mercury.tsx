@@ -43,9 +43,10 @@ interface MercuryProps {
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
+    showLabel?: boolean;
 }
 
-export function Mercury({ position, sunDirection, locale, onFocus, isFocused = false }: MercuryProps) {
+export function Mercury({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: MercuryProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -82,7 +83,7 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
         // sunDirection * SUN_DISPLAY_DL. Mercury is at `position`. We subtract to get the vector
         // pointing from Mercury toward the Sun, then normalize.
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
+            const sunWorld = new THREE.Vector3(0, 0, 0);
             const mercuryWorld = new THREE.Vector3(...position);
             const dirToSun = sunWorld.sub(mercuryWorld).normalize();
             (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
@@ -159,9 +160,11 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
                     </mesh>
                 ) : null}
 
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Mercury' : 'Mercúrio'}</span>
-                </ScreenLabel>
+                {showLabel ? (
+                    <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
+                        <span className="font-semibold">{locale === 'en' ? 'Mercury' : 'Mercúrio'}</span>
+                    </ScreenLabel>
+                ) : null}
             </group>
         </>
     );

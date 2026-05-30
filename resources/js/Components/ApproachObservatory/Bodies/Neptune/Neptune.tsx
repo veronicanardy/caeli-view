@@ -44,9 +44,10 @@ interface NeptuneProps {
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
+    showLabel?: boolean;
 }
 
-export function Neptune({ position, sunDirection, locale, onFocus, isFocused = false }: NeptuneProps) {
+export function Neptune({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: NeptuneProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -79,7 +80,7 @@ export function Neptune({ position, sunDirection, locale, onFocus, isFocused = f
         meshRef.current.rotation.y = NEPTUNE_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
+            const sunWorld = new THREE.Vector3(0, 0, 0);
             const neptuneWorld = new THREE.Vector3(...position);
             const dirToSun = sunWorld.sub(neptuneWorld).normalize();
             (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
@@ -148,9 +149,11 @@ export function Neptune({ position, sunDirection, locale, onFocus, isFocused = f
                     </mesh>
                 ) : null}
 
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Neptune' : 'Netuno'}</span>
-                </ScreenLabel>
+                {showLabel ? (
+                    <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
+                        <span className="font-semibold">{locale === 'en' ? 'Neptune' : 'Netuno'}</span>
+                    </ScreenLabel>
+                ) : null}
             </group>
         </>
     );

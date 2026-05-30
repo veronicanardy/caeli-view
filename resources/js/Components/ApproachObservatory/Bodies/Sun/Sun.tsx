@@ -8,12 +8,10 @@ interface SunProps {
     position: [number, number, number];
     radius: number;
     locale: 'pt-BR' | 'en';
-    /**
-     * Quando verdadeiro, anexa uma luz direcional e uma luz pontual em `position`
-     * para que o Sol ilumine o restante da cena. A camada heliocêntrica injeta sua
-     * própria iluminação separadamente e passa `false` para evitar luzes duplicadas.
-     */
     withLighting?: boolean;
+    /** Direção Sol→Terra (unitário). Necessário quando withLighting=true e position=[0,0,0],
+     *  pois directionalLight precisa de um vetor não-nulo para definir a direção. */
+    sunDirection?: [number, number, number];
 }
 
 /**
@@ -31,6 +29,7 @@ export function Sun({
     radius,
     locale,
     withLighting = false,
+    sunDirection,
 }: SunProps) {
     const en = locale === 'en';
     const surfaceMat = useRef<THREE.ShaderMaterial>(null);
@@ -78,8 +77,16 @@ export function Sun({
         <group>
             {withLighting ? (
                 <>
-                    <directionalLight position={position} intensity={2.2} color="#fff6e8" />
-                    <pointLight position={position} intensity={0.5} distance={80} color="#ffdca8" />
+                    {/* directionalLight usa position como direção, não como origem.
+                        Quando Sol está na origem [0,0,0], usa sunDirection invertido (Sol→Terra). */}
+                    <directionalLight
+                        position={position[0] === 0 && position[1] === 0 && position[2] === 0
+                            ? (sunDirection ?? [1, 0, 0])
+                            : position}
+                        intensity={2.2}
+                        color="#fff6e8"
+                    />
+                    <pointLight position={position} intensity={0.5} distance={160} color="#ffdca8" />
                 </>
             ) : null}
 

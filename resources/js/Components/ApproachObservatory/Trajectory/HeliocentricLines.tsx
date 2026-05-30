@@ -113,6 +113,14 @@ function buildDisplayedOrbitGuidePoints(center: THREE.Vector3, segments = ORBIT_
  * terrestre. Para visualização, isso é aceitável porque a excentricidade da
  * Terra é pequena.
  */
+/** Anel de referência orbital heliocêntrico genérico — círculo no plano XZ centrado no Sol (origem). */
+export function PlanetOrbitRingHelio({ semiMajorAU, color, opacity }: { semiMajorAU: number; color: string; opacity: number }) {
+    const points = useMemo(() => buildCircleXZPoints(semiMajorAU * ORBIT_AU_SCALE), [semiMajorAU]);
+    const lineObject = useMemo(() => createOrbitLine(points, color, opacity), [points, color, opacity]);
+    useEffect(() => () => disposeOrbitLine(lineObject), [lineObject]);
+    return <primitive object={lineObject} />;
+}
+
 export function EarthOrbitRingHelio() {
     const points = useMemo(() => {
         return buildCircleXZPoints(ORBIT_AU_SCALE);

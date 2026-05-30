@@ -23,14 +23,31 @@ interface BodyConfig {
     facts: BodyFact[];
 }
 
-const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune', BodyConfig> = {
+const BODIES: Record<'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune', BodyConfig> = {
+    sun: {
+        namePt: 'Sol',
+        nameEn: 'Sun',
+        subtitlePt: 'Estrela · Centro do Sistema Solar',
+        subtitleEn: 'Star · Center of the Solar System',
+        contextPt: 'A estrela que ancora todo o sistema. Sua luz define o lado diurno dos corpos e sua gravidade mantém planetas, asteroides e cometas em movimento ao seu redor.',
+        contextEn: 'The star that anchors the whole system. Its light defines the daylight side of bodies, and its gravity keeps planets, asteroids, and comets moving around it.',
+        dotColor: '#f5c842',
+        facts: [
+            { labelPt: 'Distância da Terra',  labelEn: 'Distance from Earth',  value: '149,6 mi km (1 UA) / 149.6M km (1 AU)' },
+            { labelPt: 'Diâmetro',            labelEn: 'Diameter',             value: '1.392.700 km (109× a Terra)' },
+            { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '~25 dias (equador) / ~25 days (equator)' },
+            { labelPt: 'Temperatura (sup.)',  labelEn: 'Temperature (surf.)',   value: '~5.500 °C / ~9.900 °F' },
+            { labelPt: 'Tipo espectral',      labelEn: 'Spectral type',        value: 'G2V (anã amarela / yellow dwarf)' },
+        ],
+    },
+
     earth: {
         namePt: 'Terra',
         nameEn: 'Earth',
-        subtitlePt: 'Planeta · Sistema Solar Interno',
-        subtitleEn: 'Planet · Inner Solar System',
-        contextPt: 'A nossa casa! E o centro de referência desse radar. Todas as distâncias de asteroides são medidas a partir daqui.',
-        contextEn: 'The radar\'s reference center. All asteroid distances are measured from here.',
+        subtitlePt: 'Planeta · Referência do Radar',
+        subtitleEn: 'Planet · Radar Reference',
+        contextPt: 'O ponto de partida do radar. É daqui que as distâncias fazem sentido: cada aproximação, escala e trajetória é interpretada em relação ao nosso planeta.',
+        contextEn: 'The radar’s starting point. From here, distances gain meaning: every approach, scale, and trajectory is interpreted in relation to our planet.',
         dotColor: '#4a9eff',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '149,6 milhões km (1 UA) / 149.6 million km (1 AU)' },
@@ -40,13 +57,14 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '1 Lua / Moon' },
         ],
     },
+
     moon: {
         namePt: 'Lua',
         nameEn: 'Moon',
-        subtitlePt: 'Satélite natural da Terra',
-        subtitleEn: 'Earth\'s natural satellite',
-        contextPt: 'Satélite natural da Terra e marco visual de 1 DL no radar. Sua órbita ajuda a dimensionar rapidamente o espaço ao redor da Terra e a perceber quando um objeto está realmente próximo em escala astronômica.',
-        contextEn: 'Earth\'s natural satellite and the radar\'s 1 LD benchmark. Its orbit helps quickly size the space around Earth and grasp when an object is truly close in astronomical terms.',
+        subtitlePt: 'Satélite natural · Régua de escala',
+        subtitleEn: 'Natural satellite · Scale marker',
+        contextPt: 'A régua mais intuitiva do espaço próximo. Quando um objeto aparece a 1 DL, ele está aproximadamente à distância média entre a Terra e a Lua.',
+        contextEn: 'The most intuitive ruler for nearby space. When an object appears at 1 LD, it is roughly at the average distance between Earth and the Moon.',
         dotColor: '#c2c4c8',
         facts: [
             { labelPt: 'Distância da Terra',  labelEn: 'Distance from Earth',  value: '~384.400 km (1 DL)' },
@@ -56,13 +74,14 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
             { labelPt: 'Fases',               labelEn: 'Phases',               value: 'Ciclo de 29,5 dias / 29.5-day cycle' },
         ],
     },
+
     mercury: {
         namePt: 'Mercúrio',
         nameEn: 'Mercury',
         subtitlePt: 'Planeta · Sistema Solar Interno',
         subtitleEn: 'Planet · Inner Solar System',
-        contextPt: 'Menor planeta do Sistema Solar e o mais próximo do Sol. Exibido como contexto espacial — não é o foco do CaeliView. Posição em tempo real via JPL.',
-        contextEn: 'The smallest planet in the Solar System and the closest to the Sun. Shown for spatial context — not CaeliView\'s focus. Real-time position via JPL.',
+        contextPt: 'Pequeno, veloz e extremo. Mercúrio dá uma volta ao redor do Sol em apenas 88 dias e quase não tem atmosfera para suavizar suas temperaturas.',
+        contextEn: 'Small, fast, and extreme. Mercury completes an orbit around the Sun in only 88 days and has almost no atmosphere to soften its temperatures.',
         dotColor: '#b0b8c8',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '57,9 mi km (0,387 UA) / 57.9M km (0.387 AU)' },
@@ -72,13 +91,14 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Nenhum / None' },
         ],
     },
+
     venus: {
         namePt: 'Vênus',
         nameEn: 'Venus',
         subtitlePt: 'Planeta · Sistema Solar Interno',
         subtitleEn: 'Planet · Inner Solar System',
-        contextPt: 'Segundo planeta mais próximo do Sol e o mais brilhante no céu noturno da Terra. Coberto por nuvens densas de CO₂. Exibido como contexto espacial — não é o foco do CaeliView. Posição em tempo real via JPL.',
-        contextEn: 'Second closest planet to the Sun and the brightest object in the Earth\'s night sky. Covered in thick CO₂ clouds. Shown for spatial context — not CaeliView\'s focus. Real-time position via JPL.',
+        contextPt: 'Quase do tamanho da Terra, mas com um destino completamente diferente: atmosfera densa, calor extremo e nuvens que refletem tanta luz que o tornam o planeta mais brilhante no nosso céu.',
+        contextEn: 'Nearly Earth-sized, but with a completely different fate: a dense atmosphere, extreme heat, and clouds so reflective that they make it the brightest planet in our sky.',
         dotColor: '#c8b870',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '108,2 mi km (0,723 UA) / 108.2M km (0.723 AU)' },
@@ -88,13 +108,14 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Nenhum / None' },
         ],
     },
+
     mars: {
         namePt: 'Marte',
         nameEn: 'Mars',
         subtitlePt: 'Planeta · Sistema Solar Interno',
         subtitleEn: 'Planet · Inner Solar System',
-        contextPt: 'Quarto planeta mais próximo do Sol e planeta o mais avermelhado no céu noturno da Terra. Exibido como contexto espacial — não é o foco do CaeliView. Posição em tempo real via JPL.',
-        contextEn: 'Fourth closest planet to the Sun and the reddest planet in the Earth\'s night sky. Shown for spatial context — not CaeliView\'s focus. Real-time position via JPL.',
+        contextPt: 'O planeta vermelho. Sua cor vem do óxido de ferro na superfície, e seu brilho avermelhado é uma das presenças planetárias mais reconhecíveis no céu da Terra.',
+        contextEn: 'The Red Planet. Its color comes from iron oxide on the surface, and its reddish glow is one of the most recognizable planetary sights in Earth’s sky.',
         dotColor: '#c87070',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '227,9 mi km (1,524 UA) / 227.9M km (1.524 AU)' },
@@ -104,13 +125,14 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Dois / Two' },
         ],
     },
+
     jupiter: {
         namePt: 'Júpiter',
         nameEn: 'Jupiter',
         subtitlePt: 'Planeta · Sistema Solar Externo',
         subtitleEn: 'Planet · Outer Solar System',
-        contextPt: 'O maior planeta do Sistema Solar — mais de 11× o diâmetro da Terra e 318× a sua massa. Sua gravidade molda as órbitas de asteroides e cometas. Exibido como contexto espacial. Posição em tempo real via JPL.',
-        contextEn: 'The largest planet in the Solar System — over 11× Earth\'s diameter and 318× its mass. Its gravity shapes asteroid and comet orbits. Shown for spatial context. Real-time position via JPL.',
+        contextPt: 'O gigante gravitacional do Sistema Solar. Júpiter é tão massivo que influencia a arquitetura de órbitas, captura luas e perturba trajetórias de pequenos corpos.',
+        contextEn: 'The Solar System’s gravitational giant. Jupiter is so massive that it shapes orbital architecture, captures moons, and perturbs the paths of small bodies.',
         dotColor: '#c8a060',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '778,5 mi km (5,203 UA) / 778.5M km (5.203 AU)' },
@@ -120,13 +142,14 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '95 (Io, Europa, Ganimedes, Calisto…)' },
         ],
     },
+
     saturn: {
         namePt: 'Saturno',
         nameEn: 'Saturn',
         subtitlePt: 'Planeta · Sistema Solar Externo',
         subtitleEn: 'Planet · Outer Solar System',
-        contextPt: 'Famoso pelos seus anéis de gelo e rocha — o sistema de anéis mais extenso do Sistema Solar, com ~270.000 km de largura. Segundo maior planeta, com 95× a massa da Terra. Exibido como contexto espacial. Posição em tempo real via JPL.',
-        contextEn: 'Famous for its stunning ring system — the most extensive in the Solar System, ~270,000 km wide. Second largest planet, 95× Earth\'s mass. Shown for spatial context. Real-time position via JPL.',
+        contextPt: 'O planeta dos anéis. Eles parecem sólidos à distância, mas são formados por incontáveis fragmentos de gelo e rocha orbitando em uma estrutura fina e imensa.',
+        contextEn: 'The ringed planet. From afar, the rings look solid, but they are made of countless pieces of ice and rock orbiting in a vast, thin structure.',
         dotColor: '#c8a840',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '1.432 mi km (9,537 UA) / 1.432B km (9.537 AU)' },
@@ -136,13 +159,14 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '146 (Titã, Encélado, Réia…)' },
         ],
     },
+
     uranus: {
         namePt: 'Urano',
         nameEn: 'Uranus',
         subtitlePt: 'Planeta · Sistema Solar Externo',
         subtitleEn: 'Planet · Outer Solar System',
-        contextPt: 'Gigante de gelo com inclinação axial extrema de 97,77° — Urano "rola" pela órbita com o polo apontando quase para o Sol. O metano em sua atmosfera absorve luz vermelha, dando a cor ciano característica. Exibido como contexto espacial. Posição em tempo real via JPL.',
-        contextEn: 'Ice giant with an extreme axial tilt of 97.77° — Uranus "rolls" along its orbit with its pole nearly pointing at the Sun. Methane in its atmosphere absorbs red light, giving it the characteristic cyan color. Shown for spatial context. Real-time position via JPL.',
+        contextPt: 'Um planeta quase deitado. Urano provavelmente foi tombado por colisões gigantescas no início do Sistema Solar; por isso avança pela órbita como se estivesse rolando, com estações longas e muito incomuns.',
+        contextEn: 'A planet almost lying on its side. Uranus was likely tilted by giant collisions early in the Solar System, so it moves along its orbit as if it were rolling, creating long and unusual seasons.',
         dotColor: '#4ab8c8',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '2.871 mi km (19,2 UA) / 2.871B km (19.2 AU)' },
@@ -151,14 +175,15 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
             { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '17h 14min (retrógrado)' },
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '28 (Titânia, Oberon, Ariel…)' },
         ],
-    },
+},
+
     neptune: {
         namePt: 'Netuno',
         nameEn: 'Neptune',
         subtitlePt: 'Planeta · Sistema Solar Externo',
         subtitleEn: 'Planet · Outer Solar System',
-        contextPt: 'O planeta mais distante do Sistema Solar e o mais ventoso — ventos de até 2.100 km/h, os mais fortes do SS. Azul mais profundo que Urano devido a um cromóforo atmosférico adicional ainda não totalmente identificado. Exibido como contexto espacial. Posição em tempo real via JPL.',
-        contextEn: 'The most distant planet in the Solar System and the windiest — winds up to 2,100 km/h, the strongest in the SS. Deeper blue than Uranus due to an additional atmospheric chromophore not yet fully identified. Shown for spatial context. Real-time position via JPL.',
+        contextPt: 'Azul, distante e dinâmico. Netuno recebe pouca luz solar, mas sua atmosfera ainda produz ventos violentos e sistemas climáticos intensos.',
+        contextEn: 'Blue, distant, and dynamic. Neptune receives little sunlight, yet its atmosphere still produces violent winds and intense weather systems.',
         dotColor: '#2878d8',
         facts: [
             { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '4.495 mi km (30,1 UA) / 4.495B km (30.1 AU)' },
@@ -169,9 +194,8 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
         ],
     },
 };
-
 interface BodyInfoCardProps {
-    body: 'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune';
+    body: 'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune';
     onClose: () => void;
     locale: 'pt-BR' | 'en';
 }

@@ -2,14 +2,11 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 
 interface MoonOrbitProps {
-    /**
-     * A posição da Lua em unidades de cena. O comprimento deste vetor define o raio
-     * da órbita desenhada.
-     */
+    /** Posição absoluta da Lua em coordenadas de mundo. */
     moonPos: [number, number, number];
-    /**
-     * O normal do plano orbital real da Lua. Define o plano em que o círculo é construído.
-     */
+    /** Posição absoluta da Terra em coordenadas de mundo. */
+    earthPos: [number, number, number];
+    /** Normal do plano orbital real da Lua. */
     orbitNormal: [number, number, number];
 }
 
@@ -70,27 +67,32 @@ function buildOrbitPoints(a: THREE.Vector3, b: THREE.Vector3, radius: number) {
  * logarítmica). O primeiro vetor base vem da própria posição da Lua, então a
  * linha renderizada passa exatamente pela Lua renderizada.
  */
-export function MoonOrbit({ moonPos, orbitNormal }: MoonOrbitProps) {
+export function MoonOrbit({ moonPos, earthPos, orbitNormal }: MoonOrbitProps) {
     const orbitPoints = useMemo(() => {
-        // Reconstrói a geometria da órbita apenas quando os vetores de entrada mudam.
-        const moonPosition = new THREE.Vector3(...moonPos);
-        const radius = moonPosition.length();
+        // Vetor geocêntrico Terra→Lua: raio e direção do anel.
+        const geo = new THREE.Vector3(
+            moonPos[0] - earthPos[0],
+            moonPos[1] - earthPos[1],
+            moonPos[2] - earthPos[2],
+        );
+        const radius = geo.length();
         if (radius < MIN_ORBIT_RADIUS) return null;
 
         const normalizedOrbitNormal = new THREE.Vector3(...orbitNormal);
         if (normalizedOrbitNormal.lengthSq() < MIN_ORBIT_RADIUS) return null;
         normalizedOrbitNormal.normalize();
 
-        const basis = buildOrbitBasis(moonPosition, normalizedOrbitNormal);
+        const basis = buildOrbitBasis(geo, normalizedOrbitNormal);
         if (!basis) return null;
 
+        // Pontos construídos relativos à Terra; serão deslocados pelo earthPos no group abaixo.
         return buildOrbitPoints(basis.a, basis.b, radius);
-    }, [moonPos, orbitNormal]);
+    }, [moonPos, earthPos, orbitNormal]);
 
     if (!orbitPoints) return null;
 
     return (
-        <group>
+        <group position={earthPos}>
             <line>
                 <bufferGeometry attach="geometry">
                     <bufferAttribute attach="attributes-position" args={[orbitPoints, 3]} />

@@ -45,9 +45,10 @@ interface UranusProps {
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
+    showLabel?: boolean;
 }
 
-export function Uranus({ position, sunDirection, locale, onFocus, isFocused = false }: UranusProps) {
+export function Uranus({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: UranusProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -80,7 +81,7 @@ export function Uranus({ position, sunDirection, locale, onFocus, isFocused = fa
         meshRef.current.rotation.y = URANUS_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
+            const sunWorld = new THREE.Vector3(0, 0, 0);
             const uranusWorld = new THREE.Vector3(...position);
             const dirToSun = sunWorld.sub(uranusWorld).normalize();
             (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
@@ -149,9 +150,11 @@ export function Uranus({ position, sunDirection, locale, onFocus, isFocused = fa
                     </mesh>
                 ) : null}
 
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Uranus' : 'Urano'}</span>
-                </ScreenLabel>
+                {showLabel ? (
+                    <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
+                        <span className="font-semibold">{locale === 'en' ? 'Uranus' : 'Urano'}</span>
+                    </ScreenLabel>
+                ) : null}
             </group>
         </>
     );

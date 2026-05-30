@@ -95,10 +95,10 @@ export type SceneEphemeris = {
      * Earth at its real position on its 1 AU orbit (with eccentricity ~0.017 honestly applied).
      */
     earthHelioPositionAU: { x: number; y: number; z: number };
+    /** Earth's heliocentric position in scene units (Sol at origin, 1 AU = ORBIT_AU_SCALE). Anchor for Moon and asteroids. */
+    earthScenePosition: [number, number, number];
     /**
-     * Mercury's geocentric position in scene units (log-compressed DL), ready to pass directly
-     * to a THREE.Group position. Derived from astronomy-engine GeoVector(Body.Mercury) rotated
-     * to ecliptic J2000, then through the same horizonsToScene pipeline used for Moon/asteroids.
+     * Mercury's heliocentric position in scene units (Sol at origin, 1 AU = ORBIT_AU_SCALE).
      * Null until the async ephemeris resolves.
      */
     mercuryScenePosition: [number, number, number];
@@ -108,35 +108,10 @@ export type SceneEphemeris = {
      * at VENUS_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
      */
     venusScenePosition: [number, number, number];
-    /**
-     * Mars's scene position, same convention as mercuryScenePosition.
-     * Derived from HelioVector(Body.Mars) → ecliptic J2000 → placed on the heliocentric ring
-     * at MARS_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
-     */
     marsScenePosition: [number, number, number];
-    /**
-     * Jupiter's scene position, same convention as mercuryScenePosition.
-     * Derived from HelioVector(Body.Jupiter) → ecliptic J2000 → placed on the heliocentric ring
-     * at JUPITER_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
-     */
     jupiterScenePosition: [number, number, number];
-    /**
-     * Saturn's scene position, same convention as mercuryScenePosition.
-     * Derived from HelioVector(Body.Saturn) → ecliptic J2000 → placed on the heliocentric ring
-     * at SATURN_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
-     */
     saturnScenePosition: [number, number, number];
-    /**
-     * Uranus's scene position, same convention as mercuryScenePosition.
-     * Derived from HelioVector(Body.Uranus) → ecliptic J2000 → placed on the heliocentric ring
-     * at URANUS_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
-     */
     uranusScenePosition: [number, number, number];
-    /**
-     * Neptune's scene position, same convention as mercuryScenePosition.
-     * Derived from HelioVector(Body.Neptune) → ecliptic J2000 → placed on the heliocentric ring
-     * at NEPTUNE_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
-     */
     neptuneScenePosition: [number, number, number];
 };
 
@@ -243,137 +218,37 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         const earthHelioEcl = A.RotateVector(eqjToEclMatrix(A), earthHelioEqj);
         const earthHelioPositionAU = { x: earthHelioEcl.x, y: earthHelioEcl.y, z: earthHelioEcl.z };
 
-        // Mercury: scene position derived from its HELIOCENTRIC vector so it lies on the
-        // heliocentric orbit ring drawn in the radar scene.
-        //
-        // WHY heliocentric and not geocentric (GeoVector):
-        //   The orbit ring (DisplayedMercuryOrbitGuide) is centred on the displayed Sun and
-        //   has radius = MERCURY_SEMI_MAJOR_AU × SUN_DISPLAY_DL — a heliocentric construction.
-        //   Placing Mercury via GeoVector (geocentric) would put it somewhere unrelated to that
-        //   ring because the geocentric distance varies from ~0.5 to ~1.5 AU as Mercury orbits.
-        //   Using the heliocentric vector guarantees the planet dot sits exactly on its ring.
-        //
-        // Pipeline:
-        //   HelioVector(Mercury) → EQJ → ecliptic J2000 → scene axes (x, z, y) with LINEAR AU
-        //   scale (ORBIT_AU_SCALE = SUN_DISPLAY_DL) → add Sun scene position → final scene coords.
-        //   The linear scale matches the orbit ring builder; no log compression needed here because
-        //   we are working in the heliocentric sub-layer (same convention as buildHeliocentricOrbit).
-        // Mercury: position in the radar scene, consistent with DisplayedMercuryOrbitGuide.
-        //
-        // The orbit ring lives in the Y=0 plane (scene ecliptic plane). It is centred on the
-        // Sun projected onto Y=0: sunEclipticCenter = normalize2D(sunDir.xz) × SUN_DISPLAY_DL.
-        // Points on the ring are at distance MERCURY_SEMI_MAJOR_AU × SUN_DISPLAY_DL from that
-        // centre, sweeping the XZ plane.
-        //
-        // To place Mercury ON that ring we need its heliocentric angle in the ecliptic XZ plane.
-        // We get that from HelioVector(Mercury) → ecliptic J2000 → project onto XZ (drop ecl.z,
-        // which maps to scene Y) → normalize → scale by MERCURY_SEMI_MAJOR_AU × SUN_DISPLAY_DL.
-        // Then offset by the Sun's ecliptic-projected scene position.
+        // Heliocentric scene positions for all planets.
+        // Pipeline: HelioVector → EQJ → ecliptic J2000 → scene axes (ecl.x→x, ecl.z→y, ecl.y→z)
+        // scaled by ORBIT_AU_SCALE. Sol está na origem da cena; cada planeta fica na sua posição
+        // heliocêntrica real. A Terra também é posicionada assim — earthScenePosition é o ponto
+        // de ancoragem de tudo que é geocêntrico (Lua, asteroides).
+        function helioToScene(ecl: { x: number; y: number; z: number }): [number, number, number] {
+            return [ecl.x * ORBIT_AU_SCALE, ecl.z * ORBIT_AU_SCALE, ecl.y * ORBIT_AU_SCALE];
+        }
+
+        const earthScenePosition = helioToScene(earthHelioPositionAU);
+
         const mercuryHelioEqj = A.HelioVector(A.Body.Mercury, date);
-        const mercuryHelioEcl = A.RotateVector(eqjToEclMatrix(A), mercuryHelioEqj);
+        const mercuryScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), mercuryHelioEqj));
 
-        // Heliocentric direction of Mercury in the ecliptic XZ plane (drop ecl.z = scene Y).
-        // ecl.x → scene X,  ecl.y → scene Z  (the Y↔Z swap; ecl.z is ecliptic north = scene Y)
-        const mRawX = mercuryHelioEcl.x;
-        const mRawZ = mercuryHelioEcl.y;   // ecliptic Y → scene Z
-        const mLen = Math.hypot(mRawX, mRawZ) || 1;
-
-        // Sun ecliptic-projected centre (same as sunEclipticDisplayPosition in sunGeometry.ts)
-        const sunDirLen = Math.hypot(sunDirection[0], sunDirection[2]) || 1;
-        const sunEclX = (sunDirection[0] / sunDirLen) * SUN_DISPLAY_DL;
-        const sunEclZ = (sunDirection[2] / sunDirLen) * SUN_DISPLAY_DL;
-
-        // Place Mercury at MERCURY_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun in its direction
-        const mercuryOrbitRadius = 0.387 * SUN_DISPLAY_DL;
-        const mercuryScenePosition: [number, number, number] = [
-            sunEclX + (mRawX / mLen) * mercuryOrbitRadius,
-            0,   // Y=0: stays in the ecliptic plane, same as the ring
-            sunEclZ + (mRawZ / mLen) * mercuryOrbitRadius,
-        ];
-
-        // Venus: same pipeline as Mercury — heliocentric vector → ecliptic XZ direction → ring.
-        // Semi-major axis: 0.723 AU (IAU / NASA Planetary Fact Sheet).
         const venusHelioEqj = A.HelioVector(A.Body.Venus, date);
-        const venusHelioEcl = A.RotateVector(eqjToEclMatrix(A), venusHelioEqj);
-        const vRawX = venusHelioEcl.x;
-        const vRawZ = venusHelioEcl.y;   // ecliptic Y → scene Z
-        const vLen = Math.hypot(vRawX, vRawZ) || 1;
-        const venusOrbitRadius = 0.723 * SUN_DISPLAY_DL;
-        const venusScenePosition: [number, number, number] = [
-            sunEclX + (vRawX / vLen) * venusOrbitRadius,
-            0,
-            sunEclZ + (vRawZ / vLen) * venusOrbitRadius,
-        ];
+        const venusScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), venusHelioEqj));
 
-        // Mars: same pipeline — heliocentric vector → ecliptic XZ direction → ring.
-        // Semi-major axis: 1.524 AU (IAU / NASA Planetary Fact Sheet).
         const marsHelioEqj = A.HelioVector(A.Body.Mars, date);
-        const marsHelioEcl = A.RotateVector(eqjToEclMatrix(A), marsHelioEqj);
-        const maRawX = marsHelioEcl.x;
-        const maRawZ = marsHelioEcl.y;   // ecliptic Y → scene Z
-        const maLen = Math.hypot(maRawX, maRawZ) || 1;
-        const marsOrbitRadius = 1.524 * SUN_DISPLAY_DL;
-        const marsScenePosition: [number, number, number] = [
-            sunEclX + (maRawX / maLen) * marsOrbitRadius,
-            0,
-            sunEclZ + (maRawZ / maLen) * marsOrbitRadius,
-        ];
+        const marsScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), marsHelioEqj));
 
-        // Jupiter: same pipeline — heliocentric vector → ecliptic XZ direction → ring.
-        // Semi-major axis: 5.2028 AU (IAU / NASA Planetary Fact Sheet).
         const jupiterHelioEqj = A.HelioVector(A.Body.Jupiter, date);
-        const jupiterHelioEcl = A.RotateVector(eqjToEclMatrix(A), jupiterHelioEqj);
-        const juRawX = jupiterHelioEcl.x;
-        const juRawZ = jupiterHelioEcl.y;  // ecliptic Y → scene Z
-        const juLen = Math.hypot(juRawX, juRawZ) || 1;
-        const jupiterOrbitRadius = 5.2028 * SUN_DISPLAY_DL;
-        const jupiterScenePosition: [number, number, number] = [
-            sunEclX + (juRawX / juLen) * jupiterOrbitRadius,
-            0,
-            sunEclZ + (juRawZ / juLen) * jupiterOrbitRadius,
-        ];
+        const jupiterScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), jupiterHelioEqj));
 
-        // Saturn: same pipeline — heliocentric vector → ecliptic XZ direction → ring.
-        // Semi-major axis: 9.5392 AU (IAU / NASA Planetary Fact Sheet).
         const saturnHelioEqj = A.HelioVector(A.Body.Saturn, date);
-        const saturnHelioEcl = A.RotateVector(eqjToEclMatrix(A), saturnHelioEqj);
-        const saRawX = saturnHelioEcl.x;
-        const saRawZ = saturnHelioEcl.y;  // ecliptic Y → scene Z
-        const saLen = Math.hypot(saRawX, saRawZ) || 1;
-        const saturnOrbitRadius = 9.5392 * SUN_DISPLAY_DL;
-        const saturnScenePosition: [number, number, number] = [
-            sunEclX + (saRawX / saLen) * saturnOrbitRadius,
-            0,
-            sunEclZ + (saRawZ / saLen) * saturnOrbitRadius,
-        ];
+        const saturnScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), saturnHelioEqj));
 
-        // Uranus: same pipeline — heliocentric vector → ecliptic XZ direction → ring.
-        // Semi-major axis: 19.2184 AU (IAU / NASA Planetary Fact Sheet).
         const uranusHelioEqj = A.HelioVector(A.Body.Uranus, date);
-        const uranusHelioEcl = A.RotateVector(eqjToEclMatrix(A), uranusHelioEqj);
-        const urRawX = uranusHelioEcl.x;
-        const urRawZ = uranusHelioEcl.y;  // ecliptic Y → scene Z
-        const urLen = Math.hypot(urRawX, urRawZ) || 1;
-        const uranusOrbitRadius = 19.2184 * SUN_DISPLAY_DL;
-        const uranusScenePosition: [number, number, number] = [
-            sunEclX + (urRawX / urLen) * uranusOrbitRadius,
-            0,
-            sunEclZ + (urRawZ / urLen) * uranusOrbitRadius,
-        ];
+        const uranusScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), uranusHelioEqj));
 
-        // Neptune: same pipeline — heliocentric vector → ecliptic XZ direction → ring.
-        // Semi-major axis: 30.0699 AU (IAU / NASA Planetary Fact Sheet).
         const neptuneHelioEqj = A.HelioVector(A.Body.Neptune, date);
-        const neptuneHelioEcl = A.RotateVector(eqjToEclMatrix(A), neptuneHelioEqj);
-        const neRawX = neptuneHelioEcl.x;
-        const neRawZ = neptuneHelioEcl.y;  // ecliptic Y → scene Z
-        const neLen = Math.hypot(neRawX, neRawZ) || 1;
-        const neptuneOrbitRadius = 30.0699 * SUN_DISPLAY_DL;
-        const neptuneScenePosition: [number, number, number] = [
-            sunEclX + (neRawX / neLen) * neptuneOrbitRadius,
-            0,
-            sunEclZ + (neRawZ / neLen) * neptuneOrbitRadius,
-        ];
+        const neptuneScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), neptuneHelioEqj));
 
         return {
             sunDirection,
@@ -385,6 +260,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             subsolarLatDeg,
             subsolarLonDeg,
             earthHelioPositionAU,
+            earthScenePosition,
             mercuryScenePosition,
             venusScenePosition,
             marsScenePosition,

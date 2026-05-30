@@ -41,9 +41,10 @@ interface MarsProps {
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
+    showLabel?: boolean;
 }
 
-export function Mars({ position, sunDirection, locale, onFocus, isFocused = false }: MarsProps) {
+export function Mars({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: MarsProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -76,7 +77,7 @@ export function Mars({ position, sunDirection, locale, onFocus, isFocused = fals
         meshRef.current.rotation.y = MARS_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
+            const sunWorld = new THREE.Vector3(0, 0, 0);
             const marsWorld = new THREE.Vector3(...position);
             const dirToSun = sunWorld.sub(marsWorld).normalize();
             (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
@@ -145,9 +146,11 @@ export function Mars({ position, sunDirection, locale, onFocus, isFocused = fals
                     </mesh>
                 ) : null}
 
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Mars' : 'Marte'}</span>
-                </ScreenLabel>
+                {showLabel ? (
+                    <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
+                        <span className="font-semibold">{locale === 'en' ? 'Mars' : 'Marte'}</span>
+                    </ScreenLabel>
+                ) : null}
             </group>
         </>
     );

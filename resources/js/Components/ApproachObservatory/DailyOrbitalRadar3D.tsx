@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createPortal } from 'react-dom';
-import { BookOpen, ChevronDown, Maximize2, Minimize2 } from 'lucide-react';
+import { BookOpen, ChevronDown, Eye, EyeOff, Maximize2, Minimize2 } from 'lucide-react';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { computeSceneEphemeris, KM_PER_AU, type SceneEphemeris } from '@/lib/sceneEphemeris';
@@ -160,6 +160,7 @@ export function DailyOrbitalRadar3D({
 
     const [manualOpen, setManualOpen] = useState(false);
     const [fullscreen, setFullscreen] = useState(false);
+    const [showLabels, setShowLabels] = useState(true);
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const canvasContainerRef = useRef<HTMLDivElement>(null);
     const [noGoRect, setNoGoRect] = useState<NoGoRect>(null);
@@ -203,6 +204,7 @@ export function DailyOrbitalRadar3D({
         const newHasOrbit = Boolean(newObject?.trajectory?.orbitalElements);
         if (!orbitMode || !newHasOrbit) setOrbitMode(false);
         setBodyCardOpen(null);
+        setSunFocusTarget(null);
         setMercuryFocusTarget(null);
         setVenusFocusTarget(null);
         setMarsFocusTarget(null);
@@ -224,7 +226,7 @@ export function DailyOrbitalRadar3D({
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
     });
 
-    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune' | null>(null);
+    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune' | null>(null);
     const [mercuryFocusTarget, setMercuryFocusTarget] = useState<FocusFraming | null>(null);
     const [venusFocusTarget, setVenusFocusTarget] = useState<FocusFraming | null>(null);
     const [marsFocusTarget, setMarsFocusTarget] = useState<FocusFraming | null>(null);
@@ -232,12 +234,14 @@ export function DailyOrbitalRadar3D({
     const [saturnFocusTarget, setSaturnFocusTarget] = useState<FocusFraming | null>(null);
     const [uranusFocusTarget, setUranusFocusTarget] = useState<FocusFraming | null>(null);
     const [neptuneFocusTarget, setNeptuneFocusTarget] = useState<FocusFraming | null>(null);
+    const [sunFocusTarget, setSunFocusTarget] = useState<FocusFraming | null>(null);
 
     // Foca Terra ou Lua. Se estiver em modo órbita, dispara o overlay de transição antes de
     // re-enquadrar — o mesmo tratamento dado ao botão "Voltar ao Asteroide".
     const focusBody = (body: 'earth' | 'moon') => {
         onClearSelection?.();
         setBodyCardOpen(body);
+        setSunFocusTarget(null);
         setMercuryFocusTarget(null);
         setVenusFocusTarget(null);
         setMarsFocusTarget(null);
@@ -256,6 +260,7 @@ export function DailyOrbitalRadar3D({
     const focusMercury = useCallback(() => {
         onClearSelection?.();
         setBodyCardOpen('mercury');
+        setSunFocusTarget(null);
         setVenusFocusTarget(null);
         setMarsFocusTarget(null);
         setJupiterFocusTarget(null);
@@ -269,6 +274,7 @@ export function DailyOrbitalRadar3D({
     const focusVenus = useCallback(() => {
         onClearSelection?.();
         setBodyCardOpen('venus');
+        setSunFocusTarget(null);
         setMercuryFocusTarget(null);
         setMarsFocusTarget(null);
         setJupiterFocusTarget(null);
@@ -282,6 +288,7 @@ export function DailyOrbitalRadar3D({
     const focusMars = useCallback(() => {
         onClearSelection?.();
         setBodyCardOpen('mars');
+        setSunFocusTarget(null);
         setMercuryFocusTarget(null);
         setVenusFocusTarget(null);
         setJupiterFocusTarget(null);
@@ -295,6 +302,7 @@ export function DailyOrbitalRadar3D({
     const focusJupiter = useCallback(() => {
         onClearSelection?.();
         setBodyCardOpen('jupiter');
+        setSunFocusTarget(null);
         setMercuryFocusTarget(null);
         setVenusFocusTarget(null);
         setMarsFocusTarget(null);
@@ -308,6 +316,7 @@ export function DailyOrbitalRadar3D({
     const focusSaturn = useCallback(() => {
         onClearSelection?.();
         setBodyCardOpen('saturn');
+        setSunFocusTarget(null);
         setMercuryFocusTarget(null);
         setVenusFocusTarget(null);
         setMarsFocusTarget(null);
@@ -321,6 +330,7 @@ export function DailyOrbitalRadar3D({
     const focusUranus = useCallback(() => {
         onClearSelection?.();
         setBodyCardOpen('uranus');
+        setSunFocusTarget(null);
         setMercuryFocusTarget(null);
         setVenusFocusTarget(null);
         setMarsFocusTarget(null);
@@ -334,6 +344,7 @@ export function DailyOrbitalRadar3D({
     const focusNeptune = useCallback(() => {
         onClearSelection?.();
         setBodyCardOpen('neptune');
+        setSunFocusTarget(null);
         setMercuryFocusTarget(null);
         setVenusFocusTarget(null);
         setMarsFocusTarget(null);
@@ -343,6 +354,27 @@ export function DailyOrbitalRadar3D({
         const pos = ephemeris?.neptuneScenePosition;
         if (pos) setNeptuneFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.12));
     }, [ephemeris, onClearSelection]);
+
+    const focusSun = useCallback(() => {
+        onClearSelection?.();
+        setBodyCardOpen('sun');
+        setMercuryFocusTarget(null);
+        setVenusFocusTarget(null);
+        setMarsFocusTarget(null);
+        setJupiterFocusTarget(null);
+        setSaturnFocusTarget(null);
+        setUranusFocusTarget(null);
+        setNeptuneFocusTarget(null);
+        const pos = ephemeris?.sunScenePosition;
+        const doFocus = () => {
+            if (pos) setSunFocusTarget(framingForBody(new THREE.Vector3(...pos), 0.5));
+        };
+        if (orbitMode) {
+            triggerTransition(() => { setOrbitMode(false); doFocus(); });
+        } else {
+            doFocus();
+        }
+    }, [ephemeris, onClearSelection, orbitMode, triggerTransition]);
 
     const mercuryFocused = bodyCardOpen === 'mercury';
     const venusFocused = bodyCardOpen === 'venus';
@@ -387,13 +419,14 @@ export function DailyOrbitalRadar3D({
                             closestNowObjects={sceneObjects}
                             selectedId={selectedId}
                             orbitMode={orbitMode}
-                            onSelect={(approach) => { setBodyCardOpen(null); setMercuryFocusTarget(null); setVenusFocusTarget(null); setMarsFocusTarget(null); setJupiterFocusTarget(null); setSaturnFocusTarget(null); setUranusFocusTarget(null); setNeptuneFocusTarget(null); selectObject(approach); }}
+                            onSelect={(approach) => { setBodyCardOpen(null); setSunFocusTarget(null); setMercuryFocusTarget(null); setVenusFocusTarget(null); setMarsFocusTarget(null); setJupiterFocusTarget(null); setSaturnFocusTarget(null); setUranusFocusTarget(null); setNeptuneFocusTarget(null); selectObject(approach); }}
                             cameraIntent={cameraIntent}
-                            focusTarget={focusTarget ?? mercuryFocusTarget ?? venusFocusTarget ?? marsFocusTarget ?? jupiterFocusTarget ?? saturnFocusTarget ?? uranusFocusTarget ?? neptuneFocusTarget}
+                            focusTarget={focusTarget ?? sunFocusTarget ?? mercuryFocusTarget ?? venusFocusTarget ?? marsFocusTarget ?? jupiterFocusTarget ?? saturnFocusTarget ?? uranusFocusTarget ?? neptuneFocusTarget}
                             ephemeris={ephemeris}
                             fallbackSunDirection={fallbackSunDirection}
                             locale={locale}
                             objectLimit={objectLimit}
+                            showLabels={showLabels}
                             onFocusMercury={focusMercury}
                             isMercuryFocused={mercuryFocused}
                             onFocusVenus={focusVenus}
@@ -441,6 +474,7 @@ export function DailyOrbitalRadar3D({
                             neptuneFocused={neptuneFocused}
                             onFocusEarth={() => focusBody('earth')}
                             onFocusMoon={() => focusBody('moon')}
+                            onFocusSun={focusSun}
                             onFocusMercury={focusMercury}
                             onFocusVenus={focusVenus}
                             onFocusMars={focusMars}
@@ -475,7 +509,7 @@ export function DailyOrbitalRadar3D({
                         </div>
                     </div>
 
-                    {/* Botões de visão de câmera + fullscreen */}
+                    {/* Botões de visão de câmera + toggle de labels + fullscreen */}
                     <div className="pointer-events-auto flex items-center gap-2">
                         {activeMode !== 'orbit' ? (
                             <div className="flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
@@ -494,6 +528,20 @@ export function DailyOrbitalRadar3D({
                                 </ViewButton>
                             </div>
                         ) : null}
+                        <button
+                            type="button"
+                            onClick={() => setShowLabels((v) => !v)}
+                            title={showLabels ? (en ? 'Hide labels' : 'Ocultar labels') : (en ? 'Show labels' : 'Mostrar labels')}
+                            aria-label={showLabels ? (en ? 'Hide labels' : 'Ocultar labels') : (en ? 'Show labels' : 'Mostrar labels')}
+                            className={[
+                                'flex items-center justify-center rounded-full border p-1.5 backdrop-blur transition',
+                                showLabels
+                                    ? 'border-white/10 bg-space-950/82 text-white/60 hover:border-white/25 hover:text-white'
+                                    : 'border-white/20 bg-white/8 text-white/35 hover:text-white/60',
+                            ].join(' ')}
+                        >
+                            {showLabels ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+                        </button>
                         <button
                             type="button"
                             onClick={() => setFullscreen((v) => !v)}
@@ -838,6 +886,7 @@ function ReferenceSection({
     neptuneFocused,
     onFocusEarth,
     onFocusMoon,
+    onFocusSun,
     onFocusMercury,
     onFocusVenus,
     onFocusMars,
@@ -856,6 +905,7 @@ function ReferenceSection({
     neptuneFocused: boolean;
     onFocusEarth: () => void;
     onFocusMoon: () => void;
+    onFocusSun: () => void;
     onFocusMercury: () => void;
     onFocusVenus: () => void;
     onFocusMars: () => void;
@@ -874,8 +924,11 @@ function ReferenceSection({
                 {en ? 'Reference' : 'Referência'}
             </div>
 
-            {/* Linha principal: Terra + Lua + botão ··· */}
+            {/* Linha principal: Sol + Terra + Lua + botão ··· */}
             <div className="flex items-center gap-1">
+                <button type="button" onClick={onFocusSun} className={btnCls}>
+                    <span>☀️</span><span className="font-medium">{en ? 'Sun' : 'Sol'}</span>
+                </button>
                 <button type="button" onClick={onFocusEarth} className={btnCls}>
                     <span>🌍</span><span className="font-medium">{en ? 'Earth' : 'Terra'}</span>
                 </button>
@@ -885,107 +938,76 @@ function ReferenceSection({
                 <button
                     type="button"
                     onClick={() => setPlanetsOpen((v) => !v)}
-                    title={en ? 'More bodies' : 'Mais corpos'}
+                    title={en ? 'Planets' : 'Planetas'}
+                    aria-expanded={planetsOpen}
                     className={[
-                        'ml-auto rounded-lg px-2 py-1.5 text-[13px] tracking-widest transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                        planetsOpen ? 'text-white' : 'text-white/40 hover:text-white/70',
+                        'ml-auto flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium tracking-wide transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                        planetsOpen
+                            ? 'border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan'
+                            : 'border-white/15 bg-white/5 text-white/60 hover:border-white/30 hover:bg-white/10 hover:text-white',
                     ].join(' ')}
                 >
-                    ···
+                    <span>{en ? 'Planets' : 'Planetas'}</span>
+                    <ChevronDown className={['size-3 transition-transform', planetsOpen ? 'rotate-180' : ''].join(' ')} />
                 </button>
             </div>
 
-            {/* Painel expansível: planetas de ambientação */}
+            {/* Painel expansível: planetas de ambientação — grade 2 colunas para economizar espaço */}
             {planetsOpen ? (
-                <div className="mt-1 border-t border-white/8 pt-1 space-y-0.5">
+                <div className="mt-1 border-t border-white/8 pt-1 grid grid-cols-2 gap-x-1 gap-y-0.5">
                     <button
                         type="button"
                         onClick={onFocusMercury}
-                        className={[
-                            btnCls,
-                            'w-full',
-                            mercuryFocused ? 'text-white' : '',
-                        ].join(' ')}
+                        className={[btnCls, mercuryFocused ? 'text-white' : ''].join(' ')}
                     >
-                        {/* Pontinho prateado — identidade visual de Mercúrio sem emoji */}
                         <span className="inline-block size-2 rounded-full bg-[#b0b8c8] ring-1 ring-white/20" />
                         <span className="font-medium">{en ? 'Mercury' : 'Mercúrio'}</span>
                     </button>
                     <button
                         type="button"
                         onClick={onFocusVenus}
-                        className={[
-                            btnCls,
-                            'w-full',
-                            venusFocused ? 'text-white' : '',
-                        ].join(' ')}
+                        className={[btnCls, venusFocused ? 'text-white' : ''].join(' ')}
                     >
-                        {/* Pontinho âmbar — identidade visual de Vênus */}
                         <span className="inline-block size-2 rounded-full bg-[#c8b870] ring-1 ring-white/20" />
                         <span className="font-medium">{en ? 'Venus' : 'Vênus'}</span>
                     </button>
                     <button
                         type="button"
                         onClick={onFocusMars}
-                        className={[
-                            btnCls,
-                            'w-full',
-                            marsFocused ? 'text-white' : '',
-                        ].join(' ')}
+                        className={[btnCls, marsFocused ? 'text-white' : ''].join(' ')}
                     >
-                        {/* Pontinho vermelho-ferrugem — identidade visual de Marte */}
                         <span className="inline-block size-2 rounded-full bg-[#c0501a] ring-1 ring-white/20" />
                         <span className="font-medium">{en ? 'Mars' : 'Marte'}</span>
                     </button>
                     <button
                         type="button"
                         onClick={onFocusJupiter}
-                        className={[
-                            btnCls,
-                            'w-full',
-                            jupiterFocused ? 'text-white' : '',
-                        ].join(' ')}
+                        className={[btnCls, jupiterFocused ? 'text-white' : ''].join(' ')}
                     >
-                        {/* Pontinho laranja-bege — identidade visual de Júpiter */}
                         <span className="inline-block size-2 rounded-full bg-[#c8a060] ring-1 ring-white/20" />
                         <span className="font-medium">{en ? 'Jupiter' : 'Júpiter'}</span>
                     </button>
                     <button
                         type="button"
                         onClick={onFocusSaturn}
-                        className={[
-                            btnCls,
-                            'w-full',
-                            saturnFocused ? 'text-white' : '',
-                        ].join(' ')}
+                        className={[btnCls, saturnFocused ? 'text-white' : ''].join(' ')}
                     >
-                        {/* Pontinho dourado-ocre — identidade visual de Saturno e seus anéis */}
                         <span className="inline-block size-2 rounded-full bg-[#c8a840] ring-1 ring-white/20" />
                         <span className="font-medium">{en ? 'Saturn' : 'Saturno'}</span>
                     </button>
                     <button
                         type="button"
                         onClick={onFocusUranus}
-                        className={[
-                            btnCls,
-                            'w-full',
-                            uranusFocused ? 'text-white' : '',
-                        ].join(' ')}
+                        className={[btnCls, uranusFocused ? 'text-white' : ''].join(' ')}
                     >
-                        {/* Pontinho ciano-azulado — identidade visual de Urano (metano atmosférico) */}
                         <span className="inline-block size-2 rounded-full bg-[#4ab8c8] ring-1 ring-white/20" />
                         <span className="font-medium">{en ? 'Uranus' : 'Urano'}</span>
                     </button>
                     <button
                         type="button"
                         onClick={onFocusNeptune}
-                        className={[
-                            btnCls,
-                            'w-full',
-                            neptuneFocused ? 'text-white' : '',
-                        ].join(' ')}
+                        className={[btnCls, neptuneFocused ? 'text-white' : ''].join(' ')}
                     >
-                        {/* Pontinho azul-profundo — identidade visual de Netuno */}
                         <span className="inline-block size-2 rounded-full bg-[#2878d8] ring-1 ring-white/20" />
                         <span className="font-medium">{en ? 'Neptune' : 'Netuno'}</span>
                     </button>

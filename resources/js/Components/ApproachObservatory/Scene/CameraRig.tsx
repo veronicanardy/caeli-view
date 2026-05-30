@@ -2,12 +2,12 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
-import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
+import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE, SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
 import { currentPositionInScene } from '@/lib/observatory/trajectorySampling';
 
 export const CAMERA_FOV_DEG = 42;
-export const MAX_CAMERA_DISTANCE = ORBIT_AU_SCALE * 12;
+export const MAX_CAMERA_DISTANCE = ORBIT_AU_SCALE * 40;
 
 export const CAMERA_VIEWS = {
     perspective: new THREE.Vector3(0, 4.5, 9),
@@ -106,6 +106,58 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
 }
 
 /**
+ * Desloca suavemente o target do OrbitControls da Terra (origem) para o Sol conforme o usuário
+ * faz zoom out. Resolve o problema de rotação excêntrica ao visualizar planetas externos: em zoom
+ * próximo a câmera orbita a Terra naturalmente; em zoom distante, passa a orbitar o Sol.
+ *
+ * Limites:
+ * - Abaixo de NEAR_THRESHOLD: target fixo na Terra (0,0,0) — comportamento atual intacto.
+ * - Acima de FAR_THRESHOLD: target no Sol (sunScenePosition) — rotação centrada no sistema solar.
+ * - Entre os dois: interpolação suave pelo t = smoothstep(dist, near, far).
+ *
+ * Não interfere com tweens do CameraRig nem com o zoom do InertialZoom: só lê a distância
+ * câmera→target e move o target — nunca a posição da câmera.
+ *
+ * sunScenePosition deve ser a posição atual do Sol na cena (atualizada pela efeméride).
+ * Quando null (efeméride ainda resolvendo), o drift não age e o target permanece na Terra.
+ */
+const DRIFT_NEAR_THRESHOLD = SUN_DISPLAY_DL * 1.5;   // ~50 units: começa o drift
+const DRIFT_FAR_THRESHOLD  = SUN_DISPLAY_DL * 5.0;   // ~165 units: drift completo
+
+export function OrbitTargetDrift({ sunScenePosition, earthPos, locked }: { sunScenePosition: [number, number, number] | null; earthPos: [number, number, number]; locked: boolean }) {
+    const { camera } = useThree();
+    const controls = useThree((s) => s.controls) as unknown as
+        | { target: THREE.Vector3; update: () => void }
+        | null;
+
+    const sunPos = useRef(new THREE.Vector3());
+    useEffect(() => {
+        if (sunScenePosition) sunPos.current.set(...sunScenePosition);
+    }, [sunScenePosition]);
+
+    useFrame(() => {
+        if (!controls || !sunScenePosition || locked) return;
+
+        const dist = camera.position.distanceTo(controls.target);
+        const t = THREE.MathUtils.smoothstep(dist, DRIFT_NEAR_THRESHOLD, DRIFT_FAR_THRESHOLD);
+
+        if (t <= 0) return; // dentro do limiar próximo — não toca no target
+
+        const desired = new THREE.Vector3().lerpVectors(
+            new THREE.Vector3(...earthPos),
+            sunPos.current,
+            t,
+        );
+
+        // Lerp suave para não saltar se sunPos acabou de atualizar
+        controls.target.lerp(desired, 0.04);
+        controls.update();
+    });
+
+    return null;
+}
+
+/**
  * Controla a câmera APENAS durante uma transição explícita (clique em atalho de visão ou foco
  * em objeto/corpo). Fora de uma transição não faz nada, então o OrbitControls é o dono completo
  * da câmera — sem conflito em pequenos arrastos.
@@ -119,23 +171,30 @@ export function CameraRig({
     viewNonce,
     focusTarget,
     focusNonce,
+    earthPos,
 }: {
     view: CameraViewKey;
     viewNonce: number;
     focusTarget: FocusFraming | null;
     focusNonce: number;
+    earthPos: [number, number, number];
 }) {
-    // OrbitControls se registra aqui via `makeDefault`. Tipado de forma frouxa porque o slot
-    // `controls` do R3F é intencionalmente sem tipo (pode hospedar qualquer implementação).
     const controls = useThree((s) => s.controls) as unknown as
         | { target: THREE.Vector3; update: () => void; addEventListener: (t: string, fn: () => void) => void; removeEventListener: (t: string, fn: () => void) => void }
         | null;
 
+    // earthPos é lido via ref para não disparar tween a cada atualização de efeméride (10s).
+    const earthPosRef = useRef(earthPos);
+    useEffect(() => { earthPosRef.current = earthPos; }, [earthPos]);
+
     // Posição e alvo desejados da câmera para a transição atual.
+    // Views predefinidas são offsets relativos à Terra — somamos earthPos para que Reset/Superior/Lateral
+    // continuem centrados na Terra independente de onde ela esteja na órbita heliocêntrica.
     const desired = useMemo(() => {
         if (focusTarget) return { position: focusTarget.position.clone(), target: focusTarget.target.clone() };
-        return { position: CAMERA_VIEWS[view].clone(), target: new THREE.Vector3(0, 0, 0) };
-        // Os nonces participam para que reeditar a mesma intenção reinicie o tween.
+        const earth = new THREE.Vector3(...earthPosRef.current);
+        return { position: earth.clone().add(CAMERA_VIEWS[view]), target: earth };
+        // earthPos é lido via ref — intencionalmente fora das dependências para não reiniciar tweens.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view, viewNonce, focusTarget, focusNonce]);
 

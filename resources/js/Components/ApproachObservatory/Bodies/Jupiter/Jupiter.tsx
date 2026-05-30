@@ -42,9 +42,10 @@ interface JupiterProps {
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
+    showLabel?: boolean;
 }
 
-export function Jupiter({ position, sunDirection, locale, onFocus, isFocused = false }: JupiterProps) {
+export function Jupiter({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: JupiterProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -77,7 +78,7 @@ export function Jupiter({ position, sunDirection, locale, onFocus, isFocused = f
         meshRef.current.rotation.y = JUPITER_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
+            const sunWorld = new THREE.Vector3(0, 0, 0);
             const jupiterWorld = new THREE.Vector3(...position);
             const dirToSun = sunWorld.sub(jupiterWorld).normalize();
             (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
@@ -146,9 +147,11 @@ export function Jupiter({ position, sunDirection, locale, onFocus, isFocused = f
                     </mesh>
                 ) : null}
 
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Jupiter' : 'Júpiter'}</span>
-                </ScreenLabel>
+                {showLabel ? (
+                    <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
+                        <span className="font-semibold">{locale === 'en' ? 'Jupiter' : 'Júpiter'}</span>
+                    </ScreenLabel>
+                ) : null}
             </group>
         </>
     );

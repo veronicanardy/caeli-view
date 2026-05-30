@@ -98,9 +98,10 @@ interface SaturnProps {
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
+    showLabel?: boolean;
 }
 
-export function Saturn({ position, sunDirection, locale, onFocus, isFocused = false }: SaturnProps) {
+export function Saturn({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: SaturnProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -134,7 +135,7 @@ export function Saturn({ position, sunDirection, locale, onFocus, isFocused = fa
         meshRef.current.rotation.y = SATURN_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
+            const sunWorld = new THREE.Vector3(0, 0, 0);
             const saturnWorld = new THREE.Vector3(...position);
             const dirToSun = sunWorld.sub(saturnWorld).normalize();
             (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
@@ -230,9 +231,11 @@ export function Saturn({ position, sunDirection, locale, onFocus, isFocused = fa
                     </mesh>
                 ) : null}
 
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Saturn' : 'Saturno'}</span>
-                </ScreenLabel>
+                {showLabel ? (
+                    <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
+                        <span className="font-semibold">{locale === 'en' ? 'Saturn' : 'Saturno'}</span>
+                    </ScreenLabel>
+                ) : null}
             </group>
         </>
     );

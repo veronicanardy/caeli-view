@@ -10,6 +10,9 @@ import { useEarthTexture } from '../Earth/Earth';
 export interface MoonProps {
     onFocus: () => void;
     position: [number, number, number];
+    /** Vetor Terra→Lua em coordenadas de cena (geocêntrico log-comprimido). Usado pelo tidal lock.
+     *  Se omitido, usa `position` (compatibilidade com cenas onde Terra é a origem). */
+    geocentricPosition?: [number, number, number];
     sunDirection: [number, number, number];
     compactLabel: boolean;
     showLabel: boolean;
@@ -22,6 +25,7 @@ export interface MoonProps {
 export function Moon({
     onFocus,
     position,
+    geocentricPosition,
     sunDirection,
     compactLabel,
     showLabel,
@@ -43,16 +47,17 @@ export function Moon({
     // A cada frame orientamos a malha para que o lado visível fique voltado para a origem da cena.
     const meshRef = useRef<THREE.Mesh>(null);
     useFrame(() => {
-        if (meshRef.current) orientMoonTidal(meshRef.current, position);
+        if (meshRef.current) orientMoonTidal(meshRef.current, geocentricPosition ?? position);
     });
 
     // A fase da Lua é gerada pela iluminação real. Adicionamos um preenchimento suave
     // oposto ao Sol para evitar que o lado não iluminado fique completamente preto.
+    // fillPos é relativo à origem do grupo (centro da Lua) — só o oposto do Sol.
     const fillPos = useMemo<[number, number, number]>(() => [
-        position[0] - sunDirection[0] * 3,
-        position[1] - sunDirection[1] * 3,
-        position[2] - sunDirection[2] * 3,
-    ], [position, sunDirection]);
+        -sunDirection[0] * 3,
+        -sunDirection[1] * 3,
+        -sunDirection[2] * 3,
+    ], [sunDirection]);
 
     const title = isApproximate
         ? (en ? 'Lunar position loading (server fallback)' : 'Posição lunar carregando (estimativa do servidor)')
