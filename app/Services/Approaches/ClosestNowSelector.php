@@ -127,7 +127,7 @@ final class ClosestNowSelector
         // individual do Horizons por objectId (TTL 30min) reutiliza automaticamente os
         // ~10 objetos já consultados — apenas os objetos 11–20 geram novas chamadas à API.
         $windowSignature = implode(',', self::HORIZONS_WINDOW);
-        $cacheKey        = 'closest-now:v7:' . md5($dateMin . '|' . $dateMax . '|' . $mode . '|' . $limit . '|' . $anchor . '|' . $windowSignature);
+        $cacheKey        = 'closest-now:v11:' . md5($dateMin . '|' . $dateMax . '|' . $mode . '|' . $limit . '|' . $anchor . '|' . $windowSignature);
 
         if ($forceRefresh) {
             Cache::forget($cacheKey);
@@ -180,8 +180,16 @@ final class ClosestNowSelector
             'featured', 'attention' => [
                 'date_min'      => CarbonImmutable::parse($anchorDate, 'UTC')->subDays(90)->toDateString(),
                 'date_max'      => CarbonImmutable::parse($anchorDate, 'UTC')->addDays(90)->toDateString(),
-                'type'          => 'all',
+                'type'          => 'comet', // pula NeoWs (só asteroides) — CAD basta e evita crash com janela ±90d
                 'dist_max'      => '1.0',   // até 1 UA — inclui objetos famosos distantes
+                'sort'          => 'dist',
+                'distance_unit' => 'km',
+            ],
+            'upcoming' => [
+                'date_min'      => $dateMin,
+                'date_max'      => $dateMax,
+                'type'          => 'all',
+                'dist_max'      => '0.05',  // mesmo critério do Eyes on Asteroids
                 'sort'          => 'dist',
                 'distance_unit' => 'km',
             ],
@@ -199,12 +207,13 @@ final class ClosestNowSelector
 
         $approaches = is_array($data['approaches'] ?? null) ? $data['approaches'] : [];
 
-        if ($approaches === []) {
+        if ($approaches === [] && $mode !== 'featured') {
             return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato encontrado no período.');
         }
 
         // Passo 2: filtra e seleciona candidatos de acordo com o modo.
         $candidates = $this->pickCandidates($approaches, $mode, $anchorDate);
+        Log::info('[ClosestNow] candidates após pick', ['mode' => $mode, 'count' => count($candidates), 'ids' => array_column(array_slice($candidates, 0, 6), 'id')]);
 
         if ($candidates === []) {
             return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato com dados suficientes para projeção.');
@@ -385,18 +394,72 @@ final class ClosestNowSelector
     }
 
     /**
-     * Modo 'featured': somente objetos com modelo 3D real disponível na cena.
-     * A lista de nomes/números espelha exatamente REAL_ASTEROID_MODELS no frontend.
+     * Objetos em destaque fixos: sempre presentes, independente do CAD.
+     * spkId (SPK-ID do JPL) => nome canônico para fallback direto ao Horizons.
+     */
+    private const FEATURED_OBJECTS = [
+        '2101955' => 'Bennu',
+        '2000001' => 'Ceres',
+        '2025143' => 'Itokawa',
+        '2000433' => 'Eros',
+        '2000004' => 'Vesta',
+        '2001943' => 'Anteros',
+    ];
+
+    /**
+     * Modo 'featured': objetos com modelo 3D ou na lista de destaque fixa.
+     * Primeiro filtra o pool do CAD; para os que não aparecerem, cria entradas
+     * sintéticas mínimas para o Horizons conseguir buscar a posição atual.
      *
      * @param  array<int, array<string, mixed>>  $approaches
      * @return array<int, array<string, mixed>>
      */
     private function pickFeaturedCandidates(array $approaches): array
     {
-        return array_values(array_filter(
+        $fromCad = array_values(array_filter(
             $approaches,
             fn (array $a): bool => $this->hasFeaturedModel($a),
         ));
+
+        // Detecta quais SPK IDs já vieram do CAD (aceita com ou sem prefixo "2").
+        $foundSpkIds = [];
+        foreach ($fromCad as $a) {
+            $spk = trim((string) ($a['spkId'] ?? ''));
+            if ($spk !== '') {
+                $foundSpkIds[$spk] = true;
+                $foundSpkIds[ltrim($spk, '2')] = true;
+            }
+        }
+
+        // Para os que faltam, cria entrada sintética mínima para o Horizons.
+        $synthetic = [];
+        foreach (self::FEATURED_OBJECTS as $spkId => $name) {
+            if (isset($foundSpkIds[$spkId]) || isset($foundSpkIds[ltrim($spkId, '2')])) {
+                continue;
+            }
+            $synthetic[] = [
+                'id'                => 'featured:' . $spkId,
+                'source'            => 'cad',
+                'sourceLabel'       => 'JPL CAD',
+                'rawName'           => $name,
+                'name'              => $name,
+                'displayName'       => $name,
+                'designation'       => null,
+                'spkId'             => $spkId,
+                'permanentNumber'   => ltrim($spkId, '2'),
+                'properName'        => $name,
+                'objectType'        => 'asteroid',
+                'approachDate'      => null,
+                'approachTime'      => '',
+                'approachBody'      => 'Earth',
+                'nominalDistanceKm' => null,
+                'hazardFlag'        => false,
+                'detailIdentifier'  => $name,
+                'distanceContext'   => \App\Support\DistancePresenter::fromKilometers(null),
+            ];
+        }
+
+        return array_merge($fromCad, $synthetic);
     }
 
     /**
@@ -420,11 +483,11 @@ final class ClosestNowSelector
      */
     private function hasFeaturedModel(array $approach): bool
     {
-        // Números de catálogo canônicos dos asteroides com modelo 3D próprio
-        static $featuredNumbers = ['101955', '1', '25143', '433', '4'];
+        // Números de catálogo canônicos dos asteroides em destaque
+        static $featuredNumbers = ['101955', '1', '25143', '433', '4', '1943'];
 
         // Aliases textuais correspondentes
-        static $featuredAliases = ['bennu', 'rq36', 'ceres', 'itokawa', 'eros', 'vesta'];
+        static $featuredAliases = ['bennu', 'rq36', 'ceres', 'itokawa', 'eros', 'vesta', 'anteros'];
 
         $fields = array_filter([
             $approach['name'] ?? null,

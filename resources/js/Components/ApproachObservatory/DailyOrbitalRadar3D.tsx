@@ -563,8 +563,8 @@ const EMPTY_MODE_MESSAGES: Record<SelectionMode, { pt: string; en: string }> = {
     nearest:   { pt: 'Nenhum objeto próximo encontrado agora.', en: 'No nearby objects found right now.' },
     upcoming:  { pt: 'Nenhuma aproximação prevista para hoje.', en: 'No close approaches scheduled for today.' },
     featured:  {
-        pt: 'Nenhum dos objetos em destaque (Bennu, Eros, Ceres, Itokawa, Vesta) tem posição disponível no radar agora.',
-        en: 'None of the featured objects (Bennu, Eros, Ceres, Itokawa, Vesta) have a position available in the radar right now.',
+        pt: 'Nenhum dos objetos em destaque (Bennu, Eros, Ceres, Itokawa, Vesta, Anteros) tem posição disponível no radar agora.',
+        en: 'None of the featured objects (Bennu, Eros, Ceres, Itokawa, Vesta, Anteros) have a position available in the radar right now.',
     },
     attention: {
         pt: 'Nenhum objeto monitorado pela NASA/JPL com posição disponível no radar agora.',
