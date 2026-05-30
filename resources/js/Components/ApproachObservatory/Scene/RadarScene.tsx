@@ -60,11 +60,12 @@ type RadarSceneProps = {
     /** Chamado quando Terra ou Lua são focados de dentro da cena (clique no label/hitbox). */
     onFocusBody: (body: 'earth' | 'moon') => void;
     onFocusSun?: () => void;
+    isSunFocused?: boolean;
     /** Quando false, todas as labels 3D (planetas, asteroides, Terra, Lua) ficam ocultas. */
     showLabels?: boolean;
 };
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, showLabels = true }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -232,11 +233,11 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     {/* Sol na origem da cena heliocêntrica. */}
                     <Sun
                         position={[0, 0, 0]}
-                        sunDirection={sunDir}
                         radius={SUN_RADIUS_SCENE}
                         locale={locale}
                         withLighting
                         onFocus={onFocusSun}
+                        isFocused={isSunFocused}
                         showLabel={showLabels}
                     />
                     {/* Terra na posição heliocêntrica real. */}

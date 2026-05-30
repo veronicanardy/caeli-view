@@ -450,6 +450,7 @@ export function DailyOrbitalRadar3D({
                             objectLimit={objectLimit}
                             showLabels={showLabels}
                             onFocusSun={focusSun}
+                            isSunFocused={bodyCardOpen === 'sun'}
                             onFocusMercury={focusMercury}
                             isMercuryFocused={mercuryFocused}
                             onFocusVenus={focusVenus}

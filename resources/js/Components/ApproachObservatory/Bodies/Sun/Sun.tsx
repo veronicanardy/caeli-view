@@ -9,8 +9,8 @@ interface SunProps {
     radius: number;
     locale: 'pt-BR' | 'en';
     withLighting?: boolean;
-    sunDirection?: [number, number, number];
     onFocus?: () => void;
+    isFocused?: boolean;
     showLabel?: boolean;
 }
 
@@ -29,8 +29,8 @@ export function Sun({
     radius,
     locale,
     withLighting = false,
-    sunDirection,
     onFocus,
+    isFocused = false,
     showLabel = true,
 }: SunProps) {
     const en = locale === 'en';
@@ -71,16 +71,7 @@ export function Sun({
     return (
         <group>
             {withLighting ? (
-                <>
-                    <directionalLight
-                        position={position[0] === 0 && position[1] === 0 && position[2] === 0
-                            ? (sunDirection ?? [1, 0, 0])
-                            : position}
-                        intensity={2.2}
-                        color="#fff6e8"
-                    />
-                    <pointLight position={position} intensity={0.5} distance={160} color="#ffdca8" />
-                </>
+                <pointLight position={position} intensity={8.0} distance={0} decay={0} color="#fff6e8" />
             ) : null}
 
             <group position={position}>
@@ -101,7 +92,7 @@ export function Sun({
                     <primitive object={glowMaterial} attach="material" />
                 </mesh>
                 <SunProminences radius={radius} />
-                {onFocus ? (
+                {onFocus && !isFocused ? (
                     <mesh
                         onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onFocus(); }}
                         onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
