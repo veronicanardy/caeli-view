@@ -33,8 +33,10 @@ export interface PlanetDatum {
     rotationPeriodS: number;
     /** Obliquity of the ecliptic, degrees. IAU WGCCRE 2015. */
     axialTiltDeg: number;
-    /** Public path to the 2K surface texture, or null for fallback. */
+    /** Public path to the surface texture, or null for fallback. */
     texturePath: string | null;
+    /** Optional path to an atmosphere/cloud overlay texture. */
+    atmospherePath?: string | null;
     /** Fallback sphere color when no texture is loaded. */
     fallbackColor: string;
 }
@@ -57,7 +59,7 @@ export const MERCURY: PlanetDatum = {
     visualRadiusDl: 0.028,                             // rendered radius (~44× exaggeration)
     rotationPeriodS: 58.6462 * 24 * 3600,             // 5_067,013 s ≈ 58.65 days
     axialTiltDeg: 0.034,                               // near-zero obliquity (IAU WGCCRE 2015)
-    texturePath: '/images/mercury/mercury-2k.jpg',
+    texturePath: '/images/mercury/mercury-8k.jpg',
     fallbackColor: '#a89880',                          // warm grey matching real surface albedo
 };
 
@@ -82,7 +84,8 @@ export const VENUS: PlanetDatum = {
     visualRadiusDl: 0.038,                              // rendered radius (~24× exaggeration)
     rotationPeriodS: 243.018 * 24 * 3600,              // magnitude; sign applied in Venus.tsx
     axialTiltDeg: 177.36,                               // retrograde obliquity (IAU WGCCRE 2015)
-    texturePath: '/images/venus/venus-2k.jpg',
+    texturePath: '/images/venus/venus-8k.jpg',
+    atmospherePath: '/images/venus/venus-atmosfere-2k.jpg',
     fallbackColor: '#c8a84a',                           // âmbar dourado — cor das nuvens de CO₂
 };
 
@@ -105,7 +108,7 @@ export const MARS: PlanetDatum = {
     visualRadiusDl: 0.048,                              // rendered radius (~54× exaggeration)
     rotationPeriodS: 1.02596 * 24 * 3600,              // 88,643 s ≈ 1.026 days (sol marciano)
     axialTiltDeg: 25.19,                                // obliquity (IAU WGCCRE 2015)
-    texturePath: '/images/mars/mars-2k.jpg',
+    texturePath: '/images/mars/mars-8k.jpg',
     fallbackColor: '#c0501a',                           // vermelho-ferrugem — óxido de ferro
 };
 
@@ -133,7 +136,7 @@ export const SATURN: PlanetDatum = {
     visualRadiusDl: 0.16,                                // rendered radius (~1.02× — quase real!)
     rotationPeriodS: 0.44401 * 24 * 3600,               // 38,362 s ≈ 10h 39min (sistema III IAU)
     axialTiltDeg: 26.73,                                 // obliquity (IAU WGCCRE 2015)
-    texturePath: '/images/saturn/saturn-2k.jpg',
+    texturePath: '/images/saturn/saturn-8k.jpg',
     fallbackColor: '#c8b060',                            // dourado-ocre — bandas de amônia
 };
 
@@ -212,6 +215,6 @@ export const JUPITER: PlanetDatum = {
     visualRadiusDl: 0.19,                               // rendered radius (~1.02× — quase real!)
     rotationPeriodS: 0.41354 * 24 * 3600,              // 35,730 s ≈ 9h 55min (sistema III IAU)
     axialTiltDeg: 3.13,                                 // obliquity (IAU WGCCRE 2015)
-    texturePath: '/images/jupiter/jupiter-2k.jpg',
+    texturePath: '/images/jupiter/jupiter-8k.jpg',
     fallbackColor: '#c8a878',                           // laranja-bege — bandas de amônia
 };

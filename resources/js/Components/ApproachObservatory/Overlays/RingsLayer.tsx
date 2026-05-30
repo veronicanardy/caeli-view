@@ -4,7 +4,7 @@ import { SceneLabel } from './SceneLabels';
 
 // Anéis primários de DL desabilitados aqui; a referência de 1 DL pertence à órbita da Lua.
 const RING_STOPS_DL: number[] = [];
-const GUIDE_RING_STOPS_DL = [50];
+const GUIDE_RING_STOPS_DL: number[] = [];
 
 /**
  * Anéis guia tênues além da Lua com seus rótulos de distância. O anel de 1 DL fica na linha de

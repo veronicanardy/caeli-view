@@ -20,6 +20,7 @@ const EARTH_TEXTURE_CASCADE = [
 
 // Cascade of cloud textures — only used when EARTH_DEBUG_MINIMAL is false.
 const CLOUD_TEXTURE_CASCADE = [
+    '/images/earth/8k_earth_clouds.jpg',
     '/images/earth/earth-clouds-2048.jpg',
     '/images/earth/earth-clouds-1024.png',
 ] as const;

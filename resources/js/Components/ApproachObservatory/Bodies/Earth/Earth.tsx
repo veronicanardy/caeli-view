@@ -76,13 +76,13 @@ export function Earth({
      * Textura noturna com luzes urbanas. Também usa `raw` por ser consumida pelo
      * shader customizado da Terra.
      */
-    const night = useEarthTexture('/images/earth/earth-night-lights-2048.jpg', 'raw');
+    const night = useEarthTexture('/images/earth/8k_earth_nightmap.jpg', 'raw');
 
     /**
      * Mapa de nuvens. Usa `srgb` porque a textura alimenta diretamente o shader
      * visual de nuvens.
      */
-    const clouds = useEarthTexture('/images/earth/earth-clouds-2048.jpg', 'srgb');
+    const clouds = useEarthTexture('/images/earth/8k_earth_clouds.jpg', 'srgb');
 
     /**
      * Grupo que contém a superfície e a camada de nuvens.

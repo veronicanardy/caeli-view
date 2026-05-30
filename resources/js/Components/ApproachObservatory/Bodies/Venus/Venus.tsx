@@ -66,6 +66,7 @@ export function Venus({ position, sunDirection, locale, onFocus, isFocused = fal
     };
 
     const texture = useEarthTexture(VENUS.texturePath ?? '', 'srgb');
+    const atmosphere = useEarthTexture(VENUS.atmospherePath ?? '', 'srgb');
 
     const poleGroupRef = useRef<THREE.Group>(null);
     const meshRef = useRef<THREE.Mesh>(null);
@@ -89,6 +90,7 @@ export function Venus({ position, sunDirection, locale, onFocus, isFocused = fal
     });
 
     useEffect(() => { return () => { texture?.dispose(); }; }, [texture]);
+    useEffect(() => { return () => { atmosphere?.dispose(); }; }, [atmosphere]);
 
     const material = useMemo(() => {
         const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
@@ -98,8 +100,9 @@ export function Venus({ position, sunDirection, locale, onFocus, isFocused = fal
         if (texture) {
             return new THREE.ShaderMaterial({
                 uniforms: {
-                    surfaceMap: { value: texture },
-                    sunDir: { value: initialSunDir },
+                    surfaceMap:     { value: texture },
+                    atmosphereMap:  { value: atmosphere ?? texture },
+                    sunDir:         { value: initialSunDir },
                 },
                 vertexShader: VENUS_VERT,
                 fragmentShader: VENUS_FRAG,
@@ -107,7 +110,7 @@ export function Venus({ position, sunDirection, locale, onFocus, isFocused = fal
         }
         return new THREE.MeshStandardMaterial({ color: VENUS.fallbackColor, roughness: 0.6, metalness: 0.0 });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [texture]);
+    }, [texture, atmosphere]);
 
     useEffect(() => { return () => { material.dispose(); }; }, [material]);
 

@@ -30,6 +30,7 @@ export const VENUS_VERT = /* glsl */ `
 
 export const VENUS_FRAG = /* glsl */ `
     uniform sampler2D surfaceMap;
+    uniform sampler2D atmosphereMap;
     uniform vec3 sunDir;
 
     varying vec2 vUv;
@@ -46,9 +47,13 @@ export const VENUS_FRAG = /* glsl */ `
         // pelo lado noturno, alargando a transição dia/noite.
         float dayAmount = smoothstep(-0.25, 0.35, lambert);
 
-        vec3 cloudColor = texture2D(surfaceMap, vUv).rgb;
+        // Superfície base (rocha/topografia) coberta pela camada de nuvens/atmosfera.
+        vec3 surfaceColor = texture2D(surfaceMap, vUv).rgb;
+        vec4 atmSample    = texture2D(atmosphereMap, vUv);
+        // Mistura atmosfera sobre superfície pela opacidade da textura de nuvens.
+        vec3 cloudColor   = mix(surfaceColor, atmSample.rgb, atmSample.a);
 
-        // Lado diurno: albedo alto mas sem estourar — piso + ganho reduzidos.
+        // Lado diurno: albedo alto mas sem estourar.
         float lit = clamp(lambert, 0.0, 1.0);
         vec3 dayLit = cloudColor * (0.55 + 0.65 * pow(lit, 0.75));
 

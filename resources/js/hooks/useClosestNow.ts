@@ -22,6 +22,7 @@ export function useClosestNow(
     dateMax:  string,
     limit:    ObjectLimit,
     mode:     SelectionMode,
+    refreshNonce: number = 0,
 ): UseClosestNowResult {
     const [data,         setData]         = useState<ClosestNowResponse | null>(null);
     const [fetchLoading, setFetchLoading] = useState(false);
@@ -33,7 +34,7 @@ export function useClosestNow(
     // Ref dos params atualmente resolvidos (pós-fetch bem-sucedido).
     // Comparado com os params atuais para detectar mudança antes do useEffect.
     const resolvedParamsRef = useRef<string | null>(null);
-    const currentParams = `${dateMin}|${dateMax}|${limit}|${mode}`;
+    const currentParams = `${dateMin}|${dateMax}|${limit}|${mode}|${refreshNonce}`;
 
     // Síncrono: loading é true se os params atuais diferem dos últimos resolvidos
     // OU se o fetch ainda está em andamento. Não depende do ciclo de useEffect.
@@ -87,7 +88,7 @@ export function useClosestNow(
     // currentParams é derivado de dateMin/dateMax/limit/mode — usar as fontes diretas
     // nas deps garante que o efeito re-dispara corretamente.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dateMin, dateMax, limit, mode]);
+    }, [dateMin, dateMax, limit, mode, refreshNonce]);
 
     return { data: data ?? staleDataRef.current, loading, error };
 }

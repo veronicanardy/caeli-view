@@ -95,6 +95,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     const [use3DPrototype, setUse3DPrototype] = useState(true);
 
     const { objectLimit, selectionMode, setObjectLimit, setSelectionMode } = useRadarControls();
+    const [refreshNonce, setRefreshNonce] = useState(0);
 
     // Reset reference mode to the date-appropriate default whenever the selected date changes.
     useEffect(() => {
@@ -181,6 +182,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
         filters.date_max,
         radarMode === 'closest-5-now' ? objectLimit : 5,
         radarMode === 'closest-5-now' ? selectionMode : 'nearest',
+        refreshNonce,
     );
 
     useEffect(() => {
@@ -518,6 +520,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                                     onLimitChange={setObjectLimit}
                                     onModeChange={setSelectionMode}
                                     radarLoading={closestNowLoading}
+                                    onRefresh={() => setRefreshNonce((n) => n + 1)}
                                     onSelect={(approach) => {
                                         // Click toggles selection — clicking the same object again deselects.
                                         setSelectedFocusId((current) => (current === approach.id ? null : approach.id));

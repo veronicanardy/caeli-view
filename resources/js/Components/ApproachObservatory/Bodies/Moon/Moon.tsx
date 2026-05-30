@@ -38,7 +38,7 @@ export function Moon({
     const [hovered, setHovered] = useState(false);
 
     // Textura lunar real (2K). O bump procedural adiciona relevo de crateras em cima.
-    const texture = useEarthTexture('/images/moon/moon-2048.jpg');
+    const texture = useEarthTexture('/images/moon/moon-8k.jpg');
     const bump = useMemo(() => {
         try { return buildMoonBump(512); } catch { return null; }
     }, []);

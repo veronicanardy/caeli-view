@@ -119,7 +119,7 @@ export function Saturn({ position, sunDirection, locale, onFocus, isFocused = fa
     };
 
     const texture = useEarthTexture(SATURN.texturePath ?? '', 'srgb');
-    const ringTexture = useEarthTexture('/images/saturn/saturn-ring-2k.png', 'srgb');
+    const ringTexture = useEarthTexture('/images/saturn/saturn-ring-8k.png', 'srgb');
 
     const poleGroupRef = useRef<THREE.Group>(null);
     const meshRef = useRef<THREE.Mesh>(null);

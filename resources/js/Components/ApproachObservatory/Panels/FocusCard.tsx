@@ -44,7 +44,7 @@ export function FocusCard({
     const trajectoryStatus = trajectoryStatusBadge(object.trajectory, en);
 
     return (
-        <div className="pointer-events-auto absolute left-3 top-[66%] z-20 flex max-h-[76%] w-[min(24rem,48%)] -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-signal-cyan/25 bg-space-950/92 shadow-glow backdrop-blur-xl">
+        <div className="pointer-events-auto absolute left-3 top-[54%] z-20 flex max-h-[76%] w-[min(24rem,48%)] -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-signal-cyan/25 bg-space-950/92 shadow-glow backdrop-blur-xl">
             {/* Header */}
             <div className="flex items-start justify-between gap-2 px-3 pt-3">
                 <div className="min-w-0">

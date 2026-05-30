@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createPortal } from 'react-dom';
-import { BookOpen, ChevronDown, Eye, EyeOff, Maximize2, Minimize2 } from 'lucide-react';
+import { BookOpen, ChevronDown, Eye, EyeOff, Maximize2, Minimize2, RefreshCw } from 'lucide-react';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { computeSceneEphemeris, KM_PER_AU, type SceneEphemeris } from '@/lib/sceneEphemeris';
@@ -53,6 +53,7 @@ type Props = {
     onLimitChange: (limit: ObjectLimit) => void;
     onModeChange: (mode: SelectionMode) => void;
     radarLoading?: boolean;
+    onRefresh?: () => void;
     /**
      * Direção do Sol (eclíptica geocêntrica) para o instante atual, calculada no servidor
      * via SunDirectionCalculator e transmitida pelo Inertia. Usada como fallback SÍNCRONO
@@ -75,6 +76,7 @@ export function DailyOrbitalRadar3D({
     onLimitChange,
     onModeChange,
     radarLoading = false,
+    onRefresh,
     initialSunDirection,
 }: Props) {
     const en = locale === 'en';
@@ -162,31 +164,42 @@ export function DailyOrbitalRadar3D({
     const [manualOpen, setManualOpen] = useState(false);
     const [fullscreen, setFullscreen] = useState(false);
     const [showLabels, setShowLabels] = useState(true);
+    const [planetsOpen, setPlanetsOpen] = useState(false);
     const sidePanelRef = useRef<HTMLDivElement>(null);
+    const planetFlyoutRef = useRef<HTMLDivElement>(null);
     const canvasContainerRef = useRef<HTMLDivElement>(null);
     const [noGoRect, setNoGoRect] = useState<NoGoRect>(null);
 
-    // Recalcula o rect do painel lateral relativo ao canvas sempre que o layout muda
+    // Recalcula o rect proibido para labels — une o painel lateral e o flyout de planetas
     useEffect(() => {
         const update = () => {
             const panel = sidePanelRef.current;
             const canvas = canvasContainerRef.current;
             if (!panel || !canvas) return;
-            const panelRect = panel.getBoundingClientRect();
             const canvasRect = canvas.getBoundingClientRect();
-            setNoGoRect({
-                left:   panelRect.left   - canvasRect.left,
-                top:    panelRect.top    - canvasRect.top,
-                right:  panelRect.right  - canvasRect.left,
-                bottom: panelRect.bottom - canvasRect.top,
-            });
+            const panelRect = panel.getBoundingClientRect();
+            let left   = panelRect.left   - canvasRect.left;
+            let top    = panelRect.top    - canvasRect.top;
+            let right  = panelRect.right  - canvasRect.left;
+            let bottom = panelRect.bottom - canvasRect.top;
+            // Expande para cobrir o flyout de planetas quando está aberto
+            const flyout = planetFlyoutRef.current;
+            if (flyout) {
+                const flyoutRect = flyout.getBoundingClientRect();
+                left   = Math.min(left,   flyoutRect.left   - canvasRect.left);
+                top    = Math.min(top,    flyoutRect.top    - canvasRect.top);
+                right  = Math.max(right,  flyoutRect.right  - canvasRect.left);
+                bottom = Math.max(bottom, flyoutRect.bottom - canvasRect.top);
+            }
+            setNoGoRect({ left, top, right, bottom });
         };
         update();
         const observer = new ResizeObserver(update);
         if (sidePanelRef.current) observer.observe(sidePanelRef.current);
+        if (planetFlyoutRef.current) observer.observe(planetFlyoutRef.current);
         if (canvasContainerRef.current) observer.observe(canvasContainerRef.current);
         return () => observer.disconnect();
-    }, [fullscreen]);
+    }, [fullscreen, planetsOpen]);
 
     useEffect(() => {
         if (!fullscreen) return;
@@ -457,46 +470,50 @@ export function DailyOrbitalRadar3D({
 
                 {/* Barra superior: painel lateral + botões de câmera. */}
                 <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-3">
-                    <div ref={sidePanelRef} className="pointer-events-auto flex h-[min(26rem,70vh)] w-[min(18rem,48%)] flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl">
+                    <div className="pointer-events-auto relative flex items-start gap-2">
+                        {/* Painel lateral principal */}
+                        <div ref={sidePanelRef} className="flex h-[min(26rem,70vh)] w-[min(18rem,48vw)] flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl">
 
-                        {/* Controles de seleção: quantidade + critério — integrados no painel lateral. */}
-                        <div className="border-b border-white/10 px-2 py-2">
-                            <RadarObjectControls
-                                objectLimit={objectLimit}
-                                selectionMode={selectionMode}
-                                onLimitChange={onLimitChange}
-                                onModeChange={onModeChange}
-                                locale={locale}
-                                loading={radarLoading}
+                            {/* Controles de seleção: quantidade + critério — integrados no painel lateral. */}
+                            <div className="border-b border-white/10 px-2 py-2">
+                                <RadarObjectControls
+                                    objectLimit={objectLimit}
+                                    selectionMode={selectionMode}
+                                    onLimitChange={onLimitChange}
+                                    onModeChange={onModeChange}
+                                    locale={locale}
+                                    loading={radarLoading}
+                                />
+                            </div>
+
+                            {/* Corpos de referência */}
+                            <ReferenceSection
+                                en={en}
+                                planetsOpen={planetsOpen}
+                                onPlanetsOpenChange={setPlanetsOpen}
+                                onFocusEarth={() => focusBody('earth')}
+                                onFocusMoon={() => focusBody('moon')}
+                                onFocusSun={focusSun}
                             />
-                        </div>
-
-                        {/* Corpos de referência */}
-                        <ReferenceSection
-                            en={en}
-                            mercuryFocused={mercuryFocused}
-                            venusFocused={venusFocused}
-                            marsFocused={marsFocused}
-                            jupiterFocused={jupiterFocused}
-                            saturnFocused={saturnFocused}
-                            uranusFocused={uranusFocused}
-                            neptuneFocused={neptuneFocused}
-                            onFocusEarth={() => focusBody('earth')}
-                            onFocusMoon={() => focusBody('moon')}
-                            onFocusSun={focusSun}
-                            onFocusMercury={focusMercury}
-                            onFocusVenus={focusVenus}
-                            onFocusMars={focusMars}
-                            onFocusJupiter={focusJupiter}
-                            onFocusSaturn={focusSaturn}
-                            onFocusUranus={focusUranus}
-                            onFocusNeptune={focusNeptune}
-                        />
 
                         {/* Lista dos objetos: ocupa o espaço restante do painel com scroll. */}
                         <div className="flex min-h-0 flex-1 flex-col px-2 py-2">
-                            <div className="px-1 pb-1.5 text-[11px] uppercase tracking-wide text-white/45">
-                                {listTitle(closestNowObjects.length, selectionMode, en)}
+                            <div className="flex items-center justify-between px-1 pb-1.5">
+                                <span className="text-[11px] uppercase tracking-wide text-white/45">
+                                    {listTitle(closestNowObjects.length, selectionMode, en)}
+                                </span>
+                                {onRefresh ? (
+                                    <button
+                                        type="button"
+                                        onClick={onRefresh}
+                                        disabled={radarLoading}
+                                        title={en ? 'Refresh data' : 'Atualizar dados'}
+                                        aria-label={en ? 'Refresh data' : 'Atualizar dados'}
+                                        className="rounded p-0.5 text-white/35 transition outline-none hover:text-white/70 focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait disabled:opacity-40"
+                                    >
+                                        <RefreshCw className={['size-3', radarLoading ? 'animate-spin' : ''].join(' ')} />
+                                    </button>
+                                ) : null}
                             </div>
                             {radarLoading ? null : closestNowObjects.length === 0 ? (
                                 <EmptyModeMessage selectionMode={selectionMode} locale={locale} />
@@ -516,6 +533,33 @@ export function DailyOrbitalRadar3D({
                                 </ul>
                             )}
                         </div>
+                        </div>
+
+                        {/* Flyout de planetas — abre à direita do painel lateral */}
+                        {planetsOpen ? (
+                            <div ref={planetFlyoutRef} className="flex h-[min(26rem,70vh)] w-[min(14rem,40vw)] flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl overflow-y-auto">
+                                <div className="px-2 pt-2 pb-1 text-[11px] uppercase tracking-wide text-white/45 border-b border-white/10">
+                                    {en ? 'Planets' : 'Planetas'}
+                                </div>
+                                <PlanetFlyout
+                                    en={en}
+                                    mercuryFocused={mercuryFocused}
+                                    venusFocused={venusFocused}
+                                    marsFocused={marsFocused}
+                                    jupiterFocused={jupiterFocused}
+                                    saturnFocused={saturnFocused}
+                                    uranusFocused={uranusFocused}
+                                    neptuneFocused={neptuneFocused}
+                                    onFocusMercury={focusMercury}
+                                    onFocusVenus={focusVenus}
+                                    onFocusMars={focusMars}
+                                    onFocusJupiter={focusJupiter}
+                                    onFocusSaturn={focusSaturn}
+                                    onFocusUranus={focusUranus}
+                                    onFocusNeptune={focusNeptune}
+                                />
+                            </div>
+                        ) : null}
                     </div>
 
                     {/* Botões de visão de câmera + toggle de labels + fullscreen */}
@@ -540,8 +584,8 @@ export function DailyOrbitalRadar3D({
                         <button
                             type="button"
                             onClick={() => setShowLabels((v) => !v)}
-                            title={showLabels ? (en ? 'Hide labels' : 'Ocultar labels') : (en ? 'Show labels' : 'Mostrar labels')}
-                            aria-label={showLabels ? (en ? 'Hide labels' : 'Ocultar labels') : (en ? 'Show labels' : 'Mostrar labels')}
+                            title={showLabels ? (en ? 'Hide markers' : 'Ocultar marcações') : (en ? 'Show markers' : 'Mostrar marcações')}
+                            aria-label={showLabels ? (en ? 'Hide markers' : 'Ocultar marcações') : (en ? 'Show markers' : 'Mostrar marcações')}
                             className={[
                                 'flex items-center justify-center rounded-full border p-1.5 backdrop-blur transition',
                                 showLabels
@@ -882,15 +926,60 @@ function ViewButton({
     );
 }
 
-/**
- * Seção de corpos de referência do painel lateral.
- *
- * Terra e Lua são sempre visíveis. O botão "···" expande uma linha adicional
- * com planetas de ambientação (por enquanto só Mercúrio). Cada planeta aparece
- * como um pontinho colorido + nome, sem ícone emoji para manter a discrição.
- * Ao adicionar Vênus, Marte etc., basta acrescentar na lista AMBIENT_PLANETS.
- */
 function ReferenceSection({
+    en,
+    planetsOpen,
+    onPlanetsOpenChange,
+    onFocusEarth,
+    onFocusMoon,
+    onFocusSun,
+}: {
+    en: boolean;
+    planetsOpen: boolean;
+    onPlanetsOpenChange: (open: boolean) => void;
+    onFocusEarth: () => void;
+    onFocusMoon: () => void;
+    onFocusSun: () => void;
+}) {
+    const btnCls = 'flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan';
+
+    return (
+        <div className="border-b border-white/10 px-2 py-2">
+            <div className="px-1 pb-1 text-[11px] uppercase tracking-wide text-white/45">
+                {en ? 'Reference' : 'Referência'}
+            </div>
+
+            <div className="flex items-center gap-1">
+                <button type="button" onClick={onFocusSun} className={btnCls}>
+                    <span>☀️</span><span className="font-medium">{en ? 'Sun' : 'Sol'}</span>
+                </button>
+                <button type="button" onClick={onFocusEarth} className={btnCls}>
+                    <span>🌍</span><span className="font-medium">{en ? 'Earth' : 'Terra'}</span>
+                </button>
+                <button type="button" onClick={onFocusMoon} className={btnCls}>
+                    <span>🌙</span><span className="font-medium">{en ? 'Moon' : 'Lua'}</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onPlanetsOpenChange(!planetsOpen)}
+                    title={en ? 'Planets' : 'Planetas'}
+                    aria-expanded={planetsOpen}
+                    className={[
+                        'ml-auto flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium tracking-wide transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                        planetsOpen
+                            ? 'border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan'
+                            : 'border-white/15 bg-white/5 text-white/60 hover:border-white/30 hover:bg-white/10 hover:text-white',
+                    ].join(' ')}
+                >
+                    <span>{en ? 'Planets' : 'Planetas'}</span>
+                    <ChevronDown className={['size-3 transition-transform', planetsOpen ? 'rotate-180' : ''].join(' ')} />
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function PlanetFlyout({
     en,
     mercuryFocused,
     venusFocused,
@@ -899,9 +988,6 @@ function ReferenceSection({
     saturnFocused,
     uranusFocused,
     neptuneFocused,
-    onFocusEarth,
-    onFocusMoon,
-    onFocusSun,
     onFocusMercury,
     onFocusVenus,
     onFocusMars,
@@ -918,9 +1004,6 @@ function ReferenceSection({
     saturnFocused: boolean;
     uranusFocused: boolean;
     neptuneFocused: boolean;
-    onFocusEarth: () => void;
-    onFocusMoon: () => void;
-    onFocusSun: () => void;
     onFocusMercury: () => void;
     onFocusVenus: () => void;
     onFocusMars: () => void;
@@ -929,105 +1012,28 @@ function ReferenceSection({
     onFocusUranus: () => void;
     onFocusNeptune: () => void;
 }) {
-    const [planetsOpen, setPlanetsOpen] = useState(false);
-
-    const btnCls = 'flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan';
-
+    const btnCls = 'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan';
     return (
-        <div className="border-b border-white/10 px-2 py-2">
-            <div className="px-1 pb-1 text-[11px] uppercase tracking-wide text-white/45">
-                {en ? 'Reference' : 'Referência'}
-            </div>
-
-            {/* Linha principal: Sol + Terra + Lua + botão ··· */}
-            <div className="flex items-center gap-1">
-                <button type="button" onClick={onFocusSun} className={btnCls}>
-                    <span>☀️</span><span className="font-medium">{en ? 'Sun' : 'Sol'}</span>
-                </button>
-                <button type="button" onClick={onFocusEarth} className={btnCls}>
-                    <span>🌍</span><span className="font-medium">{en ? 'Earth' : 'Terra'}</span>
-                </button>
-                <button type="button" onClick={onFocusMoon} className={btnCls}>
-                    <span>🌙</span><span className="font-medium">{en ? 'Moon' : 'Lua'}</span>
-                </button>
+        <div className="px-1 py-1 space-y-0.5">
+            {([
+                { key: 'mercury', color: '#b0b8c8', labelPt: 'Mercúrio', labelEn: 'Mercury', focused: mercuryFocused, onFocus: onFocusMercury },
+                { key: 'venus',   color: '#c8b870', labelPt: 'Vênus',    labelEn: 'Venus',   focused: venusFocused,   onFocus: onFocusVenus },
+                { key: 'mars',    color: '#c0501a', labelPt: 'Marte',    labelEn: 'Mars',    focused: marsFocused,    onFocus: onFocusMars },
+                { key: 'jupiter', color: '#c8a060', labelPt: 'Júpiter',  labelEn: 'Jupiter', focused: jupiterFocused, onFocus: onFocusJupiter },
+                { key: 'saturn',  color: '#c8a840', labelPt: 'Saturno',  labelEn: 'Saturn',  focused: saturnFocused,  onFocus: onFocusSaturn },
+                { key: 'uranus',  color: '#4ab8c8', labelPt: 'Urano',    labelEn: 'Uranus',  focused: uranusFocused,  onFocus: onFocusUranus },
+                { key: 'neptune', color: '#2878d8', labelPt: 'Netuno',   labelEn: 'Neptune', focused: neptuneFocused, onFocus: onFocusNeptune },
+            ] as const).map((p) => (
                 <button
+                    key={p.key}
                     type="button"
-                    onClick={() => setPlanetsOpen((v) => !v)}
-                    title={en ? 'Planets' : 'Planetas'}
-                    aria-expanded={planetsOpen}
-                    className={[
-                        'ml-auto flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium tracking-wide transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                        planetsOpen
-                            ? 'border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan'
-                            : 'border-white/15 bg-white/5 text-white/60 hover:border-white/30 hover:bg-white/10 hover:text-white',
-                    ].join(' ')}
+                    onClick={p.onFocus}
+                    className={[btnCls, p.focused ? 'text-white' : ''].join(' ')}
                 >
-                    <span>{en ? 'Planets' : 'Planetas'}</span>
-                    <ChevronDown className={['size-3 transition-transform', planetsOpen ? 'rotate-180' : ''].join(' ')} />
+                    <span className="inline-block size-2 shrink-0 rounded-full ring-1 ring-white/20" style={{ backgroundColor: p.color }} />
+                    <span className="font-medium">{en ? p.labelEn : p.labelPt}</span>
                 </button>
-            </div>
-
-            {/* Painel expansível: planetas de ambientação — grade 2 colunas para economizar espaço */}
-            {planetsOpen ? (
-                <div className="mt-1 border-t border-white/8 pt-1 grid grid-cols-2 gap-x-1 gap-y-0.5">
-                    <button
-                        type="button"
-                        onClick={onFocusMercury}
-                        className={[btnCls, mercuryFocused ? 'text-white' : ''].join(' ')}
-                    >
-                        <span className="inline-block size-2 rounded-full bg-[#b0b8c8] ring-1 ring-white/20" />
-                        <span className="font-medium">{en ? 'Mercury' : 'Mercúrio'}</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onFocusVenus}
-                        className={[btnCls, venusFocused ? 'text-white' : ''].join(' ')}
-                    >
-                        <span className="inline-block size-2 rounded-full bg-[#c8b870] ring-1 ring-white/20" />
-                        <span className="font-medium">{en ? 'Venus' : 'Vênus'}</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onFocusMars}
-                        className={[btnCls, marsFocused ? 'text-white' : ''].join(' ')}
-                    >
-                        <span className="inline-block size-2 rounded-full bg-[#c0501a] ring-1 ring-white/20" />
-                        <span className="font-medium">{en ? 'Mars' : 'Marte'}</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onFocusJupiter}
-                        className={[btnCls, jupiterFocused ? 'text-white' : ''].join(' ')}
-                    >
-                        <span className="inline-block size-2 rounded-full bg-[#c8a060] ring-1 ring-white/20" />
-                        <span className="font-medium">{en ? 'Jupiter' : 'Júpiter'}</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onFocusSaturn}
-                        className={[btnCls, saturnFocused ? 'text-white' : ''].join(' ')}
-                    >
-                        <span className="inline-block size-2 rounded-full bg-[#c8a840] ring-1 ring-white/20" />
-                        <span className="font-medium">{en ? 'Saturn' : 'Saturno'}</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onFocusUranus}
-                        className={[btnCls, uranusFocused ? 'text-white' : ''].join(' ')}
-                    >
-                        <span className="inline-block size-2 rounded-full bg-[#4ab8c8] ring-1 ring-white/20" />
-                        <span className="font-medium">{en ? 'Uranus' : 'Urano'}</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onFocusNeptune}
-                        className={[btnCls, neptuneFocused ? 'text-white' : ''].join(' ')}
-                    >
-                        <span className="inline-block size-2 rounded-full bg-[#2878d8] ring-1 ring-white/20" />
-                        <span className="font-medium">{en ? 'Neptune' : 'Netuno'}</span>
-                    </button>
-                </div>
-            ) : null}
+            ))}
         </div>
     );
 }

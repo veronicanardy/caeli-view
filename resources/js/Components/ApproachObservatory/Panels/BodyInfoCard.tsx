@@ -211,7 +211,7 @@ export function BodyInfoCard({ body, onClose, locale }: BodyInfoCardProps) {
     };
 
     return (
-        <div className="pointer-events-auto absolute left-3 top-[66%] z-20 h-[19rem] w-[min(22rem,48%)] -translate-y-1/2 overflow-hidden rounded-xl border border-white/15 bg-space-950/92 shadow-glow backdrop-blur-xl">
+        <div className="pointer-events-auto absolute left-3 top-[54%] z-20 h-[19rem] w-[min(22rem,48%)] -translate-y-1/2 overflow-hidden rounded-xl border border-white/15 bg-space-950/92 shadow-glow backdrop-blur-xl">
 
             {/* Header */}
             <div className="flex items-start justify-between gap-2 px-3 pt-3">

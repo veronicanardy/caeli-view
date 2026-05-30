@@ -251,7 +251,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     </group>
                     {/* Lua: position absoluto para o grupo 3D e labels; geocentricPosition para tidal lock. */}
                     <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} sunDirection={sunDir} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} />
-                    <MoonOrbit moonPos={moonPos} earthPos={earthPos} orbitNormal={moonOrbitNormal} />
+                    {showLabels ? <MoonOrbit moonPos={moonPos} earthPos={earthPos} orbitNormal={moonOrbitNormal} /> : null}
                     {/* Planetas — posições heliocêntricas reais, Sol na origem. */}
                     {mercuryPos ? <Mercury position={mercuryPos} sunDirection={sunDir} locale={locale} onFocus={onFocusMercury} isFocused={isMercuryFocused} showLabel={showLabels} /> : null}
                     {venusPos ? <Venus position={venusPos} sunDirection={sunDir} locale={locale} onFocus={onFocusVenus} isFocused={isVenusFocused} showLabel={showLabels} /> : null}
@@ -261,7 +261,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     {uranusPos ? <Uranus position={uranusPos} sunDirection={sunDir} locale={locale} onFocus={onFocusUranus} isFocused={isUranusFocused} showLabel={showLabels} /> : null}
                     {neptunePos ? <Neptune position={neptunePos} sunDirection={sunDir} locale={locale} onFocus={onFocusNeptune} isFocused={isNeptuneFocused} showLabel={showLabels} /> : null}
                     {/* Elipses orbitais — longitude do periélio calculada dinamicamente da efeméride. */}
-                    {!orbitLabelsOnly && ephemeris ? (
+                    {showLabels && !orbitLabelsOnly && ephemeris ? (
                         <>
                             <PlanetOrbitEllipseHelio semiMajorAU={0.387} eccentricity={0.2056} lonPerihelionDeg={ephemeris.mercuryLonPerihelionDeg} color="#9aa0aa" opacity={0.14} />
                             <PlanetOrbitEllipseHelio semiMajorAU={0.723} eccentricity={0.0068} lonPerihelionDeg={ephemeris.venusLonPerihelionDeg}   color="#c8b870" opacity={0.14} />
@@ -291,7 +291,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                             />
                         ))}
 
-                        {closestNowObjects
+                        {showLabels && closestNowObjects
                             .map((object, index) => ({ object, palette: OBJECT_PALETTE[index % OBJECT_PALETTE.length] }))
                             .filter(({ object }) => object.trajectory && object.trajectory.status === 'available')
                             .map(({ object, palette }) => {
