@@ -164,6 +164,32 @@ export const URANUS: PlanetDatum = {
 };
 
 /**
+ * Neptune's physical constants.
+ *
+ * physicalRadiusDl = 24764 km / 384400 km/DL = 0.06444 DL (raio equatorial)
+ *
+ * Netuno é o quarto maior planeta em raio — 24764 km, ~3.9× a Terra.
+ * Renderizamos em 0.12 DL (~1.86× físico) — leve exageramento, semelhante a Urano
+ * (0.13 DL), levemente menor para refletir que Netuno é ligeiramente menor em raio.
+ *
+ * Rotation: 0.67125 Earth days (16h 6min, prógrada — rotação mais rápida entre os gigantes de gelo).
+ * Axial tilt: 28.32° — similar à Terra (23.44°); Netuno tem estações reais, mas cada
+ *   uma dura ~40 anos devido ao período orbital de 165 anos.
+ *
+ * Textura: atmosfera superior de H₂/He/CH₄ com aparência azul mais profunda e saturada
+ *   que Urano — provavelmente devido a um cromóforo adicional ainda não identificado.
+ *   Netuno tem tempestades visíveis (Grandes Manchas Escuras) e ventos de ~2100 km/h.
+ */
+export const NEPTUNE: PlanetDatum = {
+    physicalRadiusDl: 24_764 / KM_PER_LD,              // 0.06444 DL — true equatorial radius
+    visualRadiusDl: 0.12,                                // rendered radius (~1.86× — leve exagero)
+    rotationPeriodS: 0.67125 * 24 * 3600,               // 57,996 s ≈ 16h 6min
+    axialTiltDeg: 28.32,                                 // obliquity (IAU WGCCRE 2015)
+    texturePath: '/images/neptune/neptune-2k.jpg',
+    fallbackColor: '#2878d8',                            // azul-profundo — cor do metano + cromóforo
+};
+
+/**
  * Jupiter's physical constants.
  *
  * physicalRadiusDl = 71492 km / 384400 km/DL = 0.18596 DL (raio equatorial)

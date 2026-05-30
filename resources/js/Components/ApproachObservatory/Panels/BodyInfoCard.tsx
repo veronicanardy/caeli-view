@@ -23,7 +23,7 @@ interface BodyConfig {
     facts: BodyFact[];
 }
 
-const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus', BodyConfig> = {
+const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune', BodyConfig> = {
     earth: {
         namePt: 'Terra',
         nameEn: 'Earth',
@@ -152,10 +152,26 @@ const BODIES: Record<'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter'
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '28 (Titânia, Oberon, Ariel…)' },
         ],
     },
+    neptune: {
+        namePt: 'Netuno',
+        nameEn: 'Neptune',
+        subtitlePt: 'Planeta · Sistema Solar Externo',
+        subtitleEn: 'Planet · Outer Solar System',
+        contextPt: 'O planeta mais distante do Sistema Solar e o mais ventoso — ventos de até 2.100 km/h, os mais fortes do SS. Azul mais profundo que Urano devido a um cromóforo atmosférico adicional ainda não totalmente identificado. Exibido como contexto espacial. Posição em tempo real via JPL.',
+        contextEn: 'The most distant planet in the Solar System and the windiest — winds up to 2,100 km/h, the strongest in the SS. Deeper blue than Uranus due to an additional atmospheric chromophore not yet fully identified. Shown for spatial context. Real-time position via JPL.',
+        dotColor: '#2878d8',
+        facts: [
+            { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '4.495 mi km (30,1 UA) / 4.495B km (30.1 AU)' },
+            { labelPt: 'Diâmetro',            labelEn: 'Diameter',             value: '49.528 km (3,9× a Terra)' },
+            { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '165 anos / 165 years' },
+            { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '16h 6min' },
+            { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '16 (Tritão, Nereida…)' },
+        ],
+    },
 };
 
 interface BodyInfoCardProps {
-    body: 'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus';
+    body: 'earth' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune';
     onClose: () => void;
     locale: 'pt-BR' | 'en';
 }

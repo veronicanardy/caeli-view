@@ -378,6 +378,52 @@ export function DisplayedUranusOrbitGuide({ sunDirection }: { sunDirection: [num
 }
 
 /**
+ * Semi-major axis de Netuno em AU. Fonte: IAU / NASA Planetary Fact Sheet.
+ */
+const NEPTUNE_SEMI_MAJOR_AU = 30.0699;
+
+/**
+ * Guia visual da órbita de Netuno ao redor do Sol na cena geocêntrica.
+ *
+ * Mesmo padrão dos outros planetas — anel centrado no Sol com
+ * raio = NEPTUNE_SEMI_MAJOR_AU × SUN_DISPLAY_DL.
+ * Netuno fica além de Urano — o anel mais externo de todos os planetas exibidos.
+ * Cor azul-profunda para identidade com o azul intenso de Netuno.
+ * Opacidade mínima (0.06) pois é o mais distante — moldura extrema do sistema.
+ */
+export function DisplayedNeptuneOrbitGuide({ sunDirection }: { sunDirection: [number, number, number] }) {
+    const points = useMemo(() => {
+        const sunPos = sunEclipticDisplayPosition(sunDirection);
+        const neptuneOrbitRadius = NEPTUNE_SEMI_MAJOR_AU * SUN_DISPLAY_DL;
+
+        const earthDir = sunPos.clone().multiplyScalar(-1).normalize();
+        const tangent = new THREE.Vector3(-earthDir.z, 0, earthDir.x);
+        if (tangent.lengthSq() < 1e-6) tangent.set(1, 0, 0);
+        else tangent.normalize();
+
+        const pts: number[] = [];
+        for (let i = 0; i <= ORBIT_LINE_SEGMENTS; i += 1) {
+            const a = (i / ORBIT_LINE_SEGMENTS) * Math.PI * 2;
+            const pt = sunPos.clone()
+                .add(earthDir.clone().multiplyScalar(Math.cos(a) * neptuneOrbitRadius))
+                .add(tangent.clone().multiplyScalar(Math.sin(a) * neptuneOrbitRadius));
+            pts.push(pt.x, pt.y, pt.z);
+        }
+        return new Float32Array(pts);
+    }, [sunDirection]);
+
+    const lineObject = useMemo(
+        () => createOrbitLine(points, '#2878d8', 0.06),
+        [points],
+    );
+
+    useEffect(() => () => disposeOrbitLine(lineObject), [lineObject]);
+
+    if (points.length === 0) return null;
+    return <primitive object={lineObject} />;
+}
+
+/**
  * Semi-major axis de Saturno em AU. Fonte: IAU / NASA Planetary Fact Sheet.
  */
 const SATURN_SEMI_MAJOR_AU = 9.5392;

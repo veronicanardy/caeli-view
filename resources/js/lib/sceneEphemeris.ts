@@ -132,6 +132,12 @@ export type SceneEphemeris = {
      * at URANUS_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
      */
     uranusScenePosition: [number, number, number];
+    /**
+     * Neptune's scene position, same convention as mercuryScenePosition.
+     * Derived from HelioVector(Body.Neptune) → ecliptic J2000 → placed on the heliocentric ring
+     * at NEPTUNE_SEMI_MAJOR_AU × SUN_DISPLAY_DL from the Sun's projected ecliptic position.
+     */
+    neptuneScenePosition: [number, number, number];
 };
 
 let modulePromise: Promise<typeof Astronomy> | null = null;
@@ -355,6 +361,20 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             sunEclZ + (urRawZ / urLen) * uranusOrbitRadius,
         ];
 
+        // Neptune: same pipeline — heliocentric vector → ecliptic XZ direction → ring.
+        // Semi-major axis: 30.0699 AU (IAU / NASA Planetary Fact Sheet).
+        const neptuneHelioEqj = A.HelioVector(A.Body.Neptune, date);
+        const neptuneHelioEcl = A.RotateVector(eqjToEclMatrix(A), neptuneHelioEqj);
+        const neRawX = neptuneHelioEcl.x;
+        const neRawZ = neptuneHelioEcl.y;  // ecliptic Y → scene Z
+        const neLen = Math.hypot(neRawX, neRawZ) || 1;
+        const neptuneOrbitRadius = 30.0699 * SUN_DISPLAY_DL;
+        const neptuneScenePosition: [number, number, number] = [
+            sunEclX + (neRawX / neLen) * neptuneOrbitRadius,
+            0,
+            sunEclZ + (neRawZ / neLen) * neptuneOrbitRadius,
+        ];
+
         return {
             sunDirection,
             sunScenePosition,
@@ -371,6 +391,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             jupiterScenePosition,
             saturnScenePosition,
             uranusScenePosition,
+            neptuneScenePosition,
         };
     } catch {
         return null;
