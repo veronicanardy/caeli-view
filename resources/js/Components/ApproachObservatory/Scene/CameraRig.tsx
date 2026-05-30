@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
 import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE, SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
-import { currentPositionInScene } from '@/lib/observatory/trajectorySampling';
+import { currentPositionInScene, type EarthHelioAU } from '@/lib/observatory/trajectorySampling';
 
 export const CAMERA_FOV_DEG = 42;
 export const MAX_CAMERA_DISTANCE = ORBIT_AU_SCALE * 40;
@@ -241,7 +241,7 @@ export function CameraRig({
 export function computeFocusFraming(
     object: ClosestNowObject,
     orbitMode = false,
-    earthHelioPositionAU: { x: number; y: number; z: number } | null = null,
+    earthHelioPositionAU: EarthHelioAU | null = null,
     earthScenePosition: [number, number, number] = [0, 0, 0],
 ): FocusFraming | null {
     if (orbitMode && object.trajectory?.orbitalElements) {
@@ -282,11 +282,12 @@ export function computeFocusFraming(
         // Elementos rejeitados pelo construtor de órbita. Cai para o close-up para mostrar algo.
     }
 
-    // Close-up geocêntrico na rocha. Posição geocêntrica log-comprimida + offset da Terra.
-    const current = currentPositionInScene(object);
+    // Close-up na rocha: posição heliocêntrica absoluta (geo km + earthHelio → comprimir uma vez).
+    // earthHelioPositionAU é necessário para a conversão; sem ele não há framing.
+    if (!earthHelioPositionAU) return null;
+    const current = currentPositionInScene(object, earthHelioPositionAU);
     if (!current) return null;
-    const earth = new THREE.Vector3(...earthScenePosition);
-    const target = earth.clone().add(new THREE.Vector3(...current));
+    const target = new THREE.Vector3(...current);
     const distance = 2.1;
     const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
     const position = target.clone().add(dir.multiplyScalar(distance));

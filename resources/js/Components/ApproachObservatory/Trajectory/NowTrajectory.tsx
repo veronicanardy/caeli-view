@@ -4,7 +4,7 @@ import type { AsteroidTrajectory } from '@/types';
 import { compactKm } from '@/lib/format';
 import { formatTimestamp } from '@/lib/observatory/format';
 import type { Palette } from '@/lib/observatory/palette';
-import { clipPolylineByLength, collectTimeTicks, findClosestApproachPoint, toVec3 } from '@/lib/observatory/trajectorySampling';
+import { clipPolylineByLength, collectTimeTicks, findClosestApproachPoint, toVec3, type EarthHelioAU } from '@/lib/observatory/trajectorySampling';
 import { FocusProtectedHtml } from '../Overlays/SceneLabels';
 // --------------- Trajectory ---------------
 
@@ -14,26 +14,27 @@ type NowTrajectoryProps = {
     emphasized: boolean;
     dimmed: boolean;
     locale: 'pt-BR' | 'en';
+    earthHelioAU: EarthHelioAU;
     /** Quando true, renderiza apenas o cone de direção — sem linhas de trajetória.
      *  Usado com 15/30 objetos para indicar direção sem poluir a cena. */
     coneOnly?: boolean;
 };
 
-export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale, coneOnly = false }: NowTrajectoryProps) {
+export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale, earthHelioAU, coneOnly = false }: NowTrajectoryProps) {
     const pastVecs = useMemo(
-        () => (trajectory.pastPoints ?? []).map(toVec3),
-        [trajectory.pastPoints],
+        () => (trajectory.pastPoints ?? []).map((p) => toVec3(p, earthHelioAU)),
+        [trajectory.pastPoints, earthHelioAU],
     );
     const futureVecs = useMemo(
-        () => (trajectory.futurePoints ?? []).map(toVec3),
-        [trajectory.futurePoints],
+        () => (trajectory.futurePoints ?? []).map((p) => toVec3(p, earthHelioAU)),
+        [trajectory.futurePoints, earthHelioAU],
     );
     const currentVec = useMemo(
-        () => (trajectory.currentPoint ? toVec3(trajectory.currentPoint) : null),
-        [trajectory.currentPoint],
+        () => (trajectory.currentPoint ? toVec3(trajectory.currentPoint, earthHelioAU) : null),
+        [trajectory.currentPoint, earthHelioAU],
     );
 
-    const closestApproach = useMemo(() => findClosestApproachPoint(trajectory), [trajectory]);
+    const closestApproach = useMemo(() => findClosestApproachPoint(trajectory, earthHelioAU), [trajectory, earthHelioAU]);
 
     // Line reaches further for selected objects; non-selected get a shorter but still visible arc.
     // Both clip the same underlying Catmull-Rom curve so selecting just extends what's already drawn.
@@ -75,9 +76,9 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
         const cp = trajectory.currentPoint;
         let direction: THREE.Vector3 | null = null;
         if (cp && typeof cp.vx === 'number' && typeof cp.vy === 'number') {
-            // Velocity is in ecliptic (x,y,z); scene axes swap to (x, z, y). Magnitude is irrelevant
+            // Velocity is in ecliptic (x,y,z); scene axes: x→x, z→y, −y→z. Magnitude is irrelevant
             // (we normalize), so no unit conversion needed — only the direction matters.
-            const v = new THREE.Vector3(cp.vx, cp.vz ?? 0, cp.vy);
+            const v = new THREE.Vector3(cp.vx, cp.vz ?? 0, -(cp.vy ?? 0));
             if (v.lengthSq() > 1e-12) direction = v.normalize();
         }
         if (!direction && fullFuture.length >= 2) {
@@ -92,7 +93,7 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
     const timeTicks = useMemo(() => {
         if (!emphasized) return [];
         const drawn = [...fullPast, ...fullFuture];
-        return collectTimeTicks(trajectory).filter((tick) =>
+        return collectTimeTicks(trajectory, earthHelioAU).filter((tick) =>
             drawn.some((p) => p.distanceToSquared(tick.vec) < 0.35 * 0.35),
         );
     }, [emphasized, trajectory, fullPast, fullFuture]);

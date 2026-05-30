@@ -6,19 +6,21 @@
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, TrajectoryPoint } from '@/types';
 import { KM_PER_LD } from '@/lib/sceneEphemeris';
-import { horizonsToScene } from './coordinates';
+import { horizonsGeoToHelioScene } from './coordinates';
 
 /** Snap threshold (scene units) used by closestApproachNearPosition. */
 export const CLOSEST_APPROACH_MERGE_DISTANCE_SCENE = 0.45;
 
-export function currentPositionInScene(object: ClosestNowObject): [number, number, number] | null {
+export type EarthHelioAU = { x: number; y: number; z: number };
+
+export function currentPositionInScene(object: ClosestNowObject, earthHelioAU: EarthHelioAU): [number, number, number] | null {
     const point = object.trajectory?.currentPoint;
     if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') return null;
-    return horizonsToScene(point.x, point.y, point.z ?? 0);
+    return horizonsGeoToHelioScene(point.x, point.y, point.z ?? 0, earthHelioAU);
 }
 
-export function toVec3(point: { x: number; y: number; z?: number | null }): THREE.Vector3 {
-    const [x, y, z] = horizonsToScene(point.x, point.y, point.z ?? 0);
+export function toVec3(point: { x: number; y: number; z?: number | null }, earthHelioAU: EarthHelioAU): THREE.Vector3 {
+    const [x, y, z] = horizonsGeoToHelioScene(point.x, point.y, point.z ?? 0, earthHelioAU);
     return new THREE.Vector3(x, y, z);
 }
 
@@ -55,7 +57,7 @@ export type ClosestApproachSample = {
     timestamp: string;
 };
 
-export function findClosestApproachPoint(trajectory: AsteroidTrajectory): ClosestApproachSample | null {
+export function findClosestApproachPoint(trajectory: AsteroidTrajectory, earthHelioAU: EarthHelioAU): ClosestApproachSample | null {
     const candidates: TrajectoryPoint[] = [
         ...(trajectory.pastPoints ?? []),
         ...(trajectory.futurePoints ?? []),
@@ -77,7 +79,7 @@ export function findClosestApproachPoint(trajectory: AsteroidTrajectory): Closes
     if (!best) return null;
 
     return {
-        vec: toVec3(best),
+        vec: toVec3(best, earthHelioAU),
         distanceKm: bestKm,
         distanceLD: typeof best.distanceLunar === 'number' ? best.distanceLunar : bestKm / KM_PER_LD,
         timestamp: best.timestamp,
@@ -87,9 +89,10 @@ export function findClosestApproachPoint(trajectory: AsteroidTrajectory): Closes
 export function closestApproachNearPosition(
     trajectory: AsteroidTrajectory | null | undefined,
     position: THREE.Vector3 | null,
+    earthHelioAU: EarthHelioAU,
 ): ClosestApproachSample | null {
     if (!trajectory || !position) return null;
-    const closest = findClosestApproachPoint(trajectory);
+    const closest = findClosestApproachPoint(trajectory, earthHelioAU);
     if (!closest) return null;
 
     return closest.vec.distanceToSquared(position) <= CLOSEST_APPROACH_MERGE_DISTANCE_SCENE * CLOSEST_APPROACH_MERGE_DISTANCE_SCENE
@@ -102,7 +105,7 @@ export function closestApproachNearPosition(
  * positions + short labels. "now" is the currentPoint's timestamp (the instant Horizons anchored
  * the trajectory to). Only ticks with a real sample within ~6h of the target time are emitted.
  */
-export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: THREE.Vector3; label: string }> {
+export function collectTimeTicks(trajectory: AsteroidTrajectory, earthHelioAU: EarthHelioAU): Array<{ vec: THREE.Vector3; label: string }> {
     const now = trajectory.currentPoint?.timestamp ? new Date(trajectory.currentPoint.timestamp).getTime() : NaN;
     if (Number.isNaN(now)) return [];
 
@@ -133,7 +136,7 @@ export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: T
         }
         // Only show the tick if we actually have a sample within 6h of the target.
         if (best && bestDelta <= 6 * HOUR) {
-            ticks.push({ vec: toVec3(best), label });
+            ticks.push({ vec: toVec3(best, earthHelioAU), label });
         }
     }
     return ticks;
