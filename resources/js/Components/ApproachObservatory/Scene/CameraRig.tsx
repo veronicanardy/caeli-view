@@ -242,6 +242,7 @@ export function computeFocusFraming(
     object: ClosestNowObject,
     orbitMode = false,
     earthHelioPositionAU: { x: number; y: number; z: number } | null = null,
+    earthScenePosition: [number, number, number] = [0, 0, 0],
 ): FocusFraming | null {
     if (orbitMode && object.trajectory?.orbitalElements) {
         const elements = object.trajectory.orbitalElements;
@@ -281,11 +282,11 @@ export function computeFocusFraming(
         // Elementos rejeitados pelo construtor de órbita. Cai para o close-up para mostrar algo.
     }
 
-    // Close-up geocêntrico na rocha. A cena de radar (log) está ativa, então usamos a mesma
-    // posição log-comprimida que o marcador usa.
+    // Close-up geocêntrico na rocha. Posição geocêntrica log-comprimida + offset da Terra.
     const current = currentPositionInScene(object);
     if (!current) return null;
-    const target = new THREE.Vector3(...current);
+    const earth = new THREE.Vector3(...earthScenePosition);
+    const target = earth.clone().add(new THREE.Vector3(...current));
     const distance = 2.1;
     const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
     const position = target.clone().add(dir.multiplyScalar(distance));

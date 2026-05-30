@@ -152,6 +152,7 @@ export function DailyOrbitalRadar3D({
         cameraIntent.kind === 'object' ? cameraIntent.nonce : 0,
         orbitMode,
         ephemeris?.earthHelioPositionAU ?? null,
+        ephemeris?.earthScenePosition ?? null,
     );
 
     // Modo ativo da cena. Heliocêntrico só quando o usuário pediu E o objeto tem
@@ -831,21 +832,27 @@ function useSelectionFocusFraming(
     selectionFocusNonce: number,
     orbitMode: boolean,
     earthHelioPositionAU: { x: number; y: number; z: number } | null,
+    earthScenePosition: [number, number, number] | null,
 ): FocusFraming | null {
     const [framing, setFraming] = useState<FocusFraming | null>(null);
     const latestEarthHelio = useRef(earthHelioPositionAU);
+    const latestEarthScene = useRef(earthScenePosition);
 
-    useEffect(() => {
-        latestEarthHelio.current = earthHelioPositionAU;
-    }, [earthHelioPositionAU]);
+    useEffect(() => { latestEarthHelio.current = earthHelioPositionAU; }, [earthHelioPositionAU]);
+    useEffect(() => { latestEarthScene.current = earthScenePosition; }, [earthScenePosition]);
 
     useEffect(() => {
         if (!focusedObject) {
             setFraming(null);
             return;
         }
-        setFraming(computeFocusFraming(focusedObject, orbitMode, latestEarthHelio.current));
-        // earthHelioPositionAU é lida via ref — intencionalmente fora das dependências.
+        setFraming(computeFocusFraming(
+            focusedObject,
+            orbitMode,
+            latestEarthHelio.current,
+            latestEarthScene.current ?? [0, 0, 0],
+        ));
+        // refs lidas intencionalmente fora das dependências.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [focusedObject?.approach.id, selectionFocusNonce, orbitMode]);
 
