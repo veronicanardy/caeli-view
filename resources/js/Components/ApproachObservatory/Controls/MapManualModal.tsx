@@ -301,15 +301,15 @@ function RadarFriendly({ en, nf, lunarDistanceKm }: { en: boolean; nf: Intl.Numb
                     <Section title={en ? 'What each thing on screen means' : 'O que cada coisa na tela significa'}>
                         <p className="text-sm leading-relaxed text-white/60 mb-3">
                             {en
-                                ? 'Once you can rotate the scene, here is what each element represents:'
-                                : 'Agora que você já consegue girar a cena, aqui está o que cada elemento representa:'}
+                                ? 'The radar has two layers drawn on top of each other. The inner layer shows the Earth\'s neighbourhood — asteroids, the Moon, and distance rings. A second, much larger background layer shows the planets for scale, so you can see how the whole solar system fits around the scene. Here is what each element represents:'
+                                : 'O radar tem duas camadas sobrepostas. A camada interna mostra a vizinhança da Terra — asteroides, a Lua e os anéis de distância. Uma segunda camada de fundo, muito maior, mostra os planetas para escala, para que você veja como o sistema solar inteiro se encaixa ao redor da cena. Aqui está o que cada elemento representa:'}
                         </p>
                         <div className="space-y-2">
                             <VisualKey color="bg-violet-400" label={en ? 'Coloured dot' : 'Ponto colorido'} desc={en ? 'One asteroid or comet, tracked live. Each gets its own colour so you can follow it as you rotate.' : 'Um asteroide ou cometa, rastreado ao vivo. Cada um tem sua cor para você acompanhá-lo enquanto gira a cena.'} />
                             <VisualKey color="bg-cyan-400" shape="cone" label={en ? 'Cone on the dot' : 'Cone no ponto'} desc={en ? 'The direction it is heading right now. The tip is where it will be next.' : 'A direção em que ele está indo agora. A ponta é onde ele estará em seguida.'} />
                             <VisualKey color="bg-slate-400" shape="dashed" label={en ? 'Dashed trail' : 'Rastro tracejado'} desc={en ? 'Where it came from — its recent path through space.' : 'De onde ele veio — seu caminho recente pelo espaço.'} />
                             <VisualKey color="bg-slate-300" label={en ? 'Silver sphere' : 'Esfera prateada'} desc={en ? 'The Moon, always at 1 DL from Earth. Use it as a reference: if an object is closer than the Moon, it is inside the lunar orbit.' : 'A Lua, sempre a 1 DL da Terra. Use-a como referência: se um objeto está mais perto que a Lua, ele está dentro da órbita lunar.'} />
-                            <VisualKey color="bg-amber-300" shape="ring" label={en ? 'Planet ring + dashed orbit' : 'Anel de planeta + órbita tracejada'} desc={en ? 'Mercury, Venus, Mars, Jupiter, Saturn, Uranus and Neptune. Their positions are real, from live ephemeris data. The dashed ellipse around each is its actual orbit — drawn to scale in the heliocentric layer.' : 'Mercúrio, Vênus, Marte, Júpiter, Saturno, Urano e Netuno. As posições são reais, vindas de efeméride ao vivo. A elipse tracejada ao redor de cada um é sua órbita real — desenhada em escala na camada heliocêntrica.'} />
+                            <VisualKey color="bg-amber-300" shape="ring" label={en ? 'Planet ring + dashed orbit (background layer)' : 'Anel de planeta + órbita tracejada (camada de fundo)'} desc={en ? 'Mercury, Venus, Mars, Jupiter, Saturn, Uranus and Neptune — drawn in a separate heliocentric background layer for scale context only. Their positions are real, from live ephemeris data. The dashed ellipse around each is its actual orbit.' : 'Mercúrio, Vênus, Marte, Júpiter, Saturno, Urano e Netuno — desenhados numa camada heliocêntrica de fundo separada, apenas para referência de escala. As posições são reais, vindas de efeméride ao vivo. A elipse tracejada ao redor de cada um é sua órbita real.'} />
                         </div>
                     </Section>
                 </div>
@@ -405,8 +405,8 @@ function OrbitFriendly({ en }: { en: boolean }) {
                             <ReadingStep
                                 label={en ? '3. Does the oval come near where Earth orbits?' : '3. O oval passa perto de onde a Terra orbita?'}
                                 text={en
-                                    ? "Earth orbits about 1 AU from the Sun. If this ellipse passes through that distance at any point, the two bodies share a crossing zone. But that doesn't automatically mean danger — the orbital tilt (how steeply the orbit is angled relative to Earth's plane) determines whether they actually get close. That's why the next step matters."
-                                    : 'A Terra orbita a cerca de 1 UA do Sol. Se essa elipse passa por essa distância em algum ponto, os dois corpos compartilham uma zona onde seus caminhos se cruzam. Mas isso não significa necessariamente perigo — a inclinação da órbita (o quanto ela está "tombada" em relação ao plano da Terra) determina se eles chegam a se aproximar de verdade. É por isso que o próximo passo é tão importante.'}
+                                    ? "Earth orbits about 1 AU from the Sun — 1 AU (Astronomical Unit) is the average Earth–Sun distance, roughly 150 million kilometres. If this ellipse passes through that distance at any point, the two bodies share a crossing zone. But that doesn't automatically mean danger — the orbital tilt (how steeply the orbit is angled relative to Earth's plane) determines whether they actually get close. That's why the next step matters."
+                                    : 'A Terra orbita a cerca de 1 UA do Sol — 1 UA (Unidade Astronômica) é a distância média entre a Terra e o Sol, aproximadamente 150 milhões de quilômetros. Se essa elipse passa por essa distância em algum ponto, os dois corpos compartilham uma zona onde seus caminhos se cruzam. Mas isso não significa necessariamente perigo — a inclinação da órbita (o quanto ela está "tombada" em relação ao plano da Terra) determina se eles chegam a se aproximar de verdade. É por isso que o próximo passo é tão importante.'}
                             />
                             <ReadingStep
                                 label={en ? '4. Always rotate to check the tilt' : '4. Sempre gire para ver a inclinação'}
@@ -729,7 +729,7 @@ function RadarTechnical({ en, ldKm, lunarDistanceKm, locale }: { en: boolean; au
                     <RadarGuideDiagram locale={locale} technical />
 
                     {/* ── 2. Coordinate frame ── */}
-                    <TechSection title={en ? '2. Coordinate frame' : '2. Referencial de coordenadas'}>
+                    <TechSection title={en ? '2. Coordinate frame and axis mapping' : '2. Referencial de coordenadas e mapeamento de eixos'}>
                         <p className="text-sm leading-relaxed text-white/70">
                             {en
                                 ? 'JPL Horizons delivers vectors in the geocentric J2000 equatorial frame. "J2000" is the standard epoch: Earth\'s mean equatorial plane at noon TDB on 1 Jan 2000. "Geocentric" means Earth is at the origin — all coordinates measure each object\'s position relative to Earth\'s centre.'
@@ -737,8 +737,16 @@ function RadarTechnical({ en, ldKm, lunarDistanceKm, locale }: { en: boolean; au
                         </p>
                         <p className="mt-2 text-sm leading-relaxed text-white/70">
                             {en
-                                ? "Sun and Moon vectors from astronomy-engine are also in J2000 equatorial, then rotated to the J2000 ecliptic frame (where Z points to the ecliptic north pole) before being placed in the scene. The axis swap (ecliptic y↔z) aligns the ecliptic convention with Three.js's Y-up scene convention."
-                                : 'Os vetores do Sol e da Lua calculados pelo astronomy-engine também estão em J2000 equatorial, depois rotacionados para o referencial eclíptico J2000 (onde Z aponta para o polo norte eclíptico) antes de serem posicionados na cena. A troca de eixos (eclíptico y↔z) alinha a convenção eclíptica com a convenção Y-up do motor 3D (Three.js).'}
+                                ? "Sun and Moon vectors from astronomy-engine are also in J2000 equatorial, then rotated to the J2000 ecliptic frame (where Z points to the ecliptic north pole). All geocentric vectors — asteroids, Moon, Sun — then go through the same axis remap before placement in the Three.js scene:"
+                                : 'Os vetores do Sol e da Lua calculados pelo astronomy-engine também estão em J2000 equatorial, depois rotacionados para o referencial eclíptico J2000 (onde Z aponta para o polo norte eclíptico). Todos os vetores geocêntricos — asteroides, Lua, Sol — passam pelo mesmo remapeamento de eixos antes de serem posicionados na cena Three.js:'}
+                        </p>
+                        <div className="mt-2 rounded-md border border-signal-cyan/15 bg-signal-cyan/[0.055] px-3 py-2.5 font-mono text-[12px] leading-relaxed text-cyan-100/88">
+                            <div>{en ? 'scene(x, y, z) = (ecl.x, ecl.z, −ecl.y)   ← asteroid / Moon / Sun' : 'cena(x, y, z) = (ecl.x, ecl.z, −ecl.y)   ← asteroide / Lua / Sol'}</div>
+                        </div>
+                        <p className="mt-2 text-[13px] leading-relaxed text-white/60">
+                            {en
+                                ? "The ecliptic frame has Z pointing up (north pole). Three.js uses Y-up. Swapping ecliptic Z→scene Y and negating ecliptic Y→scene Z preserves handedness and maps the ecliptic plane onto the horizontal plane of the scene — so the Earth's orbital plane lies flat on screen when viewed from above."
+                                : 'O referencial eclíptico tem Z apontando para cima (polo norte). O Three.js usa Y-up. Trocar eclíptico Z→cena Y e negar eclíptico Y→cena Z preserva a orientação (handedness) e mapeia o plano eclíptico para o plano horizontal da cena — assim o plano orbital da Terra fica horizontal na tela quando visto de cima.'}
                         </p>
                     </TechSection>
 
@@ -783,8 +791,8 @@ function RadarTechnical({ en, ldKm, lunarDistanceKm, locale }: { en: boolean; au
                             'r_scene = f(d_DL) · r̂     r̂ = r/‖r‖',
                         ]}
                         note={en
-                            ? 'This compression applies only to asteroids, comets, and the Moon — the geocentric layer. On a linear scale 1 AU = 389 LD, so near-Earth asteroids would occupy <0.3% of the canvas. K forces f(1) = 1 — the Moon always lands at exactly 1 scene unit. r̂ is computed before compression and reapplied after, so direction and trajectory shape are never distorted. Numbers in the UI are always the original, uncompressed values.'
-                            : 'Esta compressão se aplica apenas a asteroides, cometas e à Lua — a camada geocêntrica. Em escala linear 1 UA = 389 DL, os asteroides próximos ocupariam <0,3% do canvas. K força f(1) = 1 — a Lua sempre cai em exatamente 1 unidade de cena. r̂ é calculado antes e reaplicado depois, então direção e forma das trajetórias nunca são distorcidos. Os números na interface são sempre os valores originais, sem compressão.'}
+                            ? 'R₀ = 8 DL is the compression pivot: it sets where the logarithmic curve transitions from nearly linear (objects much closer than R₀) to strongly compressed (objects much farther). At 8 DL the Moon sits well inside the linear region, preserving its visual position, while objects at 50–200 DL — which would be off-screen on a linear scale — are pulled into view. K is derived from R₀ by the constraint f(1) = 1, forcing the Moon to always land at exactly 1 scene unit regardless of its actual distance on a given day. r̂ is computed before compression and reapplied after, so direction and trajectory shape are never distorted. Numbers in the UI are always the original, uncompressed values.'
+                            : 'R₀ = 8 DL é o pivô de compressão: define onde a curva logarítmica transita de quase linear (objetos muito mais próximos que R₀) para fortemente comprimida (objetos muito mais distantes). Em 8 DL a Lua fica bem dentro da região linear, preservando sua posição visual, enquanto objetos a 50–200 DL — que estariam fora da tela numa escala linear — são trazidos para dentro da cena. K é derivado de R₀ pela restrição f(1) = 1, forçando a Lua a sempre cair em exatamente 1 unidade de cena independentemente da sua distância real no dia. r̂ é calculado antes e reaplicado depois, então direção e forma das trajetórias nunca são distorcidos. Os números na interface são sempre os valores originais, sem compressão.'}
                     />
 
                     {/* ── Formula 2b ── */}
@@ -942,7 +950,7 @@ function OrbitTechnical({ en, locale }: { en: boolean; locale: 'pt-BR' | 'en' })
                     <OrbitGuideDiagram locale={locale} technical />
 
                     {/* ── Osculating elements explanation ── */}
-                    <TechSection title={en ? 'What "osculating" means' : 'O que significa "osculador"'}>
+                    <TechSection title={en ? 'What "osculating" means — and data freshness' : 'O que significa "osculador" — e atualização dos dados'}>
                         <p className="text-sm leading-relaxed text-white/70">
                             {en
                                 ? 'The solar system is not a two-body problem — Jupiter, Saturn, and other planets exert measurable gravitational pulls on every asteroid. The true trajectory is therefore not a perfect ellipse, but a curve that shifts slightly over time.'
@@ -952,6 +960,11 @@ function OrbitTechnical({ en, locale }: { en: boolean; locale: 'pt-BR' | 'en' })
                             {en
                                 ? 'An osculating orbit is the best-fit Keplerian ellipse to that real trajectory at a specific instant — the ellipse the body would follow if all other planets suddenly disappeared. JPL Horizons provides these elements at the current solution epoch. They are accurate for months to a few years for typical near-Earth asteroids, but degrade over longer timescales, especially for objects that pass close to Jupiter.'
                                 : 'Uma órbita osculadora é a elipse kepleriana que melhor se ajusta a essa trajetória real num instante específico — a elipse que o corpo seguiria se todos os outros planetas desaparecessem. O JPL Horizons fornece esses elementos na época da solução atual. São precisos por meses a alguns anos para asteroides próximos à Terra típicos, mas degradam em escalas de tempo maiores, especialmente para objetos que passam perto de Júpiter.'}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-white/70">
+                            {en
+                                ? 'The orbital elements (q, e, i, Ω, ω, Tₚ) are fetched from JPL Horizons per object and cached for up to 6 hours — distinct from the radar\'s position cache (15 min). This means the drawn ellipse shape is stable across a session and changes only when the backend refreshes the SBDB solution. The asteroid\'s dot position on the ellipse is always computed locally from the current Julian Date, so it moves in real time without a new network call.'
+                                : 'Os elementos orbitais (q, e, i, Ω, ω, Tₚ) são buscados no JPL Horizons por objeto e cacheados por até 6 horas — distinto do cache de posição do radar (15 min). Isso significa que a forma da elipse desenhada é estável ao longo de uma sessão e muda apenas quando o backend renova a solução do SBDB. A posição do ponto do asteroide na elipse é sempre calculada localmente a partir da Data Juliana atual, então ele avança em tempo real sem uma nova chamada de rede.'}
                         </p>
                     </TechSection>
                 </div>
@@ -1273,7 +1286,7 @@ function RadarGuideDiagram({ locale, technical = false }: { locale: 'pt-BR' | 'e
 
                 {/* Moon — silver-grey to match the 3D scene */}
                 <circle cx="270" cy="141" r="9" fill="url(#rg-moon)" />
-                <text x="285" y="145" fill="#cbd5e1" fontSize="11" fontWeight="600">{en ? 'Moon · 1 LD' : 'Lua · 1 DL'}</text>
+                <text x="285" y="146" fill="#cbd5e1" fontSize="13" fontWeight="600">{en ? 'Moon · 1 LD' : 'Lua · 1 DL'}</text>
 
                 {/* Asteroid trail */}
                 <path d="M270 195 C306 130 372 112 432 88" fill="none" stroke="#94a3b8" strokeOpacity="0.40" strokeWidth="2.5" strokeDasharray="6 8" />
@@ -1291,29 +1304,33 @@ function RadarGuideDiagram({ locale, technical = false }: { locale: 'pt-BR' | 'e
 
                 {/* Earth */}
                 <circle cx="270" cy="195" r="28" fill="url(#rg-earth)" />
-                <text x="270" y="239" textAnchor="middle" fill="#e0f2fe" fontSize="14" fontWeight="700">{en ? 'Earth' : 'Terra'}</text>
+                <text x="270" y="241" textAnchor="middle" fill="#e0f2fe" fontSize="16" fontWeight="700">{en ? 'Earth' : 'Terra'}</text>
 
                 {/* Technical overlays */}
                 {technical && (
                     <>
+                        {/* vector line Earth → asteroid */}
                         <line x1="270" y1="195" x2="396" y2="112" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.85" strokeDasharray="3 4" />
-                        <text x="308" y="142" fill="#fef3c7" fontSize="11.5" fontStyle="italic">r = (x,y,z)</text>
-                        <text x="270" y="358" textAnchor="middle" fill="#bae6fd" fontSize="11.5">r_cena = f(d_DL) · r̂</text>
-                        <text x="270" y="373" textAnchor="middle" fill="#bae6fd" fontSize="11" opacity="0.7">f(r) = K·ln(1 + r/R₀)</text>
+                        {/* vector label — positioned above and to the right of the midpoint, away from the trail */}
+                        <text x="358" y="98" fill="#fef3c7" fontSize="13" fontStyle="italic" textAnchor="middle">r = (x, y, z)</text>
+                        {/* formula box — bottom-left corner, clear of all objects */}
+                        <rect x="12" y="310" width="240" height="48" rx="5" fill="#0a1628" fillOpacity="0.92" stroke="#22d3ee" strokeOpacity="0.25" strokeWidth="1" />
+                        <text x="22" y="330" fill="#bae6fd" fontSize="13" fontFamily="monospace">r_scene = f(d_DL) · r̂</text>
+                        <text x="22" y="349" fill="#bae6fd" fontSize="12" fontFamily="monospace" opacity="0.75">f(r) = K · ln(1 + r/R₀)</text>
                     </>
                 )}
 
                 {/* Labels — title + ring labels */}
-                <text x="20" y="30" fill="#cbd5e1" fontSize="13" fontWeight="700">{en ? 'Read outward from Earth' : 'Leia saindo da Terra'}</text>
-                <text x="20" y="48" fill="#64748b" fontSize="11">{en ? '— numbers in the focus panel are uncompressed' : '— números no painel de foco são descomprimidos'}</text>
+                <text x="20" y="30" fill="#cbd5e1" fontSize="15" fontWeight="700">{en ? 'Read outward from Earth' : 'Leia saindo da Terra'}</text>
+                <text x="20" y="50" fill="#64748b" fontSize="13">{en ? '— numbers in the focus panel are uncompressed' : '— números no painel de foco são descomprimidos'}</text>
 
                 {/* Ring labels */}
-                <text x="327" y="192" fill="#475569" fontSize="10">1 DL</text>
-                <text x="381" y="192" fill="#334155" fontSize="10">2 DL</text>
+                <text x="327" y="192" fill="#475569" fontSize="12">1 DL</text>
+                <text x="381" y="192" fill="#334155" fontSize="12">2 DL</text>
 
                 {/* Object labels */}
-                <text x="412" y="105" fill="#e2e8f0" fontSize="12">{en ? 'object' : 'objeto'}</text>
-                <text x="448" y="72" fill="#67e8f9" fontSize="12" fontWeight="600">{en ? 'moving' : 'movimento'}</text>
+                <text x="412" y="105" fill="#e2e8f0" fontSize="14">{en ? 'object' : 'objeto'}</text>
+                <text x="448" y="72" fill="#67e8f9" fontSize="14" fontWeight="600">{en ? 'moving' : 'movimento'}</text>
             </svg>
             <figcaption className="border-t border-white/10 px-4 py-3 text-[12px] leading-relaxed text-white/55">
                 {en
@@ -1371,33 +1388,38 @@ function OrbitGuideDiagram({ locale, technical = false }: { locale: 'pt-BR' | 'e
 
                 {/* Sun at left focus */}
                 <circle cx={SUN_X} cy={CY} r="22" fill="url(#og-sun)" filter="url(#og-sun-glow)" />
-                <text x={SUN_X} y={CY + 40} textAnchor="middle" fill="#fed7aa" fontSize="13" fontWeight="700">{en ? 'Sun' : 'Sol'}</text>
+                <text x={SUN_X} y={CY + 42} textAnchor="middle" fill="#fed7aa" fontSize="15" fontWeight="700">{en ? 'Sun' : 'Sol'}</text>
 
                 {/* Perihelion — leftmost point of ellipse, closest to Sun */}
                 <circle cx={PERI_X} cy={CY} r="4" fill="#fbbf24" opacity="0.85" />
-                <text x={PERI_X + 6} y={CY - 8} fill="#fbbf24" fontSize="10" opacity="0.85">{en ? 'perihelion' : 'periélio'}</text>
-                <text x={PERI_X + 6} y={CY + 4} fill="#fbbf24" fontSize="9" opacity="0.60">{en ? '(closest to Sun)' : '(mais perto do Sol)'}</text>
+                <text x={PERI_X + 8} y={CY - 10} fill="#fbbf24" fontSize="12" opacity="0.85">{en ? 'perihelion' : 'periélio'}</text>
+                <text x={PERI_X + 8} y={CY + 6} fill="#fbbf24" fontSize="11" opacity="0.60">{en ? '(closest to Sun)' : '(mais perto do Sol)'}</text>
 
                 {/* Asteroid on its ellipse (upper right quadrant) */}
                 <circle cx={AST_X} cy={AST_Y} r="11" fill="#f8fafc" filter="url(#og-glow)" />
                 {/* Velocity arrow — tangent direction at this point, pointing upper-right */}
                 <path d={`M${AST_X - 8} ${AST_Y + 7} L${AST_X + 22} ${AST_Y - 22}`} stroke="#67e8f9" strokeWidth="2.5" markerEnd="url(#og-arrow)" />
-                <text x={AST_X + 14} y={AST_Y - 8} fill="#e2e8f0" fontSize="11">{en ? 'asteroid' : 'asteroide'}</text>
-                <text x={AST_X + 14} y={AST_Y - 20} fill="#67e8f9" fontSize="10" fontWeight="600">{en ? 'moving' : 'movimento'}</text>
+                <text x={AST_X + 14} y={AST_Y - 6} fill="#e2e8f0" fontSize="13">{en ? 'asteroid' : 'asteroide'}</text>
+                <text x={AST_X + 14} y={AST_Y - 21} fill="#67e8f9" fontSize="12" fontWeight="600">{en ? 'moving' : 'movimento'}</text>
 
                 {/* Technical overlays */}
                 {technical && (
                     <>
+                        {/* Sun → asteroid vector line */}
                         <line x1={SUN_X} y1={CY} x2={AST_X} y2={AST_Y} stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.8" strokeDasharray="3 4" />
-                        <text x={(SUN_X + AST_X) / 2 + 4} y={(CY + AST_Y) / 2 - 6} fill="#fef3c7" fontSize="11" fontStyle="italic">p_ecl [AU]</text>
-                        <text x="20" y="370" fill="#bae6fd" fontSize="11.5">E − e·sin(E) = M</text>
-                        <text x="20" y="386" fill="#bae6fd" fontSize="11" opacity="0.7">a = q/(1−e)</text>
+                        {/* vector label — above the midpoint, clear of the ellipse arc */}
+                        <text x={(SUN_X + AST_X) / 2} y={(CY + AST_Y) / 2 - 16} fill="#fef3c7" fontSize="13" fontStyle="italic" textAnchor="middle">p_ecl [AU]</text>
+                        {/* formula box — bottom-right, below the ellipse aphelion */}
+                        <rect x="286" y="312" width="244" height="66" rx="5" fill="#0a1628" fillOpacity="0.92" stroke="#22d3ee" strokeOpacity="0.25" strokeWidth="1" />
+                        <text x="300" y="331" fill="#bae6fd" fontSize="13" fontFamily="monospace">E − e·sin(E) = M</text>
+                        <text x="300" y="350" fill="#bae6fd" fontSize="12" fontFamily="monospace" opacity="0.80">a = q / (1 − e)</text>
+                        <text x="300" y="368" fill="#bae6fd" fontSize="12" fontFamily="monospace" opacity="0.65">n = k / a^(3/2)</text>
                     </>
                 )}
 
                 {/* Title */}
-                <text x="20" y="30" fill="#cbd5e1" fontSize="13" fontWeight="700">{en ? 'The full orbit — true to scale' : 'A órbita completa — em escala real'}</text>
-                <text x="20" y="48" fill="#64748b" fontSize="11">{en ? '— Sun sits at one focus of the ellipse, not the centre' : '— o Sol fica em um foco da elipse, não no centro'}</text>
+                <text x="20" y="30" fill="#cbd5e1" fontSize="15" fontWeight="700">{en ? 'The full orbit — true to scale' : 'A órbita completa — em escala real'}</text>
+                <text x="20" y="50" fill="#64748b" fontSize="13">{en ? '— Sun sits at one focus of the ellipse, not the centre' : '— o Sol fica em um foco da elipse, não no centro'}</text>
             </svg>
             <figcaption className="border-t border-white/10 px-4 py-3 text-[12px] leading-relaxed text-white/55">
                 {en
