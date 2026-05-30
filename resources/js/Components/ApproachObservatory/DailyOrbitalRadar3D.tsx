@@ -2,7 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createPortal } from 'react-dom';
-import { BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, List, Maximize2, Minimize2, RefreshCw, RotateCcw } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, Maximize2, Minimize2, RefreshCw, RotateCcw } from 'lucide-react';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { computeSceneEphemeris, KM_PER_AU, type SceneEphemeris } from '@/lib/sceneEphemeris';
@@ -378,27 +378,17 @@ export function DailyOrbitalRadar3D({
                 <div className="pointer-events-none absolute left-3 top-3 z-10">
                     <div className="pointer-events-auto relative flex flex-col sm:flex-row items-start gap-2">
 
-                        {/* ── Mobile: painel colapsado → só a alça de toggle ── */}
-                        {panelCollapsed ? (
-                            <button
-                                type="button"
-                                onClick={() => setPanelCollapsed(false)}
-                                title={en ? 'Show object list' : 'Mostrar lista de objetos'}
-                                aria-label={en ? 'Show object list' : 'Mostrar lista de objetos'}
-                                className="sm:hidden flex items-center gap-1.5 rounded-xl border border-white/12 bg-space-950/88 px-2.5 py-2 text-white/70 backdrop-blur-xl transition hover:text-white"
-                            >
-                                <List className="size-3.5" />
-                                <ChevronDown className="size-3 text-white/40" />
-                            </button>
-                        ) : null}
-
-                        {/* Painel lateral principal — sempre visível em desktop, toggle em mobile */}
+                        {/* Painel lateral principal — sempre visível em desktop, toggle em mobile.
+                            Em mobile, some quando há objeto em foco (FocusCard toma o lugar). */}
                         <div
                             ref={sidePanelRef}
                             className={[
                                 'flex flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl',
                                 'sm:flex sm:h-[min(26rem,70vh)] sm:w-[min(18rem,48vw)]',
-                                panelCollapsed ? 'hidden' : 'flex h-[min(22rem,55vh)] w-[min(16rem,calc(100vw-5rem))]',
+                                // mobile: escondido se colapsado OU se há objeto em foco
+                                (panelCollapsed || !!focusedObject || !!bodyCardOpen)
+                                    ? 'hidden sm:flex'
+                                    : 'flex h-[min(22rem,55vh)] w-[min(16rem,calc(100vw-5rem))]',
                             ].join(' ')}
                         >
                             {/* Header mobile: título + botão de fechar o painel */}
@@ -501,14 +491,13 @@ export function DailyOrbitalRadar3D({
                     </div>
                 </div>
 
-                {/* Botões de câmera + labels + fullscreen — canto superior direito, sempre visíveis. */}
+                {/* Botões de câmera + labels + fullscreen — canto superior direito, sempre visíveis.
+                    Desktop: horizontal. Mobile: coluna vertical de ícones. */}
                 <div className="pointer-events-none absolute right-3 top-3 z-20">
-                    <div className="pointer-events-auto flex items-center gap-1.5">
-
-                        {/* Vista de câmera — desktop: texto; mobile: ícones em pill único */}
-                        {activeMode !== 'orbit' ? (<>
-                            {/* Desktop */}
-                            <div className="hidden sm:flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
+                    {/* Desktop: tudo numa linha */}
+                    <div className="pointer-events-auto hidden sm:flex items-center gap-1.5">
+                        {activeMode !== 'orbit' ? (
+                            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
                                 <ViewButton active={view === 'top' && !focusedObject} onClick={() => pickView('top')}>
                                     {en ? 'Top' : 'Superior'}
                                 </ViewButton>
@@ -520,58 +509,61 @@ export function DailyOrbitalRadar3D({
                                     {en ? 'Reset' : 'Resetar'}
                                 </ViewButton>
                             </div>
-                            {/* Mobile: pill de ícones */}
-                            <div className="flex sm:hidden items-center gap-0.5 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
-                                <IconViewButton
-                                    active={view === 'top' && !focusedObject}
-                                    onClick={() => pickView('top')}
-                                    title={en ? 'Top view' : 'Vista superior'}
-                                >
-                                    <svg viewBox="0 0 14 14" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                        <circle cx="7" cy="7" r="5.5" />
-                                        <line x1="7" y1="1.5" x2="7" y2="4" />
-                                        <line x1="7" y1="10" x2="7" y2="12.5" />
-                                        <line x1="1.5" y1="7" x2="4" y2="7" />
-                                        <line x1="10" y1="7" x2="12.5" y2="7" />
-                                    </svg>
-                                </IconViewButton>
-                                <IconViewButton
-                                    active={view === 'side' && !focusedObject}
-                                    onClick={() => pickView('side')}
-                                    title={en ? 'Side view' : 'Vista lateral'}
-                                >
-                                    <svg viewBox="0 0 14 14" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                        <ellipse cx="7" cy="7" rx="5.5" ry="2.5" />
-                                        <line x1="1.5" y1="7" x2="12.5" y2="7" />
-                                    </svg>
-                                </IconViewButton>
-                                <span className="mx-0.5 h-3.5 w-px bg-white/10" aria-hidden />
-                                <IconViewButton
-                                    active={view === 'perspective' && !focusedObject}
-                                    onClick={resetView}
-                                    title={en ? 'Reset view' : 'Resetar vista'}
-                                >
-                                    <RotateCcw className="size-3" />
-                                </IconViewButton>
-                            </div>
-                        </>) : null}
-
-                        {/* Toggle de labels */}
+                        ) : null}
                         <button
                             type="button"
                             onClick={() => setShowLabels((v) => !v)}
                             title={showLabels ? (en ? 'Hide markers' : 'Ocultar marcações') : (en ? 'Show markers' : 'Mostrar marcações')}
                             aria-label={showLabels ? (en ? 'Hide markers' : 'Ocultar marcações') : (en ? 'Show markers' : 'Mostrar marcações')}
-                            className={[
-                                'flex items-center justify-center rounded-full border p-1.5 backdrop-blur transition',
-                                showLabels
-                                    ? 'border-white/10 bg-space-950/82 text-white/60 hover:border-white/25 hover:text-white'
-                                    : 'border-white/20 bg-white/8 text-white/35 hover:text-white/60',
-                            ].join(' ')}
+                            className={['flex items-center justify-center rounded-full border p-1.5 backdrop-blur transition', showLabels ? 'border-white/10 bg-space-950/82 text-white/60 hover:border-white/25 hover:text-white' : 'border-white/20 bg-white/8 text-white/35 hover:text-white/60'].join(' ')}
                         >
                             {showLabels ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setFullscreen((v) => !v)}
+                            title={fullscreen ? (en ? 'Exit fullscreen' : 'Sair da tela cheia') : (en ? 'Fullscreen' : 'Tela cheia')}
+                            aria-label={fullscreen ? (en ? 'Exit fullscreen' : 'Sair da tela cheia') : (en ? 'Fullscreen' : 'Tela cheia')}
+                            className="flex items-center justify-center rounded-full border border-white/10 bg-space-950/82 p-1.5 text-white/60 backdrop-blur transition hover:border-white/25 hover:text-white"
+                        >
+                            {fullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+                        </button>
+                    </div>
 
+                    {/* Mobile: coluna vertical de ícones */}
+                    <div className="pointer-events-auto flex sm:hidden flex-col items-center gap-1.5">
+                        {/* Pill vertical de vistas de câmera */}
+                        {activeMode !== 'orbit' ? (
+                            <div className="flex flex-col items-center gap-0.5 rounded-full border border-white/10 bg-space-950/82 py-1 px-1 backdrop-blur">
+                                <IconViewButton active={view === 'top' && !focusedObject} onClick={() => pickView('top')} title={en ? 'Top view' : 'Vista superior'}>
+                                    <svg viewBox="0 0 14 14" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <circle cx="7" cy="7" r="5.5" />
+                                        <line x1="7" y1="1.5" x2="7" y2="4" /><line x1="7" y1="10" x2="7" y2="12.5" />
+                                        <line x1="1.5" y1="7" x2="4" y2="7" /><line x1="10" y1="7" x2="12.5" y2="7" />
+                                    </svg>
+                                </IconViewButton>
+                                <IconViewButton active={view === 'side' && !focusedObject} onClick={() => pickView('side')} title={en ? 'Side view' : 'Vista lateral'}>
+                                    <svg viewBox="0 0 14 14" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <ellipse cx="7" cy="7" rx="5.5" ry="2.5" />
+                                        <line x1="1.5" y1="7" x2="12.5" y2="7" />
+                                    </svg>
+                                </IconViewButton>
+                                <span className="my-0.5 h-px w-3.5 bg-white/10" aria-hidden />
+                                <IconViewButton active={view === 'perspective' && !focusedObject} onClick={resetView} title={en ? 'Reset view' : 'Resetar vista'}>
+                                    <RotateCcw className="size-3" />
+                                </IconViewButton>
+                            </div>
+                        ) : null}
+                        {/* Labels toggle */}
+                        <button
+                            type="button"
+                            onClick={() => setShowLabels((v) => !v)}
+                            title={showLabels ? (en ? 'Hide markers' : 'Ocultar marcações') : (en ? 'Show markers' : 'Mostrar marcações')}
+                            aria-label={showLabels ? (en ? 'Hide markers' : 'Ocultar marcações') : (en ? 'Show markers' : 'Mostrar marcações')}
+                            className={['flex items-center justify-center rounded-full border p-1.5 backdrop-blur transition', showLabels ? 'border-white/10 bg-space-950/82 text-white/60 hover:border-white/25 hover:text-white' : 'border-white/20 bg-white/8 text-white/35 hover:text-white/60'].join(' ')}
+                        >
+                            {showLabels ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+                        </button>
                         {/* Fullscreen */}
                         <button
                             type="button"
@@ -598,10 +590,11 @@ export function DailyOrbitalRadar3D({
                         onShowOrbit={showOrbit}
                         onShowCloseUp={showCloseUp}
                         locale={locale}
-                        mobileTopAlign={panelCollapsed}
+                        mobileTopAlign={true}
+                        onShowPanel={() => { selectObject(focusedObject.approach); setPanelCollapsed(false); }}
                     />
                 ) : bodyCardOpen ? (
-                    <BodyInfoCard body={bodyCardOpen} onClose={() => setBodyCardOpen(null)} locale={locale} mobileTopAlign={panelCollapsed} />
+                    <BodyInfoCard body={bodyCardOpen} onClose={() => setBodyCardOpen(null)} locale={locale} mobileTopAlign={true} />
                 ) : null}
 
                 {/* Título e badge — overlay centrado na borda inferior do canvas */}

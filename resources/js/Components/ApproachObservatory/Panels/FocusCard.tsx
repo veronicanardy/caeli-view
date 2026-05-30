@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import type { AsteroidTrajectory, ClosestNowObject, HorizonsFailureKind, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { formatDistanceAU, formatTimestamp } from '@/lib/observatory/format';
@@ -17,6 +18,7 @@ export function FocusCard({
     onShowCloseUp,
     locale,
     mobileTopAlign,
+    onShowPanel,
 }: {
     object: ClosestNowObject;
     onOpenFocus?: (approach: UnifiedApproach) => void;
@@ -24,18 +26,14 @@ export function FocusCard({
     orbitMode: boolean;
     /** Osculating elements present — orbit *shape* is drawable. */
     hasOrbit: boolean;
-    /**
-     * Whether we can place the asteroid on its drawn orbit. Requires a usable tpJd (perihelion
-     * epoch) so the Kepler propagation has a time origin. Without it, the shape is drawable but
-     * the "current" point on it is not — we keep the orbit button disabled rather than show a
-     * fake position alongside the ellipse.
-     */
     canShowOrbitPosition: boolean;
     onShowOrbit: () => void;
     onShowCloseUp: () => void;
     locale: 'pt-BR' | 'en';
-    /** Em mobile, alinha ao topo substituindo o painel lateral colapsado. */
+    /** Em mobile, alinha ao topo substituindo o painel lateral. */
     mobileTopAlign?: boolean;
+    /** Callback para reabrir o painel lateral em mobile. */
+    onShowPanel?: () => void;
 }) {
     const en = locale === 'en';
     const a = object.approach;
@@ -47,13 +45,30 @@ export function FocusCard({
     const summary = humanSummary(object, en);
     const trajectoryStatus = trajectoryStatusBadge(object.trajectory, en);
 
+    const eyebrowText = orbitMode
+        ? (en ? 'On its orbit around the Sun' : 'Em sua órbita ao redor do Sol')
+        : (en ? 'Object in focus' : 'Objeto em Foco');
+
+    const eyebrow = onShowPanel ? (
+        <div className="flex items-center gap-2">
+            <button
+                type="button"
+                onClick={onShowPanel}
+                className="sm:hidden flex items-center gap-1 text-[11px] text-white/50 transition hover:text-white/80"
+                aria-label={en ? 'Back to list' : 'Voltar à lista'}
+            >
+                <ChevronDown className="-rotate-90 size-3" />
+                {en ? 'List' : 'Lista'}
+            </button>
+            <span className="text-[11px] uppercase tracking-wide text-white/45">{eyebrowText}</span>
+        </div>
+    ) : eyebrowText;
+
     return (
         <PanelShell
             onClose={onClose}
             closeLabel={en ? 'Close focus card' : 'Fechar painel'}
-            eyebrow={orbitMode
-                ? (en ? 'On its orbit around the Sun' : 'Em sua órbita ao redor do Sol')
-                : (en ? 'Object in focus' : 'Objeto em Foco')}
+            eyebrow={eyebrow}
             title={a.displayName ?? a.name}
             subtitle={a.subtitle ?? undefined}
             borderClass="border-signal-cyan/25"
