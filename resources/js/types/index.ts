@@ -161,6 +161,9 @@ export type AsteroidTrajectory = {
     currentPoint?: TrajectoryPoint | null;
     currentDistanceKm?: number | null;
     currentDistanceLD?: number | null;
+    /** Velocity magnitude relative to Earth, km/h, derived from Horizons vx/vy/vz vectors.
+     * Populated for objects that lack a CAD relativeVelocityKph (e.g. featured synthetics). */
+    currentVelocityKph?: number | null;
     anchor?: 'now' | 'closest_approach';
     anchorTime?: string | null;
     referencePoint?: TrajectoryPoint | null;
@@ -199,7 +202,7 @@ export type ClosestNowObject = {
 };
 
 export type ObjectLimit = 5 | 15 | 30;
-export type SelectionMode = 'nearest' | 'upcoming' | 'featured' | 'attention';
+export type SelectionMode = 'nearest' | 'upcoming' | 'attention';
 
 export type ClosestNowResponse = {
     mode: 'closest_now';

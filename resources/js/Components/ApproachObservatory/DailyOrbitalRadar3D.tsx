@@ -239,7 +239,9 @@ export function DailyOrbitalRadar3D({
     const selectObject = (approach: UnifiedApproach) => {
         const newObject = closestNowObjects.find((o) => o.approach.id === approach.id);
         const newHasOrbit = Boolean(newObject?.trajectory?.orbitalElements);
-        if (!orbitMode || !newHasOrbit) setOrbitMode(false);
+        // Em modo orbital, bloqueia clique em objetos sem órbita — eles são desabilitados na lista.
+        if (orbitMode && !newHasOrbit) return;
+        if (!orbitMode) setOrbitMode(false);
         setBodyCardOpen(null);
         clearPlanetTargets();
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
@@ -431,6 +433,7 @@ export function DailyOrbitalRadar3D({
                                             locale={locale}
                                             selectionMode={selectionMode}
                                             compact={objectLimit === 30}
+                                            orbitMode={orbitMode}
                                         />
                                     ))}
                                 </ul>
@@ -554,7 +557,6 @@ export function DailyOrbitalRadar3D({
 
 function listTitle(count: number, mode: SelectionMode, en: boolean): string {
     if (mode === 'upcoming')  return en ? `${count} upcoming passes`     : `${count} próximas aproximações`;
-    if (mode === 'featured')  return en ? 'Featured objects'              : 'Objetos em destaque';
     if (mode === 'attention') return en ? `${count} watch-list objects`   : `${count} objetos em maior atenção`;
     return en ? `${count} closest objects now` : `${count} objetos mais próximos agora`;
 }
@@ -562,10 +564,6 @@ function listTitle(count: number, mode: SelectionMode, en: boolean): string {
 const EMPTY_MODE_MESSAGES: Record<SelectionMode, { pt: string; en: string }> = {
     nearest:   { pt: 'Nenhum objeto próximo encontrado agora.', en: 'No nearby objects found right now.' },
     upcoming:  { pt: 'Nenhuma aproximação prevista para hoje.', en: 'No close approaches scheduled for today.' },
-    featured:  {
-        pt: 'Nenhum dos objetos em destaque (Bennu, Eros, Ceres, Itokawa, Vesta, Anteros) tem posição disponível no radar agora.',
-        en: 'None of the featured objects (Bennu, Eros, Ceres, Itokawa, Vesta, Anteros) have a position available in the radar right now.',
-    },
     attention: {
         pt: 'Nenhum objeto monitorado pela NASA/JPL com posição disponível no radar agora.',
         en: 'No NASA/JPL-monitored objects with a position available in the radar right now.',
@@ -605,15 +603,19 @@ type ObjectListItemProps = {
     selectionMode: SelectionMode;
     /** Modo compacto: oculta distância e reduz padding — usado com 30 objetos. */
     compact?: boolean;
+    /** Quando true, objetos sem elementos orbitais ficam desabilitados. */
+    orbitMode?: boolean;
 };
 
 /**
  * Item da lista de objetos próximos na barra lateral da cena.
  * Exibe cor de paleta, nome, distância e indicadores de estado (sem posição, perigo).
  */
-function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, selectionMode, compact = false }: ObjectListItemProps) {
+function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, selectionMode, compact = false, orbitMode = false }: ObjectListItemProps) {
     const en = locale === 'en';
     const hasScenePosition = Boolean(o.trajectory?.currentPoint);
+    const hasOrbit = Boolean(o.trajectory?.orbitalElements);
+    const orbitBlocked = orbitMode && !hasOrbit;
     const hazard = o.approach.hazardFlag;
 
     const trailingLabel = useMemo(() => {
@@ -643,23 +645,28 @@ function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, sele
         return compactKm(o.currentDistanceKm);
     }, [selectionMode, o.approach.approachDate, o.currentDistanceKm, locale]);
 
+    const title = orbitBlocked
+        ? (en ? 'Orbit unavailable for this object — no orbital elements from Horizons.' : 'Órbita indisponível para este objeto — sem elementos orbitais do Horizons.')
+        : !hasScenePosition
+          ? (en ? 'No live position from Horizons right now — not shown on the radar.' : 'Sem posição do Horizons no momento — não exibido no radar.')
+          : undefined;
+
     return (
         <li>
             <button
                 type="button"
+                disabled={orbitBlocked}
                 onClick={() => onSelect(o.approach)}
-                title={
-                    hasScenePosition
-                        ? undefined
-                        : en
-                          ? 'No live position from Horizons right now — not shown on the radar.'
-                          : 'Sem posição do Horizons no momento — não exibido no radar.'
-                }
+                title={title}
                 className={[
                     'flex w-full items-center gap-2 rounded-lg text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                     compact ? 'px-2 py-1' : 'px-2 py-2',
-                    isSelected ? 'bg-signal-cyan/15 text-white ring-1 ring-signal-cyan/40' : 'text-white/75 hover:bg-white/8 hover:text-white',
-                    hasScenePosition ? '' : 'opacity-50',
+                    orbitBlocked
+                        ? 'cursor-not-allowed opacity-35'
+                        : isSelected
+                          ? 'bg-signal-cyan/15 text-white ring-1 ring-signal-cyan/40'
+                          : 'text-white/75 hover:bg-white/8 hover:text-white',
+                    !orbitBlocked && !hasScenePosition ? 'opacity-50' : '',
                 ].join(' ')}
             >
                 <span className="h-2 w-2 shrink-0 rounded-full ring-1 ring-white/10" style={{ backgroundColor: palette.future }} />
@@ -669,7 +676,11 @@ function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, sele
                 {hazard ? (
                     <span className="shrink-0 text-[11px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>⚠️</span>
                 ) : null}
-                {!hasScenePosition ? (
+                {orbitBlocked ? (
+                    <span className="shrink-0 text-[10px] text-white/30" aria-hidden>
+                        {en ? 'no orbit' : 'sem órbita'}
+                    </span>
+                ) : !hasScenePosition ? (
                     <span className="shrink-0 text-[10px] text-amber-200/60" aria-hidden>
                         {en ? 'no pos.' : 'sem pos.'}
                     </span>

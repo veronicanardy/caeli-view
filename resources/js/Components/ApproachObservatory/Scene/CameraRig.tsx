@@ -282,12 +282,14 @@ export function computeFocusFraming(
         // Elementos rejeitados pelo construtor de órbita. Cai para o close-up para mostrar algo.
     }
 
-    // Close-up na rocha: posição heliocêntrica absoluta (geo km + earthHelio → comprimir uma vez).
-    // earthHelioPositionAU é necessário para a conversão; sem ele não há framing.
-    if (!earthHelioPositionAU) return null;
-    const current = currentPositionInScene(object, earthHelioPositionAU);
-    if (!current) return null;
-    const target = new THREE.Vector3(...current);
+    // Close-up na rocha: posição geocêntrica log-comprimida offsetada pela Terra na cena.
+    const geoPos = currentPositionInScene(object);
+    if (!geoPos) return null;
+    const target = new THREE.Vector3(
+        earthScenePosition[0] + geoPos[0],
+        earthScenePosition[1] + geoPos[1],
+        earthScenePosition[2] + geoPos[2],
+    );
     const distance = 2.1;
     const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
     const position = target.clone().add(dir.multiplyScalar(distance));

@@ -54,10 +54,10 @@ final class ClosestNowSelector
     private const TOP_RESULT_LIMIT = 5;
 
     /** Modos de seleção válidos — o critério que define quais objetos são priorizados */
-    private const VALID_MODES = ['nearest', 'upcoming', 'featured', 'attention'];
+    private const VALID_MODES = ['nearest', 'upcoming', 'attention'];
 
     /**
-     * Janela temporal enviada ao Horizons: ±2 dias com passo de 6 horas (~9 pontos por objeto).
+     * Janela temporal padrão enviada ao Horizons: ±2 dias com passo de 6 horas (~17 pontos).
      *
      * Janela curta tem dois efeitos positivos:
      *   1. Respostas muito menores → menos timeout quando 30 objetos são consultados em paralelo.
@@ -65,11 +65,29 @@ final class ClosestNowSelector
      * Para o critério "mais próximos agora" não precisamos de órbita completa — só queremos
      * saber onde o objeto está hoje. A trajetória de ±2 dias é suficiente para a cena 3D
      * mostrar a curva de passagem sem exigir 60 pontos por objeto.
+     *
+     * Objetos muito distantes (> 50M km) recebem janelas adaptativas maiores — veja
+     * trajectoryWindowFor(). A compressão logarítmica da cena "achata" o espaço lá longe,
+     * fazendo com que ±2 dias produzam um arco invisível para objetos acima de ~500 DL.
      */
     private const HORIZONS_WINDOW = [
         'startOffsetHours' => -48,    // -2 dias
         'stopOffsetHours'  => 48,     // +2 dias
         'stepSize'         => '6 hours',
+    ];
+
+    /** Janela adaptativa para objetos a 50M–500M km: ±15 dias, passo 1 dia (~31 pontos). */
+    private const HORIZONS_WINDOW_MEDIUM = [
+        'startOffsetHours' => -360,   // -15 dias
+        'stopOffsetHours'  => 360,    // +15 dias
+        'stepSize'         => '1 day',
+    ];
+
+    /** Janela adaptativa para objetos além de 500M km: ±120 dias, passo 5 dias (~49 pontos). */
+    private const HORIZONS_WINDOW_WIDE = [
+        'startOffsetHours' => -2880,  // -120 dias
+        'stopOffsetHours'  => 2880,   // +120 dias
+        'stepSize'         => '5 days',
     ];
 
     /** Máximo de objetos consultados simultaneamente no Horizons. Acima disso os timeouts explodem. */
@@ -107,7 +125,7 @@ final class ClosestNowSelector
      * @param  string  $dateMin   Data inicial ISO (Y-m-d), inclusive (já pode estar alargada pelo controller)
      * @param  string  $dateMax   Data final ISO (Y-m-d), inclusive (já pode estar alargada pelo controller)
      * @param  int     $limit     Quantos objetos retornar (padrão 5, máx 30)
-     * @param  string  $mode      Critério de seleção: 'nearest' | 'upcoming' | 'featured' | 'attention'
+     * @param  string  $mode      Critério de seleção: 'nearest' | 'upcoming' | 'attention'
      * @param  string  $anchorMin Data âncora original (antes do alargamento) — usada pelo modo 'upcoming'
      */
     public function select(string $dateMin, string $dateMax, int $limit = self::TOP_RESULT_LIMIT, string $mode = 'nearest', string $anchorMin = '', bool $forceRefresh = false): array
@@ -127,7 +145,7 @@ final class ClosestNowSelector
         // individual do Horizons por objectId (TTL 30min) reutiliza automaticamente os
         // ~10 objetos já consultados — apenas os objetos 11–20 geram novas chamadas à API.
         $windowSignature = implode(',', self::HORIZONS_WINDOW);
-        $cacheKey        = 'closest-now:v11:' . md5($dateMin . '|' . $dateMax . '|' . $mode . '|' . $limit . '|' . $anchor . '|' . $windowSignature);
+        $cacheKey        = 'closest-now:v12:' . md5($dateMin . '|' . $dateMax . '|' . $mode . '|' . $limit . '|' . $anchor . '|' . $windowSignature);
 
         if ($forceRefresh) {
             Cache::forget($cacheKey);
@@ -173,11 +191,11 @@ final class ClosestNowSelector
         $anchorDate = $anchor !== '' ? $anchor : $dateMin;
 
         // Passo 1: candidatos do CAD + NeoWs.
-        // 'featured' e 'attention' usam janela de ± 90 dias sem dist_max para garantir
-        // que objetos famosos (Bennu, Eros…) e PHAs sejam encontrados mesmo fora da janela diária.
+        // 'attention' usa janela de ± 90 dias sem dist_max para garantir que PHAs sejam
+        // encontrados mesmo fora da janela diária.
         // 'upcoming' usa janela alargada para capturar os próximos 3 dias.
         $observeParams = match ($mode) {
-            'featured', 'attention' => [
+            'attention' => [
                 'date_min'      => CarbonImmutable::parse($anchorDate, 'UTC')->subDays(90)->toDateString(),
                 'date_max'      => CarbonImmutable::parse($anchorDate, 'UTC')->addDays(90)->toDateString(),
                 'type'          => 'comet', // pula NeoWs (só asteroides) — CAD basta e evita crash com janela ±90d
@@ -207,7 +225,7 @@ final class ClosestNowSelector
 
         $approaches = is_array($data['approaches'] ?? null) ? $data['approaches'] : [];
 
-        if ($approaches === [] && $mode !== 'featured') {
+        if ($approaches === []) {
             return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato encontrado no período.');
         }
 
@@ -306,7 +324,6 @@ final class ClosestNowSelector
     {
         return match ($mode) {
             'upcoming'  => $this->pickUpcomingCandidates($approaches, $dateMin),
-            'featured'  => $this->pickFeaturedCandidates($approaches),
             'attention' => $this->pickAttentionCandidates($approaches),
             default     => $this->pickNearestCandidates($approaches),
         };
@@ -394,75 +411,6 @@ final class ClosestNowSelector
     }
 
     /**
-     * Objetos em destaque fixos: sempre presentes, independente do CAD.
-     * spkId (SPK-ID do JPL) => nome canônico para fallback direto ao Horizons.
-     */
-    private const FEATURED_OBJECTS = [
-        '2101955' => 'Bennu',
-        '2000001' => 'Ceres',
-        '2025143' => 'Itokawa',
-        '2000433' => 'Eros',
-        '2000004' => 'Vesta',
-        '2001943' => 'Anteros',
-    ];
-
-    /**
-     * Modo 'featured': objetos com modelo 3D ou na lista de destaque fixa.
-     * Primeiro filtra o pool do CAD; para os que não aparecerem, cria entradas
-     * sintéticas mínimas para o Horizons conseguir buscar a posição atual.
-     *
-     * @param  array<int, array<string, mixed>>  $approaches
-     * @return array<int, array<string, mixed>>
-     */
-    private function pickFeaturedCandidates(array $approaches): array
-    {
-        $fromCad = array_values(array_filter(
-            $approaches,
-            fn (array $a): bool => $this->hasFeaturedModel($a),
-        ));
-
-        // Detecta quais SPK IDs já vieram do CAD (aceita com ou sem prefixo "2").
-        $foundSpkIds = [];
-        foreach ($fromCad as $a) {
-            $spk = trim((string) ($a['spkId'] ?? ''));
-            if ($spk !== '') {
-                $foundSpkIds[$spk] = true;
-                $foundSpkIds[ltrim($spk, '2')] = true;
-            }
-        }
-
-        // Para os que faltam, cria entrada sintética mínima para o Horizons.
-        $synthetic = [];
-        foreach (self::FEATURED_OBJECTS as $spkId => $name) {
-            if (isset($foundSpkIds[$spkId]) || isset($foundSpkIds[ltrim($spkId, '2')])) {
-                continue;
-            }
-            $synthetic[] = [
-                'id'                => 'featured:' . $spkId,
-                'source'            => 'cad',
-                'sourceLabel'       => 'JPL CAD',
-                'rawName'           => $name,
-                'name'              => $name,
-                'displayName'       => $name,
-                'designation'       => null,
-                'spkId'             => $spkId,
-                'permanentNumber'   => ltrim($spkId, '2'),
-                'properName'        => $name,
-                'objectType'        => 'asteroid',
-                'approachDate'      => null,
-                'approachTime'      => '',
-                'approachBody'      => 'Earth',
-                'nominalDistanceKm' => null,
-                'hazardFlag'        => false,
-                'detailIdentifier'  => $name,
-                'distanceContext'   => \App\Support\DistancePresenter::fromKilometers(null),
-            ];
-        }
-
-        return array_merge($fromCad, $synthetic);
-    }
-
-    /**
      * Modo 'attention': somente objetos monitorados pela NASA/JPL (hazardFlag = true).
      *
      * @param  array<int, array<string, mixed>>  $approaches
@@ -474,56 +422,6 @@ final class ClosestNowSelector
             $approaches,
             static fn (array $a): bool => (bool) ($a['hazardFlag'] ?? false),
         ));
-    }
-
-    /**
-     * Verifica se o objeto corresponde a um asteroide com modelo 3D real disponível.
-     * Espelha exatamente os registros de REAL_ASTEROID_MODELS no frontend:
-     *   bennu (101955), ceres (1), itokawa (25143), eros (433), vesta (4)
-     */
-    private function hasFeaturedModel(array $approach): bool
-    {
-        // Números de catálogo canônicos dos asteroides em destaque
-        static $featuredNumbers = ['101955', '1', '25143', '433', '4', '1943'];
-
-        // Aliases textuais correspondentes
-        static $featuredAliases = ['bennu', 'rq36', 'ceres', 'itokawa', 'eros', 'vesta', 'anteros'];
-
-        $fields = array_filter([
-            $approach['name'] ?? null,
-            $approach['displayName'] ?? null,
-            $approach['rawName'] ?? null,
-            $approach['properName'] ?? null,
-            $approach['designation'] ?? null,
-            $approach['provisionalDesignation'] ?? null,
-            $approach['detailIdentifier'] ?? null,
-        ]);
-
-        $lowerFields = array_map('strtolower', array_map('trim', $fields));
-
-        foreach ($featuredAliases as $alias) {
-            foreach ($lowerFields as $field) {
-                if (preg_match('/(^|[^a-z0-9])' . preg_quote($alias, '/') . '([^a-z0-9]|$)/i', $field)) {
-                    return true;
-                }
-            }
-        }
-
-        $numberFields = array_filter([
-            (string) ($approach['permanentNumber'] ?? ''),
-            (string) ($approach['spkId'] ?? ''),
-        ]);
-
-        foreach ($featuredNumbers as $number) {
-            foreach ($numberFields as $field) {
-                $clean = trim(preg_replace('/^\((\d+)\)$/', '$1', $field));
-                if ($clean === $number) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -585,7 +483,9 @@ final class ClosestNowSelector
                 continue;
             }
             $payload    = $this->toHorizonsPayload($approach);
-            $tasks[$id] = fn () => $this->horizons->trajectoryAroundNow($payload, self::HORIZONS_WINDOW);
+            $distKm     = isset($approach['nominalDistanceKm']) ? (float) $approach['nominalDistanceKm'] : null;
+            $window     = $this->trajectoryWindowFor($distKm);
+            $tasks[$id] = fn () => $this->horizons->trajectoryAroundNow($payload, $window);
         }
 
         if ($tasks === []) {
@@ -796,8 +696,29 @@ final class ClosestNowSelector
     // -------------------------------------------------------------------------
 
     /**
-     * Converte o shape de uma aproximação unificada para o payload esperado pelo `HorizonsTrajectoryService`.
+     * Escolhe a janela de trajetória com base na distância nominal do objeto.
+     *
+     * A cena 3D aplica compressão logarítmica (r_cena = K·ln(1 + r/R0)). Para objetos
+     * muito distantes, a derivada d(r_cena)/dr é pequena, então ±2 dias geram um arco
+     * praticamente invisível. Limiares derivados da condição "arco ≥ 0.3 unidades de cena":
+     *   - null (desconhecida) → WIDE por segurança (objetos sem passagem recente no CAD
+     *     podem estar em qualquer distância)
+     *   - < 50M km  → ±2 dias, passo 6h   (padrão; arco visível em <1 dia)
+     *   - 50M–500M km → ±15 dias, passo 1d (Vesta, Ceres — precisa ~10 dias para arco visível)
+     *   - > 500M km → ±120 dias, passo 5d  (Eros, objetos além da faixa de asteroides — ~100 dias)
      */
+    private function trajectoryWindowFor(?float $distanceKm): array
+    {
+        if ($distanceKm === null || $distanceKm > 500_000_000) {
+            return self::HORIZONS_WINDOW_WIDE;
+        }
+        if ($distanceKm > 50_000_000) {
+            return self::HORIZONS_WINDOW_MEDIUM;
+        }
+        return self::HORIZONS_WINDOW;
+    }
+
+    /** Converte o shape de uma aproximação unificada para o payload esperado pelo HorizonsTrajectoryService. */
     private function toHorizonsPayload(array $approach): array
     {
         return [

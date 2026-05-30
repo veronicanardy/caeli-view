@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, ObjectLimit, UnifiedApproach } from '@/types';
 import { compressDistanceDl, compressSceneVector, KM_PER_LD, SUN_DISPLAY_DL, type SceneEphemeris } from '@/lib/sceneEphemeris';
-import { currentPositionInScene, type EarthHelioAU } from '@/lib/observatory/trajectorySampling';
+import { currentPositionInScene } from '@/lib/observatory/trajectorySampling';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
 import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
 import { Sun } from '../Bodies/Sun/Sun';
@@ -96,15 +96,6 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
             -fallbackSunDirection[2] * SUN_DISPLAY_DL,
         ];
     }, [ephemeris, fallbackSunDirection]);
-
-    // Posição heliocêntrica da Terra em AU (eclíptico J2000) — necessária para converter vetores
-    // geocêntricos do Horizons em posições heliocêntricas antes de aplicar a compressão logarítmica.
-    // Fallback: { x: -1, y: 0, z: 0 } (Terra a ~1 AU em -X eclíptico). Só ativo por <1s até a
-    // efeméride resolver; o erro introduzido nesse instante é invisível.
-    const earthHelioAU = useMemo<EarthHelioAU>(
-        () => ephemeris?.earthHelioPositionAU ?? { x: -1, y: 0, z: 0 },
-        [ephemeris],
-    );
 
     // Vetor geocêntrico da Lua (log-comprimido) — usado por orientMoonTidal e MoonOrbit.
     const moonGeoPos = useMemo<[number, number, number]>(() => {
@@ -204,7 +195,10 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         return !orbitLabelsOnly;
     };
 
-    const focusedObjectPosition = focusedObject ? currentPositionInScene(focusedObject, earthHelioAU) : null;
+    const focusedObjectGeoPos = focusedObject ? currentPositionInScene(focusedObject) : null;
+    const focusedObjectPosition = focusedObjectGeoPos
+        ? [earthPos[0] + focusedObjectGeoPos[0], earthPos[1] + focusedObjectGeoPos[1], earthPos[2] + focusedObjectGeoPos[2]] as [number, number, number]
+        : null;
     const labelOccluder = bodyFocus?.body === 'earth'
         ? { center: new THREE.Vector3(...earthPos), radius: EARTH_RADIUS_DL * 1.35 }
         : bodyFocus?.body === 'moon'
@@ -286,40 +280,40 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         </>
                     ) : null}
 
-                    {/* Asteroides e trajetórias: posições heliocêntricas absolutas (geo→helio antes da compressão). */}
-                    {closestNowObjects.map((object, index) => (
-                        <AsteroidMarker
-                            key={object.approach.id}
-                            object={object}
-                            palette={OBJECT_PALETTE[index % OBJECT_PALETTE.length]}
-                            isSelected={object.approach.id === selectedId}
-                            dimmed={hasSelection && object.approach.id !== selectedId}
-                            onSelect={onSelect}
-                            compactLabel={compactLabels}
-                            showLabel={showLabelForObject(object.approach.id)}
-                            protectLabelFromFocus={object.approach.id !== selectedId}
-                            locale={locale}
-                            earthHelioAU={earthHelioAU}
-                        />
-                    ))}
+                    {/* Asteroides e trajetórias: geocêntricos log-comprimidos, offsetados pela Terra. */}
+                    <group position={earthPos}>
+                        {closestNowObjects.map((object, index) => (
+                            <AsteroidMarker
+                                key={object.approach.id}
+                                object={object}
+                                palette={OBJECT_PALETTE[index % OBJECT_PALETTE.length]}
+                                isSelected={object.approach.id === selectedId}
+                                dimmed={hasSelection && object.approach.id !== selectedId}
+                                onSelect={onSelect}
+                                compactLabel={compactLabels}
+                                showLabel={showLabelForObject(object.approach.id)}
+                                protectLabelFromFocus={object.approach.id !== selectedId}
+                                locale={locale}
+                            />
+                        ))}
 
-                    {showLabels && closestNowObjects
-                        .map((object, index) => ({ object, palette: OBJECT_PALETTE[index % OBJECT_PALETTE.length] }))
-                        .filter(({ object }) => object.trajectory && object.trajectory.status === 'available')
-                        .map(({ object, palette }) => {
-                            const activeTrajectory = object.approach.id === selectedId;
-                            return (
-                                <NowTrajectory
-                                    key={`traj-${object.approach.id}`}
-                                    trajectory={object.trajectory as AsteroidTrajectory}
-                                    palette={palette}
-                                    emphasized={activeTrajectory}
-                                    dimmed={hasSelection && !activeTrajectory}
-                                    locale={locale}
-                                    earthHelioAU={earthHelioAU}
-                                />
-                            );
-                        })}
+                        {showLabels && closestNowObjects
+                            .map((object, index) => ({ object, palette: OBJECT_PALETTE[index % OBJECT_PALETTE.length] }))
+                            .filter(({ object }) => object.trajectory && object.trajectory.status === 'available')
+                            .map(({ object, palette }) => {
+                                const activeTrajectory = object.approach.id === selectedId;
+                                return (
+                                    <NowTrajectory
+                                        key={`traj-${object.approach.id}`}
+                                        trajectory={object.trajectory as AsteroidTrajectory}
+                                        palette={palette}
+                                        emphasized={activeTrajectory}
+                                        dimmed={hasSelection && !activeTrajectory}
+                                        locale={locale}
+                                    />
+                                );
+                            })}
+                    </group>
                 </>
             )}
 

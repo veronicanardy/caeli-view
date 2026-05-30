@@ -1,4 +1,4 @@
-﻿import { useFrame } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -6,7 +6,6 @@ import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import {
     closestApproachNearPosition,
     currentPositionInScene,
-    type EarthHelioAU,
 } from '@/lib/observatory/trajectorySampling';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import RealAsteroidModel from './RealAsteroidModel';
@@ -39,7 +38,6 @@ type AsteroidMarkerProps = {
     showLabel: boolean;
     protectLabelFromFocus: boolean;
     locale: 'pt-BR' | 'en';
-    earthHelioAU: EarthHelioAU;
 };
 
 /**
@@ -67,9 +65,8 @@ export function AsteroidMarker({
     showLabel,
     protectLabelFromFocus,
     locale,
-    earthHelioAU,
 }: AsteroidMarkerProps) {
-    const position = currentPositionInScene(object, earthHelioAU);
+    const position = currentPositionInScene(object);
     const [hovered, setHovered] = useState(false);
     const rockRef = useRef<THREE.Group>(null);
 
@@ -93,7 +90,6 @@ export function AsteroidMarker({
     const nearbyClosestApproach = closestApproachNearPosition(
         object.trajectory,
         new THREE.Vector3(...position),
-        earthHelioAU,
     );
     const en = locale === 'en';
 

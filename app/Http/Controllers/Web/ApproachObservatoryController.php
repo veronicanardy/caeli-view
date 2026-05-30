@@ -172,7 +172,7 @@ class ApproachObservatoryController
             'date_min'      => ['nullable', 'date_format:Y-m-d'],
             'date_max'      => ['nullable', 'date_format:Y-m-d'],
             'limit'         => ['nullable', 'integer', 'min:1', 'max:30'],
-            'mode'          => ['nullable', 'string', 'in:nearest,upcoming,featured,attention'],
+            'mode'          => ['nullable', 'string', 'in:nearest,upcoming,attention'],
             'force_refresh' => ['nullable', 'boolean'],
         ]);
 
