@@ -1,4 +1,4 @@
-import { useFrame } from '@react-three/fiber';
+import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { SUN_GLOW_FRAG, SUN_GLOW_VERT } from '@/lib/observatory/shaders/sun.glsl';
@@ -9,9 +9,9 @@ interface SunProps {
     radius: number;
     locale: 'pt-BR' | 'en';
     withLighting?: boolean;
-    /** Direção Sol→Terra (unitário). Necessário quando withLighting=true e position=[0,0,0],
-     *  pois directionalLight precisa de um vetor não-nulo para definir a direção. */
     sunDirection?: [number, number, number];
+    onFocus?: () => void;
+    showLabel?: boolean;
 }
 
 /**
@@ -30,6 +30,8 @@ export function Sun({
     locale,
     withLighting = false,
     sunDirection,
+    onFocus,
+    showLabel = true,
 }: SunProps) {
     const en = locale === 'en';
     const surfaceMesh = useRef<THREE.Mesh>(null);
@@ -99,9 +101,21 @@ export function Sun({
                     <primitive object={glowMaterial} attach="material" />
                 </mesh>
                 <SunProminences radius={radius} />
-                <ScreenLabel position={[0, radius + 0.42, 0]} protectFromFocus={false}>
-                    <span className="font-semibold">{en ? 'Sun' : 'Sol'}</span>
-                </ScreenLabel>
+                {onFocus ? (
+                    <mesh
+                        onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onFocus(); }}
+                        onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
+                        onPointerOut={() => { document.body.style.cursor = ''; }}
+                    >
+                        <sphereGeometry args={[radius * 2.5, 12, 8]} />
+                        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                    </mesh>
+                ) : null}
+                {showLabel ? (
+                    <ScreenLabel position={[0, radius + 0.42, 0]} protectFromFocus={false} onClick={onFocus}>
+                        <span className="font-semibold">{en ? 'Sun' : 'Sol'}</span>
+                    </ScreenLabel>
+                ) : null}
             </group>
         </group>
     );

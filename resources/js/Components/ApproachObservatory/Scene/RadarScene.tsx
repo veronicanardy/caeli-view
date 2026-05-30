@@ -59,11 +59,12 @@ type RadarSceneProps = {
     isNeptuneFocused: boolean;
     /** Chamado quando Terra ou Lua são focados de dentro da cena (clique no label/hitbox). */
     onFocusBody: (body: 'earth' | 'moon') => void;
+    onFocusSun?: () => void;
     /** Quando false, todas as labels 3D (planetas, asteroides, Terra, Lua) ficam ocultas. */
     showLabels?: boolean;
 };
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, showLabels = true }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, showLabels = true }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -235,6 +236,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         radius={SUN_RADIUS_SCENE}
                         locale={locale}
                         withLighting
+                        onFocus={onFocusSun}
+                        showLabel={showLabels}
                     />
                     {/* Terra na posição heliocêntrica real. */}
                     <group position={earthPos}>
