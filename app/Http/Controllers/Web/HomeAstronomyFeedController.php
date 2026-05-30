@@ -32,7 +32,13 @@ class HomeAstronomyFeedController
 
         if ((bool) Config::get('features.home_observatory_feed', true)) {
             try {
-                $nextApproach = $this->observatory->nextApproach($this->observatory->defaultFilters());
+                $today = now()->toDateString();
+                $nextApproach = $this->observatory->nextApproach([
+                    'date_min' => $today,
+                    'date_max' => now()->addDays(7)->toDateString(),
+                    'dist_max' => '0.2',
+                    'type'     => 'all',
+                ]);
             } catch (Throwable) {
                 $nextApproach = null;
             }

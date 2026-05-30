@@ -39,7 +39,8 @@ export function useHomeAstronomyFeed(initialFeed: HomeFeed): { data: HomeFeed; l
                 return response.json() as Promise<HomeFeed>;
             })
             .then((feed) => {
-                cachedHomeFeed = feed;
+                const hasContent = Boolean(feed.apod || feed.nextApproach || feed.spaceNewsHighlight);
+                if (hasContent) cachedHomeFeed = feed;
                 setData(feed);
                 setLoading(false);
             })
