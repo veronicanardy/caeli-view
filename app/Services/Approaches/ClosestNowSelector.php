@@ -110,7 +110,7 @@ final class ClosestNowSelector
      * @param  string  $mode      Critério de seleção: 'nearest' | 'upcoming' | 'featured' | 'attention'
      * @param  string  $anchorMin Data âncora original (antes do alargamento) — usada pelo modo 'upcoming'
      */
-    public function select(string $dateMin, string $dateMax, int $limit = self::TOP_RESULT_LIMIT, string $mode = 'nearest', string $anchorMin = ''): array
+    public function select(string $dateMin, string $dateMax, int $limit = self::TOP_RESULT_LIMIT, string $mode = 'nearest', string $anchorMin = '', bool $forceRefresh = false): array
     {
         $limit = max(1, min($limit, 30));
         $mode  = in_array($mode, self::VALID_MODES, true) ? $mode : 'nearest';
@@ -127,7 +127,12 @@ final class ClosestNowSelector
         // individual do Horizons por objectId (TTL 30min) reutiliza automaticamente os
         // ~10 objetos já consultados — apenas os objetos 11–20 geram novas chamadas à API.
         $windowSignature = implode(',', self::HORIZONS_WINDOW);
-        $cacheKey        = 'closest-now:v5:' . md5($dateMin . '|' . $dateMax . '|' . $mode . '|' . $limit . '|' . $anchor . '|' . $windowSignature);
+        $cacheKey        = 'closest-now:v7:' . md5($dateMin . '|' . $dateMax . '|' . $mode . '|' . $limit . '|' . $anchor . '|' . $windowSignature);
+
+        if ($forceRefresh) {
+            Cache::forget($cacheKey);
+            Cache::forget("illuminate:cache:flexible:created:{$cacheKey}");
+        }
 
         $full = Cache::flexible(
             $cacheKey,
@@ -240,7 +245,11 @@ final class ClosestNowSelector
         $allCandidates = array_merge($priorityCandidates, $reserveCandidates);
         $objects       = $this->buildObjects($allCandidates, $trajectories);
 
-        usort($objects, $this->compareByCurrentDistance(...));
+        if ($mode !== 'upcoming') {
+            usort($objects, $this->compareByCurrentDistance(...));
+        } else {
+            usort($objects, $this->compareByUpcomingApproachDate(...));
+        }
 
         // Remove duplicatas por nome canônico mantendo apenas a entrada mais próxima (já é a primeira após sort).
         // Necessário porque um mesmo objeto pode ter múltiplas entradas no CAD com datas de aproximação
@@ -348,12 +357,15 @@ final class ClosestNowSelector
      */
     private function pickUpcomingCandidates(array $approaches, string $dateMin): array
     {
+        $now         = CarbonImmutable::now('UTC');
         $anchorStart = CarbonImmutable::parse($dateMin, 'UTC')->startOfDay();
+        // Corte a partir de agora (não do início do dia) para não incluir aproximações já passadas.
+        $windowStart = $anchorStart->greaterThan($now) ? $anchorStart : $now;
         $anchorEnd   = $anchorStart->addDays(3)->endOfDay();
 
         $filtered = array_values(array_filter(
             $approaches,
-            static function (array $a) use ($anchorStart, $anchorEnd): bool {
+            static function (array $a) use ($windowStart, $anchorEnd): bool {
                 $raw = (string) ($a['approachDate'] ?? '');
                 if ($raw === '') {
                     return false;
@@ -363,7 +375,7 @@ final class ClosestNowSelector
                 } catch (\Throwable) {
                     return false;
                 }
-                return $date->greaterThanOrEqualTo($anchorStart) && $date->lessThanOrEqualTo($anchorEnd);
+                return $date->greaterThanOrEqualTo($windowStart) && $date->lessThanOrEqualTo($anchorEnd);
             },
         ));
 
@@ -659,6 +671,31 @@ final class ClosestNowSelector
         if ($bDate === null) return -1;
 
         // Prioriza datas no futuro; para datas passadas usa distância absoluta
+        $aFuture = $aDate->greaterThan($now);
+        $bFuture = $bDate->greaterThan($now);
+
+        if ($aFuture && ! $bFuture) return -1;
+        if (! $aFuture && $bFuture) return 1;
+
+        return abs($aDate->diffInSeconds($now)) <=> abs($bDate->diffInSeconds($now));
+    }
+
+    /**
+     * Comparador para modo 'upcoming' aplicado sobre os objects já construídos (com 'approach' aninhado).
+     * Ordena pela approachDate mais próxima de agora: futuras primeiro, depois passado recente.
+     */
+    private function compareByUpcomingApproachDate(array $a, array $b): int
+    {
+        $now   = CarbonImmutable::now('UTC');
+        $aRaw  = (string) ($a['approach']['approachDate'] ?? '');
+        $bRaw  = (string) ($b['approach']['approachDate'] ?? '');
+        $aDate = $aRaw !== '' ? CarbonImmutable::parse($aRaw, 'UTC') : null;
+        $bDate = $bRaw !== '' ? CarbonImmutable::parse($bRaw, 'UTC') : null;
+
+        if ($aDate === null && $bDate === null) return 0;
+        if ($aDate === null) return 1;
+        if ($bDate === null) return -1;
+
         $aFuture = $aDate->greaterThan($now);
         $bFuture = $bDate->greaterThan($now);
 

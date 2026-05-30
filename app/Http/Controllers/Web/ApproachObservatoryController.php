@@ -169,17 +169,19 @@ class ApproachObservatoryController
     public function closestNow(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'date_min' => ['nullable', 'date_format:Y-m-d'],
-            'date_max' => ['nullable', 'date_format:Y-m-d'],
-            'limit'    => ['nullable', 'integer', 'min:1', 'max:30'],
-            'mode'     => ['nullable', 'string', 'in:nearest,upcoming,featured,attention'],
+            'date_min'      => ['nullable', 'date_format:Y-m-d'],
+            'date_max'      => ['nullable', 'date_format:Y-m-d'],
+            'limit'         => ['nullable', 'integer', 'min:1', 'max:30'],
+            'mode'          => ['nullable', 'string', 'in:nearest,upcoming,featured,attention'],
+            'force_refresh' => ['nullable', 'boolean'],
         ]);
 
         $defaults = $this->observatory->defaultFilters();
-        $anchorMin = (string) ($validated['date_min'] ?? $defaults['date_min']);
-        $anchorMax = (string) ($validated['date_max'] ?? $defaults['date_max']);
-        $limit = (int) ($validated['limit'] ?? 5);
-        $mode  = (string) ($validated['mode'] ?? 'nearest');
+        $anchorMin    = (string) ($validated['date_min'] ?? $defaults['date_min']);
+        $anchorMax    = (string) ($validated['date_max'] ?? $defaults['date_max']);
+        $limit        = (int) ($validated['limit'] ?? 5);
+        $mode         = (string) ($validated['mode'] ?? 'nearest');
+        $forceRefresh = (bool) ($validated['force_refresh'] ?? false);
 
         // "Closest right now" is not the same as "approaches that peak today". An object that had
         // its peak 2 days ago can still be one of the 5 closest to Earth right now, and so can one
@@ -195,7 +197,7 @@ class ApproachObservatoryController
         \Illuminate\Support\Facades\Log::info('[closestNow] request', compact('anchorMin', 'anchorMax', 'dateMin', 'dateMax', 'limit', 'mode'));
 
         try {
-            $payload = $this->closestNow->select($dateMin, $dateMax, $limit, $mode, $anchorMin);
+            $payload = $this->closestNow->select($dateMin, $dateMax, $limit, $mode, $anchorMin, $forceRefresh);
         } catch (\Throwable) {
             $payload = [
                 'mode'                => 'closest_now',

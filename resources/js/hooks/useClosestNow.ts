@@ -55,11 +55,15 @@ export function useClosestNow(
             limit:    String(limit),
             mode,
         });
+        if (refreshNonce > 0) params.set('force_refresh', '1');
+
+        const headers: HeadersInit = { Accept: 'application/json' };
+        if (refreshNonce > 0) headers['Cache-Control'] = 'no-cache';
 
         fetch(`/radar/closest-now?${params.toString()}`, {
             signal:      controller.signal,
             credentials: 'same-origin',
-            headers:     { Accept: 'application/json' },
+            headers,
         })
             .then((response) => {
                 if (!response.ok) throw new Error('Closest-now unavailable.');

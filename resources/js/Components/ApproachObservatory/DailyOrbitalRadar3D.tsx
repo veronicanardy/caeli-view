@@ -429,6 +429,7 @@ export function DailyOrbitalRadar3D({
                                             isSelected={o.approach.id === selectedId}
                                             onSelect={selectObject}
                                             locale={locale}
+                                            selectionMode={selectionMode}
                                             compact={objectLimit === 30}
                                         />
                                     ))}
@@ -601,6 +602,7 @@ type ObjectListItemProps = {
     isSelected: boolean;
     onSelect: (approach: UnifiedApproach) => void;
     locale: 'pt-BR' | 'en';
+    selectionMode: SelectionMode;
     /** Modo compacto: oculta distância e reduz padding — usado com 30 objetos. */
     compact?: boolean;
 };
@@ -609,10 +611,37 @@ type ObjectListItemProps = {
  * Item da lista de objetos próximos na barra lateral da cena.
  * Exibe cor de paleta, nome, distância e indicadores de estado (sem posição, perigo).
  */
-function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, compact = false }: ObjectListItemProps) {
+function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, selectionMode, compact = false }: ObjectListItemProps) {
     const en = locale === 'en';
     const hasScenePosition = Boolean(o.trajectory?.currentPoint);
     const hazard = o.approach.hazardFlag;
+
+    const trailingLabel = useMemo(() => {
+        if (selectionMode === 'upcoming' && o.approach.approachDate) {
+            // CAD returns "2026-May-30 18:05" (named month); normalize to ISO before parsing.
+            const normalized = o.approach.approachDate.replace(
+                /^(\d{4})-([A-Za-z]{3})-(\d{2})\s/,
+                (_, y, m, d) => {
+                    const months: Record<string, string> = {
+                        Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+                        Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+                    };
+                    return `${y}-${months[m] ?? m}-${d}T`;
+                },
+            ).replace(' ', 'T') + 'Z';
+            const d = new Date(normalized);
+            if (!Number.isNaN(d.getTime())) {
+                return new Intl.DateTimeFormat(locale, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                }).format(d);
+            }
+        }
+        return compactKm(o.currentDistanceKm);
+    }, [selectionMode, o.approach.approachDate, o.currentDistanceKm, locale]);
 
     return (
         <li>
@@ -646,7 +675,7 @@ function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, comp
                     </span>
                 ) : null}
                 <span className="shrink-0 tabular-nums text-white/55">
-                    {compactKm(o.currentDistanceKm)}
+                    {trailingLabel}
                 </span>
             </button>
         </li>
