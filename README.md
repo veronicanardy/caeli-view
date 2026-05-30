@@ -1,135 +1,297 @@
 # CaeliView
 
-CaeliView is a web application built with Laravel, Inertia.js, and React to explore near-Earth and small-body data from NASA and JPL public APIs.
+> A space observation portal built with Laravel, Inertia.js, React, and Three.js — pulling real data from NASA and JPL to bring near-Earth objects, Earth imagery, and small bodies to life.
 
-Portuguese version: see [README.pt-BR.md](README.pt-BR.md).
+Portuguese version: [README.pt-BR.md](README.pt-BR.md)
 
-## Overview
+---
 
-The project is designed to centralize external API integrations in the Laravel backend, normalize heterogeneous payloads, and deliver page data to React through Inertia.js.
+```
+  ██████╗ █████╗ ███████╗██╗     ██╗    ██╗   ██╗██╗███████╗██╗    ██╗
+ ██╔════╝██╔══██╗██╔════╝██║     ██║    ██║   ██║██║██╔════╝██║    ██║
+ ██║     ███████║█████╗  ██║     ██║    ██║   ██║██║█████╗  ██║ █╗ ██║
+ ██║     ██╔══██║██╔══╝  ██║     ██║    ╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
+ ╚██████╗██║  ██║███████╗███████╗██║     ╚████╔╝ ██║███████╗╚███╔███╔╝
+  ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝╚═╝      ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
+```
 
-Instead of maintaining a separate internal REST API for each screen, controllers return Inertia responses with validated and prepared data models for the UI.
+---
 
-## Main Features
+## What is CaeliView?
 
-- Cinematic Home with a fully custom Three.js Earth scene (real NASA Blue Marble daytime texture, Black Marble night lights, normal and specular maps, atmosphere/twilight shading, cloud layer with sun-driven shadow projection, multi-tier starfield with per-star twinkle, and a fallback-safe rendering pipeline).
-- Live Home dashboard with:
-  - Local sky conditions (`Open-Meteo` + `7Timer`) routed through a backend proxy to avoid cross-origin frontend requests.
-  - Visible objects today (Moon, Venus, Mars, Jupiter, Saturn) using local calculations via `astronomy-engine` (loaded as a separate lazy chunk).
-  - Space news highlight (SNAPI) with APOD fallback.
-  - Next relevant near-Earth approach summary.
-  - Human-readable location via reverse geocoding (BigDataCloud) proxied through the backend.
-- Approach Observatory (`/radar`) combining NASA NeoWs and JPL CAD data, with Earth reference imagery from EPIC when available.
-- Asteroids dashboard (`/asteroides`) and asteroid detail page (`/asteroides/{asteroidId}`).
-- EPIC gallery (`/epic`) with date-based query.
-- APOD page (`/apod`) with date-based query and safe image/video rendering.
-- Small Bodies module (`/viajantes`, `/viajantes/{identifier}`) using JPL CAD and SBDB.
-- About page (`/sobre`) describing the project.
-- Bilingual UI support (`pt-BR` default, `en`) with centralized translation dictionaries and a language toggle.
-- Progressive data loading: heavy pages render immediately and fetch their payloads from dedicated JSON endpoints (`/radar/data`, `/epic/data`, `/apod/data`, `/home/astronomy-feed`) with `Cache-Control` headers.
-- Input validation with Form Requests, API exception handling, stale-while-revalidate response caching (`Cache::flexible()`), parallel upstream fan-out (`Concurrency::run()`), and rate limiting.
+CaeliView is a full-stack web application for exploring near-Earth and small-body astronomical data from NASA and JPL public APIs. It combines:
+
+- A **cinematic 3D Earth** rendered in Three.js with real NASA textures
+- A **3D heliocentric orbital radar** showing asteroid positions in the Solar System
+- **Live sky conditions** and visible planets using your actual location
+- Real-time asteroid and comet data from NASA NeoWs, JPL CAD, and JPL Horizons
+- An APOD viewer, EPIC Earth gallery, and space news highlights
+
+All external API integrations live in the Laravel backend. React pages receive clean, normalized data through Inertia.js — no browser-to-NASA requests, no exposed API keys.
+
+---
+
+## Pages
+
+```
+  /                Cinematic home with live sky dashboard
+  /radar           Approach Observatory (2D + 3D orbital radar)
+  /asteroides      Asteroid feed with charts and filters
+  /asteroides/:id  Asteroid detail with orbital elements and history
+  /epic            NASA EPIC Earth imagery gallery
+  /apod            Astronomy Picture of the Day
+  /viajantes       Small bodies (comets, probes) from JPL
+  /viajantes/:id   Small body detail with approach timeline
+  /sobre           About the project
+```
+
+---
+
+## Feature Highlights
+
+### Cinematic Home
+
+```
+  ┌─────────────────────────────────────────────────────────┐
+  │                                                         │
+  │         ·  ★        ·   ✦          ·    ★   ·          │
+  │   ·                                         ·           │
+  │          ★    ╭──────────────╮    ·    ✦               │
+  │    ·          │  ( Earth )   │              ·           │
+  │         ·     │  ◌ clouds   │    ★                     │
+  │    ✦          │  ● night   │          ·                 │
+  │               ╰──────────────╯                          │
+  │                                                         │
+  └─────────────────────────────────────────────────────────┘
+   Three.js scene: NASA Blue Marble + Black Marble night lights,
+   normal/specular maps, cloud shadows, atmosphere glow, starfield
+```
+
+- Custom Three.js Earth with **real NASA Blue Marble** (daytime) and **Black Marble** (night lights) textures
+- Vertex/fragment shaders for **cloud layer with sun-driven shadow projection**
+- **Atmosphere twilight glow** and specular water highlights
+- Multi-tier starfield with **per-star twinkle animation**
+- Soft fallback pipeline for lower-end GPUs
+
+### Live Sky Dashboard
+
+```
+  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+  │  ☁ Sky Now  │  │  🌙 Visible  │  │ 🚀 Next NEO  │
+  │  Seeing: 3  │  │   Moon  ↑    │  │  2024 YR4    │
+  │  Transp: 4  │  │   Venus ↗    │  │  in 3 days   │
+  │  Wind: 12   │  │   Mars  →    │  │  0.02 AU     │
+  └──────────────┘  └──────────────┘  └──────────────┘
+  Open-Meteo + 7Timer            astronomy-engine (lazy chunk)
+```
+
+- Local sky quality via **Open-Meteo** and **7Timer** (proxied through backend)
+- Visible objects (Moon, Venus, Mars, Jupiter, Saturn) computed with **astronomy-engine**
+- Next near-Earth approach preview from combined NASA + JPL data
+- Location name via **BigDataCloud reverse geocoding** (backend proxy)
+- All cards degrade gracefully when location is denied or APIs fail
+
+### Approach Observatory
+
+```
+  2D Panel                         3D Heliocentric Radar
+  ┌─────────────────────────┐      ┌──────────────────────────────┐
+  │  OBJECT      MISS DIST  │      │   ♃         ★ 2024 YR4      │
+  │  2024 YR4    0.02 AU ●  │      │        ·  ·   ·              │
+  │  2020 SW     0.08 AU    │      │   ♂ ·    ⊕    · 2020 SW     │
+  │  2019 OK     0.13 AU    │      │        ·   ·                 │
+  │  ────────────────────── │      │   ♀    ☿       ♄            │
+  │  [Filter] [Sort] [3D ↗] │      │              ☀              │
+  └─────────────────────────┘      └──────────────────────────────┘
+  NASA NeoWs + JPL CAD (merged)    Three.js + react-three/fiber
+```
+
+- Combines **NASA NeoWs** and **JPL CAD** in parallel, deduplicates and merges by identity
+- **3D heliocentric scene** with procedurally rendered planets (Mercury → Neptune), Sun, Moon
+- Asteroid positions from **JPL Horizons API** ephemeris queries
+- Trajectory lines, distance scaling, focus mode for individual objects
+- 2D fallback with full filtering, sorting, and analytics panels
+- Earth reference imagery from **NASA EPIC** with CSS fallback
+
+### Asteroid Dashboard
+
+```
+  ┌───────────────────────────────────────────────────┐
+  │  Week: Apr 14 – Apr 21                [Card|Table]│
+  │                                                   │
+  │  ╔══════╗  ╔══════╗  ╔══════╗  ╔══════╗          │
+  │  ║  42  ║  ║  7 ⚠ ║  ║ 0.3 ║  ║ 12km ║          │
+  │  ║total ║  ║hazard║  ║AU mn║  ║lrgst ║          │
+  │  ╚══════╝  ╚══════╝  ╚══════╝  ╚══════╝          │
+  │                                                   │
+  │  [Daily count chart]  [Hazard breakdown chart]    │
+  └───────────────────────────────────────────────────┘
+```
+
+- Date-range feed from NASA NeoWs with stats cards and Recharts visualizations
+- Hazard classification, velocity, size, and miss-distance breakdowns
+- Card and table views; asteroid detail page with close approach history
+
+---
+
+## Architecture
+
+```
+  Browser
+    │
+    │ HTTP request
+    ▼
+  Laravel Router
+    │  (throttle / validation)
+    ▼
+  Controller
+    │
+    ├──▶ Service Layer ──▶ Cache (Redis, stale-while-revalidate)
+    │         │
+    │    ┌────┴─────────────────────────────────┐
+    │    │  Concurrency::run()                  │
+    │    │  ├── NasaHttpClient  ──▶ NASA APIs   │
+    │    │  └── JplHttpClient   ──▶ JPL APIs    │
+    │    └──────────────────────────────────────┘
+    │         │
+    │       DTOs (normalize heterogeneous payloads)
+    │
+    ├──▶ Inertia response (page + props)
+    │         │
+    │         ▼
+    │       React Page
+    │         │
+    │         ├── Three.js scenes (Earth, orbital radar)
+    │         ├── Recharts (asteroid charts)
+    │         └── astronomy-engine (sky calculations)
+    │
+    └──▶ JSON endpoint (/radar/data, /epic/data, /apod/data, ...)
+              │  ← heavy pages fetch their payload after first render
+              ▼
+            React (async hydration with Cache-Control)
+```
+
+### Key Decisions
+
+| Pattern | What it does |
+|---|---|
+| `Concurrency::run()` | Fans out NeoWs + JPL CAD in parallel for the Observatory |
+| `Cache::flexible()` | Stale-while-revalidate: serves cached data immediately, refreshes in background |
+| Progressive loading | Heavy pages render instantly; data arrives from dedicated JSON endpoints |
+| Backend proxies | `/proxy/sky-observation`, `/proxy/reverse-geocode` keep third-party calls and keys server-side |
+| DTOs | Every API source has its own normalization pipeline before data reaches React |
+| No Repository Pattern | All data is read-only and transient; Services + DTOs are sufficient |
+
+---
 
 ## Tech Stack
 
-Backend:
+### Backend
 
-- PHP 8.4
-- Laravel 13
-- Inertia Laravel 2
-- Guzzle HTTP
+| | |
+|---|---|
+| PHP | 8.4 |
+| Laravel | 13 |
+| Inertia Laravel | 2 |
+| Guzzle HTTP | 7 |
+| PostgreSQL | 17 |
+| Redis | 7 |
+| PHPUnit | 12 |
+| Laravel Pint | latest |
 
-Frontend:
+### Frontend
 
-- React 19
-- TypeScript
-- Inertia React 2
-- Tailwind CSS
-- Recharts
-- `three` (custom cinematic Earth scene on the Home)
-- `react-globe.gl` (interactive globe on secondary views)
-- `astronomy-engine`
-- Vite 6 (with manual chunk splitting for the astronomy engine)
+| | |
+|---|---|
+| React | 19 |
+| TypeScript | 5 |
+| Inertia React | 2 |
+| Tailwind CSS | 3.4 |
+| Three.js | 0.184 |
+| react-three/fiber | 9.6 |
+| react-three/drei | 10.7 |
+| react-globe.gl | 2.35 |
+| astronomy-engine | 2.1 |
+| Recharts | 2.15 |
+| Vite | 6 |
 
-Infrastructure / Tooling:
+### Infrastructure
 
-- Docker Compose
-- PostgreSQL 17
-- Redis 7
-- PHPUnit 12
-- Laravel Pint
+| | |
+|---|---|
+| Docker Compose | multi-container (app, postgres, redis) |
+| Node + npm | runs inside the Docker container |
+| Vite | manual chunk splitting (React, Inertia, astronomy-engine, charts) |
+
+---
 
 ## External APIs
 
-- NASA Open APIs: https://api.nasa.gov/
-- JPL SSD/CNEOS API Service: https://ssd-api.jpl.nasa.gov/
-- JPL CAD API docs: https://ssd-api.jpl.nasa.gov/doc/cad.html
-- JPL SBDB API docs: https://ssd-api.jpl.nasa.gov/doc/sbdb.html
-- Spaceflight News API (SNAPI): https://api.spaceflightnewsapi.net/v4/docs/
-- Open-Meteo API docs: https://open-meteo.com/
-- 7Timer Astro API: https://www.7timer.info/doc.php?lang=en
-- BigDataCloud reverse geocoding: https://www.bigdatacloud.com/docs/api/free-reverse-geocode-to-city-api
+| Provider | Used for |
+|---|---|
+| [NASA NeoWs](https://api.nasa.gov/) | Near-Earth asteroid feed and detail |
+| [NASA EPIC](https://api.nasa.gov/) | Earth Polychromatic Imaging gallery |
+| [NASA APOD](https://api.nasa.gov/) | Astronomy Picture of the Day |
+| [JPL CAD](https://ssd-api.jpl.nasa.gov/doc/cad.html) | Close approach data |
+| [JPL SBDB](https://ssd-api.jpl.nasa.gov/doc/sbdb.html) | Small-body database |
+| [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) | Ephemeris / state vectors for orbital radar |
+| [SNAPI](https://api.spaceflightnewsapi.net/v4/docs/) | Space news highlights |
+| [Open-Meteo](https://open-meteo.com/) | Local sky conditions (seeing, transparency, wind) |
+| [7Timer Astro](https://www.7timer.info/) | Astronomical sky quality forecast |
+| [BigDataCloud](https://www.bigdatacloud.com/) | Reverse geocoding (location name) |
 
-Endpoints currently used by the application:
+---
 
-- NASA NeoWs: `GET /neo/rest/v1/feed`, `GET /neo/rest/v1/neo/{id}`
-- NASA EPIC: `GET /EPIC/api/natural`, `GET /EPIC/api/natural/date/{date}`
-- NASA APOD: `GET /planetary/apod`
-- JPL CAD: `GET /cad.api`
-- JPL SBDB: `GET /sbdb.api`
-- SNAPI: `GET /v4/articles`
-- Open-Meteo Forecast: `GET /v1/forecast`
-- 7Timer Astro: `GET /bin/astro.php`
-- BigDataCloud reverse geocode (via backend proxy)
+## Project Structure
 
-## Architecture Overview
+```
+app/
+├── DTOs/
+│   ├── Approaches/        # Unified approach data models
+│   ├── Jpl/               # CAD + SBDB response normalization
+│   └── Nasa/              # NeoWs + EPIC + APOD normalization
+├── Exceptions/            # Domain exceptions (NasaApiException, JplApiException)
+├── Http/
+│   ├── Controllers/Web/   # Page + data-endpoint controllers
+│   └── Requests/          # Form Request validation
+└── Services/
+    ├── Approaches/        # Observatory orchestration (fan-out, merge, summarize)
+    ├── Jpl/               # JPL CAD, SBDB, Horizons clients
+    ├── Nasa/              # NASA NeoWs, EPIC, APOD clients
+    └── SpaceNews/         # SNAPI client
 
-```text
-NASA/JPL Public APIs
-        ↓
-Laravel Services
-        ↓
-Controllers + Form Requests
-        ↓
-Inertia.js
-        ↓
-React Pages and Components
+resources/js/
+├── Pages/                 # Top-level Inertia page components
+├── Components/
+│   ├── Home/              # CinematicEarthScene, LiveSkyDashboard
+│   ├── ApproachObservatory/ # DailyOrbitalRadar, DailyOrbitalRadar3D, panels
+│   ├── SmallBodies/       # Orbital elements, approach timelines
+│   ├── Nasa/              # EarthGlobe, reusable NASA components
+│   └── Charts/            # Recharts wrappers
+├── hooks/                 # Custom React hooks
+├── lib/
+│   └── observatory/       # Coordinate math, shaders, planet data, Kepler orbits
+├── services/              # Client-side API calls and fallback logic
+├── i18n/                  # Translation dictionaries (pt-BR, en)
+└── types/                 # TypeScript type definitions
+
+tests/
+├── Feature/               # Integration tests (HTTP fakes — no live API calls)
+└── Unit/                  # Unit tests
 ```
 
-- Laravel handles routing, controllers, validation, external API services, cache, and error translation.
-- Inertia.js connects Laravel responses directly to React pages.
-- React handles interface composition, charts, and client-side visual interactions.
-
-References:
-
-- Laravel docs: https://laravel.com/docs
-- Inertia.js docs: https://inertiajs.com/
-- React docs: https://react.dev/
-
-## Architecture Decisions
-
-- External integrations are isolated by provider: `app/Services/Nasa/*`, `app/Services/Jpl/*`, and `app/Services/SpaceNews/*`.
-- Aggregation logic for mixed data sources is isolated in `app/Services/Approaches/ApproachObservatoryService.php`, which uses `Concurrency::run()` to fan out NeoWs + JPL CAD requests in parallel.
-- DTOs in `app/DTOs/*` normalize API responses before rendering.
-- Heavy pages return immediately with a lightweight Inertia payload and fetch their data from a separate JSON endpoint (`/radar/data`, `/epic/data`, `/apod/data`, `/home/astronomy-feed`) with `Cache-Control` headers — this removes blocking external calls from the initial SSR render.
-- Third-party endpoints that the browser would otherwise hit cross-origin (sky observation, reverse geocoding) are routed through dedicated backend proxies (`/proxy/sky-observation`, `/proxy/reverse-geocode`) to centralize keys, caching, and error handling.
-- Client-side observation helpers live in `resources/js/services/*` and `resources/js/hooks/*`, with lightweight caching and resilient fallbacks.
-- Cache strategy uses `Cache::flexible()` (stale-while-revalidate) so hot endpoints serve cached data immediately while refreshing in the background.
-- The project does not currently use Repository Pattern because it does not have complex domain persistence. Most data comes from external APIs and is normalized before being sent to the interface. API integration lives in Services, and response normalization lives in DTOs. This keeps the architecture clean without adding unnecessary layers.
-
-## Error Handling and Fallback Strategy
-
-- External HTTP clients (`NasaHttpClient`, `JplHttpClient`) map failures to domain exceptions.
-- Controllers catch exceptions and still render safe page payloads.
-- Rate-limit and availability errors use user-friendly messages.
-- API responses are cached with dedicated TTL values from `config/services.php`.
-- `NASA_API_KEY` remains server-side and is never exposed to React props.
-- Observatory Earth reference uses EPIC when available and a CSS fallback when EPIC is unavailable.
-- Home cards keep working when location is denied, browser geolocation is unavailable, or external providers fail.
-- APOD media handling falls back safely when content is not directly renderable (for example, video-only cases).
+---
 
 ## Installation
 
-Clone and enter the repository:
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
+- A free [NASA API key](https://api.nasa.gov/) (optional for first run — `DEMO_KEY` works)
+
+### Steps
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/veronicanardy/caeli-view.git
@@ -139,24 +301,22 @@ cd caeli-view
 Create your local environment file:
 
 ```bash
+# bash / zsh
 cp .env.example .env
-```
 
-On PowerShell:
-
-```powershell
+# PowerShell
 Copy-Item .env.example .env
 ```
 
-Set your NASA API key:
+Set your NASA API key in `.env`:
 
 ```env
 NASA_API_KEY=DEMO_KEY
 ```
 
-`DEMO_KEY` is useful for quick local tests but has low rate limits. For continuous development, generate a free key at https://api.nasa.gov/.
+> `DEMO_KEY` works for quick tests but hits NASA's lowest rate limits. For active development, generate a free key at [https://api.nasa.gov/](https://api.nasa.gov/).
 
-Install dependencies and prepare the app:
+Build and install dependencies:
 
 ```bash
 docker compose build
@@ -165,130 +325,93 @@ docker compose run --rm app npm install
 docker compose run --rm app php artisan key:generate
 ```
 
-Start services and run migrations:
+Start services and migrate:
 
 ```bash
 docker compose up -d
 docker compose exec app php artisan migrate
 ```
 
-Run frontend dev server:
+Start the frontend dev server:
 
 ```bash
 docker compose exec app npm run dev -- --host=0.0.0.0
 ```
 
-Application URL:
+Open [http://localhost:8000](http://localhost:8000).
 
-```text
-http://localhost:8000
+---
+
+## Development Commands
+
+```bash
+# Run all tests
+docker compose exec app php artisan test
+
+# Format PHP code
+docker compose exec app ./vendor/bin/pint
+
+# Build frontend for production
+docker compose exec app npm run build
+
+# Run Laravel server + Vite together (Composer script)
+docker compose exec app composer dev
 ```
+
+---
 
 ## Environment Variables
 
-The application reads these integration keys from `.env` through `config/services.php`:
+Read from `.env` through `config/services.php`:
 
-- `NASA_API_BASE_URL`
-- `NASA_API_KEY`
-- `NASA_TIMEOUT_SECONDS`
-- `NASA_CACHE_TTL_SECONDS`
-- `NASA_EPIC_CACHE_TTL_SECONDS`
-- `NASA_APOD_CACHE_TTL_SECONDS`
-- `JPL_API_BASE_URL`
-- `JPL_TIMEOUT_SECONDS`
-- `JPL_CAD_CACHE_TTL_SECONDS`
-- `JPL_SBDB_CACHE_TTL_SECONDS`
+```env
+# NASA
+NASA_API_BASE_URL=
+NASA_API_KEY=
+NASA_TIMEOUT_SECONDS=
+NASA_CACHE_TTL_SECONDS=
+NASA_EPIC_CACHE_TTL_SECONDS=
+NASA_APOD_CACHE_TTL_SECONDS=
 
-It also uses runtime and infra keys such as:
-
-- `APP_*`, `LOG_*`
-- `DB_*`
-- `CACHE_STORE`, `QUEUE_CONNECTION`, `SESSION_*`
-- `REDIS_*`
-- `APP_PORT`, `VITE_PORT`, `FORWARD_DB_PORT`, `FORWARD_REDIS_PORT`
-
-Do not commit your `.env` file.
-
-## Project Structure
-
-```text
-app/
-  DTOs/
-    Approaches/
-    Jpl/
-    Nasa/
-  Exceptions/
-  Http/
-    Controllers/Web/
-    Requests/
-  Services/
-    Approaches/
-    Jpl/
-    Nasa/
-    SpaceNews/
-  Support/
-config/
-resources/
-  css/
-  js/
-    Components/
-      Home/
-      Nasa/
-      ApproachObservatory/
-      SmallBodies/
-      Charts/
-    Pages/
-    hooks/
-    i18n/
-    services/
-routes/
-tests/
-  Feature/
-  Unit/
+# JPL
+JPL_API_BASE_URL=
+JPL_TIMEOUT_SECONDS=
+JPL_CAD_CACHE_TTL_SECONDS=
+JPL_SBDB_CACHE_TTL_SECONDS=
 ```
 
-## Development
+Standard Laravel / infrastructure variables: `APP_*`, `DB_*`, `REDIS_*`, `CACHE_STORE`, `SESSION_*`, `APP_PORT`, `VITE_PORT`, `FORWARD_DB_PORT`, `FORWARD_REDIS_PORT`.
 
-Run tests:
+> Never commit your `.env` file.
+
+---
+
+## Error Handling
+
+- `NasaHttpClient` and `JplHttpClient` map HTTP failures to typed domain exceptions
+- Controllers catch exceptions and return safe page payloads with user-friendly messages
+- Observatory falls back to a CSS Earth reference when EPIC imagery is unavailable
+- Home cards stay functional when geolocation is denied or any external provider fails
+- APOD media handling detects video-only content and renders a safe fallback
+- `NASA_API_KEY` is always server-side and never exposed in React props
+
+---
+
+## Testing
+
+Feature tests use Laravel's HTTP fake to intercept all NASA and JPL requests. Test runs are fully offline — no live API calls required.
 
 ```bash
 docker compose exec app php artisan test
 ```
 
-Format PHP:
+---
 
-```bash
-docker compose exec app ./vendor/bin/pint
-```
+## Status
 
-Build frontend:
+Active development. Core features are working. Planned next steps: end-to-end tests (Playwright), CI/CD workflow, deployment documentation, user bookmarks.
 
-```bash
-docker compose exec app npm run build
-```
-
-Run full dev mode via Composer script:
-
-```bash
-docker compose exec app composer dev
-```
-
-## Testing Notes
-
-Feature and unit tests rely on HTTP fakes for external API interactions, so test runs do not depend on live NASA/JPL availability.
-
-## Future Improvements
-
-- End-to-end tests (Playwright).
-- CI workflow for test/build validation.
-- Deployment instructions.
-- Changelog and release/versioning workflow.
-- Additional visual refinements and screenshots.
-- User-level features such as favorites/bookmarks.
-
-## Project Status
-
-Active development.
+---
 
 ## Author
 
