@@ -218,40 +218,40 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         const earthHelioEcl = A.RotateVector(eqjToEclMatrix(A), earthHelioEqj);
         const earthHelioPositionAU = { x: earthHelioEcl.x, y: earthHelioEcl.y, z: earthHelioEcl.z };
 
-        // Heliocentric scene positions for all planets.
-        // Pipeline: HelioVector → EQJ → ecliptic J2000 → scene axes (ecl.x→x, ecl.z→y, ecl.y→z)
-        // scaled by ORBIT_AU_SCALE. Sol está na origem da cena; cada planeta fica na sua posição
-        // heliocêntrica real. A Terra também é posicionada assim — earthScenePosition é o ponto
-        // de ancoragem de tudo que é geocêntrico (Lua, asteroides).
-        function helioToScene(ecl: { x: number; y: number; z: number }): [number, number, number] {
-            // Eclíptica J2000 → cena Three.js: ecl.x→x, 0→y (plano eclíptico flat), -ecl.y→z
-            // Y=0 mantém planetas colados nos anéis de referência (que vivem no plano XZ).
-            // O sinal negativo em Z preserva a orientação anti-horária das órbitas vista de cima.
+        // Terra: posição heliocêntrica real — âncora dos asteroides e da Lua.
+        // Eclíptica J2000 → cena: ecl.x→x, 0→y (plano flat), -ecl.y→z (orientação anti-horária).
+        function earthToScene(ecl: { x: number; y: number; z: number }): [number, number, number] {
             return [ecl.x * ORBIT_AU_SCALE, 0, -ecl.y * ORBIT_AU_SCALE];
         }
+        const earthScenePosition = earthToScene(earthHelioPositionAU);
 
-        const earthScenePosition = helioToScene(earthHelioPositionAU);
+        // Planetas de contexto: direção heliocêntrica real projetada no plano XZ,
+        // mas distância fixada no semi-eixo médio — garante alinhamento com os anéis de referência.
+        function planetToScene(ecl: { x: number; y: number; z: number }, semiMajorAU: number): [number, number, number] {
+            const len = Math.hypot(ecl.x, ecl.y) || 1; // XZ da eclíptica (ecl.x e ecl.y → scene X e Z)
+            return [(ecl.x / len) * semiMajorAU * ORBIT_AU_SCALE, 0, -(ecl.y / len) * semiMajorAU * ORBIT_AU_SCALE];
+        }
 
         const mercuryHelioEqj = A.HelioVector(A.Body.Mercury, date);
-        const mercuryScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), mercuryHelioEqj));
+        const mercuryScenePosition = planetToScene(A.RotateVector(eqjToEclMatrix(A), mercuryHelioEqj), 0.387);
 
         const venusHelioEqj = A.HelioVector(A.Body.Venus, date);
-        const venusScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), venusHelioEqj));
+        const venusScenePosition = planetToScene(A.RotateVector(eqjToEclMatrix(A), venusHelioEqj), 0.723);
 
         const marsHelioEqj = A.HelioVector(A.Body.Mars, date);
-        const marsScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), marsHelioEqj));
+        const marsScenePosition = planetToScene(A.RotateVector(eqjToEclMatrix(A), marsHelioEqj), 1.524);
 
         const jupiterHelioEqj = A.HelioVector(A.Body.Jupiter, date);
-        const jupiterScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), jupiterHelioEqj));
+        const jupiterScenePosition = planetToScene(A.RotateVector(eqjToEclMatrix(A), jupiterHelioEqj), 5.2028);
 
         const saturnHelioEqj = A.HelioVector(A.Body.Saturn, date);
-        const saturnScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), saturnHelioEqj));
+        const saturnScenePosition = planetToScene(A.RotateVector(eqjToEclMatrix(A), saturnHelioEqj), 9.5392);
 
         const uranusHelioEqj = A.HelioVector(A.Body.Uranus, date);
-        const uranusScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), uranusHelioEqj));
+        const uranusScenePosition = planetToScene(A.RotateVector(eqjToEclMatrix(A), uranusHelioEqj), 19.2184);
 
         const neptuneHelioEqj = A.HelioVector(A.Body.Neptune, date);
-        const neptuneScenePosition = helioToScene(A.RotateVector(eqjToEclMatrix(A), neptuneHelioEqj));
+        const neptuneScenePosition = planetToScene(A.RotateVector(eqjToEclMatrix(A), neptuneHelioEqj), 30.0699);
 
         return {
             sunDirection,
