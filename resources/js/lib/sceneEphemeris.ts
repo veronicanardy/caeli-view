@@ -132,7 +132,7 @@ function eclToScene(x: number, y: number, z: number, unitsKmPerInput: number): [
     return [
         (x * unitsKmPerInput) / KM_PER_LD,
         (z * unitsKmPerInput) / KM_PER_LD,
-        (y * unitsKmPerInput) / KM_PER_LD,
+        (-y * unitsKmPerInput) / KM_PER_LD,
     ];
 }
 
