@@ -309,6 +309,7 @@ function RadarFriendly({ en, nf, lunarDistanceKm }: { en: boolean; nf: Intl.Numb
                             <VisualKey color="bg-cyan-400" shape="cone" label={en ? 'Cone on the dot' : 'Cone no ponto'} desc={en ? 'The direction it is heading right now. The tip is where it will be next.' : 'A direção em que ele está indo agora. A ponta é onde ele estará em seguida.'} />
                             <VisualKey color="bg-slate-400" shape="dashed" label={en ? 'Dashed trail' : 'Rastro tracejado'} desc={en ? 'Where it came from — its recent path through space.' : 'De onde ele veio — seu caminho recente pelo espaço.'} />
                             <VisualKey color="bg-slate-300" label={en ? 'Silver sphere' : 'Esfera prateada'} desc={en ? 'The Moon, always at 1 DL from Earth. Use it as a reference: if an object is closer than the Moon, it is inside the lunar orbit.' : 'A Lua, sempre a 1 DL da Terra. Use-a como referência: se um objeto está mais perto que a Lua, ele está dentro da órbita lunar.'} />
+                            <VisualKey color="bg-amber-300" shape="ring" label={en ? 'Planet ring + dashed orbit' : 'Anel de planeta + órbita tracejada'} desc={en ? 'Mercury, Venus, Mars, Jupiter, Saturn, Uranus and Neptune. Their positions are real, from live ephemeris data. The dashed ellipse around each is its actual orbit — drawn to scale in the heliocentric layer.' : 'Mercúrio, Vênus, Marte, Júpiter, Saturno, Urano e Netuno. As posições são reais, vindas de efeméride ao vivo. A elipse tracejada ao redor de cada um é sua órbita real — desenhada em escala na camada heliocêntrica.'} />
                         </div>
                     </Section>
                 </div>
@@ -774,7 +775,7 @@ function RadarTechnical({ en, ldKm, lunarDistanceKm, locale }: { en: boolean; au
 
                     {/* ── Formula 2 ── */}
                     <FormulaPanel
-                        title={en ? '4. Radial log compression (scene placement)' : '4. Compressão radial logarítmica (posicionamento na cena)'}
+                        title={en ? '4. Radial log compression — asteroids and Moon' : '4. Compressão radial logarítmica — asteroides e Lua'}
                         formulas={[
                             `R₀ = 8 DL  (= ${nf.format(8 * lunarDistanceKm)} km)`,
                             'K  = 1 / ln(1 + 1/R₀)',
@@ -782,8 +783,22 @@ function RadarTechnical({ en, ldKm, lunarDistanceKm, locale }: { en: boolean; au
                             'r_scene = f(d_DL) · r̂     r̂ = r/‖r‖',
                         ]}
                         note={en
-                            ? 'On a linear scale 1 AU = 389 LD, so near-Earth asteroids would occupy <0.3% of the canvas. The log function stretches the near region and compresses the far region while keeping both visible. K forces f(1) = 1 — the Moon always lands at exactly 1 scene unit. r̂ is computed before compression and reapplied after, so direction, orbital inclination, and trajectory shape are never distorted. Numbers shown in the UI are always the original, uncompressed values.'
-                            : 'Em escala linear 1 UA = 389 DL, então os asteroides próximos ocupariam <0,3% do canvas. A função log estica a região próxima e comprime a distante mantendo ambas visíveis. K força f(1) = 1 — a Lua sempre cai exatamente em 1 unidade de cena. r̂ é calculado antes da compressão e reaplicado depois, então direção, inclinação orbital e forma das trajetórias nunca são distorcidos. Os números na interface são sempre os valores originais, sem compressão.'}
+                            ? 'This compression applies only to asteroids, comets, and the Moon — the geocentric layer. On a linear scale 1 AU = 389 LD, so near-Earth asteroids would occupy <0.3% of the canvas. K forces f(1) = 1 — the Moon always lands at exactly 1 scene unit. r̂ is computed before compression and reapplied after, so direction and trajectory shape are never distorted. Numbers in the UI are always the original, uncompressed values.'
+                            : 'Esta compressão se aplica apenas a asteroides, cometas e à Lua — a camada geocêntrica. Em escala linear 1 UA = 389 DL, os asteroides próximos ocupariam <0,3% do canvas. K força f(1) = 1 — a Lua sempre cai em exatamente 1 unidade de cena. r̂ é calculado antes e reaplicado depois, então direção e forma das trajetórias nunca são distorcidos. Os números na interface são sempre os valores originais, sem compressão.'}
+                    />
+
+                    {/* ── Formula 2b ── */}
+                    <FormulaPanel
+                        title={en ? '4b. Linear AU scale — planets and their orbits' : '4b. Escala linear em UA — planetas e suas órbitas'}
+                        formulas={[
+                            'ORBIT_AU_SCALE = f(1 AU in DL)   (same K·ln constant)',
+                            en ? 'planet_scene = (ecl.x, 0, −ecl.y) · ORBIT_AU_SCALE' : 'planeta_cena = (ecl.x, 0, −ecl.y) · ORBIT_AU_SCALE',
+                            en ? 'planet position ← astronomy-engine HelioState()' : 'posição do planeta ← astronomy-engine HelioState()',
+                            en ? 'orbit ellipse ← same scale, lonPerihelion from ephemeris' : 'elipse orbital ← mesma escala, lonPeriélio da efeméride',
+                        ]}
+                        note={en
+                            ? 'Planets (Mercury through Neptune) live in a separate heliocentric layer with a strictly linear scale — 1 AU maps to the same fixed number of scene units everywhere. The ecliptic z component is dropped (y = 0 in scene), so all planetary orbits are projected onto the ecliptic plane. Planet positions come from astronomy-engine\'s HelioState(), which returns real heliocentric position and velocity. The perihelion longitude orienting each orbit ellipse is derived from those live vectors — not from a fixed table — so the ellipse always passes exactly through the planet\'s projected position.'
+                            : 'Os planetas (de Mercúrio a Netuno) vivem numa camada heliocêntrica separada com escala estritamente linear — 1 UA mapeia para o mesmo número fixo de unidades de cena em todo lugar. A componente z eclíptica é descartada (y = 0 na cena), então todas as órbitas planetárias são projetadas no plano eclíptico. As posições dos planetas vêm do HelioState() do astronomy-engine, que retorna posição e velocidade heliocêntricas reais. A longitude do periélio que orienta cada elipse orbital é derivada desses vetores ao vivo — não de uma tabela fixa — então a elipse sempre passa exatamente pela posição projetada do planeta.'}
                     />
 
                     {/* ── Formula 3 ── */}
@@ -993,13 +1008,13 @@ function OrbitTechnical({ en, locale }: { en: boolean; locale: 'pt-BR' | 'en' })
                         title={en ? '5. Mapping to the 3D scene' : '5. Mapeamento para a cena 3D'}
                         formulas={[
                             '1 AU = ORBIT_AU_SCALE scene units   (linear, no log)',
-                            'scene(x, y, z) = (x_ecl, z_ecl, y_ecl) · ORBIT_AU_SCALE',
-                            en ? 'Earth ← real heliocentric ephemeris (astronomy-engine)' : 'Terra ← efeméride heliocêntrica real (astronomy-engine)',
-                            en ? 'Sun  ← scene origin' : 'Sol  ← origem da cena',
+                            en ? 'asteroid scene(x,y,z) = (x_ecl, z_ecl, y_ecl) · scale' : 'asteroide cena(x,y,z) = (x_ecl, z_ecl, y_ecl) · scale',
+                            en ? 'planet  scene(x,y,z) = (x_ecl,    0, −y_ecl) · scale' : 'planeta  cena(x,y,z) = (x_ecl,    0, −y_ecl) · scale',
+                            en ? 'Earth, Sun, planets ← astronomy-engine (heliocentric)' : 'Terra, Sol, planetas ← astronomy-engine (heliocêntrico)',
                         ]}
                         note={en
-                            ? "The axis swap (ecliptic y↔z) aligns J2000 ecliptic — where Z is the ecliptic north pole — with Three.js's Y-up convention. Without this, all orbits would appear flat on the horizontal plane. The scale is strictly linear: the drawn ellipse has the exact eccentricity and perihelion of the real orbit. Earth's rendered radius is amplified for visibility, but its position is taken from astronomy-engine's heliocentric ephemeris, so the Sun–Earth–asteroid geometry is physically correct."
-                            : 'A troca de eixos (eclíptico y↔z) alinha o J2000 eclíptico — onde Z é o polo norte eclíptico — com a convenção Y-up do Three.js. Sem isso, todas as órbitas apareceriam planas no plano horizontal. A escala é estritamente linear: a elipse desenhada tem a excentricidade e o periélio exatos da órbita real. O raio renderizado da Terra é amplificado para visibilidade, mas sua posição vem da efeméride heliocêntrica do astronomy-engine, então a geometria Sol-Terra-asteroide é fisicamente correta.'}
+                            ? "Two axis conventions coexist in the same scene. The asteroid orbit uses a full 3D ecliptic mapping (y↔z swap) so inclination is preserved — steeply tilted orbits rise above/below the screen plane. The planet layer projects onto the ecliptic plane (y = 0 always), which is accurate because planetary inclinations are small (< 7°) and the visual difference is sub-pixel. The scale is strictly linear for both: the drawn ellipse has the exact eccentricity and perihelion of the real orbit."
+                            : 'Duas convenções de eixos coexistem na mesma cena. A órbita do asteroide usa mapeamento eclíptico 3D completo (troca y↔z) para que a inclinação seja preservada — órbitas muito inclinadas sobem acima ou abaixo do plano da tela. A camada dos planetas é projetada no plano eclíptico (y = 0 sempre), o que é preciso porque as inclinações planetárias são pequenas (< 7°) e a diferença visual é sub-pixel. A escala é estritamente linear para ambos: a elipse desenhada tem a excentricidade e o periélio exatos da órbita real.'}
                     />
                 </div>
             </div>
@@ -1026,10 +1041,10 @@ function OrbitTechnical({ en, locale }: { en: boolean; locale: 'pt-BR' | 'en' })
                             : 'Girar para a vista lateral revela a inclinação orbital. Uma órbita plana na tela tem i ≈ 0° (quase coplanar com a órbita da Terra). Uma órbita que sobe acentuadamente acima ou abaixo do plano eclíptico tem i alto — ela cruza a zona orbital da Terra em apenas dois nodos específicos, tornando uma aproximação próxima geometricamente menos provável.'}
                     />
                     <TechInterpretItem
-                        label={en ? 'White dot position = Kepler propagation' : 'Posição do ponto branco = propagação kepleriana'}
+                        label={en ? 'Asteroid dot = Kepler propagation · Planet dots = live ephemeris' : 'Ponto do asteroide = Kepler · Pontos dos planetas = efeméride ao vivo'}
                         text={en
-                            ? "The white dot is placed by solving Kepler's equation for today's Julian Date. It is a calculated position, not a direct observation. Its accuracy depends on the quality of the osculating elements from JPL Horizons — excellent for well-tracked objects, rougher for newly discovered ones."
-                            : 'O ponto branco é posicionado resolvendo a equação de Kepler para a Data Juliana de hoje. É uma posição calculada, não uma observação direta. Sua precisão depende da qualidade dos elementos osculadores do JPL Horizons — excelente para objetos bem rastreados, menos precisa para recém-descobertos.'}
+                            ? "The asteroid's white dot is placed by solving Kepler's equation for today's Julian Date — a calculated position from JPL Horizons osculating elements. The planet dots (Mercury–Neptune) use a different pipeline: astronomy-engine's HelioState() returns their heliocentric position and velocity directly, with no Kepler solving step. Both pipelines place each body exactly on its drawn ellipse by construction."
+                            : 'O ponto branco do asteroide é posicionado resolvendo a equação de Kepler para a Data Juliana de hoje — posição calculada a partir dos elementos osculadores do JPL Horizons. Os pontos dos planetas (Mercúrio–Netuno) usam um pipeline diferente: o HelioState() do astronomy-engine retorna posição e velocidade heliocêntricas diretamente, sem etapa de resolução de Kepler. Ambos os pipelines posicionam cada corpo exatamente sobre sua elipse desenhada por construção.'}
                     />
                 </div>
             </TechSection>
