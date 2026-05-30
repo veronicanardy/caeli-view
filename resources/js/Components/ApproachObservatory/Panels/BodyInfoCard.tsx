@@ -200,9 +200,10 @@ interface BodyInfoCardProps {
     body: 'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune';
     onClose: () => void;
     locale: 'pt-BR' | 'en';
+    mobileTopAlign?: boolean;
 }
 
-export function BodyInfoCard({ body, onClose, locale }: BodyInfoCardProps) {
+export function BodyInfoCard({ body, onClose, locale, mobileTopAlign }: BodyInfoCardProps) {
     const en = locale === 'en';
     const cfg = BODIES[body];
 
@@ -220,6 +221,7 @@ export function BodyInfoCard({ body, onClose, locale }: BodyInfoCardProps) {
             title={en ? cfg.nameEn : cfg.namePt}
             dotColor={cfg.dotColor}
             className="max-h-[45vh] sm:h-[19rem] w-[min(18rem,calc(100vw-6rem))] sm:w-[min(22rem,48%)]"
+            mobileTopAlign={mobileTopAlign}
         >
             {/* Context note + facts — scroll em mobile quando o conteúdo ultrapassa max-h */}
             <div className="overflow-y-auto">

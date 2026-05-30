@@ -16,6 +16,7 @@ export function FocusCard({
     onShowOrbit,
     onShowCloseUp,
     locale,
+    mobileTopAlign,
 }: {
     object: ClosestNowObject;
     onOpenFocus?: (approach: UnifiedApproach) => void;
@@ -33,6 +34,8 @@ export function FocusCard({
     onShowOrbit: () => void;
     onShowCloseUp: () => void;
     locale: 'pt-BR' | 'en';
+    /** Em mobile, alinha ao topo substituindo o painel lateral colapsado. */
+    mobileTopAlign?: boolean;
 }) {
     const en = locale === 'en';
     const a = object.approach;
@@ -55,6 +58,7 @@ export function FocusCard({
             subtitle={a.subtitle ?? undefined}
             borderClass="border-signal-cyan/25"
             className="flex max-h-[45vh] sm:max-h-[76%] w-[min(18rem,calc(100vw-6rem))] sm:w-[min(24rem,48%)] flex-col"
+            mobileTopAlign={mobileTopAlign}
         >
 
             {/* Risk badge — prominent, color-coded by hazard. */}

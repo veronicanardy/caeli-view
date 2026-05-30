@@ -13,6 +13,8 @@ type PanelShellProps = {
     borderClass?: string;
     children: ReactNode;
     className?: string;
+    /** Em mobile, alinha ao topo (substitui o painel lateral) em vez de bottom. */
+    mobileTopAlign?: boolean;
 };
 
 /**
@@ -29,11 +31,16 @@ export function PanelShell({
     borderClass = 'border-white/15',
     children,
     className = '',
+    mobileTopAlign = false,
 }: PanelShellProps) {
     return (
         <div
             className={[
-                'pointer-events-auto absolute left-3 bottom-10 sm:top-[54%] sm:bottom-auto z-20 sm:-translate-y-1/2 overflow-hidden rounded-xl border bg-space-950/92 shadow-glow backdrop-blur-xl',
+                'pointer-events-auto absolute left-3 z-20 overflow-hidden rounded-xl border bg-space-950/92 shadow-glow backdrop-blur-xl',
+                // Mobile: top-3 quando substitui painel, bottom-10 caso contrário
+                mobileTopAlign ? 'top-3' : 'bottom-10',
+                // Desktop: sempre centralizado verticalmente
+                'sm:top-[54%] sm:bottom-auto sm:-translate-y-1/2',
                 borderClass,
                 className,
             ].join(' ')}
