@@ -33,7 +33,7 @@ export function PanelShell({
     return (
         <div
             className={[
-                'pointer-events-auto absolute left-3 top-[54%] z-20 -translate-y-1/2 overflow-hidden rounded-xl border bg-space-950/92 shadow-glow backdrop-blur-xl',
+                'pointer-events-auto absolute left-3 bottom-10 sm:top-[54%] sm:bottom-auto z-20 sm:-translate-y-1/2 overflow-hidden rounded-xl border bg-space-950/92 shadow-glow backdrop-blur-xl',
                 borderClass,
                 className,
             ].join(' ')}

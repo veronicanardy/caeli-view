@@ -219,24 +219,26 @@ export function BodyInfoCard({ body, onClose, locale }: BodyInfoCardProps) {
             eyebrow={en ? cfg.subtitleEn : cfg.subtitlePt}
             title={en ? cfg.nameEn : cfg.namePt}
             dotColor={cfg.dotColor}
-            className="h-[19rem] w-[min(22rem,48%)]"
+            className="max-h-[45vh] sm:h-[19rem] w-[min(18rem,calc(100vw-6rem))] sm:w-[min(22rem,48%)]"
         >
-            {/* Context note */}
-            <div className="mt-2 px-3">
-                <p className="text-[13px] leading-relaxed text-white/55">
-                    {en ? cfg.contextEn : cfg.contextPt}
-                </p>
-            </div>
+            {/* Context note + facts — scroll em mobile quando o conteúdo ultrapassa max-h */}
+            <div className="overflow-y-auto">
+                <div className="mt-2 px-3">
+                    <p className="text-[13px] leading-relaxed text-white/55">
+                        {en ? cfg.contextEn : cfg.contextPt}
+                    </p>
+                </div>
 
-            {/* Facts */}
-            <dl className="mt-2.5 space-y-1 px-3 pb-3 text-[13px]">
-                {cfg.facts.map((f) => (
-                    <div key={f.labelEn} className="flex items-baseline justify-between gap-3">
-                        <dt className="shrink-0 text-white/45">{en ? f.labelEn : f.labelPt}</dt>
-                        <dd className="text-right font-medium text-white/80">{val(f.value)}</dd>
-                    </div>
-                ))}
-            </dl>
+                {/* Facts */}
+                <dl className="mt-2.5 space-y-1 px-3 pb-3 text-[13px]">
+                    {cfg.facts.map((f) => (
+                        <div key={f.labelEn} className="flex items-baseline justify-between gap-3">
+                            <dt className="shrink-0 text-white/45">{en ? f.labelEn : f.labelPt}</dt>
+                            <dd className="text-right font-medium text-white/80">{val(f.value)}</dd>
+                        </div>
+                    ))}
+                </dl>
+            </div>
         </PanelShell>
     );
 }

@@ -323,13 +323,13 @@ export function DailyOrbitalRadar3D({
     return (
         <section>
             {fullscreen && (
-                <div className="h-[calc(100vh-8rem)] min-h-[560px] rounded-lg border border-white/5 bg-white/[0.02]" aria-hidden />
+                <div className="h-[calc(100vh-8rem)] min-h-[400px] sm:min-h-[560px] rounded-lg border border-white/5 bg-white/[0.02]" aria-hidden />
             )}
             <div
                 ref={canvasContainerRef}
                 className={fullscreen
                     ? 'fixed inset-0 z-50 bg-[#03060d]'
-                    : 'relative h-[calc(100vh-8rem)] min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d]'}
+                    : 'relative h-[calc(100vh-8rem)] min-h-[400px] sm:min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d]'}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 <LabelNoGoContext.Provider value={noGoRect}>
@@ -372,11 +372,11 @@ export function DailyOrbitalRadar3D({
                     </Suspense>
                 </Canvas>
 
-                {/* Barra superior: painel lateral + botões de câmera. */}
-                <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-3">
+                {/* Painel lateral — canto superior esquerdo. */}
+                <div className="pointer-events-none absolute left-3 top-3 z-10">
                     <div className="pointer-events-auto relative flex items-start gap-2">
                         {/* Painel lateral principal */}
-                        <div ref={sidePanelRef} className="flex h-[min(26rem,70vh)] w-[min(18rem,48vw)] flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl">
+                        <div ref={sidePanelRef} className="flex h-[min(14rem,40vh)] w-[min(16rem,calc(100vw-5rem))] sm:h-[min(26rem,70vh)] sm:w-[min(18rem,48vw)] flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl">
 
                             {/* Controles de seleção: quantidade + critério — integrados no painel lateral. */}
                             <div className="border-b border-white/10 px-2 py-2">
@@ -390,15 +390,17 @@ export function DailyOrbitalRadar3D({
                                 />
                             </div>
 
-                            {/* Corpos de referência */}
-                            <ReferenceSection
-                                en={en}
-                                planetsOpen={planetsOpen}
-                                onPlanetsOpenChange={setPlanetsOpen}
-                                onFocusEarth={() => focusBody('earth')}
-                                onFocusMoon={() => focusBody('moon')}
-                                onFocusSun={focusSun}
-                            />
+                            {/* Corpos de referência — escondidos em mobile para economizar espaço. */}
+                            <div className="hidden sm:block">
+                                <ReferenceSection
+                                    en={en}
+                                    planetsOpen={planetsOpen}
+                                    onPlanetsOpenChange={setPlanetsOpen}
+                                    onFocusEarth={() => focusBody('earth')}
+                                    onFocusMoon={() => focusBody('moon')}
+                                    onFocusSun={focusSun}
+                                />
+                            </div>
 
                         {/* Lista dos objetos: ocupa o espaço restante do painel com scroll. */}
                         <div className="flex min-h-0 flex-1 flex-col px-2 py-2">
@@ -441,9 +443,9 @@ export function DailyOrbitalRadar3D({
                         </div>
                         </div>
 
-                        {/* Flyout de planetas — abre à direita do painel lateral */}
+                        {/* Flyout de planetas — abre à direita do painel lateral (só desktop) */}
                         {planetsOpen ? (
-                            <div ref={planetFlyoutRef} className="flex h-[min(26rem,70vh)] w-[min(14rem,40vw)] flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl overflow-y-auto">
+                            <div ref={planetFlyoutRef} className="hidden sm:flex h-[min(26rem,70vh)] w-[min(14rem,40vw)] flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl overflow-y-auto">
                                 <div className="px-2 pt-2 pb-1 text-[11px] uppercase tracking-wide text-white/45 border-b border-white/10">
                                     {en ? 'Planets' : 'Planetas'}
                                 </div>
@@ -455,8 +457,10 @@ export function DailyOrbitalRadar3D({
                             </div>
                         ) : null}
                     </div>
+                </div>
 
-                    {/* Botões de visão de câmera + toggle de labels + fullscreen */}
+                {/* Botões de visão de câmera + toggle de labels + fullscreen — sempre no canto superior direito. */}
+                <div className="pointer-events-none absolute right-3 top-3 z-20">
                     <div className="pointer-events-auto flex items-center gap-2">
                         {activeMode !== 'orbit' ? (
                             <div className="flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
@@ -716,9 +720,9 @@ function SceneLegend({
     const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
     return (
-        <div className="pointer-events-auto absolute bottom-3 right-3 z-10 w-[min(22rem,46%)] overflow-hidden rounded-xl border border-white/18 bg-space-950/92 shadow-glow backdrop-blur-xl">
-            {/* Referências de distância sempre visíveis — o que o usuário consulta com mais frequência. */}
-            <div className="space-y-2 px-3 pt-3">
+        <div className="pointer-events-auto absolute bottom-3 right-3 z-10 w-auto sm:w-[min(22rem,46%)] overflow-hidden rounded-xl border border-white/18 bg-space-950/92 shadow-glow backdrop-blur-xl">
+            {/* Referências de distância — escondidas em mobile para economizar espaço. */}
+            <div className="hidden sm:block space-y-2 px-3 pt-3">
                 <div className="flex items-baseline justify-between gap-2 text-[13px]">
                     <span className="font-medium text-white/75">
                         {en ? '🌙 1 LD · Earth-Moon distance' : '🌙 1 DL · distância Terra-Lua'}
@@ -737,13 +741,13 @@ function SceneLegend({
             <button
                 type="button"
                 onClick={() => onManualOpenChange(true)}
-                className="mt-2 flex w-full items-center justify-between gap-2 border-t border-white/10 px-3 py-2.5 text-left text-[13px] font-semibold text-signal-cyan transition outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                className="sm:mt-2 flex w-full items-center justify-between gap-2 sm:border-t border-white/10 px-3 py-2.5 text-left text-[13px] font-semibold text-signal-cyan transition outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-signal-cyan"
             >
                 <span className="inline-flex items-center gap-2">
                     <BookOpen className="size-4" aria-hidden />
-                    {en ? (mode === 'radar' ? 'Radar guide' : 'Orbit guide') : (mode === 'radar' ? 'Guia do radar' : 'Guia da órbita')}
+                    <span className="hidden sm:inline">{en ? (mode === 'radar' ? 'Radar guide' : 'Orbit guide') : (mode === 'radar' ? 'Guia do radar' : 'Guia da órbita')}</span>
                 </span>
-                <ChevronDown className="-rotate-90 size-4" aria-hidden />
+                <ChevronDown className="-rotate-90 size-4 sm:block hidden" aria-hidden />
             </button>
 
             {manualOpen ? (
@@ -847,7 +851,7 @@ function ViewButton({
             type="button"
             onClick={onClick}
             className={[
-                'rounded-full px-3 py-1 text-[12px] font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                'rounded-full px-2 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-[12px] font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                 active ? 'bg-white/15 text-white' : 'text-white/70 hover:text-white',
             ].join(' ')}
         >

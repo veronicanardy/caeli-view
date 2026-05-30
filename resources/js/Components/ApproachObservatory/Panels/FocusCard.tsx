@@ -54,7 +54,7 @@ export function FocusCard({
             title={a.displayName ?? a.name}
             subtitle={a.subtitle ?? undefined}
             borderClass="border-signal-cyan/25"
-            className="flex max-h-[76%] w-[min(24rem,48%)] flex-col"
+            className="flex max-h-[45vh] sm:max-h-[76%] w-[min(18rem,calc(100vw-6rem))] sm:w-[min(24rem,48%)] flex-col"
         >
 
             {/* Risk badge — prominent, color-coded by hazard. */}
