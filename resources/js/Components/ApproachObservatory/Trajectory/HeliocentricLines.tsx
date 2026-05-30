@@ -114,38 +114,45 @@ function buildDisplayedOrbitGuidePoints(center: THREE.Vector3, segments = ORBIT_
  * Terra é pequena.
  */
 /**
- * Elipse orbital heliocêntrica real — semi-eixo + excentricidade + ângulo de periélio.
- * Ω (longitude do nó) ignorado pois Y=0 (plano eclíptico flat na cena).
- * O Sol fica no foco: centro da elipse deslocado de c = a·e ao longo do periélio.
+ * Elipse orbital heliocêntrica real no plano eclíptico.
+ * Constrói a elipse em coordenadas eclípticas (x, y) e depois converte para
+ * coordenadas de cena (scene_x = ecl_x, scene_z = -ecl_y) — mesmo mapeamento
+ * de helioToScene em sceneEphemeris. O Sol fica no foco (deslocamento c = a·e).
+ * lonPerihelionDeg = Ω + ω (longitude do periélio = nó + argumento).
  */
-function buildEllipsePoints(semiMajorAU: number, eccentricity: number, perihelionAngleDeg: number, segments = ORBIT_LINE_SEGMENTS) {
+function buildEllipsePoints(semiMajorAU: number, eccentricity: number, lonPerihelionDeg: number, segments = ORBIT_LINE_SEGMENTS) {
     const a = semiMajorAU * ORBIT_AU_SCALE;
     const e = eccentricity;
-    const b = a * Math.sqrt(1 - e * e);
-    const c = a * e; // distância centro→foco
-    const w = perihelionAngleDeg * Math.PI / 180;
+    const b = a * Math.sqrt(Math.max(0, 1 - e * e));
+    const c = a * e;
+    // Rotação no plano eclíptico (x, y) pela longitude do periélio
+    const w = lonPerihelionDeg * Math.PI / 180;
     const cosW = Math.cos(w), sinW = Math.sin(w);
     const points: number[] = [];
     for (let i = 0; i <= segments; i += 1) {
         const t = (i / segments) * Math.PI * 2;
-        // Elipse centrada na origem, depois rotacionada pelo argumento do periélio
-        const xE = a * Math.cos(t) - c; // desloca para Sol no foco
-        const zE = b * Math.sin(t);
-        points.push(xE * cosW - zE * sinW, 0, xE * sinW + zE * cosW);
+        // Elipse no frame do periélio: periélio em +x, Sol no foco
+        const xP = a * Math.cos(t) - c;
+        const yP = b * Math.sin(t);
+        // Rotaciona para eclíptica (longitude do periélio)
+        const eclX = xP * cosW - yP * sinW;
+        const eclY = xP * sinW + yP * cosW;
+        // Converte para cena: ecl_x → scene_x, -ecl_y → scene_z
+        points.push(eclX, 0, -eclY);
     }
     return new Float32Array(points);
 }
 
-export function PlanetOrbitEllipseHelio({ semiMajorAU, eccentricity, perihelionAngleDeg, color, opacity }: {
+export function PlanetOrbitEllipseHelio({ semiMajorAU, eccentricity, lonPerihelionDeg, color, opacity }: {
     semiMajorAU: number;
     eccentricity: number;
-    perihelionAngleDeg: number;
+    lonPerihelionDeg: number;
     color: string;
     opacity: number;
 }) {
     const points = useMemo(
-        () => buildEllipsePoints(semiMajorAU, eccentricity, perihelionAngleDeg),
-        [semiMajorAU, eccentricity, perihelionAngleDeg],
+        () => buildEllipsePoints(semiMajorAU, eccentricity, lonPerihelionDeg),
+        [semiMajorAU, eccentricity, lonPerihelionDeg],
     );
     const lineObject = useMemo(() => createOrbitLine(points, color, opacity), [points, color, opacity]);
     useEffect(() => () => disposeOrbitLine(lineObject), [lineObject]);
