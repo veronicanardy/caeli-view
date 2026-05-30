@@ -17,7 +17,7 @@ import { Jupiter } from '../Bodies/Jupiter/Jupiter';
 import { Saturn } from '../Bodies/Saturn/Saturn';
 import { Uranus } from '../Bodies/Uranus/Uranus';
 import { Neptune } from '../Bodies/Neptune/Neptune';
-import { PlanetOrbitRingHelio, EarthOrbitRingHelio } from '../Trajectory/HeliocentricLines';
+import { PlanetOrbitEllipseHelio } from '../Trajectory/HeliocentricLines';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { RingsLayer } from '../Overlays/RingsLayer';
 import { LabelOccluderContext, useCompactLabelMode, useHideAsteroidLabelsMode } from '../Overlays/SceneLabels';
@@ -260,17 +260,17 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     {saturnPos ? <Saturn position={saturnPos} sunDirection={sunDir} locale={locale} onFocus={onFocusSaturn} isFocused={isSaturnFocused} showLabel={showLabels} /> : null}
                     {uranusPos ? <Uranus position={uranusPos} sunDirection={sunDir} locale={locale} onFocus={onFocusUranus} isFocused={isUranusFocused} showLabel={showLabels} /> : null}
                     {neptunePos ? <Neptune position={neptunePos} sunDirection={sunDir} locale={locale} onFocus={onFocusNeptune} isFocused={isNeptuneFocused} showLabel={showLabels} /> : null}
-                    {/* Anéis de referência orbital — círculos heliocentricos centrados no Sol (origem). */}
+                    {/* Elipses orbitais reais — semi-eixo, excentricidade e argumento do periélio J2000. */}
                     {!orbitLabelsOnly ? (
                         <>
-                            <EarthOrbitRingHelio />
-                            <PlanetOrbitRingHelio semiMajorAU={0.387} color="#9aa0aa" opacity={0.14} />
-                            <PlanetOrbitRingHelio semiMajorAU={0.723} color="#c8b870" opacity={0.14} />
-                            <PlanetOrbitRingHelio semiMajorAU={1.524} color="#c0501a" opacity={0.13} />
-                            <PlanetOrbitRingHelio semiMajorAU={5.2028} color="#c8a060" opacity={0.11} />
-                            <PlanetOrbitRingHelio semiMajorAU={9.5392} color="#c8a840" opacity={0.09} />
-                            <PlanetOrbitRingHelio semiMajorAU={19.2184} color="#4ab8c8" opacity={0.07} />
-                            <PlanetOrbitRingHelio semiMajorAU={30.0699} color="#2878d8" opacity={0.06} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={0.387} eccentricity={0.2056} perihelionAngleDeg={29.1}  color="#9aa0aa" opacity={0.14} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={0.723} eccentricity={0.0068} perihelionAngleDeg={54.9}  color="#c8b870" opacity={0.14} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={1.000} eccentricity={0.0167} perihelionAngleDeg={102.9} color="#5b9bd5" opacity={0.30} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={1.524} eccentricity={0.0934} perihelionAngleDeg={286.5} color="#c0501a" opacity={0.13} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={5.203} eccentricity={0.0489} perihelionAngleDeg={273.9} color="#c8a060" opacity={0.11} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={9.537} eccentricity={0.0565} perihelionAngleDeg={339.4} color="#c8a840" opacity={0.09} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={19.19} eccentricity={0.0472} perihelionAngleDeg={96.5}  color="#4ab8c8" opacity={0.07} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={30.07} eccentricity={0.0086} perihelionAngleDeg={273.2} color="#2878d8" opacity={0.06} />
                         </>
                     ) : null}
 

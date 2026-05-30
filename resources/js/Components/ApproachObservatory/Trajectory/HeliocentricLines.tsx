@@ -113,9 +113,40 @@ function buildDisplayedOrbitGuidePoints(center: THREE.Vector3, segments = ORBIT_
  * terrestre. Para visualização, isso é aceitável porque a excentricidade da
  * Terra é pequena.
  */
-/** Anel de referência orbital heliocêntrico genérico — círculo no plano XZ centrado no Sol (origem). */
-export function PlanetOrbitRingHelio({ semiMajorAU, color, opacity }: { semiMajorAU: number; color: string; opacity: number }) {
-    const points = useMemo(() => buildCircleXZPoints(semiMajorAU * ORBIT_AU_SCALE), [semiMajorAU]);
+/**
+ * Elipse orbital heliocêntrica real — semi-eixo + excentricidade + ângulo de periélio.
+ * Ω (longitude do nó) ignorado pois Y=0 (plano eclíptico flat na cena).
+ * O Sol fica no foco: centro da elipse deslocado de c = a·e ao longo do periélio.
+ */
+function buildEllipsePoints(semiMajorAU: number, eccentricity: number, perihelionAngleDeg: number, segments = ORBIT_LINE_SEGMENTS) {
+    const a = semiMajorAU * ORBIT_AU_SCALE;
+    const e = eccentricity;
+    const b = a * Math.sqrt(1 - e * e);
+    const c = a * e; // distância centro→foco
+    const w = perihelionAngleDeg * Math.PI / 180;
+    const cosW = Math.cos(w), sinW = Math.sin(w);
+    const points: number[] = [];
+    for (let i = 0; i <= segments; i += 1) {
+        const t = (i / segments) * Math.PI * 2;
+        // Elipse centrada na origem, depois rotacionada pelo argumento do periélio
+        const xE = a * Math.cos(t) - c; // desloca para Sol no foco
+        const zE = b * Math.sin(t);
+        points.push(xE * cosW - zE * sinW, 0, xE * sinW + zE * cosW);
+    }
+    return new Float32Array(points);
+}
+
+export function PlanetOrbitEllipseHelio({ semiMajorAU, eccentricity, perihelionAngleDeg, color, opacity }: {
+    semiMajorAU: number;
+    eccentricity: number;
+    perihelionAngleDeg: number;
+    color: string;
+    opacity: number;
+}) {
+    const points = useMemo(
+        () => buildEllipsePoints(semiMajorAU, eccentricity, perihelionAngleDeg),
+        [semiMajorAU, eccentricity, perihelionAngleDeg],
+    );
     const lineObject = useMemo(() => createOrbitLine(points, color, opacity), [points, color, opacity]);
     useEffect(() => () => disposeOrbitLine(lineObject), [lineObject]);
     return <primitive object={lineObject} />;
