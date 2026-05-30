@@ -260,25 +260,17 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     {saturnPos ? <Saturn position={saturnPos} sunDirection={sunDir} locale={locale} onFocus={onFocusSaturn} isFocused={isSaturnFocused} showLabel={showLabels} /> : null}
                     {uranusPos ? <Uranus position={uranusPos} sunDirection={sunDir} locale={locale} onFocus={onFocusUranus} isFocused={isUranusFocused} showLabel={showLabels} /> : null}
                     {neptunePos ? <Neptune position={neptunePos} sunDirection={sunDir} locale={locale} onFocus={onFocusNeptune} isFocused={isNeptuneFocused} showLabel={showLabels} /> : null}
-                    {/* Elipses orbitais reais — a, e, longitude do periélio (Ω+ω) J2000. */}
-                    {!orbitLabelsOnly ? (
+                    {/* Elipses orbitais — longitude do periélio calculada dinamicamente da efeméride. */}
+                    {!orbitLabelsOnly && ephemeris ? (
                         <>
-                            {/* Mercúrio: a=0.387, e=0.2056, Ω=48.3°, ω=29.1° → lon=77.4° */}
-                            <PlanetOrbitEllipseHelio semiMajorAU={0.387} eccentricity={0.2056} lonPerihelionDeg={77.4}  color="#9aa0aa" opacity={0.14} />
-                            {/* Vênus:   a=0.723, e=0.0068, Ω=76.7°, ω=54.9° → lon=131.6° */}
-                            <PlanetOrbitEllipseHelio semiMajorAU={0.723} eccentricity={0.0068} lonPerihelionDeg={131.6} color="#c8b870" opacity={0.14} />
-                            {/* Terra:   a=1.000, e=0.0167, Ω=0°,    ω=102.9° → lon=102.9° */}
-                            <PlanetOrbitEllipseHelio semiMajorAU={1.000} eccentricity={0.0167} lonPerihelionDeg={102.9} color="#5b9bd5" opacity={0.30} />
-                            {/* Marte:   a=1.524, e=0.0934, Ω=49.6°, ω=286.5° → lon=336.1° */}
-                            <PlanetOrbitEllipseHelio semiMajorAU={1.524} eccentricity={0.0934} lonPerihelionDeg={336.1} color="#c0501a" opacity={0.13} />
-                            {/* Júpiter: a=5.203, e=0.0489, Ω=100.5°, ω=273.9° → lon=14.4° */}
-                            <PlanetOrbitEllipseHelio semiMajorAU={5.203} eccentricity={0.0489} lonPerihelionDeg={14.4}  color="#c8a060" opacity={0.11} />
-                            {/* Saturno: a=9.537, e=0.0565, Ω=113.7°, ω=339.4° → lon=93.1° */}
-                            <PlanetOrbitEllipseHelio semiMajorAU={9.537} eccentricity={0.0565} lonPerihelionDeg={93.1}  color="#c8a840" opacity={0.09} />
-                            {/* Urano:   a=19.19, e=0.0472, Ω=74.0°, ω=96.5° → lon=170.5° */}
-                            <PlanetOrbitEllipseHelio semiMajorAU={19.19} eccentricity={0.0472} lonPerihelionDeg={170.5} color="#4ab8c8" opacity={0.07} />
-                            {/* Netuno:  a=30.07, e=0.0086, Ω=131.8°, ω=273.2° → lon=45.0° */}
-                            <PlanetOrbitEllipseHelio semiMajorAU={30.07} eccentricity={0.0086} lonPerihelionDeg={45.0}  color="#2878d8" opacity={0.06} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={0.387} eccentricity={0.2056} lonPerihelionDeg={ephemeris.mercuryLonPerihelionDeg} color="#9aa0aa" opacity={0.14} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={0.723} eccentricity={0.0068} lonPerihelionDeg={ephemeris.venusLonPerihelionDeg}   color="#c8b870" opacity={0.14} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={1.000} eccentricity={0.0167} lonPerihelionDeg={ephemeris.earthLonPerihelionDeg}   color="#5b9bd5" opacity={0.30} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={1.524} eccentricity={0.0934} lonPerihelionDeg={ephemeris.marsLonPerihelionDeg}    color="#c0501a" opacity={0.13} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={5.203} eccentricity={0.0489} lonPerihelionDeg={ephemeris.jupiterLonPerihelionDeg} color="#c8a060" opacity={0.11} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={9.537} eccentricity={0.0565} lonPerihelionDeg={ephemeris.saturnLonPerihelionDeg}  color="#c8a840" opacity={0.09} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={19.19} eccentricity={0.0472} lonPerihelionDeg={ephemeris.uranusLonPerihelionDeg}  color="#4ab8c8" opacity={0.07} />
+                            <PlanetOrbitEllipseHelio semiMajorAU={30.07} eccentricity={0.0086} lonPerihelionDeg={ephemeris.neptuneLonPerihelionDeg} color="#2878d8" opacity={0.06} />
                         </>
                     ) : null}
 
