@@ -2,7 +2,7 @@
  * Constantes compartilhadas pelos corpos visuais do Approach Observatory.
  *
  * Mantem em um unico ponto valores que precisam permanecer sincronizados entre
- * planetas e aneis orbitais, sem misturar configuracao de cena ou efemerides.
+ * planetas e o guia orbital da Lua, sem misturar configuracao de cena ou efemerides.
  */
 
 /** Epoca J2000.0 em segundos Unix; ancora rotacoes visuais entre sessoes. */
@@ -16,7 +16,4 @@ export const BODY_ORBIT_MIN_RADIUS = 1e-6;
 
 export const BODY_ORBIT_OPACITY = {
     moon: 0.3,
-    innerPlanet: 0.22,
-    terrestrialPlanet: 0.2,
-    outerPlanet: 0.18,
 } as const;
