@@ -452,13 +452,13 @@ export function DailyOrbitalRadar3D({
                                 'flex flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl',
                                 orbitMode
                                     ? 'sm:flex sm:h-[min(18rem,49vh)] sm:w-[min(18rem,48vw)]'
-                                    : 'sm:flex sm:h-[min(26rem,70vh)] sm:w-[min(18rem,48vw)]',
+                                    : 'sm:flex sm:h-[min(22rem,50vh)] sm:w-[min(18rem,48vw)]',
                                 // mobile: escondido apenas quando o usuário recolhe o painel
                                 panelCollapsed
                                     ? 'hidden sm:flex'
                                     : orbitMode
                                         ? 'flex h-[min(10.5rem,27vh)] w-[min(15rem,calc(100vw-5rem))]'
-                                        : 'flex h-[min(15rem,38vh)] w-[min(15rem,calc(100vw-5rem))]',
+                                        : 'flex h-[min(13rem,33vh)] w-[min(15rem,calc(100vw-5rem))]',
                             ].join(' ')}
                         >
                             {/* Header mobile: título + botão de fechar o painel */}
