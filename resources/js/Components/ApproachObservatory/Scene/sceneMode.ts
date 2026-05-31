@@ -1,5 +1,5 @@
 import type { ClosestNowObject } from '@/types';
-import type { SceneMode } from '../Controls/MapManualModal';
+import type { SceneMode } from '../Controls/Manual/manualTypes';
 
 export function deriveActiveMode(orbitMode: boolean, focusedObject: ClosestNowObject | null): SceneMode {
     if (!orbitMode || !focusedObject) return 'radar';

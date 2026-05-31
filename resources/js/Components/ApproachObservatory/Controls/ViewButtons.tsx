@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 
+/**
+ * Botão textual de alternância de vista.
+ */
 export function ViewButton({
     active,
     onClick,
@@ -23,6 +26,9 @@ export function ViewButton({
     );
 }
 
+/**
+ * Variante compacta em ícone para ações rápidas da barra de cena.
+ */
 export function IconViewButton({
     active,
     onClick,

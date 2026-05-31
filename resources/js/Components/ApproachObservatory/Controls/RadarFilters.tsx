@@ -2,9 +2,11 @@ import type { Translator } from '@/i18n';
 import type { RadarMode } from '@/types';
 
 /**
- * Backwards-compatible alias. The radar UI used to expose a client-side filter id; now it
- * exposes the *mode* (which decides what to fetch). Keeping the old name avoids touching
- * every import site, but the values are the new mode keys.
+ * Alias mantido por compatibilidade retroativa.
+ *
+ * A interface do radar antes expunha um identificador de filtro no cliente; agora ela
+ * expõe o *modo* (que decide o que buscar). Manter o nome antigo evita mexer em todos
+ * os pontos de importação, embora os valores já sejam as novas chaves de modo.
  */
 export type RadarFilterId = RadarMode;
 
@@ -15,6 +17,12 @@ type Props = {
     t: Translator;
 };
 
+/**
+ * Abas de modo do radar.
+ *
+ * Apesar do nome histórico "filters", este componente hoje troca o modo de consulta
+ * que alimenta a cena e seus painéis.
+ */
 export function RadarFilters({ activeId, onChange, counts, t }: Props) {
     const filters: Array<{ id: RadarMode; label: string }> = [
         { id: 'closest-5-now', label: t('observatory.radar.modes.closestNow') },

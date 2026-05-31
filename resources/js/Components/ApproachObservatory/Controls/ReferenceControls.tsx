@@ -1,5 +1,10 @@
 import type { PlanetId } from '../Scene/planetConfig';
 
+/**
+ * Atalhos de foco para corpos de referência da cena.
+ *
+ * Expõe ações rápidas para Sol, Terra, Lua e, fora do modo órbita, a lista de planetas.
+ */
 export function ReferenceSection({
     en,
     orbitMode = false,
@@ -83,6 +88,9 @@ const PLANET_LIST = [
     { id: 'neptune' as PlanetId, color: '#2878d8', labelPt: 'Netuno', labelEn: 'Neptune' },
 ];
 
+/**
+ * Lista flutuante de planetas usada pelo atalho de referência.
+ */
 export function PlanetFlyout({ en, focusedId, onFocus }: { en: boolean; focusedId: PlanetId | null; onFocus: (id: PlanetId) => void }) {
     const btnCls = 'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan';
     return (

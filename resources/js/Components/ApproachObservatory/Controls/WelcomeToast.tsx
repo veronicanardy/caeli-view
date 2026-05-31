@@ -6,6 +6,9 @@ const STORAGE_KEY_ORBIT = 'caeli_orbit_visited';
 
 type ToastVariant = 'radar' | 'orbit';
 
+/**
+ * Guarda local simples para mostrar a ajuda contextual apenas na primeira visita.
+ */
 function useFirstVisit(key: string): [boolean, () => void] {
     const [isFirst, setIsFirst] = useState(false);
 
@@ -31,6 +34,9 @@ function useFirstVisit(key: string): [boolean, () => void] {
     return [isFirst, dismiss];
 }
 
+/**
+ * Boas-vindas contextual da vista radar.
+ */
 export function RadarWelcomeToast({
     locale,
     onOpenManual,
@@ -50,6 +56,9 @@ export function RadarWelcomeToast({
     );
 }
 
+/**
+ * Boas-vindas contextual da vista orbital.
+ */
 export function OrbitWelcomeToast({
     locale,
     onOpenManual,

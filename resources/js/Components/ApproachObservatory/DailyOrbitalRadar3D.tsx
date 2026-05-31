@@ -2,7 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import * as THREE from 'three';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
 import { sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
-import type { SceneMode } from './Controls/MapManualModal';
+import type { SceneMode } from './Controls/Manual/manualTypes';
 import { SceneToolbar } from './Controls/SceneToolbar';
 import type { MobilePanelSection } from './Panels/MobilePanelControls';
 import { RadarFloatingOverlays } from './Panels/RadarFloatingOverlays';

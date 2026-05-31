@@ -57,6 +57,11 @@ const MODE_OPTIONS: ModeOption[] = [
     },
 ];
 
+/**
+ * Controle de curadoria do radar.
+ *
+ * Permite alternar critério de seleção e quantidade de objetos exibidos.
+ */
 export function RadarObjectControls({
     objectLimit,
     selectionMode,

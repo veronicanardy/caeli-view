@@ -20,6 +20,11 @@ type Props = {
     t: Translator;
 };
 
+/**
+ * Barra condensada de filtros para áreas com pouco espaço vertical.
+ *
+ * Reapresenta os mesmos controles principais em uma composição mais densa.
+ */
 export function CompactConsoleBar({
     form,
     onFormChange,

@@ -22,6 +22,11 @@ type Props = {
     compact?: boolean;
 };
 
+/**
+ * Formulário principal de observação.
+ *
+ * Centraliza data, tipo de consulta e busca textual nas versões completa e compacta.
+ */
 export function ObservationControls({ form, onFormChange, onSubmit, onPresetDateSelect, query, onQueryChange, isUpdating, errors, t, compact = false }: Props) {
     const today = dayOffset(0);
     const yesterday = dayOffset(-1);

@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { BookOpen, ChevronDown } from 'lucide-react';
 import type { LunarReference } from '@/types';
 import { KM_PER_AU } from '@/lib/sceneEphemeris';
-import { MapManualModal, type SceneMode } from '../Controls/MapManualModal';
+import { MapManualModal } from '../Controls/MapManualModal';
+import type { SceneMode } from '../Controls/Manual/manualTypes';
 
 export function SceneLegend({
     lunarReference,

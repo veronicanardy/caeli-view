@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import type { ClosestNowObject, LunarReference, UnifiedApproach } from '@/types';
-import type { SceneMode } from '../Controls/MapManualModal';
+import type { SceneMode } from '../Controls/Manual/manualTypes';
 import { OrbitWelcomeToast, RadarWelcomeToast } from '../Controls/WelcomeToast';
 import type { PlanetId } from '../Scene/planetConfig';
 import { BodyInfoCard } from './BodyInfoCard';

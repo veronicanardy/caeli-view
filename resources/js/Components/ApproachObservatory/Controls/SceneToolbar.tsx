@@ -1,6 +1,6 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { Eye, EyeOff, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
-import type { SceneMode } from './MapManualModal';
+import type { SceneMode } from './Manual/manualTypes';
 import { IconViewButton, ViewButton } from './ViewButtons';
 import type { CameraViewKey } from '../Scene/CameraRig';
 
