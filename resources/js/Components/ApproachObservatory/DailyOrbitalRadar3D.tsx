@@ -36,6 +36,8 @@ type PlanetCfg = {
     framingRadius: number;
 };
 
+type MobilePanelSection = 'menu' | 'filters' | 'reference' | 'objects';
+
 const PLANET_CONFIG: Record<PlanetId, PlanetCfg> = {
     mercury: { ephemerisKey: 'mercuryScenePosition', framingRadius: 0.028 },
     venus:   { ephemerisKey: 'venusScenePosition',   framingRadius: 0.038 },
@@ -134,6 +136,10 @@ export function DailyOrbitalRadar3D({
         () => closestNowObjects.find((o) => o.approach.id === selectedId) ?? null,
         [closestNowObjects, selectedId],
     );
+    const [dismissedFocusObjectId, setDismissedFocusObjectId] = useState<string | null>(null);
+    const visibleFocusedObject = focusedObject && focusedObject.approach.id !== dismissedFocusObjectId
+        ? focusedObject
+        : null;
 
     // Dois modos de visualização para um asteroide selecionado:
     //   - close-up (orbitMode = false): câmera voa ATÉ a rocha, exibindo o painel de foco.
@@ -188,41 +194,55 @@ export function DailyOrbitalRadar3D({
     const [planetsOpen, setPlanetsOpen] = useState(false);
     // Em mobile o painel começa colapsado para não cobrir o canvas.
     const [panelCollapsed, setPanelCollapsed] = useState(true);
+    const [mobilePanelSection, setMobilePanelSection] = useState<MobilePanelSection>('menu');
+    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'sun' | PlanetId | null>(null);
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const planetFlyoutRef = useRef<HTMLDivElement>(null);
+    const focusCardRef = useRef<HTMLDivElement>(null);
+    const bodyCardRef = useRef<HTMLDivElement>(null);
     const canvasContainerRef = useRef<HTMLDivElement>(null);
-    const [noGoRect, setNoGoRect] = useState<NoGoRect>(null);
+    const [noGoRects, setNoGoRects] = useState<NoGoRect[]>([]);
 
-    // Recalcula o rect proibido para labels — une o painel lateral e o flyout de planetas
+    // Recalcula as zonas proibidas para labels — painel lateral, flyout e cards flutuantes.
     useEffect(() => {
+        const toCanvasRect = (element: HTMLDivElement, canvasRect: DOMRect): NoGoRect => {
+            const rect = element.getBoundingClientRect();
+            return {
+                left: rect.left - canvasRect.left,
+                top: rect.top - canvasRect.top,
+                right: rect.right - canvasRect.left,
+                bottom: rect.bottom - canvasRect.top,
+            };
+        };
+
         const update = () => {
-            const panel = sidePanelRef.current;
             const canvas = canvasContainerRef.current;
-            if (!panel || !canvas) return;
+            if (!canvas) return;
             const canvasRect = canvas.getBoundingClientRect();
-            const panelRect = panel.getBoundingClientRect();
-            let left   = panelRect.left   - canvasRect.left;
-            let top    = panelRect.top    - canvasRect.top;
-            let right  = panelRect.right  - canvasRect.left;
-            let bottom = panelRect.bottom - canvasRect.top;
-            // Expande para cobrir o flyout de planetas quando está aberto
-            const flyout = planetFlyoutRef.current;
-            if (flyout) {
-                const flyoutRect = flyout.getBoundingClientRect();
-                left   = Math.min(left,   flyoutRect.left   - canvasRect.left);
-                top    = Math.min(top,    flyoutRect.top    - canvasRect.top);
-                right  = Math.max(right,  flyoutRect.right  - canvasRect.left);
-                bottom = Math.max(bottom, flyoutRect.bottom - canvasRect.top);
-            }
-            setNoGoRect({ left, top, right, bottom });
+            const elements = [
+                sidePanelRef.current,
+                planetFlyoutRef.current,
+                focusCardRef.current,
+                bodyCardRef.current,
+            ].filter((element): element is HTMLDivElement => Boolean(element));
+
+            setNoGoRects(elements.map((element) => toCanvasRect(element, canvasRect)));
         };
         update();
         const observer = new ResizeObserver(update);
         if (sidePanelRef.current) observer.observe(sidePanelRef.current);
         if (planetFlyoutRef.current) observer.observe(planetFlyoutRef.current);
+        if (focusCardRef.current) observer.observe(focusCardRef.current);
+        if (bodyCardRef.current) observer.observe(bodyCardRef.current);
         if (canvasContainerRef.current) observer.observe(canvasContainerRef.current);
-        return () => observer.disconnect();
-    }, [fullscreen, planetsOpen]);
+        window.addEventListener('resize', update);
+        window.addEventListener('scroll', update, true);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', update);
+            window.removeEventListener('scroll', update, true);
+        };
+    }, [fullscreen, planetsOpen, focusedObject, bodyCardOpen, panelCollapsed, mobilePanelSection]);
 
     useEffect(() => {
         if (!fullscreen) return;
@@ -244,6 +264,7 @@ export function DailyOrbitalRadar3D({
         // Em modo orbital, bloqueia clique em objetos sem órbita — eles são desabilitados na lista.
         if (orbitMode && !newHasOrbit) return;
         if (!orbitMode) setOrbitMode(false);
+        setDismissedFocusObjectId(null);
         setBodyCardOpen(null);
         clearPlanetTargets();
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
@@ -260,7 +281,6 @@ export function DailyOrbitalRadar3D({
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
     });
 
-    const [bodyCardOpen, setBodyCardOpen] = useState<'earth' | 'moon' | 'sun' | PlanetId | null>(null);
     const [planetFocusTargets, setPlanetFocusTargets] = useState<Partial<Record<PlanetId, FocusFraming>>>({});
     const [sunFocusTarget, setSunFocusTarget] = useState<FocusFraming | null>(null);
 
@@ -268,6 +288,41 @@ export function DailyOrbitalRadar3D({
         setPlanetFocusTargets({});
         setSunFocusTarget(null);
     }, []);
+
+    const showNavigationPanel = useCallback(() => {
+        setDismissedFocusObjectId(null);
+        onClearSelection?.();
+        setBodyCardOpen(null);
+        clearPlanetTargets();
+        setPlanetsOpen(false);
+        setPanelCollapsed(false);
+        setMobilePanelSection('menu');
+    }, [clearPlanetTargets, onClearSelection]);
+
+    const closeFocusedObject = useCallback(() => {
+        if (focusedObject) setDismissedFocusObjectId(focusedObject.approach.id);
+        setBodyCardOpen(null);
+        clearPlanetTargets();
+        setPlanetsOpen(false);
+    }, [clearPlanetTargets, focusedObject]);
+
+    useEffect(() => {
+        if (!focusedObject) {
+            setDismissedFocusObjectId(null);
+            return;
+        }
+        if (dismissedFocusObjectId && dismissedFocusObjectId !== focusedObject.approach.id) {
+            setDismissedFocusObjectId(null);
+        }
+    }, [focusedObject, dismissedFocusObjectId]);
+
+    useEffect(() => {
+        if (!orbitMode) return;
+        setPlanetsOpen(false);
+        if (mobilePanelSection === 'filters') {
+            setMobilePanelSection('menu');
+        }
+    }, [orbitMode, mobilePanelSection]);
 
     // Foca Terra ou Lua. Se estiver em modo órbita, dispara o overlay de transição antes de
     // re-enquadrar — o mesmo tratamento dado ao botão "Voltar ao Asteroide".
@@ -286,6 +341,7 @@ export function DailyOrbitalRadar3D({
     const focusPlanet = useCallback((id: PlanetId) => {
         onClearSelection?.();
         setBodyCardOpen(id);
+        setPlanetsOpen(false);
         setSunFocusTarget(null);
         const cfg = PLANET_CONFIG[id];
         const pos = ephemeris?.[cfg.ephemerisKey];
@@ -334,7 +390,7 @@ export function DailyOrbitalRadar3D({
                     : 'relative h-[calc(100vh-8rem)] min-h-[400px] sm:min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d]'}
                 onContextMenu={(e) => e.preventDefault()}
             >
-                <LabelNoGoContext.Provider value={noGoRect}>
+                <LabelNoGoContext.Provider value={noGoRects}>
                 <Canvas
                     camera={{ position: [0, 4.5, 9], fov: CAMERA_FOV_DEG, near: 0.01, far: MAX_CAMERA_DISTANCE * 3 }}
                     dpr={[1, 1.6]}
@@ -377,59 +433,200 @@ export function DailyOrbitalRadar3D({
                 {/* Painel lateral — canto superior esquerdo. */}
                 <div className="pointer-events-none absolute left-3 top-3 z-10">
                     <div className="pointer-events-auto relative flex flex-col sm:flex-row items-start gap-2">
+                        {panelCollapsed ? (
+                            <button
+                                type="button"
+                                onClick={showNavigationPanel}
+                                aria-label={en ? 'Show navigation panel' : 'Mostrar painel de navegaÃ§Ã£o'}
+                                className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-space-950/90 px-2.5 py-1.5 text-[11px] font-medium text-white/75 shadow-glow backdrop-blur transition hover:border-white/25 hover:text-white sm:hidden"
+                            >
+                                <ChevronDown className="size-3.5 -rotate-90" />
+                                <span>{en ? 'Objects' : 'Objetos'}</span>
+                            </button>
+                        ) : null}
 
-                        {/* Painel lateral principal — sempre visível em desktop, toggle em mobile.
-                            Em mobile, some quando há objeto em foco (FocusCard toma o lugar). */}
+                            {/* Painel lateral principal — sempre visível em desktop, toggle em mobile. */}
                         <div
                             ref={sidePanelRef}
                             className={[
                                 'flex flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl',
-                                'sm:flex sm:h-[min(26rem,70vh)] sm:w-[min(18rem,48vw)]',
-                                // mobile: escondido se colapsado OU se há objeto em foco
-                                (panelCollapsed || !!focusedObject || !!bodyCardOpen)
+                                orbitMode
+                                    ? 'sm:flex sm:h-[min(18rem,49vh)] sm:w-[min(18rem,48vw)]'
+                                    : 'sm:flex sm:h-[min(26rem,70vh)] sm:w-[min(18rem,48vw)]',
+                                // mobile: escondido apenas quando o usuário recolhe o painel
+                                panelCollapsed
                                     ? 'hidden sm:flex'
-                                    : 'flex h-[min(22rem,55vh)] w-[min(16rem,calc(100vw-5rem))]',
+                                    : orbitMode
+                                        ? 'flex h-[min(10.5rem,27vh)] w-[min(15rem,calc(100vw-5rem))]'
+                                        : 'flex h-[min(15rem,38vh)] w-[min(15rem,calc(100vw-5rem))]',
                             ].join(' ')}
                         >
                             {/* Header mobile: título + botão de fechar o painel */}
-                            <div className="flex items-center justify-between border-b border-white/10 px-2 py-1.5 sm:hidden">
-                                <span className="text-[11px] font-medium uppercase tracking-wide text-white/50">
-                                    {en ? 'Objects' : 'Objetos'}
-                                </span>
+                            <div className="border-b border-white/10 px-2 pt-1 pb-1.5 sm:hidden">
                                 <button
                                     type="button"
-                                    onClick={() => setPanelCollapsed(true)}
+                                    onClick={() => { setPanelCollapsed(true); setMobilePanelSection('menu'); setPlanetsOpen(false); }}
                                     aria-label={en ? 'Collapse panel' : 'Recolher painel'}
-                                    className="rounded p-0.5 text-white/40 transition hover:text-white"
+                                    className="flex w-full flex-col items-center gap-1 rounded-lg py-0.5 text-signal-cyan/75 transition hover:text-signal-cyan"
                                 >
-                                    <ChevronUp className="size-3.5" />
+                                    <span className="h-1 w-10 rounded-full bg-white/18" aria-hidden />
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide">
+                                        <ChevronUp className="size-3" aria-hidden />
+                                        {en ? 'Objects' : 'Objetos'}
+                                    </span>
                                 </button>
                             </div>
 
+                            <div className="flex flex-1 flex-col sm:hidden">
+                                {mobilePanelSection === 'menu' ? (
+                                    <div className="flex flex-1 flex-col gap-2 px-2 py-2">
+                                        {!orbitMode ? (
+                                            <MobilePanelMenuButton
+                                                label={en ? 'Filters' : 'Filtros'}
+                                                subtitle={en ? 'Amount and criterion' : 'Quantidade e critério'}
+                                                onClick={() => setMobilePanelSection('filters')}
+                                            />
+                                        ) : null}
+                                        <MobilePanelMenuButton
+                                            label={en ? 'References' : 'Referências'}
+                                            subtitle={en ? 'Sun, Earth, Moon and planets' : 'Sol, Terra, Lua e planetas'}
+                                            onClick={() => setMobilePanelSection('reference')}
+                                        />
+                                        <MobilePanelMenuButton
+                                            label={en ? 'Nearest objects' : 'Objetos próximos'}
+                                            subtitle={listTitle(closestNowObjects.length, selectionMode, en)}
+                                            onClick={() => setMobilePanelSection('objects')}
+                                        />
+                                    </div>
+                                ) : null}
+
+                                {mobilePanelSection === 'filters' && !orbitMode ? (
+                                    <div className="flex flex-1 flex-col">
+                                        <MobilePanelSectionHeader
+                                            title={en ? 'Filters' : 'Filtros'}
+                                            backLabel={en ? 'Back' : 'Voltar'}
+                                            onBack={() => setMobilePanelSection('menu')}
+                                        />
+                                            <div className="min-h-0 px-2 py-2">
+                                                <RadarObjectControls
+                                                    objectLimit={objectLimit}
+                                                    selectionMode={selectionMode}
+                                                    onLimitChange={onLimitChange}
+                                                    onModeChange={onModeChange}
+                                                    locale={locale}
+                                                    loading={radarLoading}
+                                                    criterionLocked={orbitMode}
+                                                />
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                {mobilePanelSection === 'reference' ? (
+                                    <div className="flex min-h-0 flex-1 flex-col">
+                                        <MobilePanelSectionHeader
+                                            title={en ? 'References' : 'Referências'}
+                                            backLabel={en ? 'Back' : 'Voltar'}
+                                            onBack={() => { setMobilePanelSection('menu'); setPlanetsOpen(false); }}
+                                        />
+                                        <ReferenceSection
+                                            en={en}
+                                            orbitMode={orbitMode}
+                                            planetsOpen={planetsOpen}
+                                            onPlanetsOpenChange={setPlanetsOpen}
+                                            onFocusEarth={() => focusBody('earth')}
+                                            onFocusMoon={() => focusBody('moon')}
+                                            onFocusSun={focusSun}
+                                        />
+                                        {planetsOpen && !orbitMode ? (
+                                            <div className="min-h-0 flex-1 border-t border-white/10 px-2 py-2">
+                                                <div className="max-h-[8.5rem] overflow-y-auto rounded-xl border border-white/10 bg-space-950 px-1 py-1 shadow-[0_8px_24px_rgba(0,0,0,0.24)]">
+                                                    <PlanetFlyout
+                                                        en={en}
+                                                        focusedId={bodyCardOpen as PlanetId | null}
+                                                        onFocus={focusPlanet}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                ) : null}
+
+                                {mobilePanelSection === 'objects' ? (
+                                    <div className="flex min-h-0 flex-1 flex-col">
+                                        <MobilePanelSectionHeader
+                                            title={en ? 'Nearest objects' : 'Objetos próximos'}
+                                            backLabel={en ? 'Back' : 'Voltar'}
+                                            onBack={() => setMobilePanelSection('menu')}
+                                            trailing={onRefresh ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={onRefresh}
+                                                    disabled={radarLoading}
+                                                    title={en ? 'Refresh data' : 'Atualizar dados'}
+                                                    aria-label={en ? 'Refresh data' : 'Atualizar dados'}
+                                                    className="rounded p-0.5 text-white/35 transition outline-none hover:text-white/70 focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait disabled:opacity-40"
+                                                >
+                                                    <RefreshCw className={['size-3', radarLoading ? 'animate-spin' : ''].join(' ')} />
+                                                </button>
+                                            ) : null}
+                                        />
+                                        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 py-2">
+                                            {radarLoading ? null : closestNowObjects.length === 0 ? (
+                                                <EmptyModeMessage selectionMode={selectionMode} locale={locale} />
+                                            ) : (
+                                                <div className="min-h-0 max-h-[8.75rem] flex-1 overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-space-950 px-1 py-1 shadow-[0_8px_24px_rgba(0,0,0,0.24)]">
+                                                    <ul className="space-y-0.5">
+                                                        {closestNowObjects.map((o, index) => (
+                                                            <ObjectListItem
+                                                                key={o.approach.id}
+                                                                object={o}
+                                                                palette={OBJECT_PALETTE[index % OBJECT_PALETTE.length]}
+                                                                isSelected={o.approach.id === selectedId}
+                                                                onSelect={selectObject}
+                                                                locale={locale}
+                                                                selectionMode={selectionMode}
+                                                                compact={objectLimit === 30}
+                                                                orbitMode={orbitMode}
+                                                            />
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+
                             {/* Controles de seleção: quantidade + critério. */}
-                            <div className="border-b border-white/10 px-2 py-2">
-                                <RadarObjectControls
-                                    objectLimit={objectLimit}
-                                    selectionMode={selectionMode}
-                                    onLimitChange={onLimitChange}
-                                    onModeChange={onModeChange}
-                                    locale={locale}
-                                    loading={radarLoading}
+                            {!orbitMode ? (
+                                <div className="hidden border-b border-white/10 px-2 py-2 sm:block">
+                                    <RadarObjectControls
+                                        objectLimit={objectLimit}
+                                        selectionMode={selectionMode}
+                                        onLimitChange={onLimitChange}
+                                        onModeChange={onModeChange}
+                                        locale={locale}
+                                        loading={radarLoading}
+                                        criterionLocked={orbitMode}
+                                    />
+                                </div>
+                            ) : null}
+
+                            {/* Corpos de referência — visíveis quando painel está expandido. */}
+                            <div className="hidden sm:block">
+                                <ReferenceSection
+                                    en={en}
+                                    orbitMode={orbitMode}
+                                    planetsOpen={planetsOpen}
+                                    onPlanetsOpenChange={setPlanetsOpen}
+                                    onFocusEarth={() => focusBody('earth')}
+                                    onFocusMoon={() => focusBody('moon')}
+                                    onFocusSun={focusSun}
                                 />
                             </div>
 
-                            {/* Corpos de referência — visíveis quando painel está expandido. */}
-                            <ReferenceSection
-                                en={en}
-                                planetsOpen={planetsOpen}
-                                onPlanetsOpenChange={setPlanetsOpen}
-                                onFocusEarth={() => focusBody('earth')}
-                                onFocusMoon={() => focusBody('moon')}
-                                onFocusSun={focusSun}
-                            />
-
                             {/* Lista dos objetos: ocupa o espaço restante do painel com scroll. */}
-                            <div className="flex min-h-0 flex-1 flex-col px-2 py-2">
+                            <div className="hidden min-h-0 flex-1 flex-col px-2 py-2 sm:flex">
                                 <div className="flex items-center justify-between px-1 pb-1.5">
                                     <span className="text-[11px] uppercase tracking-wide text-white/45">
                                         {listTitle(closestNowObjects.length, selectionMode, en)}
@@ -471,11 +668,11 @@ export function DailyOrbitalRadar3D({
 
                         {/* Flyout de planetas — abre à direita do painel lateral.
                             Em mobile: aparece abaixo do painel (column) em vez de ao lado. */}
-                        {planetsOpen && !panelCollapsed ? (
+                        {planetsOpen && !orbitMode && mobilePanelSection !== 'reference' ? (
                             <div
                                 ref={planetFlyoutRef}
                                 className="flex flex-col rounded-xl border border-white/12 bg-space-950/88 backdrop-blur-xl overflow-y-auto
-                                           h-[min(22rem,55vh)] w-[min(16rem,calc(100vw-5rem))]
+                                           h-[min(13rem,34vh)] w-[min(15rem,calc(100vw-5rem))]
                                            sm:h-[min(26rem,70vh)] sm:w-[min(14rem,40vw)]"
                             >
                                 <div className="px-2 pt-2 pb-1 text-[11px] uppercase tracking-wide text-white/45 border-b border-white/10">
@@ -498,14 +695,14 @@ export function DailyOrbitalRadar3D({
                     <div className="pointer-events-auto hidden sm:flex items-center gap-1.5">
                         {activeMode !== 'orbit' ? (
                             <div className="flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
-                                <ViewButton active={view === 'top' && !focusedObject} onClick={() => pickView('top')}>
+                                <ViewButton active={view === 'top' && !visibleFocusedObject} onClick={() => pickView('top')}>
                                     {en ? 'Top' : 'Superior'}
                                 </ViewButton>
-                                <ViewButton active={view === 'side' && !focusedObject} onClick={() => pickView('side')}>
+                                <ViewButton active={view === 'side' && !visibleFocusedObject} onClick={() => pickView('side')}>
                                     {en ? 'Side' : 'Lateral'}
                                 </ViewButton>
                                 <span className="mx-0.5 h-4 w-px bg-white/10" aria-hidden />
-                                <ViewButton active={view === 'perspective' && !focusedObject} onClick={resetView}>
+                                <ViewButton active={view === 'perspective' && !visibleFocusedObject} onClick={resetView}>
                                     {en ? 'Reset' : 'Resetar'}
                                 </ViewButton>
                             </div>
@@ -535,21 +732,21 @@ export function DailyOrbitalRadar3D({
                         {/* Pill vertical de vistas de câmera */}
                         {activeMode !== 'orbit' ? (
                             <div className="flex flex-col items-center gap-0.5 rounded-full border border-white/10 bg-space-950/82 py-1 px-1 backdrop-blur">
-                                <IconViewButton active={view === 'top' && !focusedObject} onClick={() => pickView('top')} title={en ? 'Top view' : 'Vista superior'}>
+                                <IconViewButton active={view === 'top' && !visibleFocusedObject} onClick={() => pickView('top')} title={en ? 'Top view' : 'Vista superior'}>
                                     <svg viewBox="0 0 14 14" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
                                         <circle cx="7" cy="7" r="5.5" />
                                         <line x1="7" y1="1.5" x2="7" y2="4" /><line x1="7" y1="10" x2="7" y2="12.5" />
                                         <line x1="1.5" y1="7" x2="4" y2="7" /><line x1="10" y1="7" x2="12.5" y2="7" />
                                     </svg>
                                 </IconViewButton>
-                                <IconViewButton active={view === 'side' && !focusedObject} onClick={() => pickView('side')} title={en ? 'Side view' : 'Vista lateral'}>
+                                <IconViewButton active={view === 'side' && !visibleFocusedObject} onClick={() => pickView('side')} title={en ? 'Side view' : 'Vista lateral'}>
                                     <svg viewBox="0 0 14 14" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
                                         <ellipse cx="7" cy="7" rx="5.5" ry="2.5" />
                                         <line x1="1.5" y1="7" x2="12.5" y2="7" />
                                     </svg>
                                 </IconViewButton>
                                 <span className="my-0.5 h-px w-3.5 bg-white/10" aria-hidden />
-                                <IconViewButton active={view === 'perspective' && !focusedObject} onClick={resetView} title={en ? 'Reset view' : 'Resetar vista'}>
+                                <IconViewButton active={view === 'perspective' && !visibleFocusedObject} onClick={resetView} title={en ? 'Reset view' : 'Resetar vista'}>
                                     <RotateCcw className="size-3" />
                                 </IconViewButton>
                             </div>
@@ -579,22 +776,29 @@ export function DailyOrbitalRadar3D({
 
                 {/* Painel de foco inline — desliza da esquerda quando um objeto é selecionado.
                     Mostra as mesmas métricas do radar SVG sem sair da experiência 3D. */}
-                {focusedObject ? (
+                {visibleFocusedObject ? (
                     <FocusCard
-                        object={focusedObject}
+                        object={visibleFocusedObject}
                         onOpenFocus={onOpenFocus}
-                        onClose={() => selectObject(focusedObject.approach)}
+                        onClose={closeFocusedObject}
                         orbitMode={orbitMode}
-                        hasOrbit={Boolean(focusedObject.trajectory?.orbitalElements)}
+                        hasOrbit={Boolean(visibleFocusedObject.trajectory?.orbitalElements)}
                         canShowOrbitPosition={canShowOrbitPosition}
                         onShowOrbit={showOrbit}
                         onShowCloseUp={showCloseUp}
                         locale={locale}
-                        mobileTopAlign={true}
-                        onShowPanel={() => { selectObject(focusedObject.approach); setPanelCollapsed(false); }}
+                        mobileTopAlign={false}
+                        onShowPanel={showNavigationPanel}
+                        panelRef={focusCardRef}
                     />
                 ) : bodyCardOpen ? (
-                    <BodyInfoCard body={bodyCardOpen} onClose={() => setBodyCardOpen(null)} locale={locale} mobileTopAlign={true} />
+                    <BodyInfoCard
+                        body={bodyCardOpen}
+                        onClose={() => setBodyCardOpen(null)}
+                        locale={locale}
+                        mobileTopAlign={false}
+                        panelRef={bodyCardRef}
+                    />
                 ) : null}
 
                 {/* Título e badge — overlay centrado na borda inferior do canvas */}
@@ -637,6 +841,57 @@ function listTitle(count: number, mode: SelectionMode, en: boolean): string {
     if (mode === 'upcoming')  return en ? `${count} upcoming passes`     : `${count} próximas aproximações`;
     if (mode === 'attention') return en ? `${count} watch-list objects`   : `${count} objetos em maior atenção`;
     return en ? `${count} closest objects now` : `${count} objetos mais próximos agora`;
+}
+
+function MobilePanelMenuButton({
+    label,
+    subtitle,
+    onClick,
+}: {
+    label: string;
+    subtitle: string;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition outline-none hover:bg-white/8 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+        >
+            <div className="min-w-0">
+                <div className="text-[12px] font-medium text-white/85">{label}</div>
+                <div className="truncate text-[10px] uppercase tracking-wide text-white/40">{subtitle}</div>
+            </div>
+            <ChevronDown className="-rotate-90 size-3.5 shrink-0 text-white/35" aria-hidden />
+        </button>
+    );
+}
+
+function MobilePanelSectionHeader({
+    title,
+    backLabel,
+    onBack,
+    trailing,
+}: {
+    title: string;
+    backLabel: string;
+    onBack: () => void;
+    trailing?: React.ReactNode;
+}) {
+    return (
+        <div className="flex items-center justify-between border-b border-white/10 px-2 py-1.5">
+            <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-signal-cyan/75 transition hover:text-signal-cyan"
+            >
+                <ChevronDown className="size-3 -rotate-90" aria-hidden />
+                {backLabel}
+            </button>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-white/45">{title}</span>
+            <div className="flex min-w-4 items-center justify-end">{trailing}</div>
+        </div>
+    );
 }
 
 const EMPTY_MODE_MESSAGES: Record<SelectionMode, { pt: string; en: string }> = {
@@ -963,6 +1218,7 @@ function IconViewButton({
 
 function ReferenceSection({
     en,
+    orbitMode = false,
     planetsOpen,
     onPlanetsOpenChange,
     onFocusEarth,
@@ -970,47 +1226,66 @@ function ReferenceSection({
     onFocusSun,
 }: {
     en: boolean;
+    orbitMode?: boolean;
     planetsOpen: boolean;
     onPlanetsOpenChange: (open: boolean) => void;
     onFocusEarth: () => void;
     onFocusMoon: () => void;
     onFocusSun: () => void;
 }) {
-    const btnCls = 'flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan';
-
     return (
-        <div className="border-b border-white/10 px-2 py-2">
-            <div className="px-1 pb-1 text-[11px] uppercase tracking-wide text-white/45">
-                {en ? 'Reference' : 'Referência'}
-            </div>
-
-            <div className="flex items-center gap-1">
-                <button type="button" onClick={onFocusSun} className={btnCls}>
-                    <span>☀️</span><span className="font-medium">{en ? 'Sun' : 'Sol'}</span>
-                </button>
-                <button type="button" onClick={onFocusEarth} className={btnCls}>
-                    <span>🌍</span><span className="font-medium">{en ? 'Earth' : 'Terra'}</span>
-                </button>
-                <button type="button" onClick={onFocusMoon} className={btnCls}>
-                    <span>🌙</span><span className="font-medium">{en ? 'Moon' : 'Lua'}</span>
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onPlanetsOpenChange(!planetsOpen)}
-                    title={en ? 'Planets' : 'Planetas'}
-                    aria-expanded={planetsOpen}
-                    className={[
-                        'ml-auto flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium tracking-wide transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                        planetsOpen
-                            ? 'border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan'
-                            : 'border-white/15 bg-white/5 text-white/60 hover:border-white/30 hover:bg-white/10 hover:text-white',
-                    ].join(' ')}
-                >
-                    <span>{en ? 'Planets' : 'Planetas'}</span>
-                    <ChevronDown className={['size-3 transition-transform', planetsOpen ? 'rotate-180' : ''].join(' ')} />
-                </button>
+        <div className="border-b border-white/10 px-2 py-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+                <ReferenceIconButton label={en ? 'Sun' : 'Sol'} icon="☀️" onClick={onFocusSun} />
+                <ReferenceIconButton label={en ? 'Earth' : 'Terra'} icon="🌍" onClick={onFocusEarth} />
+                <ReferenceIconButton label={en ? 'Moon' : 'Lua'} icon="🌙" onClick={onFocusMoon} />
+                {!orbitMode ? (
+                    <ReferenceIconButton
+                        label={en ? 'Planets' : 'Planetas'}
+                        icon="🪐"
+                        onClick={() => onPlanetsOpenChange(!planetsOpen)}
+                        active={planetsOpen}
+                        className="sm:ml-auto"
+                    />
+                ) : null}
             </div>
         </div>
+    );
+}
+
+function ReferenceIconButton({
+    label,
+    icon,
+    onClick,
+    active = false,
+    className = '',
+}: {
+    label: string;
+    icon: string;
+    onClick: () => void;
+    active?: boolean;
+    className?: string;
+}) {
+    return (
+        <span className={['group relative inline-flex', className].join(' ')}>
+            <button
+                type="button"
+                onClick={onClick}
+                aria-label={label}
+                className={[
+                    'inline-flex size-8 items-center justify-center rounded-lg border text-base transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                    active
+                        ? 'border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan'
+                        : 'border-white/10 bg-white/[0.04] text-white/70 hover:border-white/25 hover:bg-white/10 hover:text-white',
+                ].join(' ')}
+            >
+                <span aria-hidden>{icon}</span>
+            </button>
+            <span className="pointer-events-none absolute bottom-full left-1/2 z-[90] mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-signal-cyan/35 bg-[#07111f] px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-[0_8px_28px_rgba(0,0,0,0.55),0_0_18px_rgba(34,211,238,0.14)] transition group-hover:translate-y-[-1px] group-hover:opacity-100 group-focus-within:translate-y-[-1px] group-focus-within:opacity-100">
+                {label}
+                <span className="absolute left-1/2 top-full size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-signal-cyan/35 bg-[#07111f]" aria-hidden />
+            </span>
+        </span>
     );
 }
 

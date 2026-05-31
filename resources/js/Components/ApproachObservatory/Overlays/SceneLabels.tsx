@@ -5,11 +5,11 @@ import { createContext, useContext, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 /**
- * Zona proibida para labels — retângulo em pixels (coordenadas do canvas) que os labels
- * devem evitar. Usado para impedir que labels apareçam sobre o painel lateral.
+ * Zonas proibidas para labels — retângulos em pixels (coordenadas do canvas) que os labels
+ * devem evitar. Usado para impedir que labels apareçam sobre qualquer card flutuante.
  */
-export type NoGoRect = { left: number; top: number; right: number; bottom: number } | null;
-export const LabelNoGoContext = createContext<NoGoRect>(null);
+export type NoGoRect = { left: number; top: number; right: number; bottom: number };
+export const LabelNoGoContext = createContext<NoGoRect[]>([]);
 
 /**
  * Limiares de pixel compartilhados pelos hooks de layout de rótulo. Mantidos aqui para que o
@@ -264,18 +264,18 @@ export function useHideAsteroidLabelsMode(): boolean {
 }
 
 /**
- * Retorna true quando a posição projetada deste label cai dentro da NoGoRect do contexto.
+ * Retorna true quando a posição projetada deste label cai dentro de qualquer NoGoRect do contexto.
  * Roda a cada frame mas só dispara re-render quando o estado muda.
  */
 function useLabelInNoGoZone(labelRef: React.RefObject<THREE.Object3D | null>): boolean {
     const { camera, size } = useThree();
-    const noGo = useContext(LabelNoGoContext);
+    const noGoRects = useContext(LabelNoGoContext);
     const [blocked, setBlocked] = useState(false);
     const blockedRef = useRef(false);
     const pos = useRef(new THREE.Vector3());
 
     useFrame(() => {
-        if (!labelRef.current || !noGo) {
+        if (!labelRef.current || noGoRects.length === 0) {
             if (blockedRef.current) { blockedRef.current = false; setBlocked(false); }
             return;
         }
@@ -287,7 +287,9 @@ function useLabelInNoGoZone(labelRef: React.RefObject<THREE.Object3D | null>): b
         }
         const px = (projected.x * 0.5 + 0.5) * size.width;
         const py = (-projected.y * 0.5 + 0.5) * size.height;
-        const next = px >= noGo.left && px <= noGo.right && py >= noGo.top && py <= noGo.bottom;
+        const next = noGoRects.some((noGo) =>
+            px >= noGo.left && px <= noGo.right && py >= noGo.top && py <= noGo.bottom,
+        );
         if (next !== blockedRef.current) { blockedRef.current = next; setBlocked(next); }
     });
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { AsteroidTrajectory, ClosestNowObject, HorizonsFailureKind, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
@@ -6,6 +6,7 @@ import { formatDistanceAU, formatTimestamp } from '@/lib/observatory/format';
 import { PanelShell } from './PanelShell';
 
 type FocusTab = 'summary' | 'physical' | 'approach';
+type FocusMobileSection = FocusTab | 'actions';
 
 export function FocusCard({
     object,
@@ -19,6 +20,7 @@ export function FocusCard({
     locale,
     mobileTopAlign,
     onShowPanel,
+    panelRef,
 }: {
     object: ClosestNowObject;
     onOpenFocus?: (approach: UnifiedApproach) => void;
@@ -34,16 +36,21 @@ export function FocusCard({
     mobileTopAlign?: boolean;
     /** Callback para reabrir o painel lateral em mobile. */
     onShowPanel?: () => void;
+    panelRef?: Ref<HTMLDivElement>;
 }) {
     const en = locale === 'en';
     const a = object.approach;
     const [tab, setTab] = useState<FocusTab>('summary');
+    const [mobileSection, setMobileSection] = useState<FocusMobileSection | null>(null);
     const ldText = object.currentDistanceLD !== null ? `${object.currentDistanceLD.toFixed(2)} DL` : '—';
     const auText = formatDistanceAU(object.currentDistanceKm, locale);
     const motion = motionLabel(object.trajectory?.motionState, en);
     const risk = riskAssessment(a, en);
     const summary = humanSummary(object, en);
     const trajectoryStatus = trajectoryStatusBadge(object.trajectory, en);
+    const activeSection = mobileSection === null || mobileSection === 'actions' ? tab : mobileSection;
+    const showMobileActions = mobileSection === 'actions';
+    const showSectionContent = mobileSection !== 'actions';
 
     const eyebrowText = orbitMode
         ? (en ? 'On its orbit around the Sun' : 'Em sua órbita ao redor do Sol')
@@ -68,28 +75,67 @@ export function FocusCard({
         <PanelShell
             onClose={onClose}
             closeLabel={en ? 'Close focus card' : 'Fechar painel'}
+            showCloseButton={!orbitMode}
             eyebrow={eyebrow}
             title={a.displayName ?? a.name}
             subtitle={a.subtitle ?? undefined}
             borderClass="border-signal-cyan/25"
-            className="flex max-h-[45vh] sm:max-h-[76%] w-[min(18rem,calc(100vw-6rem))] sm:w-[min(24rem,48%)] flex-col"
+            className="flex max-h-[34vh] sm:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] sm:w-[min(24rem,48%)] flex-col"
             mobileTopAlign={mobileTopAlign}
+            panelRef={panelRef}
         >
 
             {/* Risk badge — prominent, color-coded by hazard. */}
-            <div className="mt-2 px-3">
-                <div className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 ${risk.className}`}>
-                    <span className="text-base">{risk.icon}</span>
-                    <div className="min-w-0">
-                        <div className="text-[13px] font-semibold leading-tight">{risk.title}</div>
-                        <div className="text-[11px] leading-tight opacity-80">{risk.subtitle}</div>
+            {mobileSection === null ? (
+                <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2 sm:hidden">
+                    <div className="space-y-1.5">
+                        <MobileFocusMenuButton label={en ? 'Summary' : 'Resumo'} onClick={() => setMobileSection('summary')} />
+                        <MobileFocusMenuButton label={en ? 'Physical data' : 'Dados físicos'} onClick={() => setMobileSection('physical')} />
+                        <MobileFocusMenuButton label={en ? 'Approach details' : 'Detalhes da aproximação'} onClick={() => setMobileSection('approach')} />
+                        <MobileFocusMenuButton label={en ? 'Actions' : 'Ações'} onClick={() => setMobileSection('actions')} />
                     </div>
                 </div>
-            </div>
+            ) : null}
+
+            <div className={mobileSection === null ? 'hidden sm:flex sm:flex-1 sm:min-h-0 sm:flex-col' : 'flex min-h-0 flex-1 flex-col'}>
+            {mobileSection !== null ? (
+                <div className="flex items-center justify-between border-b border-white/10 px-2.5 py-1.5 sm:hidden">
+                    <button
+                        type="button"
+                        onClick={() => setMobileSection(null)}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-signal-cyan/75 transition hover:text-signal-cyan"
+                    >
+                        <ChevronDown className="size-3 -rotate-90" aria-hidden />
+                        {en ? 'Back' : 'Voltar'}
+                    </button>
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-white/45">
+                        {mobileSection === 'actions'
+                            ? (en ? 'Actions' : 'Ações')
+                            : activeSection === 'summary'
+                                ? (en ? 'Summary' : 'Resumo')
+                                : activeSection === 'physical'
+                                    ? (en ? 'Physical' : 'Físico')
+                                    : (en ? 'Approach' : 'Aproximação')}
+                    </span>
+                    <span className="w-8" aria-hidden />
+                </div>
+            ) : null}
+
+            {showSectionContent ? (
+                <div className="mt-1.5 px-2.5 sm:mt-2 sm:px-3">
+                    <div className={`flex items-start gap-1.5 rounded-lg border px-2 py-1 sm:items-center sm:gap-2 sm:px-2.5 sm:py-1.5 ${risk.className}`}>
+                        <span className="text-sm sm:text-base">{risk.icon}</span>
+                        <div className="min-w-0">
+                            <div className="text-[12px] font-semibold leading-tight sm:text-[13px]">{risk.title}</div>
+                            <div className="hidden text-[11px] leading-tight opacity-80 sm:block">{risk.subtitle}</div>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
 
             {/* Trajectory status — only shown when Horizons data is not available. */}
-            {trajectoryStatus ? (
-                <div className="mt-1.5 px-3">
+            {showSectionContent && trajectoryStatus ? (
+                <div className="mt-1 px-2.5 sm:mt-1.5 sm:px-3">
                     <div className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] ${trajectoryStatus.className}`}>
                         <span aria-hidden="true">{trajectoryStatus.icon}</span>
                         {trajectoryStatus.text}
@@ -98,15 +144,15 @@ export function FocusCard({
             ) : null}
 
             {/* Tabs */}
-            <div className="mt-2.5 flex gap-1 border-b border-white/10 px-3">
+            <div className="mt-2 hidden gap-1 border-b border-white/10 px-2.5 sm:flex sm:mt-2.5 sm:px-3">
                 <FocusTabButton active={tab === 'summary'} onClick={() => setTab('summary')}>{en ? 'Summary' : 'Resumo'}</FocusTabButton>
                 <FocusTabButton active={tab === 'physical'} onClick={() => setTab('physical')}>{en ? 'Physical' : 'Físico'}</FocusTabButton>
                 <FocusTabButton active={tab === 'approach'} onClick={() => setTab('approach')}>{en ? 'Approach' : 'Aproximação'}</FocusTabButton>
             </div>
 
             {/* Tab content (scrolls if tall) */}
-            <div className="flex-1 overflow-y-auto px-3 py-2.5">
-                {tab === 'summary' ? (
+            <div className="flex-1 overflow-y-auto px-2.5 py-2 sm:px-3 sm:py-2.5">
+                {showSectionContent && activeSection === 'summary' ? (
                     <div className="space-y-2">
                         <p className="text-[13px] leading-relaxed text-white/80">{summary}</p>
                         <dl className="space-y-1.5 text-[13px]">
@@ -122,7 +168,7 @@ export function FocusCard({
                     </div>
                 ) : null}
 
-                {tab === 'physical' ? (
+                {showSectionContent && activeSection === 'physical' ? (
                     <dl className="space-y-1.5 text-[13px]">
                         <Row label={en ? 'Diameter' : 'Diâmetro'}>
                             {a.diameterMeters != null
@@ -143,7 +189,7 @@ export function FocusCard({
                     </dl>
                 ) : null}
 
-                {tab === 'approach' ? (
+                {showSectionContent && activeSection === 'approach' ? (
                     <dl className="space-y-1.5 text-[13px]">
                         {(() => {
                             const v = a.relativeVelocityKph ?? object.trajectory?.currentVelocityKph ?? null;
@@ -166,10 +212,48 @@ export function FocusCard({
                         <Row label={en ? 'Source' : 'Fonte'}>JPL/Horizons</Row>
                     </dl>
                 ) : null}
+
+                {showMobileActions ? (
+                    <div className="space-y-2">
+                        {hasOrbit ? (
+                            <button
+                                type="button"
+                                onClick={orbitMode ? onShowCloseUp : onShowOrbit}
+                                disabled={!orbitMode && !canShowOrbitPosition}
+                                title={!orbitMode && !canShowOrbitPosition
+                                    ? (en
+                                        ? 'Heliocentric orbit elements incomplete for this object (missing perihelion epoch).'
+                                        : 'Elementos da órbita heliocêntrica incompletos para este objeto (sem época de periélio).')
+                                    : undefined}
+                                className={[
+                                    'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                                    !orbitMode && !canShowOrbitPosition
+                                        ? 'cursor-not-allowed border border-white/10 bg-white/5 text-white/40'
+                                        : orbitMode
+                                            ? 'border border-white/15 bg-white/5 text-white/85 hover:bg-white/10'
+                                            : 'bg-signal-cyan text-space-950 shadow-[0_0_18px_rgba(34,211,238,0.35)] hover:bg-signal-cyan/90',
+                                ].join(' ')}
+                            >
+                                {orbitMode
+                                    ? (en ? '↩ Back to the asteroid' : '↩ Voltar ao asteroide')
+                                    : (en ? '🛰 See its orbit around the Sun' : '🛰 Ver a órbita ao redor do Sol')}
+                            </button>
+                        ) : null}
+                        {onOpenFocus ? (
+                            <button
+                                type="button"
+                                onClick={() => onOpenFocus(a)}
+                                className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/6 px-3 py-1.5 text-[11px] font-medium text-white/75 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                            >
+                                {en ? 'Open full dossier' : 'Abrir dossiê completo'}
+                            </button>
+                        ) : null}
+                    </div>
+                ) : null}
             </div>
 
             {/* Actions — the orbit toggle is the primary CTA; the dossier is secondary. */}
-            <div className="space-y-1.5 border-t border-white/10 px-3 py-2.5">
+            <div className="hidden space-y-0.5 border-t border-white/10 px-2.5 py-1.5 sm:block sm:space-y-1.5 sm:px-3 sm:py-2.5">
                 {hasOrbit ? (
                     <button
                         type="button"
@@ -181,12 +265,12 @@ export function FocusCard({
                                 : 'Elementos da órbita heliocêntrica incompletos para este objeto (sem época de periélio).')
                             : undefined}
                         className={[
-                            'inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-[13px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                            'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan sm:gap-1.5 sm:py-2.5 sm:text-[13px]',
                             !orbitMode && !canShowOrbitPosition
                                 ? 'cursor-not-allowed border border-white/10 bg-white/5 text-white/40'
                                 : orbitMode
                                     ? 'border border-white/15 bg-white/5 text-white/85 hover:bg-white/10'
-                                    : 'bg-signal-cyan text-space-950 shadow-[0_0_18px_rgba(34,211,238,0.35)] hover:bg-signal-cyan/90',
+                                    : 'border border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan shadow-[0_0_18px_rgba(34,211,238,0.18)] hover:border-signal-cyan/55 hover:bg-signal-cyan/14',
                         ].join(' ')}
                     >
                         {orbitMode
@@ -198,13 +282,27 @@ export function FocusCard({
                     <button
                         type="button"
                         onClick={() => onOpenFocus(a)}
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/5 px-3 py-2 text-[12px] font-medium text-white/70 transition outline-none hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/6 px-3 py-1.5 text-[11px] font-medium text-white/75 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan sm:py-2 sm:text-[12px]"
                     >
                         {en ? 'Open full dossier' : 'Abrir dossiê completo'}
                     </button>
                 ) : null}
             </div>
+            </div>
         </PanelShell>
+    );
+}
+
+function MobileFocusMenuButton({ label, onClick }: { label: string; onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-left text-[12px] font-medium text-white/85 transition outline-none hover:bg-white/8 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+        >
+            <span>{label}</span>
+            <ChevronDown className="-rotate-90 size-3.5 text-white/35" aria-hidden />
+        </button>
     );
 }
 
