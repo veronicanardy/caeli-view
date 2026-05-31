@@ -18,7 +18,6 @@ import * as THREE from 'three';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { URANUS } from '@/lib/observatory/planetData';
 import { URANUS_FRAG, URANUS_VERT } from '@/lib/observatory/shaders/uranus.glsl';
-import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
@@ -33,18 +32,25 @@ const URANUS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (URANUS.axialTiltDeg * Math.PI) / 180,
 );
 
+function directionFromBodyToSceneSun(
+    bodyPosition: [number, number, number],
+): THREE.Vector3 {
+    return new THREE.Vector3(0, 0, 0)
+        .sub(new THREE.Vector3(...bodyPosition))
+        .normalize();
+}
+
 // --------------- Componente ---------------------------------------------------------------
 
 interface UranusProps {
     position: [number, number, number];
-    sunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
     showLabel?: boolean;
 }
 
-export function Uranus({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: UranusProps) {
+export function Uranus({ position, locale, onFocus, isFocused = false, showLabel = true }: UranusProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -77,19 +83,16 @@ export function Uranus({ position, sunDirection, locale, onFocus, isFocused = fa
         meshRef.current.rotation.y = URANUS_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(0, 0, 0);
-            const uranusWorld = new THREE.Vector3(...position);
-            const dirToSun = sunWorld.sub(uranusWorld).normalize();
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
+            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
+                directionFromBodyToSceneSun(position),
+            );
         }
     });
 
     useEffect(() => { return () => { texture?.dispose(); }; }, [texture]);
 
     const material = useMemo(() => {
-        const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
-        const uranusWorld = new THREE.Vector3(...position);
-        const initialSunDir = sunWorld.sub(uranusWorld).normalize();
+        const initialSunDir = directionFromBodyToSceneSun(position);
 
         if (texture) {
             return new THREE.ShaderMaterial({

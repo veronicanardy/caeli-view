@@ -259,13 +259,13 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} sunDirection={sunDir} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} />
                     {showLabels ? <MoonOrbit moonPos={moonPos} earthPos={earthPos} orbitNormal={moonOrbitNormal} /> : null}
                     {/* Planetas — posições heliocêntricas reais, Sol na origem. */}
-                    {mercuryPos ? <Mercury position={mercuryPos} sunDirection={sunDir} locale={locale} onFocus={onFocusMercury} isFocused={isMercuryFocused} showLabel={showLabels} /> : null}
-                    {venusPos ? <Venus position={venusPos} sunDirection={sunDir} locale={locale} onFocus={onFocusVenus} isFocused={isVenusFocused} showLabel={showLabels} /> : null}
-                    {marsPos ? <Mars position={marsPos} sunDirection={sunDir} locale={locale} onFocus={onFocusMars} isFocused={isMarsFocused} showLabel={showLabels} /> : null}
-                    {jupiterPos ? <Jupiter position={jupiterPos} sunDirection={sunDir} locale={locale} onFocus={onFocusJupiter} isFocused={isJupiterFocused} showLabel={showLabels} /> : null}
-                    {saturnPos ? <Saturn position={saturnPos} sunDirection={sunDir} locale={locale} onFocus={onFocusSaturn} isFocused={isSaturnFocused} showLabel={showLabels} /> : null}
-                    {uranusPos ? <Uranus position={uranusPos} sunDirection={sunDir} locale={locale} onFocus={onFocusUranus} isFocused={isUranusFocused} showLabel={showLabels} /> : null}
-                    {neptunePos ? <Neptune position={neptunePos} sunDirection={sunDir} locale={locale} onFocus={onFocusNeptune} isFocused={isNeptuneFocused} showLabel={showLabels} /> : null}
+                    {mercuryPos ? <Mercury position={mercuryPos} locale={locale} onFocus={onFocusMercury} isFocused={isMercuryFocused} showLabel={showLabels} /> : null}
+                    {venusPos ? <Venus position={venusPos} locale={locale} onFocus={onFocusVenus} isFocused={isVenusFocused} showLabel={showLabels} /> : null}
+                    {marsPos ? <Mars position={marsPos} locale={locale} onFocus={onFocusMars} isFocused={isMarsFocused} showLabel={showLabels} /> : null}
+                    {jupiterPos ? <Jupiter position={jupiterPos} locale={locale} onFocus={onFocusJupiter} isFocused={isJupiterFocused} showLabel={showLabels} /> : null}
+                    {saturnPos ? <Saturn position={saturnPos} locale={locale} onFocus={onFocusSaturn} isFocused={isSaturnFocused} showLabel={showLabels} /> : null}
+                    {uranusPos ? <Uranus position={uranusPos} locale={locale} onFocus={onFocusUranus} isFocused={isUranusFocused} showLabel={showLabels} /> : null}
+                    {neptunePos ? <Neptune position={neptunePos} locale={locale} onFocus={onFocusNeptune} isFocused={isNeptuneFocused} showLabel={showLabels} /> : null}
                     {/* Elipses orbitais — longitude do periélio calculada dinamicamente da efeméride. */}
                     {showLabels && !orbitLabelsOnly && ephemeris ? (
                         <>

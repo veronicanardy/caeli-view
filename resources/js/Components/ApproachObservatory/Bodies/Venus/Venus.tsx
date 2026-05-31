@@ -18,7 +18,6 @@ import * as THREE from 'three';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { VENUS } from '@/lib/observatory/planetData';
 import { VENUS_FRAG, VENUS_VERT } from '@/lib/observatory/shaders/venus.glsl';
-import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
@@ -37,18 +36,25 @@ const VENUS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (VENUS.axialTiltDeg * Math.PI) / 180,
 );
 
+function directionFromBodyToSceneSun(
+    bodyPosition: [number, number, number],
+): THREE.Vector3 {
+    return new THREE.Vector3(0, 0, 0)
+        .sub(new THREE.Vector3(...bodyPosition))
+        .normalize();
+}
+
 // --------------- Componente ---------------------------------------------------------------
 
 interface VenusProps {
     position: [number, number, number];
-    sunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
     showLabel?: boolean;
 }
 
-export function Venus({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: VenusProps) {
+export function Venus({ position, locale, onFocus, isFocused = false, showLabel = true }: VenusProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -82,10 +88,9 @@ export function Venus({ position, sunDirection, locale, onFocus, isFocused = fal
         meshRef.current.rotation.y = VENUS_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(0, 0, 0);
-            const venusWorld = new THREE.Vector3(...position);
-            const dirToSun = sunWorld.sub(venusWorld).normalize();
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
+            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
+                directionFromBodyToSceneSun(position),
+            );
         }
     });
 
@@ -93,9 +98,7 @@ export function Venus({ position, sunDirection, locale, onFocus, isFocused = fal
     useEffect(() => { return () => { atmosphere?.dispose(); }; }, [atmosphere]);
 
     const material = useMemo(() => {
-        const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
-        const venusWorld = new THREE.Vector3(...position);
-        const initialSunDir = sunWorld.sub(venusWorld).normalize();
+        const initialSunDir = directionFromBodyToSceneSun(position);
 
         if (texture) {
             return new THREE.ShaderMaterial({

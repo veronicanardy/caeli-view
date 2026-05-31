@@ -18,7 +18,6 @@ import * as THREE from 'three';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { NEPTUNE } from '@/lib/observatory/planetData';
 import { NEPTUNE_FRAG, NEPTUNE_VERT } from '@/lib/observatory/shaders/neptune.glsl';
-import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
@@ -32,18 +31,25 @@ const NEPTUNE_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (NEPTUNE.axialTiltDeg * Math.PI) / 180,
 );
 
+function directionFromBodyToSceneSun(
+    bodyPosition: [number, number, number],
+): THREE.Vector3 {
+    return new THREE.Vector3(0, 0, 0)
+        .sub(new THREE.Vector3(...bodyPosition))
+        .normalize();
+}
+
 // --------------- Componente ---------------------------------------------------------------
 
 interface NeptuneProps {
     position: [number, number, number];
-    sunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
     showLabel?: boolean;
 }
 
-export function Neptune({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: NeptuneProps) {
+export function Neptune({ position, locale, onFocus, isFocused = false, showLabel = true }: NeptuneProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -76,19 +82,16 @@ export function Neptune({ position, sunDirection, locale, onFocus, isFocused = f
         meshRef.current.rotation.y = NEPTUNE_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(0, 0, 0);
-            const neptuneWorld = new THREE.Vector3(...position);
-            const dirToSun = sunWorld.sub(neptuneWorld).normalize();
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
+            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
+                directionFromBodyToSceneSun(position),
+            );
         }
     });
 
     useEffect(() => { return () => { texture?.dispose(); }; }, [texture]);
 
     const material = useMemo(() => {
-        const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
-        const neptuneWorld = new THREE.Vector3(...position);
-        const initialSunDir = sunWorld.sub(neptuneWorld).normalize();
+        const initialSunDir = directionFromBodyToSceneSun(position);
 
         if (texture) {
             return new THREE.ShaderMaterial({

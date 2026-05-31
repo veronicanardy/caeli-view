@@ -19,7 +19,6 @@ import * as THREE from 'three';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { SATURN } from '@/lib/observatory/planetData';
 import { SATURN_FRAG, SATURN_VERT } from '@/lib/observatory/shaders/saturn.glsl';
-import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
@@ -40,7 +39,13 @@ const RING_INNER_RADIUS = SATURN.visualRadiusDl * 1.11;
 const RING_OUTER_RADIUS = SATURN.visualRadiusDl * 2.27;
 
 // --------------- Ring geometry helper ----------------------------------------------------
-
+function directionFromBodyToSceneSun(
+    bodyPosition: [number, number, number],
+): THREE.Vector3 {
+    return new THREE.Vector3(0, 0, 0)
+        .sub(new THREE.Vector3(...bodyPosition))
+        .normalize();
+}
 /**
  * Constrói a geometria de disco anular com UVs corretos para a textura do anel de Saturno.
  *
@@ -86,14 +91,13 @@ function buildRingGeometry(innerRadius: number, outerRadius: number, segments = 
 
 interface SaturnProps {
     position: [number, number, number];
-    sunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
     showLabel?: boolean;
 }
 
-export function Saturn({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: SaturnProps) {
+export function Saturn({ position, locale, onFocus, isFocused = false, showLabel = true }: SaturnProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -127,10 +131,9 @@ export function Saturn({ position, sunDirection, locale, onFocus, isFocused = fa
         meshRef.current.rotation.y = SATURN_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(0, 0, 0);
-            const saturnWorld = new THREE.Vector3(...position);
-            const dirToSun = sunWorld.sub(saturnWorld).normalize();
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
+            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
+                directionFromBodyToSceneSun(position),
+            );
         }
     });
 
@@ -138,9 +141,7 @@ export function Saturn({ position, sunDirection, locale, onFocus, isFocused = fa
     useEffect(() => { return () => { ringTexture?.dispose(); }; }, [ringTexture]);
 
     const material = useMemo(() => {
-        const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
-        const saturnWorld = new THREE.Vector3(...position);
-        const initialSunDir = sunWorld.sub(saturnWorld).normalize();
+        const initialSunDir = directionFromBodyToSceneSun(position);
 
         if (texture) {
             return new THREE.ShaderMaterial({

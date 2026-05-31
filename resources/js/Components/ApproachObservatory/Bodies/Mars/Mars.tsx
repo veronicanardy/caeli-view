@@ -18,7 +18,6 @@ import * as THREE from 'three';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { MARS } from '@/lib/observatory/planetData';
 import { MARS_FRAG, MARS_VERT } from '@/lib/observatory/shaders/mars.glsl';
-import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
@@ -32,18 +31,25 @@ const MARS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (MARS.axialTiltDeg * Math.PI) / 180,
 );
 
+function directionFromBodyToSceneSun(
+    bodyPosition: [number, number, number],
+): THREE.Vector3 {
+    return new THREE.Vector3(0, 0, 0)
+        .sub(new THREE.Vector3(...bodyPosition))
+        .normalize();
+}
+
 // --------------- Componente ---------------------------------------------------------------
 
 interface MarsProps {
     position: [number, number, number];
-    sunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
     showLabel?: boolean;
 }
 
-export function Mars({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: MarsProps) {
+export function Mars({ position, locale, onFocus, isFocused = false, showLabel = true }: MarsProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -76,19 +82,16 @@ export function Mars({ position, sunDirection, locale, onFocus, isFocused = fals
         meshRef.current.rotation.y = MARS_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(0, 0, 0);
-            const marsWorld = new THREE.Vector3(...position);
-            const dirToSun = sunWorld.sub(marsWorld).normalize();
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
+            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
+                directionFromBodyToSceneSun(position),
+            );
         }
     });
 
     useEffect(() => { return () => { texture?.dispose(); }; }, [texture]);
 
     const material = useMemo(() => {
-        const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
-        const marsWorld = new THREE.Vector3(...position);
-        const initialSunDir = sunWorld.sub(marsWorld).normalize();
+        const initialSunDir = directionFromBodyToSceneSun(position);
 
         if (texture) {
             return new THREE.ShaderMaterial({

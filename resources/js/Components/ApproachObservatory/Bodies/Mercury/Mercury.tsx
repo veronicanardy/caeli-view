@@ -18,7 +18,6 @@ import * as THREE from 'three';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { MERCURY } from '@/lib/observatory/planetData';
 import { MERCURY_FRAG, MERCURY_VERT } from '@/lib/observatory/shaders/mercury.glsl';
-import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
@@ -36,18 +35,25 @@ const MERCURY_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (MERCURY.axialTiltDeg * Math.PI) / 180,
 );
 
+function directionFromBodyToSceneSun(
+    bodyPosition: [number, number, number],
+): THREE.Vector3 {
+    return new THREE.Vector3(0, 0, 0)
+        .sub(new THREE.Vector3(...bodyPosition))
+        .normalize();
+}
+
 // --------------- Componente ---------------------------------------------------------------
 
 interface MercuryProps {
     position: [number, number, number];
-    sunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
     onFocus: () => void;
     isFocused?: boolean;
     showLabel?: boolean;
 }
 
-export function Mercury({ position, sunDirection, locale, onFocus, isFocused = false, showLabel = true }: MercuryProps) {
+export function Mercury({ position, locale, onFocus, isFocused = false, showLabel = true }: MercuryProps) {
     const [hovered, setHovered] = useState(false);
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
@@ -78,13 +84,10 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
         const nowS = Date.now() / 1000;
         meshRef.current.rotation.y = MERCURY_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
-        // sunDir = normalize(sunWorldPos - mercuryWorldPos). O vetor aponta de Mercúrio
-        // para o Sol, então o terminador acompanha a posição solar visível.
         if (matRef.current) {
-            const sunWorld = new THREE.Vector3(0, 0, 0);
-            const mercuryWorld = new THREE.Vector3(...position);
-            const dirToSun = sunWorld.sub(mercuryWorld).normalize();
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(dirToSun);
+            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
+                directionFromBodyToSceneSun(position),
+            );
         }
     });
 
@@ -92,9 +95,8 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
 
     const material = useMemo(() => {
         // Calcula o sunDir inicial para o primeiro frame já nascer coerente.
-        const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
-        const mercuryWorld = new THREE.Vector3(...position);
-        const initialSunDir = sunWorld.sub(mercuryWorld).normalize();
+
+        const initialSunDir = directionFromBodyToSceneSun(position);
 
         if (texture) {
             return new THREE.ShaderMaterial({
@@ -108,7 +110,7 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
         }
         // Material simples enquanto a textura carrega.
         return new THREE.MeshStandardMaterial({ color: MERCURY.fallbackColor, roughness: 0.95, metalness: 0.0 });
-        // sunDirection e position são atualizados por frame via uniform.
+        // A direção ao Sol da cena é atualizada por frame via uniform.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [texture]);
 
