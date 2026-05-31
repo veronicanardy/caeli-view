@@ -12,21 +12,11 @@
  * Iluminação: shader próprio com atmosfera densa, piso noturno e limb azul-acinzentado.
  */
 
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { JUPITER } from '@/lib/observatory/planetData';
 import { JUPITER_FRAG, JUPITER_VERT } from '@/lib/observatory/shaders/jupiter.glsl';
-import { ScreenLabel } from '../../Overlays/SceneLabels';
-import {
-    BODY_HITBOX_MATERIAL,
-    BODY_ROTATION_EPOCH_UNIX_S,
-    BODY_SPHERE_SEGMENTS,
-} from '../bodyRenderConstants';
-import { directionFromBodyToSceneSun } from '../bodyLighting';
+import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
-import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -43,155 +33,40 @@ const JUPITER_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (JUPITER.axialTiltDeg * Math.PI) / 180,
 );
 
+const JUPITER_VISUAL_CONFIG: PlanetVisualConfig = {
+    body: {
+        visualRadiusDl: JUPITER.visualRadiusDl,
+        texturePath: JUPITER.texturePath ?? '',
+        fallbackColor: JUPITER.fallbackColor,
+    },
+    shaders: {
+        vertex: JUPITER_VERT,
+        fragment: JUPITER_FRAG,
+    },
+    label: {
+        pt: 'Júpiter',
+        en: 'Jupiter',
+        offset: 0.14,
+    },
+    rim: {
+        color: '#7090b8',
+        opacity: 0.07,
+        scale: 1.06,
+    },
+    hitbox: {
+        radiusMultiplier: 2.0,
+    },
+};
+
 // --------------- Componente ---------------------------------------------------------------
 
-export function Jupiter({
-    position,
-    locale,
-    onFocus,
-    isFocused = false,
-    showLabel = true,
-}: PlanetBodyProps) {
-    const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        cursorPointerEnter();
-    };
-
-    const handlePointerOut = () => {
-        cursorPointerLeave();
-    };
-
-    const handleClick = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        onFocus();
-    };
-
-    const texture = useBodyTexture(JUPITER.texturePath ?? '', 'srgb');
-
-    const poleGroupRef = useRef<THREE.Group>(null);
-    const meshRef = useRef<THREE.Mesh>(null);
-    const matRef = useRef<THREE.ShaderMaterial>(null);
-
-    useEffect(() => {
-        if (poleGroupRef.current) {
-            poleGroupRef.current.quaternion.copy(JUPITER_TILT_QUAT);
-        }
-    }, []);
-
-    useFrame(() => {
-        if (!meshRef.current) return;
-
-        const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = JUPITER_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
-
-        if (matRef.current) {
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
-                directionFromBodyToSceneSun(position),
-            );
-        }
-    });
-
-    useEffect(() => {
-        return () => {
-            texture?.dispose();
-        };
-    }, [texture]);
-
-    const material = useMemo(() => {
-        const initialSunDir = directionFromBodyToSceneSun(position);
-
-        if (texture) {
-            return new THREE.ShaderMaterial({
-                uniforms: {
-                    surfaceMap: { value: texture },
-                    sunDir: { value: initialSunDir },
-                },
-                vertexShader: JUPITER_VERT,
-                fragmentShader: JUPITER_FRAG,
-            });
-        }
-
-        return new THREE.MeshStandardMaterial({
-            color: JUPITER.fallbackColor,
-            roughness: 0.85,
-            metalness: 0.0,
-        });
-
-        // A direção ao Sol da cena é atualizada por frame via uniform.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [texture]);
-
-    useEffect(() => {
-        return () => {
-            material.dispose();
-        };
-    }, [material]);
-
-    const labelPos: [number, number, number] = [0, JUPITER.visualRadiusDl + 0.14, 0];
-
+export function Jupiter(props: PlanetBodyProps) {
     return (
-        <group position={position}>
-            <group ref={poleGroupRef}>
-                <mesh ref={meshRef}>
-                    <sphereGeometry
-                        args={[
-                            JUPITER.visualRadiusDl,
-                            BODY_SPHERE_SEGMENTS.planet.width,
-                            BODY_SPHERE_SEGMENTS.planet.height,
-                        ]}
-                    />
-                    {material instanceof THREE.ShaderMaterial ? (
-                        <primitive ref={matRef} object={material} attach="material" />
-                    ) : (
-                        <primitive object={material} attach="material" />
-                    )}
-                </mesh>
-            </group>
-
-            {/* Brilho de borda: névoa de H₂/He, azul-acinzentado muito sutil. */}
-            <mesh scale={1.06}>
-                <sphereGeometry
-                    args={[
-                        JUPITER.visualRadiusDl,
-                        BODY_SPHERE_SEGMENTS.rim.width,
-                        BODY_SPHERE_SEGMENTS.rim.height,
-                    ]}
-                />
-                <meshBasicMaterial
-                    color="#7090b8"
-                    transparent
-                    opacity={0.07}
-                    side={THREE.BackSide}
-                    depthWrite={false}
-                />
-            </mesh>
-
-            {!isFocused ? (
-                <mesh
-                    onPointerOver={handlePointerOver}
-                    onPointerOut={handlePointerOut}
-                    onClick={handleClick}
-                >
-                    <sphereGeometry
-                        args={[
-                            JUPITER.visualRadiusDl * 2.0,
-                            BODY_SPHERE_SEGMENTS.hitbox.width,
-                            BODY_SPHERE_SEGMENTS.hitbox.height,
-                        ]}
-                    />
-                    <meshBasicMaterial
-                        transparent
-                        opacity={BODY_HITBOX_MATERIAL.opacity}
-                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
-                    />
-                </mesh>
-            ) : null}
-
-            {showLabel ? (
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Jupiter' : 'Júpiter'}</span>
-                </ScreenLabel>
-            ) : null}
-        </group>
+        <PlanetBody
+            {...props}
+            config={JUPITER_VISUAL_CONFIG}
+            spinRateRadPerS={JUPITER_SPIN_RATE_RAD_PER_S}
+            tiltQuaternion={JUPITER_TILT_QUAT}
+        />
     );
 }

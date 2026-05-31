@@ -12,21 +12,11 @@
  * Iluminação: shader próprio com terminador mais abrupto e limb avermelhado de poeira.
  */
 
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { MARS } from '@/lib/observatory/planetData';
 import { MARS_FRAG, MARS_VERT } from '@/lib/observatory/shaders/mars.glsl';
-import { ScreenLabel } from '../../Overlays/SceneLabels';
-import {
-    BODY_HITBOX_MATERIAL,
-    BODY_ROTATION_EPOCH_UNIX_S,
-    BODY_SPHERE_SEGMENTS,
-} from '../bodyRenderConstants';
-import { directionFromBodyToSceneSun } from '../bodyLighting';
+import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
-import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -43,155 +33,40 @@ const MARS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (MARS.axialTiltDeg * Math.PI) / 180,
 );
 
+const MARS_VISUAL_CONFIG: PlanetVisualConfig = {
+    body: {
+        visualRadiusDl: MARS.visualRadiusDl,
+        texturePath: MARS.texturePath ?? '',
+        fallbackColor: MARS.fallbackColor,
+    },
+    shaders: {
+        vertex: MARS_VERT,
+        fragment: MARS_FRAG,
+    },
+    label: {
+        pt: 'Marte',
+        en: 'Mars',
+        offset: 0.12,
+    },
+    rim: {
+        color: '#c0501a',
+        opacity: 0.09,
+        scale: 1.08,
+    },
+    hitbox: {
+        radiusMultiplier: 3.5,
+    },
+};
+
 // --------------- Componente ---------------------------------------------------------------
 
-export function Mars({
-    position,
-    locale,
-    onFocus,
-    isFocused = false,
-    showLabel = true,
-}: PlanetBodyProps) {
-    const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        cursorPointerEnter();
-    };
-
-    const handlePointerOut = () => {
-        cursorPointerLeave();
-    };
-
-    const handleClick = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        onFocus();
-    };
-
-    const texture = useBodyTexture(MARS.texturePath ?? '', 'srgb');
-
-    const poleGroupRef = useRef<THREE.Group>(null);
-    const meshRef = useRef<THREE.Mesh>(null);
-    const matRef = useRef<THREE.ShaderMaterial>(null);
-
-    useEffect(() => {
-        if (poleGroupRef.current) {
-            poleGroupRef.current.quaternion.copy(MARS_TILT_QUAT);
-        }
-    }, []);
-
-    useFrame(() => {
-        if (!meshRef.current) return;
-
-        const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = MARS_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
-
-        if (matRef.current) {
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
-                directionFromBodyToSceneSun(position),
-            );
-        }
-    });
-
-    useEffect(() => {
-        return () => {
-            texture?.dispose();
-        };
-    }, [texture]);
-
-    const material = useMemo(() => {
-        const initialSunDir = directionFromBodyToSceneSun(position);
-
-        if (texture) {
-            return new THREE.ShaderMaterial({
-                uniforms: {
-                    surfaceMap: { value: texture },
-                    sunDir: { value: initialSunDir },
-                },
-                vertexShader: MARS_VERT,
-                fragmentShader: MARS_FRAG,
-            });
-        }
-
-        return new THREE.MeshStandardMaterial({
-            color: MARS.fallbackColor,
-            roughness: 0.85,
-            metalness: 0.0,
-        });
-
-        // A direção ao Sol da cena é atualizada por frame via uniform.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [texture]);
-
-    useEffect(() => {
-        return () => {
-            material.dispose();
-        };
-    }, [material]);
-
-    const labelPos: [number, number, number] = [0, MARS.visualRadiusDl + 0.12, 0];
-
+export function Mars(props: PlanetBodyProps) {
     return (
-        <group position={position}>
-            <group ref={poleGroupRef}>
-                <mesh ref={meshRef}>
-                    <sphereGeometry
-                        args={[
-                            MARS.visualRadiusDl,
-                            BODY_SPHERE_SEGMENTS.planet.width,
-                            BODY_SPHERE_SEGMENTS.planet.height,
-                        ]}
-                    />
-                    {material instanceof THREE.ShaderMaterial ? (
-                        <primitive ref={matRef} object={material} attach="material" />
-                    ) : (
-                        <primitive object={material} attach="material" />
-                    )}
-                </mesh>
-            </group>
-
-            {/* Brilho de borda: névoa de poeira marciana, vermelho/ferrugem muito sutil. */}
-            <mesh scale={1.08}>
-                <sphereGeometry
-                    args={[
-                        MARS.visualRadiusDl,
-                        BODY_SPHERE_SEGMENTS.rim.width,
-                        BODY_SPHERE_SEGMENTS.rim.height,
-                    ]}
-                />
-                <meshBasicMaterial
-                    color="#c0501a"
-                    transparent
-                    opacity={0.09}
-                    side={THREE.BackSide}
-                    depthWrite={false}
-                />
-            </mesh>
-
-            {!isFocused ? (
-                <mesh
-                    onPointerOver={handlePointerOver}
-                    onPointerOut={handlePointerOut}
-                    onClick={handleClick}
-                >
-                    <sphereGeometry
-                        args={[
-                            MARS.visualRadiusDl * 3.5,
-                            BODY_SPHERE_SEGMENTS.hitbox.width,
-                            BODY_SPHERE_SEGMENTS.hitbox.height,
-                        ]}
-                    />
-                    <meshBasicMaterial
-                        transparent
-                        opacity={BODY_HITBOX_MATERIAL.opacity}
-                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
-                    />
-                </mesh>
-            ) : null}
-
-            {showLabel ? (
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Mars' : 'Marte'}</span>
-                </ScreenLabel>
-            ) : null}
-        </group>
+        <PlanetBody
+            {...props}
+            config={MARS_VISUAL_CONFIG}
+            spinRateRadPerS={MARS_SPIN_RATE_RAD_PER_S}
+            tiltQuaternion={MARS_TILT_QUAT}
+        />
     );
 }

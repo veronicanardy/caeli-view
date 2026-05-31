@@ -147,18 +147,6 @@ export function Saturn({
         }
     });
 
-    useEffect(() => {
-        return () => {
-            texture?.dispose();
-        };
-    }, [texture]);
-
-    useEffect(() => {
-        return () => {
-            ringTexture?.dispose();
-        };
-    }, [ringTexture]);
-
     const material = useMemo(() => {
         const initialSunDir = directionFromBodyToSceneSun(position);
 

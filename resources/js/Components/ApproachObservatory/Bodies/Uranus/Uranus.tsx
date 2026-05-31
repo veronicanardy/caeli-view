@@ -12,21 +12,11 @@
  * Iluminação: shader próprio com atmosfera de H₂/He/CH₄ e limb ciano-azulado.
  */
 
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { URANUS } from '@/lib/observatory/planetData';
 import { URANUS_FRAG, URANUS_VERT } from '@/lib/observatory/shaders/uranus.glsl';
-import { ScreenLabel } from '../../Overlays/SceneLabels';
-import {
-    BODY_HITBOX_MATERIAL,
-    BODY_ROTATION_EPOCH_UNIX_S,
-    BODY_SPHERE_SEGMENTS,
-} from '../bodyRenderConstants';
-import { directionFromBodyToSceneSun } from '../bodyLighting';
+import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
-import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -46,155 +36,40 @@ const URANUS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (URANUS.axialTiltDeg * Math.PI) / 180,
 );
 
+const URANUS_VISUAL_CONFIG: PlanetVisualConfig = {
+    body: {
+        visualRadiusDl: URANUS.visualRadiusDl,
+        texturePath: URANUS.texturePath ?? '',
+        fallbackColor: URANUS.fallbackColor,
+    },
+    shaders: {
+        vertex: URANUS_VERT,
+        fragment: URANUS_FRAG,
+    },
+    label: {
+        pt: 'Urano',
+        en: 'Uranus',
+        offset: 0.08,
+    },
+    rim: {
+        color: '#40b8c8',
+        opacity: 0.07,
+        scale: 1.06,
+    },
+    hitbox: {
+        radiusMultiplier: 1.3,
+    },
+};
+
 // --------------- Componente ---------------------------------------------------------------
 
-export function Uranus({
-    position,
-    locale,
-    onFocus,
-    isFocused = false,
-    showLabel = true,
-}: PlanetBodyProps) {
-    const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        cursorPointerEnter();
-    };
-
-    const handlePointerOut = () => {
-        cursorPointerLeave();
-    };
-
-    const handleClick = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        onFocus();
-    };
-
-    const texture = useBodyTexture(URANUS.texturePath ?? '', 'srgb');
-
-    const poleGroupRef = useRef<THREE.Group>(null);
-    const meshRef = useRef<THREE.Mesh>(null);
-    const matRef = useRef<THREE.ShaderMaterial>(null);
-
-    useEffect(() => {
-        if (poleGroupRef.current) {
-            poleGroupRef.current.quaternion.copy(URANUS_TILT_QUAT);
-        }
-    }, []);
-
-    useFrame(() => {
-        if (!meshRef.current) return;
-
-        const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = URANUS_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
-
-        if (matRef.current) {
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
-                directionFromBodyToSceneSun(position),
-            );
-        }
-    });
-
-    useEffect(() => {
-        return () => {
-            texture?.dispose();
-        };
-    }, [texture]);
-
-    const material = useMemo(() => {
-        const initialSunDir = directionFromBodyToSceneSun(position);
-
-        if (texture) {
-            return new THREE.ShaderMaterial({
-                uniforms: {
-                    surfaceMap: { value: texture },
-                    sunDir: { value: initialSunDir },
-                },
-                vertexShader: URANUS_VERT,
-                fragmentShader: URANUS_FRAG,
-            });
-        }
-
-        return new THREE.MeshStandardMaterial({
-            color: URANUS.fallbackColor,
-            roughness: 0.85,
-            metalness: 0.0,
-        });
-
-        // A direção ao Sol da cena é atualizada por frame via uniform.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [texture]);
-
-    useEffect(() => {
-        return () => {
-            material.dispose();
-        };
-    }, [material]);
-
-    const labelPos: [number, number, number] = [0, URANUS.visualRadiusDl + 0.08, 0];
-
+export function Uranus(props: PlanetBodyProps) {
     return (
-        <group position={position}>
-            <group ref={poleGroupRef}>
-                <mesh ref={meshRef}>
-                    <sphereGeometry
-                        args={[
-                            URANUS.visualRadiusDl,
-                            BODY_SPHERE_SEGMENTS.planet.width,
-                            BODY_SPHERE_SEGMENTS.planet.height,
-                        ]}
-                    />
-                    {material instanceof THREE.ShaderMaterial ? (
-                        <primitive ref={matRef} object={material} attach="material" />
-                    ) : (
-                        <primitive object={material} attach="material" />
-                    )}
-                </mesh>
-            </group>
-
-            {/* Brilho de borda: halo ciano-azulado do metano atmosférico de Urano. */}
-            <mesh scale={1.06}>
-                <sphereGeometry
-                    args={[
-                        URANUS.visualRadiusDl,
-                        BODY_SPHERE_SEGMENTS.rim.width,
-                        BODY_SPHERE_SEGMENTS.rim.height,
-                    ]}
-                />
-                <meshBasicMaterial
-                    color="#40b8c8"
-                    transparent
-                    opacity={0.07}
-                    side={THREE.BackSide}
-                    depthWrite={false}
-                />
-            </mesh>
-
-            {!isFocused ? (
-                <mesh
-                    onPointerOver={handlePointerOver}
-                    onPointerOut={handlePointerOut}
-                    onClick={handleClick}
-                >
-                    <sphereGeometry
-                        args={[
-                            URANUS.visualRadiusDl * 1.3,
-                            BODY_SPHERE_SEGMENTS.hitbox.width,
-                            BODY_SPHERE_SEGMENTS.hitbox.height,
-                        ]}
-                    />
-                    <meshBasicMaterial
-                        transparent
-                        opacity={BODY_HITBOX_MATERIAL.opacity}
-                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
-                    />
-                </mesh>
-            ) : null}
-
-            {showLabel ? (
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Uranus' : 'Urano'}</span>
-                </ScreenLabel>
-            ) : null}
-        </group>
+        <PlanetBody
+            {...props}
+            config={URANUS_VISUAL_CONFIG}
+            spinRateRadPerS={URANUS_SPIN_RATE_RAD_PER_S}
+            tiltQuaternion={URANUS_TILT_QUAT}
+        />
     );
 }

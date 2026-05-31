@@ -12,21 +12,11 @@
  * Iluminação: shader próprio com `sunDir` calculado de Mercúrio para o Sol da cena.
  */
 
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { MERCURY } from '@/lib/observatory/planetData';
 import { MERCURY_FRAG, MERCURY_VERT } from '@/lib/observatory/shaders/mercury.glsl';
-import { ScreenLabel } from '../../Overlays/SceneLabels';
-import {
-    BODY_HITBOX_MATERIAL,
-    BODY_ROTATION_EPOCH_UNIX_S,
-    BODY_SPHERE_SEGMENTS,
-} from '../bodyRenderConstants';
-import { directionFromBodyToSceneSun } from '../bodyLighting';
+import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
-import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -43,158 +33,44 @@ const MERCURY_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (MERCURY.axialTiltDeg * Math.PI) / 180,
 );
 
+const MERCURY_VISUAL_CONFIG: PlanetVisualConfig = {
+    body: {
+        visualRadiusDl: MERCURY.visualRadiusDl,
+        texturePath: MERCURY.texturePath ?? '',
+        fallbackColor: MERCURY.fallbackColor,
+    },
+    shaders: {
+        vertex: MERCURY_VERT,
+        fragment: MERCURY_FRAG,
+    },
+    label: {
+        pt: 'Mercúrio',
+        en: 'Mercury',
+        offset: 0.12,
+    },
+    materialFallback: {
+        roughness: 0.95,
+        metalness: 0.0,
+    },
+    rim: {
+        color: '#c8a87a',
+        opacity: 0.08,
+        scale: 1.08,
+    },
+    hitbox: {
+        radiusMultiplier: 3.5,
+    },
+};
+
 // --------------- Componente ---------------------------------------------------------------
 
-export function Mercury({
-    position,
-    locale,
-    onFocus,
-    isFocused = false,
-    showLabel = true,
-}: PlanetBodyProps) {
-    const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        cursorPointerEnter();
-    };
-
-    const handlePointerOut = () => {
-        cursorPointerLeave();
-    };
-
-    const handleClick = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        onFocus();
-    };
-
-    const texture = useBodyTexture(MERCURY.texturePath ?? '', 'srgb');
-
-    const poleGroupRef = useRef<THREE.Group>(null);
-    const meshRef = useRef<THREE.Mesh>(null);
-    const matRef = useRef<THREE.ShaderMaterial>(null);
-
-    useEffect(() => {
-        if (poleGroupRef.current) {
-            poleGroupRef.current.quaternion.copy(MERCURY_TILT_QUAT);
-        }
-    }, []);
-
-    useFrame(() => {
-        if (!meshRef.current) return;
-
-        const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = MERCURY_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
-
-        if (matRef.current) {
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
-                directionFromBodyToSceneSun(position),
-            );
-        }
-    });
-
-    useEffect(() => {
-        return () => {
-            texture?.dispose();
-        };
-    }, [texture]);
-
-    const material = useMemo(() => {
-        const initialSunDir = directionFromBodyToSceneSun(position);
-
-        if (texture) {
-            return new THREE.ShaderMaterial({
-                uniforms: {
-                    surfaceMap: { value: texture },
-                    sunDir: { value: initialSunDir },
-                },
-                vertexShader: MERCURY_VERT,
-                fragmentShader: MERCURY_FRAG,
-            });
-        }
-
-        return new THREE.MeshStandardMaterial({
-            color: MERCURY.fallbackColor,
-            roughness: 0.95,
-            metalness: 0.0,
-        });
-
-        // A direção ao Sol da cena é atualizada por frame via uniform.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [texture]);
-
-    useEffect(() => {
-        return () => {
-            material.dispose();
-        };
-    }, [material]);
-
-    const labelPos: [number, number, number] = [0, MERCURY.visualRadiusDl + 0.12, 0];
-
+export function Mercury(props: PlanetBodyProps) {
     return (
-        <group position={position}>
-            <group ref={poleGroupRef}>
-                <mesh ref={meshRef}>
-                    <sphereGeometry
-                        args={[
-                            MERCURY.visualRadiusDl,
-                            BODY_SPHERE_SEGMENTS.planet.width,
-                            BODY_SPHERE_SEGMENTS.planet.height,
-                        ]}
-                    />
-                    {material instanceof THREE.ShaderMaterial ? (
-                        <primitive ref={matRef} object={material} attach="material" />
-                    ) : (
-                        <primitive object={material} attach="material" />
-                    )}
-                </mesh>
-            </group>
-
-            {/*
-             * Brilho de borda puramente visual para destacar o contorno no lado noturno.
-             * Mercúrio não tem atmosfera relevante, então a opacidade fica bem baixa.
-             */}
-            <mesh scale={1.08}>
-                <sphereGeometry
-                    args={[
-                        MERCURY.visualRadiusDl,
-                        BODY_SPHERE_SEGMENTS.rim.width,
-                        BODY_SPHERE_SEGMENTS.rim.height,
-                    ]}
-                />
-                <meshBasicMaterial
-                    color="#c8a87a"
-                    transparent
-                    opacity={0.08}
-                    side={THREE.BackSide}
-                    depthWrite={false}
-                />
-            </mesh>
-
-            {!isFocused ? (
-                <mesh
-                    onPointerOver={handlePointerOver}
-                    onPointerOut={handlePointerOut}
-                    onClick={handleClick}
-                >
-                    <sphereGeometry
-                        args={[
-                            MERCURY.visualRadiusDl * 3.5,
-                            BODY_SPHERE_SEGMENTS.hitbox.width,
-                            BODY_SPHERE_SEGMENTS.hitbox.height,
-                        ]}
-                    />
-                    <meshBasicMaterial
-                        transparent
-                        opacity={BODY_HITBOX_MATERIAL.opacity}
-                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
-                    />
-                </mesh>
-            ) : null}
-
-            {showLabel ? (
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Mercury' : 'Mercúrio'}</span>
-                </ScreenLabel>
-            ) : null}
-        </group>
+        <PlanetBody
+            {...props}
+            config={MERCURY_VISUAL_CONFIG}
+            spinRateRadPerS={MERCURY_SPIN_RATE_RAD_PER_S}
+            tiltQuaternion={MERCURY_TILT_QUAT}
+        />
     );
 }
