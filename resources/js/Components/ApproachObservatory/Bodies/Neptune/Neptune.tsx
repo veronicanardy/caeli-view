@@ -20,7 +20,7 @@ import { NEPTUNE } from '@/lib/observatory/planetData';
 import { NEPTUNE_FRAG, NEPTUNE_VERT } from '@/lib/observatory/shaders/neptune.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
-import { useEarthTexture } from '../Earth/Earth';
+import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -64,7 +64,7 @@ export function Neptune({ position, locale, onFocus, isFocused = false, showLabe
         onFocus();
     };
 
-    const texture = useEarthTexture(NEPTUNE.texturePath ?? '', 'srgb');
+    const texture = useBodyTexture(NEPTUNE.texturePath ?? '', 'srgb');
 
     const poleGroupRef = useRef<THREE.Group>(null);
     const meshRef = useRef<THREE.Mesh>(null);

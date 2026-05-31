@@ -1,11 +1,12 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { TextureLoader } from 'three';
 import { orientEarth } from '@/lib/observatory/earthOrientation';
 import { CLOUDS_FRAG, EARTH_FRAG, EARTH_VERT } from '@/lib/observatory/shaders/earth.glsl';
 import { EARTH_HITBOX_DL, EARTH_RADIUS_DL } from '@/lib/observatory/bodyScale';
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { useBodyTexture } from '../useBodyTexture';
 
 /**
  * Terra na cena do radar orbital.
@@ -40,8 +41,6 @@ interface EarthProps {
     isFocused?: boolean;
 }
 
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
-
 function disposeMaterial(material: THREE.ShaderMaterial | null) {
     material?.dispose();
 }
@@ -75,19 +74,19 @@ export function Earth({
      * Textura diurna da Terra. Usa `raw` porque o shader customizado controla
      * manualmente a conversão de cor.
      */
-    const day = useEarthTexture('/images/earth/blue-marble-land-shallow-topo-2048.jpg', 'raw');
+    const day = useBodyTexture('/images/earth/blue-marble-land-shallow-topo-2048.jpg', 'raw');
 
     /**
      * Textura noturna com luzes urbanas. Também usa `raw` por ser consumida pelo
      * shader customizado da Terra.
      */
-    const night = useEarthTexture('/images/earth/8k_earth_nightmap.jpg', 'raw');
+    const night = useBodyTexture('/images/earth/8k_earth_nightmap.jpg', 'raw');
 
     /**
      * Mapa de nuvens. Usa `srgb` porque a textura alimenta diretamente o shader
      * visual de nuvens.
      */
-    const clouds = useEarthTexture('/images/earth/8k_earth_clouds.jpg', 'srgb');
+    const clouds = useBodyTexture('/images/earth/8k_earth_clouds.jpg', 'srgb');
 
     /**
      * Grupo que contém a superfície e a camada de nuvens.
@@ -106,7 +105,7 @@ export function Earth({
     const matRef = useRef<THREE.ShaderMaterial>(null);
 
     /**
-     * Estado usado apenas para enfatizar o rótulo e ajustar o cursor no hover.
+     * Estado usado para enfatizar o rótulo e ajustar o cursor no hover.
      */
     const [hovered, setHovered] = useState(false);
 
@@ -115,7 +114,9 @@ export function Earth({
      * enquanto o mouse ainda está sobre a hitbox.
      */
     useEffect(() => {
-        return () => { cursorPointerLeave(); };
+        return () => {
+            cursorPointerLeave();
+        };
     }, []);
 
     // Shader da camada de nuvens: o mapa em tons de cinza controla brilho e opacidade.
@@ -299,84 +300,4 @@ export function Earth({
             ) : null}
         </group>
     );
-}
-
-/**
- * Carrega uma textura de forma imperativa e retorna null enquanto ela não está pronta.
- *
- * Este hook evita o `useLoader` do drei/R3F porque ele usa Suspense. Na prática,
- * um try/catch ao redor de `useLoader` não resolve falhas ou lentidão de carga de
- * forma limpa. Em ambiente Docker/dev, uma textura lenta ou com erro podia deixar
- * o globo preto. Com este hook, o componente chamador consegue renderizar um
- * fallback visual enquanto o bitmap real não foi decodificado.
- *
- * Contrato:
- * - retorna `null` enquanto a textura ainda não carregou ou se houver falha;
- * - retorna uma `THREE.Texture` quando o carregamento termina com sucesso;
- * - não lança erro para a UI;
- * - deixa o chamador decidir qual fallback renderizar.
- *
- * Uso de colorSpace:
- * - `srgb`: para materiais comuns do Three.js que fazem o decode sRGB;
- * - `raw`: para shaders customizados que fazem a conversão manualmente.
- *
- * Exportado também para permitir que outros corpos, como a Lua, reutilizem o
- * mesmo contrato de carregamento/fallback.
- *
- * @param url Caminho da imagem a ser carregada.
- * @param colorSpace Espaço de cor desejado para a textura.
- * @returns Textura carregada ou null enquanto ela não está disponível.
- */
-export function useEarthTexture(
-    url: string,
-    colorSpace: 'srgb' | 'raw' = 'srgb',
-): THREE.Texture | null {
-    const [texture, setTexture] = useState<THREE.Texture | null>(null);
-
-    useEffect(() => {
-        /**
-         * Flag de segurança para evitar `setState` depois que o componente
-         * desmontou ou depois que a URL/colorSpace mudou.
-         */
-        let active = true;
-
-        /**
-         * Textura efetivamente carregada nesta execução do effect.
-         * Usada para liberar memória de GPU no cleanup.
-         */
-        let loadedTexture: THREE.Texture | null = null;
-
-        const loader = new TextureLoader();
-
-        loader.load(
-            url,
-            (tex) => {
-                tex.colorSpace = colorSpace === 'srgb'
-                    ? THREE.SRGBColorSpace
-                    : THREE.NoColorSpace;
-
-                if (!active) {
-                    tex.dispose();
-                    return;
-                }
-
-                loadedTexture = tex;
-                setTexture(tex);
-            },
-            undefined,
-            () => {
-                // Mantém null → fallback azul iluminado.
-            },
-        );
-
-        return () => {
-            active = false;
-
-            if (loadedTexture) {
-                loadedTexture.dispose();
-            }
-        };
-    }, [url, colorSpace]);
-
-    return texture;
 }

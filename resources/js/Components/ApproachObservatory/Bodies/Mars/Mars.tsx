@@ -20,7 +20,7 @@ import { MARS } from '@/lib/observatory/planetData';
 import { MARS_FRAG, MARS_VERT } from '@/lib/observatory/shaders/mars.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
-import { useEarthTexture } from '../Earth/Earth';
+import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -64,7 +64,7 @@ export function Mars({ position, locale, onFocus, isFocused = false, showLabel =
         onFocus();
     };
 
-    const texture = useEarthTexture(MARS.texturePath ?? '', 'srgb');
+    const texture = useBodyTexture(MARS.texturePath ?? '', 'srgb');
 
     const poleGroupRef = useRef<THREE.Group>(null);
     const meshRef = useRef<THREE.Mesh>(null);

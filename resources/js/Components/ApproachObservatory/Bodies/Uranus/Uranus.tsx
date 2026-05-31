@@ -20,7 +20,7 @@ import { URANUS } from '@/lib/observatory/planetData';
 import { URANUS_FRAG, URANUS_VERT } from '@/lib/observatory/shaders/uranus.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
-import { useEarthTexture } from '../Earth/Earth';
+import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -65,7 +65,7 @@ export function Uranus({ position, locale, onFocus, isFocused = false, showLabel
         onFocus();
     };
 
-    const texture = useEarthTexture(URANUS.texturePath ?? '', 'srgb');
+    const texture = useBodyTexture(URANUS.texturePath ?? '', 'srgb');
 
     const poleGroupRef = useRef<THREE.Group>(null);
     const meshRef = useRef<THREE.Mesh>(null);

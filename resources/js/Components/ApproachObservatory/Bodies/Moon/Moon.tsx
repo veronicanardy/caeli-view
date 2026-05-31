@@ -6,7 +6,7 @@ import { orientMoonTidal } from '@/lib/observatory/earthOrientation';
 import { buildMoonBump } from '@/lib/observatory/moonTextures';
 import { MOON_HITBOX_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
 import { DistanceCulledScreenLabel } from '../../Overlays/SceneLabels';
-import { useEarthTexture } from '../Earth/Earth';
+import { useBodyTexture } from '../useBodyTexture';
 
 /**
  * Lua na cena do radar orbital.
@@ -47,7 +47,7 @@ export function Moon({
     const [hovered, setHovered] = useState(false);
 
     // Textura lunar real (2K). O bump procedural adiciona relevo de crateras em cima.
-    const texture = useEarthTexture('/images/moon/moon-8k.jpg');
+    const texture = useBodyTexture('/images/moon/moon-8k.jpg');
     const bump = useMemo(() => {
         try { return buildMoonBump(512); } catch { return null; }
     }, []);

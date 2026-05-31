@@ -20,7 +20,7 @@ import { JUPITER } from '@/lib/observatory/planetData';
 import { JUPITER_FRAG, JUPITER_VERT } from '@/lib/observatory/shaders/jupiter.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
-import { useEarthTexture } from '../Earth/Earth';
+import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -64,7 +64,7 @@ export function Jupiter({ position, locale, onFocus, isFocused = false, showLabe
         onFocus();
     };
 
-    const texture = useEarthTexture(JUPITER.texturePath ?? '', 'srgb');
+    const texture = useBodyTexture(JUPITER.texturePath ?? '', 'srgb');
 
     const poleGroupRef = useRef<THREE.Group>(null);
     const meshRef = useRef<THREE.Mesh>(null);

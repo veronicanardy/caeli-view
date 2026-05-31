@@ -21,7 +21,7 @@ import { SATURN } from '@/lib/observatory/planetData';
 import { SATURN_FRAG, SATURN_VERT } from '@/lib/observatory/shaders/saturn.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
-import { useEarthTexture } from '../Earth/Earth';
+import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -112,8 +112,8 @@ export function Saturn({ position, locale, onFocus, isFocused = false, showLabel
         onFocus();
     };
 
-    const texture = useEarthTexture(SATURN.texturePath ?? '', 'srgb');
-    const ringTexture = useEarthTexture('/images/saturn/saturn-ring-8k.png', 'srgb');
+    const texture = useBodyTexture(SATURN.texturePath ?? '', 'srgb');
+    const ringTexture = useBodyTexture('/images/saturn/saturn-ring-8k.png', 'srgb');
 
     const poleGroupRef = useRef<THREE.Group>(null);
     const meshRef = useRef<THREE.Mesh>(null);

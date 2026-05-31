@@ -20,7 +20,7 @@ import { MERCURY } from '@/lib/observatory/planetData';
 import { MERCURY_FRAG, MERCURY_VERT } from '@/lib/observatory/shaders/mercury.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
-import { useEarthTexture } from '../Earth/Earth';
+import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -67,7 +67,7 @@ export function Mercury({ position, locale, onFocus, isFocused = false, showLabe
         e.stopPropagation();
         onFocus();
     };
-    const texture = useEarthTexture(MERCURY.texturePath ?? '', 'srgb');
+    const texture = useBodyTexture(MERCURY.texturePath ?? '', 'srgb');
 
     const poleGroupRef = useRef<THREE.Group>(null);
     const meshRef = useRef<THREE.Mesh>(null);
