@@ -244,7 +244,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         // Nesse caso a distância real oscila só ±0.3% em torno de 'a', então definir
         // lonPerihelion = atan2(ecl.y, ecl.x) (ν=0) coloca o planeta exatamente no periélio
         // da elipse, que tem raio 'a*(1-e) ≈ a'. O desvio visual é < 1px em qualquer zoom.
-        function planetData(body: A.Body, semiMajorAU: number, eccentricity: number): {
+        function planetData(body: Astronomy.Body, semiMajorAU: number, eccentricity: number): {
             scenePosition: [number, number, number];
             lonPerihelionDeg: number;
         } {

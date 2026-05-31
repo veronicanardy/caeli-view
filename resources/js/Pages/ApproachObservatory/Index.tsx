@@ -259,6 +259,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                 distanceSource: 'JPL Horizons',
                 positionSource: 'JPL Horizons',
                 failureReason: null,
+                horizonsFailureKind: traj.horizonsFailureKind ?? null,
                 note: traj.note ?? null,
             };
         }
