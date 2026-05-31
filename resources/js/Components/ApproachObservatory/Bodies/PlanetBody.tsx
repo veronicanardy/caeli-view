@@ -95,8 +95,8 @@ export function PlanetBody({
         config.textureColorSpace ?? 'srgb',
     );
     /**
-     * `extraTexture` cobre casos como Vênus, que usa `atmosphereMap`
-     * com fallback para `surfaceMap` enquanto o mapa auxiliar carrega.
+     * Textura auxiliar opcional usada por shaders especificos.
+     * Pode cair para surfaceMap enquanto o mapa extra ainda carrega.
      */
     const extraTexture = useBodyTexture(
         config.extraTexture?.path ?? '',
@@ -127,12 +127,10 @@ export function PlanetBody({
     });
 
     const material = useMemo(() => {
-        const initialSunDir = directionFromBodyToSceneSun(position);
-
         if (texture) {
             const uniforms: Record<string, { value: THREE.Texture | THREE.Vector3 | null }> = {
                 surfaceMap: { value: texture },
-                sunDir: { value: initialSunDir },
+                sunDir: { value: new THREE.Vector3(0, 0, 1) },
             };
 
             if (config.extraTexture) {
@@ -155,9 +153,7 @@ export function PlanetBody({
             metalness: config.materialFallback?.metalness ?? 0.0,
         });
 
-        // A direção ao Sol da cena é atualizada por frame via uniform.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [config, extraTexture, position, texture]);
+    }, [config, extraTexture, texture]);
 
     useEffect(() => {
         return () => {

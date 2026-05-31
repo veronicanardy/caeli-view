@@ -1,5 +1,5 @@
 import { useGLTF } from '@react-three/drei';
-import { useMemo, useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { AsteroidModelAsset } from './asteroidModelRegistry';
 
@@ -34,36 +34,43 @@ export default function RealAsteroidModel({ asset, opacity }: RealAsteroidModelP
             if (!mesh.isMesh) return;
 
             const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            const clonedMaterials = sourceMaterials.map((material) => material.clone());
+            mesh.material = Array.isArray(mesh.material) ? clonedMaterials : clonedMaterials[0];
+        });
 
-            const styledMaterials = sourceMaterials.map((material) => {
-                const styled = material.clone();
+        return { model: clone, scale: 2 / maxAxis };
+    }, [gltf.scene]);
 
-                styled.transparent = opacity < 1;
-                styled.opacity = opacity;
-                styled.depthWrite = opacity >= 0.75;
+    useEffect(() => {
+        model.traverse((child) => {
+            const mesh = child as THREE.Mesh;
+            if (!mesh.isMesh) return;
 
-                if ('roughness' in styled) {
-                    (styled as THREE.MeshStandardMaterial).roughness = Math.max(
-                        (styled as THREE.MeshStandardMaterial).roughness ?? 0,
+            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+
+            materials.forEach((material) => {
+                material.transparent = opacity < 1;
+                material.opacity = opacity;
+                material.depthWrite = opacity >= 0.75;
+
+                if ('roughness' in material) {
+                    (material as THREE.MeshStandardMaterial).roughness = Math.max(
+                        (material as THREE.MeshStandardMaterial).roughness ?? 0,
                         0.92,
                     );
                 }
 
-                if ('metalness' in styled) {
-                    (styled as THREE.MeshStandardMaterial).metalness = Math.min(
-                        (styled as THREE.MeshStandardMaterial).metalness ?? 0,
+                if ('metalness' in material) {
+                    (material as THREE.MeshStandardMaterial).metalness = Math.min(
+                        (material as THREE.MeshStandardMaterial).metalness ?? 0,
                         0.03,
                     );
                 }
 
-                return styled;
+                material.needsUpdate = true;
             });
-
-            mesh.material = Array.isArray(mesh.material) ? styledMaterials : styledMaterials[0];
         });
-
-        return { model: clone, scale: 2 / maxAxis };
-    }, [gltf.scene, opacity]);
+    }, [model, opacity]);
 
     useEffect(() => {
         return () => {

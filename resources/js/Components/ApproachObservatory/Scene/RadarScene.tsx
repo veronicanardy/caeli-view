@@ -286,11 +286,9 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                             <AsteroidMarker
                                 key={object.approach.id}
                                 object={object}
-                                palette={OBJECT_PALETTE[index % OBJECT_PALETTE.length]}
                                 isSelected={object.approach.id === selectedId}
                                 dimmed={hasSelection && object.approach.id !== selectedId}
                                 onSelect={onSelect}
-                                compactLabel={compactLabels}
                                 showLabel={showLabelForObject(object.approach.id)}
                                 protectLabelFromFocus={object.approach.id !== selectedId}
                                 locale={locale}

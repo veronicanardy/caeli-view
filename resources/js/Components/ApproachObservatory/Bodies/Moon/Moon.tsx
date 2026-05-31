@@ -1,5 +1,5 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { orientMoonTidal } from '@/lib/observatory/earthOrientation';
@@ -15,12 +15,10 @@ import { useBodyTexture } from '../useBodyTexture';
  * travamento tidal em relação à Terra, iluminação de fase pelo Sol, preenchimento
  * suave de earthshine, hitbox de foco e rótulo com culling por distância.
  */
-
 export interface MoonProps {
     onFocus: () => void;
     position: [number, number, number];
-    /** Vetor Terra→Lua em coordenadas de cena (geocêntrico log-comprimido). Usado pelo tidal lock.
-     *  Se omitido, usa `position` (compatibilidade com cenas onde Terra é a origem). */
+    /** Vetor Terra→Lua em coordenadas de cena. Usado para orientação e offset do rótulo. */
     geocentricPosition?: [number, number, number];
     sunDirection: [number, number, number];
     compactLabel: boolean;
@@ -46,22 +44,24 @@ export function Moon({
     const en = locale === 'en';
     const [hovered, setHovered] = useState(false);
 
-    // Textura lunar real (2K). O bump procedural adiciona relevo de crateras em cima.
+    // Textura lunar real (2K). O bump procedural adiciona relevo sem alterar a aparência-base.
     const texture = useBodyTexture('/images/moon/moon-8k.jpg');
     const bump = useMemo(() => {
         try { return buildMoonBump(512); } catch { return null; }
     }, []);
+    useEffect(() => () => {
+        bump?.dispose();
+    }, [bump]);
+
+    const earthToMoonVector = geocentricPosition ?? position;
 
     // Travamento tidal: a mesma face da Lua permanece apontada para a Terra.
-    // A cada frame orientamos a malha para que o lado visível fique voltado para a origem da cena.
     const meshRef = useRef<THREE.Mesh>(null);
     useFrame(() => {
-        if (meshRef.current) orientMoonTidal(meshRef.current, geocentricPosition ?? position);
+        if (meshRef.current) orientMoonTidal(meshRef.current, earthToMoonVector);
     });
 
-    // A fase da Lua é gerada pela iluminação real. Adicionamos um preenchimento suave
-    // oposto ao Sol para evitar que o lado não iluminado fique completamente preto.
-    // fillPos é relativo à origem do grupo (centro da Lua) — só o oposto do Sol.
+    // O preenchimento é local ao grupo da Lua, então basta usar a direção oposta ao Sol.
     const fillPos = useMemo<[number, number, number]>(() => [
         -sunDirection[0] * 3,
         -sunDirection[1] * 3,
@@ -114,7 +114,7 @@ export function Moon({
                 )}
             </mesh>
 
-            {/* Preenchimento suave por earthshine, limitado à Lua para não afetar Terra/asteroides. */}
+            {/* Preenchimento suave por earthshine, limitado à Lua. */}
             <pointLight position={fillPos} intensity={0.05} distance={MOON_RADIUS_DL * 6} color="#3a4a6a" />
 
             {/* Hitbox invisível para hover/click. Quando a Lua já está em foco, o hitbox é removido. */}
@@ -133,7 +133,7 @@ export function Moon({
                 <DistanceCulledScreenLabel
                     anchor={position}
                     maxCameraDistance={5.2}
-                    position={moonLabelOffset(position, compactLabel)}
+                    position={moonLabelOffset(earthToMoonVector, compactLabel)}
                     emphasized={hovered}
                     protectFromFocus={protectLabelFromFocus}
                     onClick={isFocused ? undefined : onFocus}
@@ -148,13 +148,12 @@ export function Moon({
 }
 
 /**
- * Coloca a etiqueta da Lua acima do satélite e, em zoom amplo, empurra-a para longe da Terra
- * para evitar sobreposição visual com os rótulos próximos ao planeta.
+ * Coloca a etiqueta acima da Lua e, em zoom amplo, afasta o rótulo na direção oposta à Terra.
  */
-function moonLabelOffset(position: [number, number, number], compactLabel: boolean): [number, number, number] {
+function moonLabelOffset(earthToMoonVector: [number, number, number], compactLabel: boolean): [number, number, number] {
     if (!compactLabel) return [0, MOON_RADIUS_DL + 0.1, 0];
 
-    const awayFromEarth = new THREE.Vector3(...position);
+    const awayFromEarth = new THREE.Vector3(...earthToMoonVector);
     if (awayFromEarth.lengthSq() < 1e-6) {
         return [0.16, MOON_RADIUS_DL + 0.06, 0];
     }

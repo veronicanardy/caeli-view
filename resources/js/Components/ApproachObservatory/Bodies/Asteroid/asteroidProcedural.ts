@@ -79,7 +79,7 @@ export function buildAsteroidGeometry(
             dir: new THREE.Vector3(
                 Math.sin(theta) * Math.cos(phi),
                 Math.sin(theta) * Math.sin(phi),
-                Math.cos(phi),
+                Math.cos(theta),
             ),
             radius: profile.craterRadius[0] + rng() * (profile.craterRadius[1] - profile.craterRadius[0]),
             depth: profile.craterDepth[0] + rng() * (profile.craterDepth[1] - profile.craterDepth[0]),

@@ -30,11 +30,9 @@ const ROTATION_X_SPEED = 0.018;
  */
 type AsteroidMarkerProps = {
     object: ClosestNowObject;
-    palette: { future: string; current: string; past: string };
     isSelected: boolean;
     dimmed: boolean;
     onSelect: (approach: UnifiedApproach) => void;
-    compactLabel: boolean;
     showLabel: boolean;
     protectLabelFromFocus: boolean;
     locale: 'pt-BR' | 'en';
@@ -57,16 +55,14 @@ type AsteroidMarkerProps = {
  */
 export function AsteroidMarker({
     object,
-    palette: _palette,
     isSelected,
     dimmed,
     onSelect,
-    compactLabel: _compactLabel,
     showLabel,
     protectLabelFromFocus,
     locale,
 }: AsteroidMarkerProps) {
-    const position = currentPositionInScene(object);
+    const position = useMemo(() => currentPositionInScene(object), [object]);
     const [hovered, setHovered] = useState(false);
     const rockRef = useRef<THREE.Group>(null);
 
@@ -83,14 +79,22 @@ export function AsteroidMarker({
         }
     });
 
+    const nearbyClosestApproach = useMemo(
+        () => {
+            if (!position) return false;
+
+            return closestApproachNearPosition(
+                object.trajectory,
+                new THREE.Vector3(...position),
+            );
+        },
+        [object.trajectory, position],
+    );
+
     if (!position) return null;
 
     const rockScale = ASTEROID_ROCK_SCALE;
     const opacity = dimmed ? DIMMED_OPACITY : FULL_OPACITY;
-    const nearbyClosestApproach = closestApproachNearPosition(
-        object.trajectory,
-        new THREE.Vector3(...position),
-    );
     const en = locale === 'en';
 
     return (
@@ -141,7 +145,7 @@ export function AsteroidMarker({
 
                     {nearbyClosestApproach ? (
                         <div className="mt-1 rounded border border-signal-cyan/35 bg-signal-cyan/10 px-2 py-1 text-[12px] font-semibold text-signal-cyan">
-                            {en ? 'Closest approach now' : 'Máxima aproximação hoje'}
+                            {en ? 'Near closest approach' : 'Perto da máxima aproximação'}
                         </div>
                     ) : null}
                 </ScreenLabel>

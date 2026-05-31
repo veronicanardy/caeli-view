@@ -19,6 +19,7 @@ interface MoonOrbitProps {
 // aparência visual.
 const ORBIT_COLOR = '#cbd5e1';
 const ORBIT_OPACITY = BODY_ORBIT_OPACITY.moon;
+const BODY_ORBIT_MIN_RADIUS_SQ = BODY_ORBIT_MIN_RADIUS ** 2;
 
 /**
  * Constroi uma base ortonormal para o círculo da órbita em relação à posição da Lua.
@@ -28,13 +29,13 @@ function buildOrbitBasis(moonPosition: THREE.Vector3, orbitNormal: THREE.Vector3
     const a = moonPosition.clone().normalize();
     const b = new THREE.Vector3().crossVectors(orbitNormal, a);
 
-    if (b.lengthSq() >= BODY_ORBIT_MIN_RADIUS) {
+    if (b.lengthSq() >= BODY_ORBIT_MIN_RADIUS_SQ) {
         return { a, b: b.normalize() };
     }
 
     const fallback = new THREE.Vector3(0, 1, 0);
     const fallbackBasis = new THREE.Vector3().crossVectors(fallback, a);
-    if (fallbackBasis.lengthSq() < BODY_ORBIT_MIN_RADIUS) {
+    if (fallbackBasis.lengthSq() < BODY_ORBIT_MIN_RADIUS_SQ) {
         return null;
     }
 
@@ -82,7 +83,7 @@ export function MoonOrbit({ moonPos, earthPos, orbitNormal }: MoonOrbitProps) {
         if (radius < BODY_ORBIT_MIN_RADIUS) return null;
 
         const normalizedOrbitNormal = new THREE.Vector3(...orbitNormal);
-        if (normalizedOrbitNormal.lengthSq() < BODY_ORBIT_MIN_RADIUS) return null;
+        if (normalizedOrbitNormal.lengthSq() < BODY_ORBIT_MIN_RADIUS_SQ) return null;
         normalizedOrbitNormal.normalize();
 
         const basis = buildOrbitBasis(geo, normalizedOrbitNormal);

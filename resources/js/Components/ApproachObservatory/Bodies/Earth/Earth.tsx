@@ -1,4 +1,18 @@
-import { useFrame } from '@react-three/fiber';
+/**
+ * Terra na cena do radar orbital.
+ *
+ * Responsabilidade: renderizar o corpo de referência central da experiência,
+ * já orientado cientificamente pelo ponto subsolar da cena. O componente cuida
+ * de shader próprio de dia/noite, nuvens, atmosfera, hitbox e rótulo.
+ *
+ * Orientação: aplicada por `orientEarth(...)` a partir de `sunDirection`,
+ * `subsolarLatDeg` e `subsolarLonDeg`.
+ * Iluminação: shader próprio com terminador dinâmico e camada de nuvens
+ * sincronizada pelo mesmo vetor solar.
+ * Escala: preserva `EARTH_RADIUS_DL` e a hitbox dedicada do observatório.
+ */
+
+import { type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { orientEarth } from '@/lib/observatory/earthOrientation';
@@ -8,14 +22,7 @@ import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { useBodyTexture } from '../useBodyTexture';
 
-/**
- * Terra na cena do radar orbital.
- *
- * Responsabilidade: renderizar o corpo de referência central da experiência 3D.
- * O componente aplica textura diurna/noturna, nuvens, atmosfera, orientação real
- * pelo ponto subsolar, hitbox de foco e rótulo. Cálculos astronômicos e posição
- * heliocêntrica chegam prontos pela cena.
- */
+// --------------- Constantes ---------------------------------------------------------------
 
 const CLOUD_LAYER_SCALE = 1.012;
 const ATMOSPHERE_OUTER_SCALE = 1.06;
@@ -29,6 +36,7 @@ const CLOUD_MATERIAL_DEPTH_WRITE = false;
 const EARTH_SPHERE_SEGMENTS = 64;
 const ATMOSPHERE_SPHERE_SEGMENTS = 48;
 const HITBOX_SPHERE_SEGMENTS = 16;
+const INITIAL_SUN_DIR = new THREE.Vector3(0, 0, 1);
 const LABEL_POSITION: [number, number, number] = [0, EARTH_RADIUS_DL + 0.14, 0];
 
 interface EarthProps {
@@ -41,26 +49,8 @@ interface EarthProps {
     isFocused?: boolean;
 }
 
-function disposeMaterial(material: THREE.ShaderMaterial | null) {
-    material?.dispose();
-}
+// --------------- Componente ---------------------------------------------------------------
 
-/**
- * Renderiza a Terra na cena 3D do observatório/radar orbital.
- *
- * Responsabilidades:
- * - carregar as texturas de dia, noite e nuvens;
- * - aplicar shader próprio para misturar lado diurno e noturno;
- * - orientar o globo para que o ponto subsolar real aponte para o Sol;
- * - atualizar a direção do Sol nos shaders a cada frame;
- * - renderizar atmosfera, nuvens, hitbox invisível e rótulo opcional.
- *
- * Observação científica:
- * a orientação do globo depende de `sunDirection`, `subsolarLatDeg` e
- * `subsolarLonDeg`. A coerência dia/noite deve ser validada principalmente em
- * `orientEarth` e nos cálculos que fornecem o ponto subsolar. Este componente
- * apenas aplica essa orientação e renderiza o resultado.
- */
 export function Earth({
     onFocus,
     sunDirection,
@@ -70,85 +60,38 @@ export function Earth({
     protectLabelFromFocus,
     isFocused = false,
 }: EarthProps) {
-    /**
-     * Textura diurna da Terra. Usa `raw` porque o shader customizado controla
-     * manualmente a conversão de cor.
-     */
     const day = useBodyTexture('/images/earth/blue-marble-land-shallow-topo-2048.jpg', 'raw');
-
-    /**
-     * Textura noturna com luzes urbanas. Também usa `raw` por ser consumida pelo
-     * shader customizado da Terra.
-     */
     const night = useBodyTexture('/images/earth/8k_earth_nightmap.jpg', 'raw');
-
-    /**
-     * Mapa de nuvens. Usa `srgb` porque a textura alimenta diretamente o shader
-     * visual de nuvens.
-     */
     const clouds = useBodyTexture('/images/earth/8k_earth_clouds.jpg', 'srgb');
 
-    /**
-     * Grupo que contém a superfície e a camada de nuvens.
-     * A orientação real da Terra é aplicada neste grupo.
-     */
     const groupRef = useRef<THREE.Group>(null);
-
-    /**
-     * Referência do material das nuvens para atualizar a direção do Sol por frame.
-     */
     const cloudsMatRef = useRef<THREE.ShaderMaterial>(null);
-
-    /**
-     * Referência do material principal da Terra para atualizar a direção do Sol por frame.
-     */
     const matRef = useRef<THREE.ShaderMaterial>(null);
-
-    /**
-     * Estado usado para enfatizar o rótulo e ajustar o cursor no hover.
-     */
     const [hovered, setHovered] = useState(false);
 
-    /**
-     * Evita que o cursor fique preso como pointer caso a Terra seja desmontada
-     * enquanto o mouse ainda está sobre a hitbox.
-     */
     useEffect(() => {
         return () => {
             cursorPointerLeave();
         };
     }, []);
 
-    // Shader da camada de nuvens: o mapa em tons de cinza controla brilho e opacidade.
-    // A iluminação usa dot(normal, sun), escurecendo as nuvens no lado noturno para
-    // evitar que elas brilhem artificialmente no escuro.
-    // A esfera fica logo acima da superfície e dentro do grupo orientado, então as nuvens
-    // acompanham a rotação/orientação do globo.
+    // Os materiais nascem uma vez por textura; sunDir é sincronizado depois por efeito.
     const cloudsMaterial = useMemo(() => {
         if (!clouds) return null;
 
         return new THREE.ShaderMaterial({
             uniforms: {
                 cloudMap: { value: clouds },
-                sunDir: { value: new THREE.Vector3(...sunDirection) },
+                sunDir: { value: INITIAL_SUN_DIR.clone() },
             },
             vertexShader: EARTH_VERT,
             fragmentShader: CLOUDS_FRAG,
             transparent: true,
             depthWrite: CLOUD_MATERIAL_DEPTH_WRITE,
         });
-
-        // `sunDirection` é atualizado por frame via uniform, então não precisa
-        // recriar o material a cada mudança desse vetor.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [clouds]);
 
-    // Abordagem de coerência: o dia/noite no shader é calculado por dot(worldNormal, sunDir),
-    // então o hemisfério iluminado sempre aponta para o Sol visível.
-    // Para colocar os continentes corretos nesse hemisfério iluminado, o globo é orientado
-    // para que o ponto subsolar real (lat/lon onde o Sol está a pino agora) aponte fisicamente
-    // para o Sol. A função orientEarth() monta essa rotação considerando o ponto subsolar,
-    // a direção do Sol e a convenção UV da textura.
+    // Dia/noite usa shader próprio da Terra, então este material permanece isolado.
     const material = useMemo(() => {
         if (!day || !night) return null;
 
@@ -156,42 +99,27 @@ export function Earth({
             uniforms: {
                 dayMap: { value: day },
                 nightMap: { value: night },
-                sunDir: { value: new THREE.Vector3(...sunDirection) },
+                sunDir: { value: INITIAL_SUN_DIR.clone() },
             },
             vertexShader: EARTH_VERT,
             fragmentShader: EARTH_FRAG,
         });
-
-        // `sunDirection` é atualizado por frame via uniform, então não precisa
-        // recriar o material a cada mudança desse vetor.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [day, night]);
 
-    /**
-     * Descarta o material principal quando ele deixa de ser usado.
-     */
     useEffect(() => {
         return () => {
-            disposeMaterial(material);
+            material?.dispose();
         };
     }, [material]);
 
-    /**
-     * Descarta o material das nuvens quando ele deixa de ser usado.
-     */
     useEffect(() => {
         return () => {
-            disposeMaterial(cloudsMaterial);
+            cloudsMaterial?.dispose();
         };
     }, [cloudsMaterial]);
 
-    /**
-     * Atualização por frame:
-     * - reorienta o globo conforme ponto subsolar e direção do Sol;
-     * - atualiza o uniforme `sunDir` nos shaders para manter dia/noite e nuvens
-     *   coerentes com a posição solar atual da cena.
-     */
-    useFrame(() => {
+    // A orientação real e os uniforms solares são atualizados juntos para manter coerência visual.
+    useEffect(() => {
         if (groupRef.current) {
             orientEarth(groupRef.current, sunDirection, subsolarLatDeg, subsolarLonDeg);
         }
@@ -203,9 +131,9 @@ export function Earth({
         if (cloudsMatRef.current) {
             (cloudsMatRef.current.uniforms.sunDir.value as THREE.Vector3).set(...sunDirection);
         }
-    });
+    }, [subsolarLatDeg, subsolarLonDeg, sunDirection]);
 
-    const handlePointerOver = (event: { stopPropagation: () => void }) => {
+    const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
         event.stopPropagation();
         setHovered(true);
         cursorPointerEnter();
@@ -216,23 +144,20 @@ export function Earth({
         cursorPointerLeave();
     };
 
-    const handleClick = (event: { stopPropagation: () => void }) => {
+    const handleClick = (event: ThreeEvent<PointerEvent>) => {
         event.stopPropagation();
         onFocus();
     };
 
     return (
         <group>
-            {/* Globo orientado: a rotação do grupo é definida a cada frame por orientEarth(),
-                de modo que o ponto subsolar real fique voltado para o Sol.
-                As camadas de brilho e a hitbox permanecem sem essa rotação. */}
+            {/* Superfície e nuvens compartilham a orientação científica aplicada por orientEarth(). */}
             <group ref={groupRef}>
                 <mesh>
                     <sphereGeometry args={[EARTH_RADIUS_DL, EARTH_SPHERE_SEGMENTS, EARTH_SPHERE_SEGMENTS]} />
                     {material ? (
                         <primitive ref={matRef} object={material} attach="material" />
                     ) : (
-                        // Alternativa azul iluminada enquanto as texturas carregam — evita uma esfera preta.
                         <meshStandardMaterial
                             color="#2f6fb0"
                             emissive="#0a2a4a"
@@ -242,7 +167,6 @@ export function Earth({
                     )}
                 </mesh>
 
-                {/* Camada de nuvens logo acima da superfície; escurecida no lado noturno pelo shader. */}
                 {cloudsMaterial ? (
                     <mesh>
                         <sphereGeometry args={[EARTH_RADIUS_DL * CLOUD_LAYER_SCALE, EARTH_SPHERE_SEGMENTS, EARTH_SPHERE_SEGMENTS]} />
@@ -251,7 +175,6 @@ export function Earth({
                 ) : null}
             </group>
 
-            {/* Brilho atmosférico — duas cascas traseiras suaves para sugerir uma borda tipo Fresnel. */}
             <mesh>
                 <sphereGeometry args={[EARTH_RADIUS_DL * ATMOSPHERE_OUTER_SCALE, ATMOSPHERE_SPHERE_SEGMENTS, ATMOSPHERE_SPHERE_SEGMENTS]} />
                 <meshBasicMaterial
@@ -272,10 +195,6 @@ export function Earth({
                 />
             </mesh>
 
-            {/* Hitbox invisível para facilitar hover/clique.
-                Clicar na Terra recentraliza a câmera nela como atalho de visão.
-                A Terra é contexto da cena, então não abre painel de foco.
-                Quando já está em foco, o hitbox é removido para evitar hover/clique. */}
             {!isFocused ? (
                 <mesh
                     onPointerOver={handlePointerOver}
