@@ -21,6 +21,7 @@ import { JUPITER_FRAG, JUPITER_VERT } from '@/lib/observatory/shaders/jupiter.gl
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useBodyTexture } from '../useBodyTexture';
+import { directionFromBodyToSceneSun } from '../bodyLighting';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -30,14 +31,6 @@ const JUPITER_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(1, 0, 0),
     (JUPITER.axialTiltDeg * Math.PI) / 180,
 );
-
-function directionFromBodyToSceneSun(
-    bodyPosition: [number, number, number],
-): THREE.Vector3 {
-    return new THREE.Vector3(0, 0, 0)
-        .sub(new THREE.Vector3(...bodyPosition))
-        .normalize();
-}
 
 // --------------- Componente ---------------------------------------------------------------
 

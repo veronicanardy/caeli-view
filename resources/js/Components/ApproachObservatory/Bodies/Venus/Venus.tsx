@@ -21,6 +21,7 @@ import { VENUS_FRAG, VENUS_VERT } from '@/lib/observatory/shaders/venus.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useBodyTexture } from '../useBodyTexture';
+import { directionFromBodyToSceneSun } from '../bodyLighting';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -35,14 +36,6 @@ const VENUS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(1, 0, 0),
     (VENUS.axialTiltDeg * Math.PI) / 180,
 );
-
-function directionFromBodyToSceneSun(
-    bodyPosition: [number, number, number],
-): THREE.Vector3 {
-    return new THREE.Vector3(0, 0, 0)
-        .sub(new THREE.Vector3(...bodyPosition))
-        .normalize();
-}
 
 // --------------- Componente ---------------------------------------------------------------
 

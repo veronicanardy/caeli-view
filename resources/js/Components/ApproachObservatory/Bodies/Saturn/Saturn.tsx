@@ -22,6 +22,7 @@ import { SATURN_FRAG, SATURN_VERT } from '@/lib/observatory/shaders/saturn.glsl'
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useBodyTexture } from '../useBodyTexture';
+import { directionFromBodyToSceneSun } from '../bodyLighting';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -39,13 +40,6 @@ const RING_INNER_RADIUS = SATURN.visualRadiusDl * 1.11;
 const RING_OUTER_RADIUS = SATURN.visualRadiusDl * 2.27;
 
 // --------------- Ring geometry helper ----------------------------------------------------
-function directionFromBodyToSceneSun(
-    bodyPosition: [number, number, number],
-): THREE.Vector3 {
-    return new THREE.Vector3(0, 0, 0)
-        .sub(new THREE.Vector3(...bodyPosition))
-        .normalize();
-}
 /**
  * Constrói a geometria de disco anular com UVs corretos para a textura do anel de Saturno.
  *
