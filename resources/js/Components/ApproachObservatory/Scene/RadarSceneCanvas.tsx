@@ -1,0 +1,104 @@
+import { Canvas } from '@react-three/fiber';
+import { Suspense } from 'react';
+import type { ClosestNowObject, ObjectLimit, UnifiedApproach } from '@/types';
+import type { SceneEphemeris } from '@/lib/sceneEphemeris';
+import { LabelNoGoContext, type NoGoRect } from '../Overlays/SceneLabels';
+import type { PlanetId } from './planetConfig';
+import { CAMERA_FOV_DEG, MAX_CAMERA_DISTANCE, type FocusFraming } from './CameraRig';
+import type { CameraIntent } from './cameraIntent';
+import { RadarScene } from './RadarScene';
+
+type Props = {
+    noGoRects: NoGoRect[];
+    closestNowObjects: ClosestNowObject[];
+    selectedId: string | null;
+    orbitMode: boolean;
+    onSelect: (approach: UnifiedApproach) => void;
+    cameraIntent: CameraIntent;
+    focusTarget: FocusFraming | null;
+    sunFocusTarget: FocusFraming | null;
+    planetFocusTargets: Partial<Record<PlanetId, FocusFraming>>;
+    ephemeris: SceneEphemeris | null;
+    fallbackSunDirection: [number, number, number];
+    locale: 'pt-BR' | 'en';
+    objectLimit: ObjectLimit;
+    showLabels: boolean;
+    bodyCardOpen: 'earth' | 'moon' | 'sun' | PlanetId | null;
+    onBodyCardOpenChange: (body: 'earth' | 'moon' | 'sun' | PlanetId | null) => void;
+    onClearPlanetTargets: () => void;
+    onFocusSun: () => void;
+    onFocusPlanet: (id: PlanetId) => void;
+    onFocusBody: (body: 'earth' | 'moon') => void;
+};
+
+export function RadarSceneCanvas({
+    noGoRects,
+    closestNowObjects,
+    selectedId,
+    orbitMode,
+    onSelect,
+    cameraIntent,
+    focusTarget,
+    sunFocusTarget,
+    planetFocusTargets,
+    ephemeris,
+    fallbackSunDirection,
+    locale,
+    objectLimit,
+    showLabels,
+    bodyCardOpen,
+    onBodyCardOpenChange,
+    onClearPlanetTargets,
+    onFocusSun,
+    onFocusPlanet,
+    onFocusBody,
+}: Props) {
+    const activeFocusTarget = focusTarget ?? sunFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
+
+    return (
+        <LabelNoGoContext.Provider value={noGoRects}>
+            <Canvas
+                camera={{ position: [0, 4.5, 9], fov: CAMERA_FOV_DEG, near: 0.01, far: MAX_CAMERA_DISTANCE * 3 }}
+                dpr={[1, 1.6]}
+                gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+            >
+                <Suspense fallback={null}>
+                    <RadarScene
+                        closestNowObjects={closestNowObjects}
+                        selectedId={selectedId}
+                        orbitMode={orbitMode}
+                        onSelect={(approach) => {
+                            onBodyCardOpenChange(null);
+                            onClearPlanetTargets();
+                            onSelect(approach);
+                        }}
+                        cameraIntent={cameraIntent}
+                        focusTarget={activeFocusTarget}
+                        ephemeris={ephemeris}
+                        fallbackSunDirection={fallbackSunDirection}
+                        locale={locale}
+                        objectLimit={objectLimit}
+                        showLabels={showLabels}
+                        onFocusSun={onFocusSun}
+                        isSunFocused={bodyCardOpen === 'sun'}
+                        onFocusMercury={() => onFocusPlanet('mercury')}
+                        isMercuryFocused={bodyCardOpen === 'mercury'}
+                        onFocusVenus={() => onFocusPlanet('venus')}
+                        isVenusFocused={bodyCardOpen === 'venus'}
+                        onFocusMars={() => onFocusPlanet('mars')}
+                        isMarsFocused={bodyCardOpen === 'mars'}
+                        onFocusJupiter={() => onFocusPlanet('jupiter')}
+                        isJupiterFocused={bodyCardOpen === 'jupiter'}
+                        onFocusSaturn={() => onFocusPlanet('saturn')}
+                        isSaturnFocused={bodyCardOpen === 'saturn'}
+                        onFocusUranus={() => onFocusPlanet('uranus')}
+                        isUranusFocused={bodyCardOpen === 'uranus'}
+                        onFocusNeptune={() => onFocusPlanet('neptune')}
+                        isNeptuneFocused={bodyCardOpen === 'neptune'}
+                        onFocusBody={onFocusBody}
+                    />
+                </Suspense>
+            </Canvas>
+        </LabelNoGoContext.Provider>
+    );
+}
