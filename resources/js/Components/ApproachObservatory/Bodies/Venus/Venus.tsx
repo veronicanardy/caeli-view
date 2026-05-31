@@ -12,21 +12,11 @@
  * Iluminação: shader próprio com atmosfera espessa e `sunDir` calculado de Vênus para o Sol da cena.
  */
 
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { VENUS } from '@/lib/observatory/planetData';
 import { VENUS_FRAG, VENUS_VERT } from '@/lib/observatory/shaders/venus.glsl';
-import { ScreenLabel } from '../../Overlays/SceneLabels';
-import {
-    BODY_HITBOX_MATERIAL,
-    BODY_ROTATION_EPOCH_UNIX_S,
-    BODY_SPHERE_SEGMENTS,
-} from '../bodyRenderConstants';
-import { directionFromBodyToSceneSun } from '../bodyLighting';
+import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
-import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -47,154 +37,52 @@ const VENUS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (VENUS.axialTiltDeg * Math.PI) / 180,
 );
 
+const VENUS_VISUAL_CONFIG: PlanetVisualConfig = {
+    body: {
+        visualRadiusDl: VENUS.visualRadiusDl,
+        texturePath: VENUS.texturePath ?? '',
+        fallbackColor: VENUS.fallbackColor,
+    },
+    shaders: {
+        vertex: VENUS_VERT,
+        fragment: VENUS_FRAG,
+    },
+    label: {
+        pt: 'Vênus',
+        en: 'Venus',
+        offset: 0.12,
+    },
+    materialFallback: {
+        roughness: 0.6,
+        metalness: 0.0,
+    },
+    rim: {
+        color: '#c8a040',
+        opacity: 0.13,
+        scale: 1.12,
+    },
+    hitbox: {
+        radiusMultiplier: 3.5,
+    },
+    extraTextures: [
+        {
+            uniformName: 'atmosphereMap',
+            path: VENUS.atmospherePath ?? '',
+            colorSpace: 'srgb',
+            fallbackToSurfaceMap: true,
+        },
+    ],
+};
+
 // --------------- Componente ---------------------------------------------------------------
 
-export function Venus({
-    position,
-    locale,
-    onFocus,
-    isFocused = false,
-    showLabel = true,
-}: PlanetBodyProps) {
-    const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        cursorPointerEnter();
-    };
-
-    const handlePointerOut = () => {
-        cursorPointerLeave();
-    };
-
-    const handleClick = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        onFocus();
-    };
-
-    const texture = useBodyTexture(VENUS.texturePath ?? '', 'srgb');
-    const atmosphere = useBodyTexture(VENUS.atmospherePath ?? '', 'srgb');
-
-    const poleGroupRef = useRef<THREE.Group>(null);
-    const meshRef = useRef<THREE.Mesh>(null);
-    const matRef = useRef<THREE.ShaderMaterial>(null);
-
-    useEffect(() => {
-        if (poleGroupRef.current) {
-            poleGroupRef.current.quaternion.copy(VENUS_TILT_QUAT);
-        }
-    }, []);
-
-    useFrame(() => {
-        if (!meshRef.current) return;
-
-        const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = VENUS_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
-
-        if (matRef.current) {
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
-                directionFromBodyToSceneSun(position),
-            );
-        }
-    });
-
-    const material = useMemo(() => {
-        const initialSunDir = directionFromBodyToSceneSun(position);
-
-        if (texture) {
-            return new THREE.ShaderMaterial({
-                uniforms: {
-                    surfaceMap: { value: texture },
-                    atmosphereMap: { value: atmosphere ?? texture },
-                    sunDir: { value: initialSunDir },
-                },
-                vertexShader: VENUS_VERT,
-                fragmentShader: VENUS_FRAG,
-            });
-        }
-
-        return new THREE.MeshStandardMaterial({
-            color: VENUS.fallbackColor,
-            roughness: 0.6,
-            metalness: 0.0,
-        });
-
-        // A direção ao Sol da cena é atualizada por frame via uniform.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [texture, atmosphere]);
-
-    useEffect(() => {
-        return () => {
-            material.dispose();
-        };
-    }, [material]);
-
-    const labelPos: [number, number, number] = [0, VENUS.visualRadiusDl + 0.12, 0];
-
+export function Venus(props: PlanetBodyProps) {
     return (
-        <group position={position}>
-            <group ref={poleGroupRef}>
-                <mesh ref={meshRef}>
-                    <sphereGeometry
-                        args={[
-                            VENUS.visualRadiusDl,
-                            BODY_SPHERE_SEGMENTS.planet.width,
-                            BODY_SPHERE_SEGMENTS.planet.height,
-                        ]}
-                    />
-                    {material instanceof THREE.ShaderMaterial ? (
-                        <primitive ref={matRef} object={material} attach="material" />
-                    ) : (
-                        <primitive object={material} attach="material" />
-                    )}
-                </mesh>
-            </group>
-
-            {/*
-             * Brilho de borda: atmosfera espessa de CO₂ cria halo âmbar/amarelado
-             * claramente visível — mais proeminente que em Mercúrio.
-             */}
-            <mesh scale={1.12}>
-                <sphereGeometry
-                    args={[
-                        VENUS.visualRadiusDl,
-                        BODY_SPHERE_SEGMENTS.rim.width,
-                        BODY_SPHERE_SEGMENTS.rim.height,
-                    ]}
-                />
-                <meshBasicMaterial
-                    color="#c8a040"
-                    transparent
-                    opacity={0.13}
-                    side={THREE.BackSide}
-                    depthWrite={false}
-                />
-            </mesh>
-
-            {!isFocused ? (
-                <mesh
-                    onPointerOver={handlePointerOver}
-                    onPointerOut={handlePointerOut}
-                    onClick={handleClick}
-                >
-                    <sphereGeometry
-                        args={[
-                            VENUS.visualRadiusDl * 3.5,
-                            BODY_SPHERE_SEGMENTS.hitbox.width,
-                            BODY_SPHERE_SEGMENTS.hitbox.height,
-                        ]}
-                    />
-                    <meshBasicMaterial
-                        transparent
-                        opacity={BODY_HITBOX_MATERIAL.opacity}
-                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
-                    />
-                </mesh>
-            ) : null}
-
-            {showLabel ? (
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Venus' : 'Vênus'}</span>
-                </ScreenLabel>
-            ) : null}
-        </group>
+        <PlanetBody
+            {...props}
+            config={VENUS_VISUAL_CONFIG}
+            spinRateRadPerS={VENUS_SPIN_RATE_RAD_PER_S}
+            tiltQuaternion={VENUS_TILT_QUAT}
+        />
     );
 }

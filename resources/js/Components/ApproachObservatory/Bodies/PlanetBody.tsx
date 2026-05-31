@@ -12,6 +12,13 @@ import { directionFromBodyToSceneSun } from './bodyLighting';
 import type { PlanetBodyProps } from './planetBodyTypes';
 import { useBodyTexture } from './useBodyTexture';
 
+interface PlanetExtraTextureConfig {
+    uniformName: string;
+    path?: string | null;
+    colorSpace?: 'srgb' | 'raw';
+    fallbackToSurfaceMap?: boolean;
+}
+
 export interface PlanetVisualConfig {
     body: {
         visualRadiusDl: number;
@@ -40,6 +47,7 @@ export interface PlanetVisualConfig {
         radiusMultiplier: number;
     };
     textureColorSpace?: 'srgb' | 'raw';
+    extraTextures?: PlanetExtraTextureConfig[];
 }
 
 interface PlanetBodyComponentProps extends PlanetBodyProps {
@@ -76,6 +84,22 @@ export function PlanetBody({
         config.body.texturePath ?? '',
         config.textureColorSpace ?? 'srgb',
     );
+    const firstExtraTextureConfig = config.extraTextures?.[0];
+    const secondExtraTextureConfig = config.extraTextures?.[1];
+    const thirdExtraTextureConfig = config.extraTextures?.[2];
+
+    const firstExtraTexture = useBodyTexture(
+        firstExtraTextureConfig?.path ?? '',
+        firstExtraTextureConfig?.colorSpace ?? 'srgb',
+    );
+    const secondExtraTexture = useBodyTexture(
+        secondExtraTextureConfig?.path ?? '',
+        secondExtraTextureConfig?.colorSpace ?? 'srgb',
+    );
+    const thirdExtraTexture = useBodyTexture(
+        thirdExtraTextureConfig?.path ?? '',
+        thirdExtraTextureConfig?.colorSpace ?? 'srgb',
+    );
 
     const poleGroupRef = useRef<THREE.Group>(null);
     const meshRef = useRef<THREE.Mesh>(null);
@@ -102,13 +126,27 @@ export function PlanetBody({
 
     const material = useMemo(() => {
         const initialSunDir = directionFromBodyToSceneSun(position);
+        const extraTextureValues = [
+            firstExtraTexture,
+            secondExtraTexture,
+            thirdExtraTexture,
+        ];
 
         if (texture) {
+            const uniforms: Record<string, { value: THREE.Texture | THREE.Vector3 | null }> = {
+                surfaceMap: { value: texture },
+                sunDir: { value: initialSunDir },
+            };
+
+            config.extraTextures?.forEach((extraTextureConfig, index) => {
+                uniforms[extraTextureConfig.uniformName] = {
+                    value: extraTextureValues[index]
+                        ?? (extraTextureConfig.fallbackToSurfaceMap ? texture : null),
+                };
+            });
+
             return new THREE.ShaderMaterial({
-                uniforms: {
-                    surfaceMap: { value: texture },
-                    sunDir: { value: initialSunDir },
-                },
+                uniforms,
                 vertexShader: config.shaders.vertex,
                 fragmentShader: config.shaders.fragment,
             });
@@ -122,7 +160,7 @@ export function PlanetBody({
 
         // A direção ao Sol da cena é atualizada por frame via uniform.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [config, position, texture]);
+    }, [config, firstExtraTexture, position, secondExtraTexture, texture, thirdExtraTexture]);
 
     useEffect(() => {
         return () => {
