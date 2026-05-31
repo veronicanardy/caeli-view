@@ -54,20 +54,20 @@ function makeTrajectory(over: Partial<AsteroidTrajectory> = {}): AsteroidTraject
 }
 
 describe('clipPolylineByLength', () => {
-    it('returns the input unchanged when no clipping is needed', () => {
+    it('retorna a entrada sem alterações quando não é necessário cortar', () => {
         const pts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(2, 0, 0)];
         const kept = clipPolylineByLength(pts, 10);
         expect(kept).toHaveLength(3);
         expect(kept[2].x).toBeCloseTo(2, 9);
     });
 
-    it('returns at least the first point when the polyline is a single point', () => {
+    it('retorna ao menos o primeiro ponto quando a polilinha tem um único ponto', () => {
         const pts = [new THREE.Vector3(0, 0, 0)];
         const kept = clipPolylineByLength(pts, 5);
         expect(kept).toHaveLength(1);
     });
 
-    it('inserts an interpolated endpoint exactly at the requested length', () => {
+    it('insere um ponto final interpolado exatamente no comprimento solicitado', () => {
         const pts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(10, 0, 0)];
         const kept = clipPolylineByLength(pts, 3);
         expect(kept).toHaveLength(2);
@@ -76,7 +76,7 @@ describe('clipPolylineByLength', () => {
         expect(kept[1].z).toBeCloseTo(0, 9);
     });
 
-    it('skips zero-length segments without going into an infinite loop', () => {
+    it('ignora segmentos de comprimento zero sem entrar em loop infinito', () => {
         const pts = [
             new THREE.Vector3(0, 0, 0),
             new THREE.Vector3(0, 0, 0), // duplicate
@@ -88,17 +88,17 @@ describe('clipPolylineByLength', () => {
 });
 
 describe('currentPositionInScene', () => {
-    it('returns null when no current point is present', () => {
+    it('retorna null quando não há ponto atual', () => {
         const object = { trajectory: makeTrajectory({ currentPoint: null }) } as unknown as ClosestNowObject;
         expect(currentPositionInScene(object)).toBeNull();
     });
 
-    it('returns null when the current point has missing coordinates', () => {
+    it('retorna null quando o ponto atual tem coordenadas ausentes', () => {
         const object = { trajectory: makeTrajectory({ currentPoint: { ...makePoint(), x: null as unknown as number } }) } as unknown as ClosestNowObject;
         expect(currentPositionInScene(object)).toBeNull();
     });
 
-    it('returns a 3-tuple when the current point has valid coordinates', () => {
+    it('retorna uma tupla de 3 posições quando o ponto atual tem coordenadas válidas', () => {
         const object = {
             trajectory: makeTrajectory({
                 currentPoint: makePoint({ x: KM_PER_LD, y: 0, z: 0 }),
@@ -111,11 +111,11 @@ describe('currentPositionInScene', () => {
 });
 
 describe('findClosestApproachPoint', () => {
-    it('returns null when the trajectory has no points', () => {
+    it('retorna null quando a trajetória não tem pontos', () => {
         expect(findClosestApproachPoint(makeTrajectory())).toBeNull();
     });
 
-    it('finds the minimum across past + current + future', () => {
+    it('encontra o mínimo entre passado, atual e futuro', () => {
         const trajectory = makeTrajectory({
             pastPoints: [makePoint({ distanceKm: 5e6, timestamp: '2026-05-27T00:00:00Z' })],
             currentPoint: makePoint({ distanceKm: 1e6, timestamp: '2026-05-28T12:00:00Z' }),
@@ -127,7 +127,7 @@ describe('findClosestApproachPoint', () => {
         expect(best!.timestamp).toBe('2026-05-28T12:00:00Z');
     });
 
-    it('falls back to Euclidean norm when distanceKm is missing', () => {
+    it('faz fallback para a norma euclidiana quando distanceKm está ausente', () => {
         const trajectory = makeTrajectory({
             pastPoints: [makePoint({ x: 3, y: 4, z: 0, distanceKm: undefined as unknown as number })],
         });
@@ -137,15 +137,15 @@ describe('findClosestApproachPoint', () => {
 });
 
 describe('closestApproachNearPosition', () => {
-    it('returns null when trajectory is missing', () => {
+    it('retorna null quando a trajetória está ausente', () => {
         expect(closestApproachNearPosition(null, new THREE.Vector3())).toBeNull();
     });
 
-    it('returns null when position is missing', () => {
+    it('retorna null quando a posição está ausente', () => {
         expect(closestApproachNearPosition(makeTrajectory(), null)).toBeNull();
     });
 
-    it('returns the closest sample only when within the snap threshold', () => {
+    it('retorna a amostra mais próxima apenas quando está dentro do limite de snap', () => {
         const trajectory = makeTrajectory({
             currentPoint: makePoint({ x: 0, y: 0, z: 0, distanceKm: 1 }),
         });
@@ -158,11 +158,11 @@ describe('closestApproachNearPosition', () => {
 });
 
 describe('collectTimeTicks', () => {
-    it('returns empty when there is no anchor time on currentPoint', () => {
+    it('retorna vazio quando não há tempo âncora em currentPoint', () => {
         expect(collectTimeTicks(makeTrajectory())).toEqual([]);
     });
 
-    it('returns ticks for samples within 6h of the −24h/+24h/+72h targets', () => {
+    it('retorna marcas para amostras dentro de 6h dos alvos −24h/+24h/+72h', () => {
         const HOUR = 3_600_000;
         const now = new Date('2026-05-28T12:00:00Z').getTime();
         const at = (offsetHours: number) => new Date(now + offsetHours * HOUR).toISOString();
@@ -177,7 +177,7 @@ describe('collectTimeTicks', () => {
         expect(ticks.map((t) => t.label)).toEqual(['−24h', '+24h', '+72h']);
     });
 
-    it('skips ticks when no sample is within 6h of the target', () => {
+    it('ignora marcas quando nenhuma amostra está a até 6h do alvo', () => {
         const HOUR = 3_600_000;
         const now = new Date('2026-05-28T12:00:00Z').getTime();
         const at = (offsetHours: number) => new Date(now + offsetHours * HOUR).toISOString();

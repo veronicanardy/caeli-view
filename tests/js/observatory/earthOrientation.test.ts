@@ -14,35 +14,35 @@ import {
  * comportamento seguro para entradas degeneradas.
  */
 describe('geoToModelDir', () => {
-    it('maps Greenwich (0°, 0°) to model +X', () => {
+    it('mapeia Greenwich (0°, 0°) para +X no modelo', () => {
         const v = geoToModelDir(0, 0);
         expect(v.x).toBeCloseTo(1, 12);
         expect(v.y).toBeCloseTo(0, 12);
         expect(v.z).toBeCloseTo(0, 12);
     });
 
-    it('maps the north pole to model +Y', () => {
+    it('mapeia o polo norte para +Y no modelo', () => {
         const v = geoToModelDir(90, 0);
         expect(v.x).toBeCloseTo(0, 12);
         expect(v.y).toBeCloseTo(1, 12);
         expect(v.z).toBeCloseTo(0, 12);
     });
 
-    it('maps 90°E to model -Z', () => {
+    it('mapeia 90°E para -Z no modelo', () => {
         const v = geoToModelDir(0, 90);
         expect(v.x).toBeCloseTo(0, 12);
         expect(v.y).toBeCloseTo(0, 12);
         expect(v.z).toBeCloseTo(-1, 12);
     });
 
-    it('maps 90°W to model +Z', () => {
+    it('mapeia 90°W para +Z no modelo', () => {
         const v = geoToModelDir(0, -90);
         expect(v.x).toBeCloseTo(0, 12);
         expect(v.y).toBeCloseTo(0, 12);
         expect(v.z).toBeCloseTo(1, 12);
     });
 
-    it('always returns a unit vector', () => {
+    it('sempre retorna um vetor unitário', () => {
         for (const [lat, lon] of [[12, 34], [-78, 5], [23.5, -120]] as const) {
             expect(geoToModelDir(lat, lon).length()).toBeCloseTo(1, 12);
         }
@@ -50,7 +50,7 @@ describe('geoToModelDir', () => {
 });
 
 describe('EARTH_POLAR_AXIS_SCENE', () => {
-    it('is a unit vector tilted 23.44° from scene +Y towards scene -Z', () => {
+    it('é um vetor unitário inclinado 23,44° de +Y da cena em direção a -Z', () => {
         expect(EARTH_POLAR_AXIS_SCENE.length()).toBeCloseTo(1, 12);
         expect(EARTH_POLAR_AXIS_SCENE.y).toBeCloseTo(Math.cos(EARTH_OBLIQUITY_RAD), 12);
         expect(EARTH_POLAR_AXIS_SCENE.z).toBeCloseTo(-Math.sin(EARTH_OBLIQUITY_RAD), 12);
@@ -65,7 +65,7 @@ describe('orientEarth', () => {
         return model.clone().applyQuaternion(group.quaternion);
     }
 
-    it('puts the model north pole on the inertial polar axis', () => {
+    it('posiciona o polo norte do modelo sobre o eixo polar inercial', () => {
         const group = new THREE.Group();
         orientEarth(group, [1, 0, 0], 0, 0);
         const worldPole = applyToModelVector(group, new THREE.Vector3(0, 1, 0));
@@ -75,7 +75,7 @@ describe('orientEarth', () => {
         expect(worldPole.z).toBeCloseTo(EARTH_POLAR_AXIS_SCENE.z, 6);
     });
 
-    it('aligns the subsolar geographic point with the Sun in a coherent simple case', () => {
+    it('alinha o ponto geográfico subsolar com o Sol em um caso simples coerente', () => {
         const group = new THREE.Group();
         orientEarth(group, [1, 0, 0], 0, 0);
 
@@ -87,7 +87,7 @@ describe('orientEarth', () => {
         expect(worldSubsolar.z).toBeCloseTo(0, 5);
     });
 
-    it('keeps the polar axis valid and quaternion finite for arbitrary coherent inputs', () => {
+    it('mantém o eixo polar válido e o quaternion finito para entradas coerentes arbitrárias', () => {
         const group = new THREE.Group();
         const sunDir: [number, number, number] = [0.6, 0.1, -0.79];
         const len = Math.hypot(...sunDir);
@@ -106,7 +106,7 @@ describe('orientEarth', () => {
 });
 
 describe('orientMoonTidal', () => {
-    it('rotates the lunar near-side (model +X) to face Earth for a +X Earth-to-Moon vector', () => {
+    it('rotaciona a face visível lunar (modelo +X) para encarar a Terra com vetor Terra-Lua em +X', () => {
         const mesh = new THREE.Mesh();
         orientMoonTidal(mesh, [3, 0, 0]);
 
@@ -116,7 +116,7 @@ describe('orientMoonTidal', () => {
         expect(nearSideWorld.z).toBeCloseTo(0, 6);
     });
 
-    it('rotates the lunar near-side (model +X) to face Earth for a +Z Earth-to-Moon vector', () => {
+    it('rotaciona a face visível lunar (modelo +X) para encarar a Terra com vetor Terra-Lua em +Z', () => {
         const mesh = new THREE.Mesh();
         orientMoonTidal(mesh, [0, 0, 3]);
 
@@ -126,7 +126,7 @@ describe('orientMoonTidal', () => {
         expect(nearSideWorld.z).toBeCloseTo(-1, 6);
     });
 
-    it('keeps the lunar north pole close to scene +Y', () => {
+    it('mantém o polo norte lunar próximo de +Y da cena', () => {
         const mesh = new THREE.Mesh();
         orientMoonTidal(mesh, [2.5, 0.3, 1.1]);
         const northWorld = new THREE.Vector3(0, 1, 0).applyQuaternion(mesh.quaternion);
@@ -134,7 +134,7 @@ describe('orientMoonTidal', () => {
         expect(northWorld.y).toBeGreaterThan(0.95);
     });
 
-    it('preserves the current orientation for the degenerate zero vector', () => {
+    it('preserva a orientação atual para o vetor nulo degenerado', () => {
         const mesh = new THREE.Mesh();
         const initial = mesh.quaternion.clone();
         orientMoonTidal(mesh, [0, 0, 0]);
@@ -142,7 +142,7 @@ describe('orientMoonTidal', () => {
         expect(mesh.quaternion.equals(initial)).toBe(true);
     });
 
-    it('produces a finite quaternion for valid non-degenerate vectors', () => {
+    it('produz um quaternion finito para vetores válidos não degenerados', () => {
         const mesh = new THREE.Mesh();
         orientMoonTidal(mesh, [0.8, 0.1, -0.5]);
 

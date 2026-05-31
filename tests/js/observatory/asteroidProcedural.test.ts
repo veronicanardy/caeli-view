@@ -20,12 +20,12 @@ function readColors(geometry: THREE.BufferGeometry): number[] {
 }
 
 describe('sphericalDirection', () => {
-    it('returns a unit vector', () => {
+    it('retorna um vetor unitário', () => {
         const dir = sphericalDirection(Math.PI / 3, Math.PI / 4);
         expect(dir.length()).toBeCloseTo(1, 12);
     });
 
-    it('uses z = cos(theta), independent of phi', () => {
+    it('usa z = cos(theta), independentemente de phi', () => {
         const theta = 1.123;
         const a = sphericalDirection(theta, 0.25);
         const b = sphericalDirection(theta, 2.4);
@@ -35,7 +35,7 @@ describe('sphericalDirection', () => {
         expect(a.z).toBeCloseTo(b.z, 12);
     });
 
-    it('never produces NaN or Infinity for valid spherical inputs', () => {
+    it('nunca produz NaN ou Infinity para entradas esféricas válidas', () => {
         const dir = sphericalDirection(Math.PI / 2, Math.PI * 1.75);
 
         expect(Number.isFinite(dir.x)).toBe(true);
@@ -45,7 +45,7 @@ describe('sphericalDirection', () => {
 });
 
 describe('buildAsteroidGeometry', () => {
-    it('is deterministic for the same seed and variant', () => {
+    it('é determinístico para a mesma seed e variante', () => {
         const first = buildAsteroidGeometry('bennu-like-seed', 'medium');
         const second = buildAsteroidGeometry('bennu-like-seed', 'medium');
 
@@ -59,7 +59,7 @@ describe('buildAsteroidGeometry', () => {
         }
     });
 
-    it('exposes matching position, normal and color attributes', () => {
+    it('expõe atributos compatíveis de posição, normal e cor', () => {
         const geometry = buildAsteroidGeometry('attribute-check', 'medium');
 
         try {
@@ -77,7 +77,7 @@ describe('buildAsteroidGeometry', () => {
         }
     });
 
-    it('produces finite positions, normals and colors in normalized ranges', () => {
+    it('produz posições, normais e cores finitas em faixas normalizadas', () => {
         const geometry = buildAsteroidGeometry('finite-geometry-check', 'large');
 
         try {
@@ -95,7 +95,7 @@ describe('buildAsteroidGeometry', () => {
         }
     });
 
-    it('produces non-degenerate vertex directions', () => {
+    it('produz direções de vértice não degeneradas', () => {
         const geometry = buildAsteroidGeometry('direction-check', 'small');
 
         try {
@@ -114,7 +114,7 @@ describe('buildAsteroidGeometry', () => {
         }
     });
 
-    it('can vary geometry across variants for the same seed', () => {
+    it('pode variar a geometria entre variantes para a mesma seed', () => {
         const tiny = buildAsteroidGeometry('shared-seed', 'tiny');
         const large = buildAsteroidGeometry('shared-seed', 'large');
 
@@ -126,7 +126,7 @@ describe('buildAsteroidGeometry', () => {
         }
     });
 
-    it('builds a valid finite bounding sphere', () => {
+    it('constrói uma bounding sphere válida e finita', () => {
         const geometry = buildAsteroidGeometry('bounding-sphere-check', 'unknown');
 
         try {

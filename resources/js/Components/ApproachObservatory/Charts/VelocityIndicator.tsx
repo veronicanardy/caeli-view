@@ -1,17 +1,33 @@
 import { Gauge } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 
+/** Referência padrão para escalar a barra quando o máximo recebido é inválido. */
+const DEFAULT_MAX_VELOCITY_KPH = 120_000;
+
+/**
+ * Calcula o percentual visual da barra de velocidade.
+ *
+ * - Valores nulos, negativos ou não finitos viram zero.
+ * - O máximo inválido cai para a referência padrão.
+ * - O piso visual de 6% só vale para velocidades positivas.
+ */
+export function velocityPercent(velocityKph: number | null | undefined, maxVelocityKph = DEFAULT_MAX_VELOCITY_KPH): number {
+    const safeVelocity = Number.isFinite(velocityKph ?? NaN) ? Math.max(0, velocityKph ?? 0) : 0;
+    const safeMaxVelocity = Number.isFinite(maxVelocityKph) && maxVelocityKph > 0 ? maxVelocityKph : DEFAULT_MAX_VELOCITY_KPH;
+
+    return safeVelocity > 0 ? Math.max(6, Math.min(100, (safeVelocity / safeMaxVelocity) * 100)) : 0;
+}
+
 /** Exibe a velocidade relativa de um objeto como barra de progresso com gradiente de cor. */
 export function VelocityIndicator({
     velocityKph,
-    maxVelocityKph = 120_000,
+    maxVelocityKph = DEFAULT_MAX_VELOCITY_KPH,
 }: {
     velocityKph: number | null | undefined;
     /** Velocidade máxima de referência para escalar a barra (padrão: 120.000 km/h). */
     maxVelocityKph?: number;
 }) {
-    // Mínimo de 6% para que a barra nunca desapareça visualmente mesmo em velocidades muito baixas.
-    const percent = velocityKph ? Math.max(6, Math.min(100, (velocityKph / maxVelocityKph) * 100)) : 0;
+    const percent = velocityPercent(velocityKph, maxVelocityKph);
 
     return (
         <div className="space-y-2">

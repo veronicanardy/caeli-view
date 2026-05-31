@@ -3,7 +3,7 @@ import { horizonsToScene, normalize3, sunDirectionFromIncoming } from '@/lib/obs
 import { compressDistanceDl, KM_PER_LD } from '@/lib/sceneEphemeris';
 
 describe('horizonsToScene', () => {
-    it('maps ecliptic +Y onto scene -Z so the ecliptic plane stays on scene XZ', () => {
+    it('mapeia +Y da eclíptica para -Z da cena para manter o plano da eclíptica em XZ', () => {
         // The scene convention is x -> x, z -> y, and -y -> z.
         const scene = horizonsToScene(0, KM_PER_LD, 0);
         // So a pure +Y ecliptic vector becomes a pure -Z scene vector after compression.
@@ -13,14 +13,14 @@ describe('horizonsToScene', () => {
         expect(scene[2]).toBeCloseTo(-1, 9);
     });
 
-    it('maps a pure ecliptic-X km vector to scene +X with log compression on magnitude', () => {
+    it('mapeia um vetor puro em X da eclíptica para +X da cena com compressão logarítmica na magnitude', () => {
         const scene = horizonsToScene(KM_PER_LD, 0, 0);
         expect(scene[0]).toBeCloseTo(1, 9);
         expect(Math.abs(scene[1])).toBeLessThan(1e-9);
         expect(Math.abs(scene[2])).toBeLessThan(1e-9);
     });
 
-    it('keeps direction honest: scene magnitude equals compressDistanceDl(real DL distance)', () => {
+    it('preserva a direção: a magnitude na cena equivale a compressDistanceDl da distância real em DL', () => {
         // Horizons km (3, 4, 0) -> 5 km input -> 5/KM_PER_LD DL real distance.
         const km = 5 * KM_PER_LD;
         const scene = horizonsToScene(3 * KM_PER_LD * 3 / 5, 4 * KM_PER_LD * 3 / 5, 0);
@@ -34,26 +34,26 @@ describe('horizonsToScene', () => {
 });
 
 describe('normalize3', () => {
-    it('returns a unit vector', () => {
+    it('retorna um vetor unitário', () => {
         const n = normalize3([3, 4, 0]);
         expect(Math.hypot(...n)).toBeCloseTo(1, 12);
     });
 
-    it('preserves direction', () => {
+    it('preserva a direção', () => {
         const n = normalize3([3, 4, 0]);
         expect(n[0]).toBeCloseTo(3 / 5, 12);
         expect(n[1]).toBeCloseTo(4 / 5, 12);
         expect(n[2]).toBeCloseTo(0, 12);
     });
 
-    it('falls back to (1, 0, 0) length for a zero vector (does not divide by zero)', () => {
+    it('retorna [0, 0, 0] para vetor nulo sem dividir por zero', () => {
         const n = normalize3([0, 0, 0]);
         expect(n).toEqual([0, 0, 0]);
     });
 });
 
 describe('sunDirectionFromIncoming', () => {
-    it('maps backend (x_ecl, y_ecl) onto scene (x, z) with z=0 in y', () => {
+    it('mapeia as coordenadas do backend (x_ecl, y_ecl) para a cena em (x, z), com y zerado', () => {
         // Backend gives a 2D ecliptic direction; scene wants x -> x, y_ecl -> z, z_ecl (=0) -> y.
         const v = sunDirectionFromIncoming({
             x: 1,
@@ -66,7 +66,7 @@ describe('sunDirectionFromIncoming', () => {
         expect(v[2]).toBeCloseTo(0, 9);
     });
 
-    it('always returns a unit vector', () => {
+    it('sempre retorna um vetor unitário', () => {
         const v = sunDirectionFromIncoming({
             x: 0.6,
             y: 0.8,

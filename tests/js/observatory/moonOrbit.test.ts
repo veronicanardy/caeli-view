@@ -10,7 +10,7 @@ import {
  * Não há montagem de Canvas nem expectativa visual de renderização.
  */
 describe('buildOrbitBasis', () => {
-    it('returns an orthonormal basis when the orbital normal is usable', () => {
+    it('retorna uma base ortonormal quando a normal orbital é utilizável', () => {
         const basis = buildOrbitBasis(
             new THREE.Vector3(2, 0.4, 0.5),
             new THREE.Vector3(0, 1, 0.2),
@@ -22,7 +22,7 @@ describe('buildOrbitBasis', () => {
         expect(basis!.a.dot(basis!.b)).toBeCloseTo(0, 12);
     });
 
-    it('falls back safely when the orbital normal is parallel to the moon direction', () => {
+    it('faz fallback seguro quando a normal orbital é paralela à direção da Lua', () => {
         const basis = buildOrbitBasis(
             new THREE.Vector3(2, 0, 0),
             new THREE.Vector3(1, 0, 0),
@@ -35,17 +35,17 @@ describe('buildOrbitBasis', () => {
 });
 
 describe('buildMoonOrbitPoints', () => {
-    it('returns null for degenerate orbital normals', () => {
+    it('retorna null para normais orbitais degeneradas', () => {
         const points = buildMoonOrbitPoints([1, 0, 0], [0, 0, 0], [0, 0, 0]);
         expect(points).toBeNull();
     });
 
-    it('returns null for a degenerate Earth-to-Moon vector', () => {
+    it('retorna null para um vetor Terra-Lua degenerado', () => {
         const points = buildMoonOrbitPoints([10, 0, 0], [10, 0, 0], [0, 1, 0]);
         expect(points).toBeNull();
     });
 
-    it('returns finite points on a stable circular guide for valid inputs', () => {
+    it('retorna pontos finitos em uma guia circular estável para entradas válidas', () => {
         const points = buildMoonOrbitPoints([1.2, 0, 0], [0.2, 0, 0], [0, 1, 0]);
 
         expect(points).not.toBeNull();
@@ -62,7 +62,7 @@ describe('buildMoonOrbitPoints', () => {
         }
     });
 
-    it('uses the geocentric Earth-to-Moon radius instead of the Moon absolute position', () => {
+    it('usa o raio geocêntrico Terra-Lua em vez da posição absoluta da Lua', () => {
         const points = buildMoonOrbitPoints([13, 0, 0], [10, 0, 0], [0, 1, 0]);
 
         expect(points).not.toBeNull();

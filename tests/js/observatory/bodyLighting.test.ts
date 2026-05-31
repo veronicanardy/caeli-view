@@ -6,7 +6,7 @@ import { directionFromBodyToSceneSun } from '@/Components/ApproachObservatory/Bo
  * direção, normalização e comportamento seguro no caso degenerado.
  */
 describe('directionFromBodyToSceneSun', () => {
-    it('returns a normalized vector from the body toward the scene Sun', () => {
+    it('retorna um vetor normalizado do corpo em direção ao Sol da cena', () => {
         const dir = directionFromBodyToSceneSun([3, 4, 0]);
 
         expect(dir.length()).toBeCloseTo(1, 12);
@@ -15,7 +15,7 @@ describe('directionFromBodyToSceneSun', () => {
         expect(dir.z).toBeCloseTo(0, 12);
     });
 
-    it('points to the origin for arbitrary valid positions', () => {
+    it('aponta para a origem em posições válidas arbitrárias', () => {
         const dir = directionFromBodyToSceneSun([-2, 1, 2]);
 
         expect(dir.x).toBeCloseTo(2 / 3, 12);
@@ -23,7 +23,7 @@ describe('directionFromBodyToSceneSun', () => {
         expect(dir.z).toBeCloseTo(-2 / 3, 12);
     });
 
-    it('does not produce NaN for the degenerate origin case', () => {
+    it('não produz NaN no caso degenerado da origem', () => {
         const dir = directionFromBodyToSceneSun([0, 0, 0]);
 
         expect(Number.isFinite(dir.x)).toBe(true);

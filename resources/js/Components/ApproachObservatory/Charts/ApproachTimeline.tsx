@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Crown } from 'lucide-react';
 import type { Translator } from '@/i18n';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
@@ -28,25 +28,31 @@ const MAX_DAYS = 14;
 export function ApproachTimeline({ approaches, locale, t }: Props) {
     const groups = useMemo(() => groupApproachesByDay(approaches, locale), [approaches, locale]);
     const daily = useMemo(() => buildDailySummary(approaches, locale), [approaches, locale]);
+    const visible = useMemo(() => groups.slice(0, MAX_DAYS), [groups]);
+    const visibleDaily = useMemo(() => daily.slice(0, MAX_DAYS), [daily]);
 
     /** ID da primeira aproximação futura para exibir o badge "próxima". */
     const nextId = useMemo(() => {
         const today = localDateIso(new Date());
-        for (const group of groups) {
+        for (const group of visible) {
             if (group.date < today) continue;
             return group.items[0]?.id ?? null;
         }
         return null;
-    }, [groups]);
+    }, [visible]);
 
     /** Abre automaticamente o grupo do próximo dia com aproximações. */
     const initialExpanded = useMemo(() => {
         const today = localDateIso(new Date());
-        const next = groups.find((group) => group.date >= today);
+        const next = visible.find((group) => group.date >= today);
         return new Set([next?.date].filter(Boolean) as string[]);
-    }, [groups]);
+    }, [visible]);
 
     const [expanded, setExpanded] = useState<Set<string>>(initialExpanded);
+
+    useEffect(() => {
+        setExpanded(initialExpanded);
+    }, [initialExpanded]);
 
     if (!groups.length) {
         return (
@@ -56,8 +62,7 @@ export function ApproachTimeline({ approaches, locale, t }: Props) {
         );
     }
 
-    const visible = groups.slice(0, MAX_DAYS);
-    const peakTotal = Math.max(...daily.map((day) => day.total), 1);
+    const peakTotal = Math.max(...visibleDaily.map((day) => day.total), 1);
 
     const toggle = (date: string) => {
         setExpanded((current) => {
@@ -70,7 +75,7 @@ export function ApproachTimeline({ approaches, locale, t }: Props) {
 
     return (
         <div className="space-y-4">
-            <DailySummary daily={daily} peakTotal={peakTotal} t={t} />
+            <DailySummary daily={visibleDaily} peakTotal={peakTotal} t={t} />
 
             <div className="relative rounded-lg border border-white/10 bg-white/[0.035] p-4 sm:p-5">
                 {/* Linha vertical decorativa que conecta os marcadores de data */}
@@ -180,6 +185,7 @@ function DailySummary({
     t: Translator;
 }) {
     if (!daily.length) return null;
+    const safePeakTotal = Number.isFinite(peakTotal) && peakTotal > 0 ? peakTotal : 1;
 
     return (
         <section className="rounded-lg border border-white/10 bg-white/[0.025] p-3 sm:p-4">
@@ -188,7 +194,7 @@ function DailySummary({
             <div className="mt-2 flex items-end gap-1 overflow-x-auto pb-1">
                 {daily.map((day) => {
                     // Altura proporcional ao total do dia, com mínimo de 6px para visibilidade.
-                    const height = Math.max(6, Math.round((day.total / peakTotal) * 36));
+                    const height = Math.max(6, Math.round((day.total / safePeakTotal) * 36));
                     return (
                         <div key={day.date} className="flex min-w-[44px] flex-col items-center gap-1">
                             <span className="text-[10px] font-medium text-white/65">{day.total}</span>
