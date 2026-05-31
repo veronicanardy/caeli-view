@@ -1,16 +1,15 @@
 /**
- * Jupiter — ambient planet for the Orbital Radar scene.
+ * Júpiter na cena do radar orbital.
  *
- * POSITION   — SceneEphemeris.jupiterScenePosition via astronomy-engine HelioVector(Body.Jupiter).
- * ROTATION   — sidereal period 0.41354 days (9 h 55 min — fastest-rotating planet).
- *              Anchored to J2000 epoch for cross-session consistency.
- * AXIAL TILT — 3.13° (IAU WGCCRE 2015) — nearly perpendicular to the ecliptic; almost no seasons.
- *              Applied as a static quaternion on the pole group, same as Mercury/Venus/Mars.
- * SCALE      — physicalRadiusDl=0.18596 DL (true equatorial); visualRadiusDl=0.19 DL (rendered, ~1×).
- *              Júpiter é tão grande que renderizamos quase sem exageração — já é visível em escala.
- * ILLUMINATION — custom ShaderMaterial: sunDir uniform pointing from Jupiter toward the Sun.
- *                Shader modela terminador suavizado pela atmosfera densa de H₂/He,
- *                piso noturno elevado (calor interno residual) e limb azul-acinzentado.
+ * Responsabilidade: renderizar o gigante gasoso como corpo ambiente focável, já
+ * posicionado pela efeméride da cena. O componente cuida de textura, rotação rápida,
+ * inclinação axial, iluminação atmosférica, hitbox e rótulo.
+ *
+ * Posição: `SceneEphemeris.jupiterScenePosition`.
+ * Rotação: período sideral de 0,41354 dias (9 h 55 min), ancorado em J2000.
+ * Inclinação axial: 3,13° (IAU WGCCRE 2015), quase perpendicular à eclíptica.
+ * Escala: raio físico de 0,18596 DL; raio visual de 0,19 DL, quase sem exagero.
+ * Iluminação: shader próprio com atmosfera densa, piso noturno e limb azul-acinzentado.
  */
 
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
@@ -21,9 +20,10 @@ import { JUPITER } from '@/lib/observatory/planetData';
 import { JUPITER_FRAG, JUPITER_VERT } from '@/lib/observatory/shaders/jupiter.glsl';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
 
-// --------------- Constants ---------------------------------------------------------------
+// --------------- Constantes ---------------------------------------------------------------
 
 const JUPITER_SPIN_RATE_RAD_PER_S = (2 * Math.PI) / JUPITER.rotationPeriodS;
 
@@ -32,10 +32,7 @@ const JUPITER_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (JUPITER.axialTiltDeg * Math.PI) / 180,
 );
 
-/** J2000.0 epoch as Unix seconds. Rotation angle anchored here for cross-session consistency. */
-const J2000_UNIX_S = 946_728_000;
-
-// --------------- Component ---------------------------------------------------------------
+// --------------- Componente ---------------------------------------------------------------
 
 interface JupiterProps {
     position: [number, number, number];
@@ -76,7 +73,7 @@ export function Jupiter({ position, sunDirection, locale, onFocus, isFocused = f
     useFrame(() => {
         if (!meshRef.current) return;
         const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = JUPITER_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
+        meshRef.current.rotation.y = JUPITER_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
         if (matRef.current) {
             const sunWorld = new THREE.Vector3(0, 0, 0);
@@ -125,7 +122,7 @@ export function Jupiter({ position, sunDirection, locale, onFocus, isFocused = f
                     </mesh>
                 </group>
 
-                {/* Rim glow: névoa de H₂/He na borda — azul-acinzentado muito sutil. */}
+                {/* Brilho de borda: névoa de H₂/He, azul-acinzentado muito sutil. */}
                 <mesh scale={1.06}>
                     <sphereGeometry args={[JUPITER.visualRadiusDl, 24, 16]} />
                     <meshBasicMaterial

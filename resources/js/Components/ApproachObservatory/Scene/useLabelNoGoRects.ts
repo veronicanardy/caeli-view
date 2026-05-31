@@ -18,6 +18,12 @@ type UseLabelNoGoRectsArgs = {
     mobilePanelSection: MobilePanelSection;
 };
 
+/**
+ * Calcula áreas da UI que as labels 3D devem evitar.
+ *
+ * O resultado é relativo ao canvas e acompanha resize/scroll dos painéis, flyout e cards
+ * flutuantes. A cena usa esses retângulos para reduzir colisões visuais com a interface.
+ */
 export function useLabelNoGoRects({
     canvasContainerRef,
     sidePanelRef,

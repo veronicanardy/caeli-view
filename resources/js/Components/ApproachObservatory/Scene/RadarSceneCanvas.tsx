@@ -31,6 +31,12 @@ type Props = {
     onFocusBody: (body: 'earth' | 'moon') => void;
 };
 
+/**
+ * Fronteira entre a interface React e a cena Three.js.
+ *
+ * Mantém o Canvas, o provider de áreas bloqueadas para labels e a adaptação das
+ * intenções globais do radar para as props granulares do RadarScene.
+ */
 export function RadarSceneCanvas({
     noGoRects,
     closestNowObjects,

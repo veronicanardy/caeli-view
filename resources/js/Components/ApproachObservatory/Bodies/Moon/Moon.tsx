@@ -8,6 +8,14 @@ import { MOON_HITBOX_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
 import { DistanceCulledScreenLabel } from '../../Overlays/SceneLabels';
 import { useEarthTexture } from '../Earth/Earth';
 
+/**
+ * Lua na cena do radar orbital.
+ *
+ * Responsabilidade: renderizar o satélite em posição absoluta de mundo, mantendo
+ * travamento tidal em relação à Terra, iluminação de fase pelo Sol, preenchimento
+ * suave de earthshine, hitbox de foco e rótulo com culling por distância.
+ */
+
 export interface MoonProps {
     onFocus: () => void;
     position: [number, number, number];

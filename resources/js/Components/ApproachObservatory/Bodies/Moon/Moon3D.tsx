@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Props do componente Moon3D.
+ * Propriedades do componente Moon3D.
  *
  * @prop sizePx          Tamanho do canvas em pixels (largura e altura iguais). Padrão: 56.
  * @prop autoRotate      Habilita rotação automática em torno do eixo Y. Padrão: true.
@@ -16,7 +16,7 @@ type Props = {
 };
 
 /**
- * Renderiza uma Lua 3D procedural usando Three.js carregado sob demanda (lazy import).
+ * Renderiza uma Lua 3D procedural usando Three.js carregado sob demanda.
  *
  * A textura e o bump map são gerados via Canvas 2D no cliente — sem arquivos externos —
  * usando um PRNG determinístico (Mulberry32) para garantir aparência consistente entre sessões.
@@ -130,7 +130,7 @@ export function Moon3D({ sizePx = 56, autoRotate = true, autoRotateSpeed = 0.08,
         };
     }, [autoRotate, autoRotateSpeed]);
 
-    // Fallback CSS: círculo acinzentado com sombra interna simulando volume
+    // Alternativa em CSS: círculo acinzentado com sombra interna simulando volume.
     if (failed) {
         return (
             <div

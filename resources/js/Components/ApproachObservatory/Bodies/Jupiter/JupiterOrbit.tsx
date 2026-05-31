@@ -9,10 +9,14 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import {
+    BODY_ORBIT_MIN_RADIUS,
+    BODY_ORBIT_OPACITY,
+    BODY_ORBIT_SEGMENTS as ORBIT_SEGMENTS,
+} from '../bodyRenderConstants';
 
-const ORBIT_SEGMENTS = 128;
 const ORBIT_COLOR = '#c8a060';   // laranja-bege — bandas de amônia de Júpiter
-const ORBIT_OPACITY = 0.20;
+const ORBIT_OPACITY = BODY_ORBIT_OPACITY.terrestrialPlanet;
 
 interface JupiterOrbitProps {
     /** Jupiter position in scene units — the ring radius is derived from this. */
@@ -22,7 +26,7 @@ interface JupiterOrbitProps {
 export function JupiterOrbit({ jupiterPos }: JupiterOrbitProps) {
     const orbitPoints = useMemo(() => {
         const radius = Math.hypot(jupiterPos[0], jupiterPos[1], jupiterPos[2]);
-        if (radius < 1e-6) return null;
+        if (radius < BODY_ORBIT_MIN_RADIUS) return null;
 
         const pts = new Float32Array((ORBIT_SEGMENTS + 1) * 3);
         for (let i = 0; i <= ORBIT_SEGMENTS; i += 1) {

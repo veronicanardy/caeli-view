@@ -10,10 +10,14 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import {
+    BODY_ORBIT_MIN_RADIUS,
+    BODY_ORBIT_OPACITY,
+    BODY_ORBIT_SEGMENTS as ORBIT_SEGMENTS,
+} from '../bodyRenderConstants';
 
-const ORBIT_SEGMENTS = 128;
 const ORBIT_COLOR = '#c8b880';   // dourado suave — remete à atmosfera âmbar de Vênus
-const ORBIT_OPACITY = 0.22;
+const ORBIT_OPACITY = BODY_ORBIT_OPACITY.innerPlanet;
 
 interface VenusOrbitProps {
     /** Venus position in scene units — the ring radius is derived from this. */
@@ -23,7 +27,7 @@ interface VenusOrbitProps {
 export function VenusOrbit({ venusPos }: VenusOrbitProps) {
     const orbitPoints = useMemo(() => {
         const radius = Math.hypot(venusPos[0], venusPos[1], venusPos[2]);
-        if (radius < 1e-6) return null;
+        if (radius < BODY_ORBIT_MIN_RADIUS) return null;
 
         const pts = new Float32Array((ORBIT_SEGMENTS + 1) * 3);
         for (let i = 0; i <= ORBIT_SEGMENTS; i += 1) {

@@ -4,8 +4,8 @@
  * Abordagem: anel circular no plano eclíptico (XZ da cena) com raio igual à
  * distância geocêntrica atual de Mercúrio. Igual ao que MoonOrbit faz para a Lua.
  *
- * WHY anel simples e não a path aparente:
- *   A path geocêntrica de Mercúrio ao longo de ~88 dias forma uma curva espiral
+ * Por que usar anel simples, e não a trajetória aparente:
+ *   A trajetória geocêntrica de Mercúrio ao longo de ~88 dias forma uma curva espiral
  *   estranha (com retrogradações) que envolve toda a cena — visualmente confusa e
  *   sem valor de orientação para o usuário. Um anel no raio atual comunica
  *   claramente "Mercúrio orbita nessa distância da Terra" sem ruído visual.
@@ -16,10 +16,14 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import {
+    BODY_ORBIT_MIN_RADIUS,
+    BODY_ORBIT_OPACITY,
+    BODY_ORBIT_SEGMENTS as ORBIT_SEGMENTS,
+} from '../bodyRenderConstants';
 
-const ORBIT_SEGMENTS = 128;
 const ORBIT_COLOR = '#b0b8c8';    // prateado suave — neutro, não compete com a Terra (azul)
-const ORBIT_OPACITY = 0.22;
+const ORBIT_OPACITY = BODY_ORBIT_OPACITY.innerPlanet;
 
 interface MercuryOrbitProps {
     /** Mercury position in scene units — the ring radius is derived from this. */
@@ -29,7 +33,7 @@ interface MercuryOrbitProps {
 export function MercuryOrbit({ mercuryPos }: MercuryOrbitProps) {
     const orbitPoints = useMemo(() => {
         const radius = Math.hypot(mercuryPos[0], mercuryPos[1], mercuryPos[2]);
-        if (radius < 1e-6) return null;
+        if (radius < BODY_ORBIT_MIN_RADIUS) return null;
 
         // Ring in the ecliptic plane (scene XZ, Y=0).
         const pts = new Float32Array((ORBIT_SEGMENTS + 1) * 3);

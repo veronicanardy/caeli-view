@@ -1,18 +1,15 @@
 /**
- * Uranus — ambient planet for the Orbital Radar scene.
+ * Urano na cena do radar orbital.
  *
- * POSITION   — SceneEphemeris.uranusScenePosition via astronomy-engine HelioVector(Body.Uranus).
- * ROTATION   — sidereal period −0.71833 days (17h 14min, retrógrado como Vênus).
- *              Urano roda de lado — inclinação axial de 97.77°, o que faz sua rotação
- *              parecer retrógrada na convenção IAU. Anchored to J2000.
- * AXIAL TILT — 97.77° (IAU WGCCRE 2015) — o maior de todos os planetas: Urano "rola"
- *              pela órbita como uma bola, com o polo apontando quase para o Sol em certas épocas.
- *              Applied as a static quaternion on the pole group.
- * SCALE      — physicalRadiusDl=0.06629 DL (true equatorial); visualRadiusDl=0.13 DL (rendered).
- *              Urano precisa de um leve exageramento (~2×) para ser visível no radar.
- * ILLUMINATION — custom ShaderMaterial: sunDir uniform pointing from Uranus toward the Sun.
- *                Shader modela terminador suavizado pela atmosfera densa de H₂/He/CH₄,
- *                piso noturno mínimo (sem calor interno) e limb ciano-azulado de metano.
+ * Responsabilidade: renderizar o gigante de gelo como corpo ambiente focável, já
+ * posicionado pela efeméride da cena. O componente cuida de textura, rotação retrógrada,
+ * inclinação axial extrema, iluminação atmosférica, hitbox e rótulo.
+ *
+ * Posição: `SceneEphemeris.uranusScenePosition`.
+ * Rotação: período sideral de -0,71833 dias, retrógrado e ancorado em J2000.
+ * Inclinação axial: 97,77° (IAU WGCCRE 2015), quase “de lado” em relação à órbita.
+ * Escala: raio físico de 0,06629 DL; raio visual de 0,13 DL para legibilidade.
+ * Iluminação: shader próprio com atmosfera de H₂/He/CH₄ e limb ciano-azulado.
  */
 
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
@@ -23,9 +20,10 @@ import { URANUS } from '@/lib/observatory/planetData';
 import { URANUS_FRAG, URANUS_VERT } from '@/lib/observatory/shaders/uranus.glsl';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
 
-// --------------- Constants ---------------------------------------------------------------
+// --------------- Constantes ---------------------------------------------------------------
 
 // Urano tem rotação retrógrada: taxa negativa para girar no sentido correto.
 const URANUS_SPIN_RATE_RAD_PER_S = -(2 * Math.PI) / URANUS.rotationPeriodS;
@@ -35,10 +33,7 @@ const URANUS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (URANUS.axialTiltDeg * Math.PI) / 180,
 );
 
-/** J2000.0 epoch as Unix seconds. Rotation angle anchored here for cross-session consistency. */
-const J2000_UNIX_S = 946_728_000;
-
-// --------------- Component ---------------------------------------------------------------
+// --------------- Componente ---------------------------------------------------------------
 
 interface UranusProps {
     position: [number, number, number];
@@ -79,7 +74,7 @@ export function Uranus({ position, sunDirection, locale, onFocus, isFocused = fa
     useFrame(() => {
         if (!meshRef.current) return;
         const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = URANUS_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
+        meshRef.current.rotation.y = URANUS_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
         if (matRef.current) {
             const sunWorld = new THREE.Vector3(0, 0, 0);
@@ -128,7 +123,7 @@ export function Uranus({ position, sunDirection, locale, onFocus, isFocused = fa
                     </mesh>
                 </group>
 
-                {/* Rim glow: halo ciano-azulado — borda de metano atmosférico de Urano. */}
+                {/* Brilho de borda: halo ciano-azulado do metano atmosférico de Urano. */}
                 <mesh scale={1.06}>
                     <sphereGeometry args={[URANUS.visualRadiusDl, 24, 16]} />
                     <meshBasicMaterial

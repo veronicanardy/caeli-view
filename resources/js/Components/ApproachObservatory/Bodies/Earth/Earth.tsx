@@ -7,6 +7,15 @@ import { CLOUDS_FRAG, EARTH_FRAG, EARTH_VERT } from '@/lib/observatory/shaders/e
 import { EARTH_HITBOX_DL, EARTH_RADIUS_DL } from '@/lib/observatory/bodyScale';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 
+/**
+ * Terra na cena do radar orbital.
+ *
+ * Responsabilidade: renderizar o corpo de referência central da experiência 3D.
+ * O componente aplica textura diurna/noturna, nuvens, atmosfera, orientação real
+ * pelo ponto subsolar, hitbox de foco e rótulo. Cálculos astronômicos e posição
+ * heliocêntrica chegam prontos pela cena.
+ */
+
 const CLOUD_LAYER_SCALE = 1.012;
 const ATMOSPHERE_OUTER_SCALE = 1.06;
 const ATMOSPHERE_INNER_SCALE = 1.18;
@@ -222,7 +231,7 @@ export function Earth({
                     {material ? (
                         <primitive ref={matRef} object={material} attach="material" />
                     ) : (
-                        // Fallback azul iluminado enquanto as texturas carregam — evita uma esfera preta.
+                        // Alternativa azul iluminada enquanto as texturas carregam — evita uma esfera preta.
                         <meshStandardMaterial
                             color="#2f6fb0"
                             emissive="#0a2a4a"

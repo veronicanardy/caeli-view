@@ -1,5 +1,8 @@
 import type { ClosestNowObject } from '@/types';
-import { genericAsteroidVariantFor } from './asteroidProcedural';
+import {
+    genericAsteroidVariantFor,
+    type GenericAsteroidVariant,
+} from './asteroidProcedural';
 
 /**
  * Metadados de um modelo 3D real de asteroide que pode ser usado na cena.
@@ -23,7 +26,7 @@ export type AsteroidModelAsset = {
  */
 export type AsteroidRenderableModel =
     | { kind: 'real'; asset: AsteroidModelAsset }
-    | { kind: 'generic'; variant: string };
+    | { kind: 'generic'; variant: GenericAsteroidVariant };
 
 /**
  * Modelos GLB de asteroides reais usados para corpos com identidade conhecida.

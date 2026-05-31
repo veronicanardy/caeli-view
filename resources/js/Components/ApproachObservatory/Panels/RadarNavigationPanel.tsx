@@ -36,6 +36,12 @@ type Props = {
     onFocusSun: () => void;
 };
 
+/**
+ * Painel de navegação do radar 3D.
+ *
+ * Concentra a UI desktop/mobile de filtros, referências, planetas e lista de objetos,
+ * mas não decide seleção nem foco: essas intenções continuam no DailyOrbitalRadar3D.
+ */
 export function RadarNavigationPanel({
     en,
     locale,

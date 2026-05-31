@@ -1,14 +1,15 @@
 /**
- * Venus — ambient planet for the Orbital Radar scene.
+ * Vênus na cena do radar orbital.
  *
- * POSITION   — SceneEphemeris.venusScenePosition via astronomy-engine HelioVector(Body.Venus).
- * ROTATION   — sidereal period −243.018 days (retrograde); spin rate is negative.
- *              Anchored to J2000 epoch for cross-session consistency.
- * AXIAL TILT — 177.36° (IAU WGCCRE 2015) — effectively upside-down / retrograde rotation.
- *              Applied as a static quaternion on the pole group, same as Mercury.
- * SCALE      — physicalRadiusDl=0.01573 DL (true); visualRadiusDl=0.038 DL (rendered, ~24×).
- * ILLUMINATION — custom ShaderMaterial matching Mercury's approach: sunDir uniform pointing
- *                from Venus toward the Sun in world space. Shader adds thick atmospheric limb glow.
+ * Responsabilidade: renderizar o planeta como corpo ambiente focável, já posicionado
+ * pela efeméride da cena. O componente mantém apenas aparência, rotação retrógrada,
+ * iluminação atmosférica, hitbox e rótulo; cálculo orbital fica fora dele.
+ *
+ * Posição: `SceneEphemeris.venusScenePosition`.
+ * Rotação: período sideral de -243,018 dias, retrógrado e ancorado em J2000.
+ * Inclinação axial: 177,36° (IAU WGCCRE 2015), aplicada no grupo do polo.
+ * Escala: raio físico de 0,01573 DL; raio visual de 0,038 DL para legibilidade.
+ * Iluminação: shader próprio com atmosfera espessa e `sunDir` de Vênus para o Sol.
  */
 
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
@@ -19,11 +20,12 @@ import { VENUS } from '@/lib/observatory/planetData';
 import { VENUS_FRAG, VENUS_VERT } from '@/lib/observatory/shaders/venus.glsl';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
 
-// --------------- Constants ---------------------------------------------------------------
+// --------------- Constantes ---------------------------------------------------------------
 
-// Retrograde: negative spin rate (Venus rotates opposite to most planets).
+// Rotação retrógrada: taxa negativa para girar no sentido correto.
 const VENUS_SPIN_RATE_RAD_PER_S = -(2 * Math.PI) / VENUS.rotationPeriodS;
 
 /**
@@ -35,10 +37,7 @@ const VENUS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (VENUS.axialTiltDeg * Math.PI) / 180,
 );
 
-/** J2000.0 epoch as Unix seconds. Rotation angle anchored here for cross-session consistency. */
-const J2000_UNIX_S = 946_728_000;
-
-// --------------- Component ---------------------------------------------------------------
+// --------------- Componente ---------------------------------------------------------------
 
 interface VenusProps {
     position: [number, number, number];
@@ -80,7 +79,7 @@ export function Venus({ position, sunDirection, locale, onFocus, isFocused = fal
     useFrame(() => {
         if (!meshRef.current) return;
         const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = VENUS_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
+        meshRef.current.rotation.y = VENUS_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
         if (matRef.current) {
             const sunWorld = new THREE.Vector3(0, 0, 0);
@@ -132,7 +131,7 @@ export function Venus({ position, sunDirection, locale, onFocus, isFocused = fal
                 </group>
 
                 {/*
-                 * Rim glow: atmosfera espessa de CO₂ cria halo âmbar/amarelado
+                 * Brilho de borda: atmosfera espessa de CO₂ cria halo âmbar/amarelado
                  * claramente visível — mais proeminente que em Mercúrio.
                  */}
                 <mesh scale={1.12}>

@@ -9,10 +9,14 @@
  */
 
 import { useMemo } from 'react';
+import {
+    BODY_ORBIT_MIN_RADIUS,
+    BODY_ORBIT_OPACITY,
+    BODY_ORBIT_SEGMENTS as ORBIT_SEGMENTS,
+} from '../bodyRenderConstants';
 
-const ORBIT_SEGMENTS = 128;
 const ORBIT_COLOR = '#2878d8';   // azul-profundo — cor de Netuno (mais saturado que Urano)
-const ORBIT_OPACITY = 0.18;
+const ORBIT_OPACITY = BODY_ORBIT_OPACITY.outerPlanet;
 
 interface NeptuneOrbitProps {
     /** Neptune position in scene units — the ring radius is derived from this. */
@@ -22,7 +26,7 @@ interface NeptuneOrbitProps {
 export function NeptuneOrbit({ neptunePos }: NeptuneOrbitProps) {
     const orbitPoints = useMemo(() => {
         const radius = Math.hypot(neptunePos[0], neptunePos[1], neptunePos[2]);
-        if (radius < 1e-6) return null;
+        if (radius < BODY_ORBIT_MIN_RADIUS) return null;
 
         const pts = new Float32Array((ORBIT_SEGMENTS + 1) * 3);
         for (let i = 0; i <= ORBIT_SEGMENTS; i += 1) {

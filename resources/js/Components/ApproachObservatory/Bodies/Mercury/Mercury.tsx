@@ -1,13 +1,15 @@
 /**
- * Mercury — ambient planet for the Orbital Radar scene.
+ * Mercúrio na cena do radar orbital.
  *
- * POSITION   — SceneEphemeris.mercuryScenePosition via astronomy-engine GeoVector(Body.Mercury).
- * ROTATION   — sidereal period 58.6462 days, anchored to J2000 epoch (not per-session drift).
- * AXIAL TILT — 0.034° (IAU WGCCRE 2015), applied as static quaternion on the pole group.
- * SCALE      — physicalRadiusDl=0.00635 DL (true); visualRadiusDl=0.028 DL (rendered, ~44×).
- * ILLUMINATION — custom ShaderMaterial with sunDir uniform pointing from Mercury toward the Sun,
- *                matching the same approach used by Earth. sunDir = normalize(sunPos - mercuryPos)
- *                computed in world space so the terminator always tracks the visible Sun.
+ * Responsabilidade: renderizar o planeta como corpo ambiente focável, já posicionado
+ * pela efeméride da cena. O componente cuida apenas de malha, textura, rotação,
+ * iluminação, hitbox e rótulo; cálculo orbital fica fora dele.
+ *
+ * Posição: `SceneEphemeris.mercuryScenePosition`.
+ * Rotação: período sideral de 58,6462 dias, ancorado em J2000 para consistência.
+ * Inclinação axial: 0,034° (IAU WGCCRE 2015), aplicada no grupo do polo.
+ * Escala: raio físico de 0,00635 DL; raio visual de 0,028 DL para legibilidade.
+ * Iluminação: shader próprio com `sunDir` apontando de Mercúrio para o Sol.
  */
 
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
@@ -18,25 +20,23 @@ import { MERCURY } from '@/lib/observatory/planetData';
 import { MERCURY_FRAG, MERCURY_VERT } from '@/lib/observatory/shaders/mercury.glsl';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
 
-// --------------- Constants ---------------------------------------------------------------
+// --------------- Constantes ---------------------------------------------------------------
 
 const MERCURY_SPIN_RATE_RAD_PER_S = (2 * Math.PI) / MERCURY.rotationPeriodS;
 
 /**
- * Axial tilt: 0.034° around ecliptic X. Structurally correct so future planets with real
- * obliquity (Venus 177°, Uranus 97°) can follow the same pattern without architecture changes.
+ * Inclinação axial: 0,034° em torno de X eclíptico. O mesmo padrão é usado
+ * pelos planetas com obliquidade mais expressiva, como Vênus e Urano.
  */
 const MERCURY_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(1, 0, 0),
     (MERCURY.axialTiltDeg * Math.PI) / 180,
 );
 
-/** J2000.0 epoch as Unix seconds. Rotation angle anchored here for cross-session consistency. */
-const J2000_UNIX_S = 946_728_000;
-
-// --------------- Component ---------------------------------------------------------------
+// --------------- Componente ---------------------------------------------------------------
 
 interface MercuryProps {
     position: [number, number, number];
@@ -76,13 +76,10 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
     useFrame(() => {
         if (!meshRef.current) return;
         const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = MERCURY_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
+        meshRef.current.rotation.y = MERCURY_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
-        // sunDir = normalize(sunWorldPos - mercuryWorldPos)
-        // sunDirection is already the unit vector Earth→Sun in scene space.
-        // The Sun is rendered at sunDirection * SUN_DISPLAY_DL, so the Sun's scene position is
-        // sunDirection * SUN_DISPLAY_DL. Mercury is at `position`. We subtract to get the vector
-        // pointing from Mercury toward the Sun, then normalize.
+        // sunDir = normalize(sunWorldPos - mercuryWorldPos). O vetor aponta de Mercúrio
+        // para o Sol, então o terminador acompanha a posição solar visível.
         if (matRef.current) {
             const sunWorld = new THREE.Vector3(0, 0, 0);
             const mercuryWorld = new THREE.Vector3(...position);
@@ -94,7 +91,7 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
     useEffect(() => { return () => { texture?.dispose(); }; }, [texture]);
 
     const material = useMemo(() => {
-        // Compute initial sunDir so the first frame is already correct.
+        // Calcula o sunDir inicial para o primeiro frame já nascer coerente.
         const sunWorld = new THREE.Vector3(...sunDirection).multiplyScalar(SUN_DISPLAY_DL);
         const mercuryWorld = new THREE.Vector3(...position);
         const initialSunDir = sunWorld.sub(mercuryWorld).normalize();
@@ -109,15 +106,15 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
                 fragmentShader: MERCURY_FRAG,
             });
         }
-        // Fallback: plain material while texture loads.
+        // Material simples enquanto a textura carrega.
         return new THREE.MeshStandardMaterial({ color: MERCURY.fallbackColor, roughness: 0.95, metalness: 0.0 });
-        // sunDirection and position are updated per-frame via uniform; no need to recreate.
+        // sunDirection e position são atualizados por frame via uniform.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [texture]);
 
     useEffect(() => { return () => { material.dispose(); }; }, [material]);
 
-    // Label offset: above the sphere, same convention as Moon label
+    // Rótulo acima da esfera, seguindo a mesma convenção da Lua.
     const labelPos: [number, number, number] = [0, MERCURY.visualRadiusDl + 0.12, 0];
 
     return (
@@ -136,8 +133,8 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
                 </group>
 
                 {/*
-                 * Rim glow: aesthetically lifts the silhouette on the night side.
-                 * Mercury has no real atmosphere — this is purely visual, kept very faint (0.08).
+                 * Brilho de borda puramente visual para destacar o contorno no lado noturno.
+                 * Mercúrio não tem atmosfera relevante, então a opacidade fica bem baixa.
                  */}
                 <mesh scale={1.08}>
                     <sphereGeometry args={[MERCURY.visualRadiusDl, 24, 16]} />
@@ -170,4 +167,3 @@ export function Mercury({ position, sunDirection, locale, onFocus, isFocused = f
         </>
     );
 }
-

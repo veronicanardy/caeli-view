@@ -21,18 +21,23 @@ import { useSceneEphemeris } from './Scene/useSceneEphemeris';
 import { useSelectionFocusFraming } from './Scene/useSelectionFocusFraming';
 
 /**
- * Radar orbital 3D — visualização principal da aproximação diária.
+ * Centro de orquestração do radar orbital 3D.
  *
  * Por que existe: o radar SVG projeta o plano eclíptico ortograficamente, colapsando
  * o eixo Z. Asteroides com alta inclinação orbital (ex.: 2018 CX, i ≈ 25°) aparecem
  * mal posicionados: sua distância 3D real é 60 DL, mas a projeção (x, y) cai entre
  * 1 e 5 DL. Esta cena preserva os eixos X/Y/Z reais para que a profundidade seja honesta.
  *
+ * Este componente mantém a intenção global da experiência: seleção, foco de corpos,
+ * modo órbita, fullscreen, overlays e critérios de lista. A renderização pesada fica
+ * delegada para RadarSceneCanvas, RadarNavigationPanel, SceneToolbar e
+ * RadarFloatingOverlays.
+ *
  * Dois modos de visualização coexistem:
  *   - 'radar'  : geocêntrico, escala logarítmica comprimida (Terra na origem).
  *   - 'orbit'  : heliocêntrico, escala linear em UA (Sol na origem).
  * A troca só ocorre quando um objeto selecionado tem elementos orbitais com época de
- * periélio válida (tpJd ≠ 0) — sem isso a posição Kepleriana não é computável.
+ * periélio válida (tpJd ≠ 0), sem isso a posição Kepleriana não é computável.
  */
 
 type Props = {
@@ -50,10 +55,8 @@ type Props = {
     radarLoading?: boolean;
     onRefresh?: () => void;
     /**
-     * Direção do Sol (eclíptica geocêntrica) para o instante atual, calculada no servidor
-     * via SunDirectionCalculator e transmitida pelo Inertia. Usada como fallback SÍNCRONO
-     * para a luz direcional — a cena nunca parte de um vetor cardinal arbitrário enquanto
-     * o astronomy-engine ainda está resolvendo seu import lazy.
+     * Direção do Sol (eclíptica geocêntrica) para o instante atual, calculada no servidor.
+     * Serve como fallback síncrono até o astronomy-engine resolver seu import lazy.
      */
     initialSunDirection: SunDirection;
 };

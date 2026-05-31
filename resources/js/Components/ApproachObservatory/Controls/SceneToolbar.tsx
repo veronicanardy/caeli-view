@@ -17,6 +17,12 @@ type Props = {
     onResetView: () => void;
 };
 
+/**
+ * Controles sempre visíveis da cena.
+ *
+ * Renderiza as variações desktop/mobile para vistas de câmera, labels e fullscreen.
+ * A toolbar apenas dispara comandos; a intenção de câmera fica no componente principal.
+ */
 export function SceneToolbar({
     en,
     activeMode,

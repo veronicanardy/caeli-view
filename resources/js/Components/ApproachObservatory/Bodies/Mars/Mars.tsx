@@ -1,15 +1,15 @@
 /**
- * Mars — ambient planet for the Orbital Radar scene.
+ * Marte na cena do radar orbital.
  *
- * POSITION   — SceneEphemeris.marsScenePosition via astronomy-engine HelioVector(Body.Mars).
- * ROTATION   — sidereal period 1.02596 days (prograde, same direction as Earth).
- *              Anchored to J2000 epoch for cross-session consistency.
- * AXIAL TILT — 25.19° (IAU WGCCRE 2015) — similar to Earth's 23.44°, seasons on Mars are real.
- *              Applied as a static quaternion on the pole group, same as Mercury/Venus.
- * SCALE      — physicalRadiusDl=0.00877 DL (true); visualRadiusDl=0.048 DL (rendered, ~55×).
- *              Marte é ~53% do raio terrestre — renderizamos entre Vênus (0.038) e Terra (0.11).
- * ILLUMINATION — custom ShaderMaterial: sunDir uniform pointing from Mars toward the Sun.
- *                Shader modela terminador abrupto (atmosfera fina) e limb avermelhado de poeira.
+ * Responsabilidade: renderizar o planeta como corpo ambiente focável, já posicionado
+ * pela efeméride da cena. O componente cuida de textura, rotação, inclinação axial,
+ * iluminação, hitbox e rótulo; trajetória e efeméride permanecem fora dele.
+ *
+ * Posição: `SceneEphemeris.marsScenePosition`.
+ * Rotação: período sideral de 1,02596 dias, prógrado e ancorado em J2000.
+ * Inclinação axial: 25,19° (IAU WGCCRE 2015), próxima à da Terra.
+ * Escala: raio físico de 0,00877 DL; raio visual de 0,048 DL para legibilidade.
+ * Iluminação: shader próprio com terminador mais abrupto e limb avermelhado de poeira.
  */
 
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
@@ -20,9 +20,10 @@ import { MARS } from '@/lib/observatory/planetData';
 import { MARS_FRAG, MARS_VERT } from '@/lib/observatory/shaders/mars.glsl';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
 
-// --------------- Constants ---------------------------------------------------------------
+// --------------- Constantes ---------------------------------------------------------------
 
 const MARS_SPIN_RATE_RAD_PER_S = (2 * Math.PI) / MARS.rotationPeriodS;
 
@@ -31,10 +32,7 @@ const MARS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (MARS.axialTiltDeg * Math.PI) / 180,
 );
 
-/** J2000.0 epoch as Unix seconds. Rotation angle anchored here for cross-session consistency. */
-const J2000_UNIX_S = 946_728_000;
-
-// --------------- Component ---------------------------------------------------------------
+// --------------- Componente ---------------------------------------------------------------
 
 interface MarsProps {
     position: [number, number, number];
@@ -75,7 +73,7 @@ export function Mars({ position, sunDirection, locale, onFocus, isFocused = fals
     useFrame(() => {
         if (!meshRef.current) return;
         const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = MARS_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
+        meshRef.current.rotation.y = MARS_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
         if (matRef.current) {
             const sunWorld = new THREE.Vector3(0, 0, 0);
@@ -124,7 +122,7 @@ export function Mars({ position, sunDirection, locale, onFocus, isFocused = fals
                     </mesh>
                 </group>
 
-                {/* Rim glow: névoa de poeira marciana — vermelho/ferrugem muito sutil. */}
+                {/* Brilho de borda: névoa de poeira marciana, vermelho/ferrugem muito sutil. */}
                 <mesh scale={1.08}>
                     <sphereGeometry args={[MARS.visualRadiusDl, 24, 16]} />
                     <meshBasicMaterial

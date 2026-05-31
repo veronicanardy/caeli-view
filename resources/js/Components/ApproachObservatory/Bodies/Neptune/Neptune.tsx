@@ -1,18 +1,15 @@
 /**
- * Neptune — ambient planet for the Orbital Radar scene.
+ * Netuno na cena do radar orbital.
  *
- * POSITION   — SceneEphemeris.neptuneScenePosition via astronomy-engine HelioVector(Body.Neptune).
- * ROTATION   — sidereal period 0.67125 days (16h 6min, prógrada).
- *              Netuno tem a rotação mais rápida entre os gigantes de gelo.
- *              Anchored to J2000 epoch for cross-session consistency.
- * AXIAL TILT — 28.32° (IAU WGCCRE 2015) — similar à Terra (23.44°); Netuno tem estações
- *              reais, mas cada uma dura ~40 anos devido ao período orbital longo.
- *              Applied as a static quaternion on the pole group.
- * SCALE      — physicalRadiusDl=0.06370 DL (true equatorial); visualRadiusDl=0.12 DL (rendered).
- *              Netuno precisa de exageramento (~1.9×) para ser visível no radar.
- * ILLUMINATION — custom ShaderMaterial: sunDir uniform pointing from Neptune toward the Sun.
- *                Shader modela terminador suavizado pela atmosfera densa de H₂/He/CH₄,
- *                piso noturno elevado (calor interno real ~2.6×) e limb azul-profundo.
+ * Responsabilidade: renderizar o gigante de gelo como corpo ambiente focável, já
+ * posicionado pela efeméride da cena. O componente cuida de textura, rotação,
+ * inclinação axial, iluminação atmosférica, hitbox e rótulo.
+ *
+ * Posição: `SceneEphemeris.neptuneScenePosition`.
+ * Rotação: período sideral de 0,67125 dias (16 h 6 min), ancorado em J2000.
+ * Inclinação axial: 28,32° (IAU WGCCRE 2015), aplicada ao grupo do polo.
+ * Escala: raio físico de 0,06370 DL; raio visual de 0,12 DL para legibilidade.
+ * Iluminação: shader próprio com atmosfera densa, calor interno e limb azul-profundo.
  */
 
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
@@ -23,9 +20,10 @@ import { NEPTUNE } from '@/lib/observatory/planetData';
 import { NEPTUNE_FRAG, NEPTUNE_VERT } from '@/lib/observatory/shaders/neptune.glsl';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
 import { useEarthTexture } from '../Earth/Earth';
 
-// --------------- Constants ---------------------------------------------------------------
+// --------------- Constantes ---------------------------------------------------------------
 
 const NEPTUNE_SPIN_RATE_RAD_PER_S = (2 * Math.PI) / NEPTUNE.rotationPeriodS;
 
@@ -34,10 +32,7 @@ const NEPTUNE_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     (NEPTUNE.axialTiltDeg * Math.PI) / 180,
 );
 
-/** J2000.0 epoch as Unix seconds. Rotation angle anchored here for cross-session consistency. */
-const J2000_UNIX_S = 946_728_000;
-
-// --------------- Component ---------------------------------------------------------------
+// --------------- Componente ---------------------------------------------------------------
 
 interface NeptuneProps {
     position: [number, number, number];
@@ -78,7 +73,7 @@ export function Neptune({ position, sunDirection, locale, onFocus, isFocused = f
     useFrame(() => {
         if (!meshRef.current) return;
         const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = NEPTUNE_SPIN_RATE_RAD_PER_S * (nowS - J2000_UNIX_S);
+        meshRef.current.rotation.y = NEPTUNE_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
         if (matRef.current) {
             const sunWorld = new THREE.Vector3(0, 0, 0);
@@ -127,7 +122,7 @@ export function Neptune({ position, sunDirection, locale, onFocus, isFocused = f
                     </mesh>
                 </group>
 
-                {/* Rim glow: halo azul-profundo — borda de metano + cromóforo de Netuno. */}
+                {/* Brilho de borda: halo azul-profundo de metano e cromóforos de Netuno. */}
                 <mesh scale={1.06}>
                     <sphereGeometry args={[NEPTUNE.visualRadiusDl, 24, 16]} />
                     <meshBasicMaterial
