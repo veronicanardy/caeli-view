@@ -20,13 +20,20 @@ import { NEPTUNE } from '@/lib/observatory/planetData';
 import { NEPTUNE_FRAG, NEPTUNE_VERT } from '@/lib/observatory/shaders/neptune.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
-import { useBodyTexture } from '../useBodyTexture';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
+import type { PlanetBodyProps } from '../planetBodyTypes';
+import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
 const NEPTUNE_SPIN_RATE_RAD_PER_S = (2 * Math.PI) / NEPTUNE.rotationPeriodS;
 
+/**
+ * Inclinação axial: 28,32° em torno de X eclíptico.
+ *
+ * Observação: esta é uma aproximação visual da obliquidade, não uma orientação
+ * completa do polo IAU no sistema de referência celeste.
+ */
 const NEPTUNE_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(1, 0, 0),
     (NEPTUNE.axialTiltDeg * Math.PI) / 180,
@@ -34,24 +41,22 @@ const NEPTUNE_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
 
 // --------------- Componente ---------------------------------------------------------------
 
-interface NeptuneProps {
-    position: [number, number, number];
-    locale: 'pt-BR' | 'en';
-    onFocus: () => void;
-    isFocused?: boolean;
-    showLabel?: boolean;
-}
-
-export function Neptune({ position, locale, onFocus, isFocused = false, showLabel = true }: NeptuneProps) {
-    
-
+export function Neptune({
+    position,
+    locale,
+    onFocus,
+    isFocused = false,
+    showLabel = true,
+}: PlanetBodyProps) {
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         cursorPointerEnter();
     };
+
     const handlePointerOut = () => {
         cursorPointerLeave();
     };
+
     const handleClick = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         onFocus();
@@ -64,11 +69,14 @@ export function Neptune({ position, locale, onFocus, isFocused = false, showLabe
     const matRef = useRef<THREE.ShaderMaterial>(null);
 
     useEffect(() => {
-        if (poleGroupRef.current) poleGroupRef.current.quaternion.copy(NEPTUNE_TILT_QUAT);
+        if (poleGroupRef.current) {
+            poleGroupRef.current.quaternion.copy(NEPTUNE_TILT_QUAT);
+        }
     }, []);
 
     useFrame(() => {
         if (!meshRef.current) return;
+
         const nowS = Date.now() / 1000;
         meshRef.current.rotation.y = NEPTUNE_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
@@ -79,7 +87,11 @@ export function Neptune({ position, locale, onFocus, isFocused = false, showLabe
         }
     });
 
-    useEffect(() => { return () => { texture?.dispose(); }; }, [texture]);
+    useEffect(() => {
+        return () => {
+            texture?.dispose();
+        };
+    }, [texture]);
 
     const material = useMemo(() => {
         const initialSunDir = directionFromBodyToSceneSun(position);
@@ -94,57 +106,66 @@ export function Neptune({ position, locale, onFocus, isFocused = false, showLabe
                 fragmentShader: NEPTUNE_FRAG,
             });
         }
-        return new THREE.MeshStandardMaterial({ color: NEPTUNE.fallbackColor, roughness: 0.85, metalness: 0.0 });
+
+        return new THREE.MeshStandardMaterial({
+            color: NEPTUNE.fallbackColor,
+            roughness: 0.85,
+            metalness: 0.0,
+        });
+
+        // A direção ao Sol da cena é atualizada por frame via uniform.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [texture]);
 
-    useEffect(() => { return () => { material.dispose(); }; }, [material]);
+    useEffect(() => {
+        return () => {
+            material.dispose();
+        };
+    }, [material]);
 
     const labelPos: [number, number, number] = [0, NEPTUNE.visualRadiusDl + 0.08, 0];
 
     return (
-        <>
-            <group position={position}>
-                <group ref={poleGroupRef}>
-                    <mesh ref={meshRef}>
-                        <sphereGeometry args={[NEPTUNE.visualRadiusDl, 48, 32]} />
-                        {material instanceof THREE.ShaderMaterial ? (
-                            <primitive ref={matRef} object={material} attach="material" />
-                        ) : (
-                            <primitive object={material} attach="material" />
-                        )}
-                    </mesh>
-                </group>
-
-                {/* Brilho de borda: halo azul-profundo de metano e cromóforos de Netuno. */}
-                <mesh scale={1.06}>
-                    <sphereGeometry args={[NEPTUNE.visualRadiusDl, 24, 16]} />
-                    <meshBasicMaterial
-                        color="#2060c8"
-                        transparent
-                        opacity={0.08}
-                        side={THREE.BackSide}
-                        depthWrite={false}
-                    />
+        <group position={position}>
+            <group ref={poleGroupRef}>
+                <mesh ref={meshRef}>
+                    <sphereGeometry args={[NEPTUNE.visualRadiusDl, 48, 32]} />
+                    {material instanceof THREE.ShaderMaterial ? (
+                        <primitive ref={matRef} object={material} attach="material" />
+                    ) : (
+                        <primitive object={material} attach="material" />
+                    )}
                 </mesh>
-
-                {!isFocused ? (
-                    <mesh
-                        onPointerOver={handlePointerOver}
-                        onPointerOut={handlePointerOut}
-                        onClick={handleClick}
-                    >
-                        <sphereGeometry args={[NEPTUNE.visualRadiusDl * 1.3, 12, 8]} />
-                        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-                    </mesh>
-                ) : null}
-
-                {showLabel ? (
-                    <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                        <span className="font-semibold">{locale === 'en' ? 'Neptune' : 'Netuno'}</span>
-                    </ScreenLabel>
-                ) : null}
             </group>
-        </>
+
+            {/* Brilho de borda: halo azul-profundo de metano e cromóforos de Netuno. */}
+            <mesh scale={1.06}>
+                <sphereGeometry args={[NEPTUNE.visualRadiusDl, 24, 16]} />
+                <meshBasicMaterial
+                    color="#2060c8"
+                    transparent
+                    opacity={0.08}
+                    side={THREE.BackSide}
+                    depthWrite={false}
+                />
+            </mesh>
+
+            {!isFocused ? (
+                <mesh
+                    onPointerOver={handlePointerOver}
+                    onPointerOut={handlePointerOut}
+                    onClick={handleClick}
+                >
+                    <sphereGeometry args={[NEPTUNE.visualRadiusDl * 1.3, 12, 8]} />
+                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+            ) : null}
+
+            {showLabel ? (
+                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
+                    <span className="font-semibold">{locale === 'en' ? 'Neptune' : 'Netuno'}</span>
+                </ScreenLabel>
+            ) : null}
+        </group>
     );
 }

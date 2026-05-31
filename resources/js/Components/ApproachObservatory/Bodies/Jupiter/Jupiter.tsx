@@ -20,8 +20,9 @@ import { JUPITER } from '@/lib/observatory/planetData';
 import { JUPITER_FRAG, JUPITER_VERT } from '@/lib/observatory/shaders/jupiter.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
-import { useBodyTexture } from '../useBodyTexture';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
+import type { PlanetBodyProps } from '../planetBodyTypes';
+import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
 
@@ -34,24 +35,23 @@ const JUPITER_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
 
 // --------------- Componente ---------------------------------------------------------------
 
-interface JupiterProps {
-    position: [number, number, number];
-    locale: 'pt-BR' | 'en';
-    onFocus: () => void;
-    isFocused?: boolean;
-    showLabel?: boolean;
-}
-
-export function Jupiter({ position, locale, onFocus, isFocused = false, showLabel = true }: JupiterProps) {
-    
+export function Jupiter({
+    position,
+    locale,
+    onFocus,
+    isFocused = false,
+    showLabel = true,
+}: PlanetBodyProps) {
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         cursorPointerEnter();
     };
+
     const handlePointerOut = () => {
         cursorPointerLeave();
     };
+
     const handleClick = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         onFocus();
@@ -64,11 +64,14 @@ export function Jupiter({ position, locale, onFocus, isFocused = false, showLabe
     const matRef = useRef<THREE.ShaderMaterial>(null);
 
     useEffect(() => {
-        if (poleGroupRef.current) poleGroupRef.current.quaternion.copy(JUPITER_TILT_QUAT);
+        if (poleGroupRef.current) {
+            poleGroupRef.current.quaternion.copy(JUPITER_TILT_QUAT);
+        }
     }, []);
 
     useFrame(() => {
         if (!meshRef.current) return;
+
         const nowS = Date.now() / 1000;
         meshRef.current.rotation.y = JUPITER_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
 
@@ -79,7 +82,11 @@ export function Jupiter({ position, locale, onFocus, isFocused = false, showLabe
         }
     });
 
-    useEffect(() => { return () => { texture?.dispose(); }; }, [texture]);
+    useEffect(() => {
+        return () => {
+            texture?.dispose();
+        };
+    }, [texture]);
 
     const material = useMemo(() => {
         const initialSunDir = directionFromBodyToSceneSun(position);
@@ -94,57 +101,66 @@ export function Jupiter({ position, locale, onFocus, isFocused = false, showLabe
                 fragmentShader: JUPITER_FRAG,
             });
         }
-        return new THREE.MeshStandardMaterial({ color: JUPITER.fallbackColor, roughness: 0.85, metalness: 0.0 });
+
+        return new THREE.MeshStandardMaterial({
+            color: JUPITER.fallbackColor,
+            roughness: 0.85,
+            metalness: 0.0,
+        });
+
+        // A direção ao Sol da cena é atualizada por frame via uniform.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [texture]);
 
-    useEffect(() => { return () => { material.dispose(); }; }, [material]);
+    useEffect(() => {
+        return () => {
+            material.dispose();
+        };
+    }, [material]);
 
     const labelPos: [number, number, number] = [0, JUPITER.visualRadiusDl + 0.14, 0];
 
     return (
-        <>
-            <group position={position}>
-                <group ref={poleGroupRef}>
-                    <mesh ref={meshRef}>
-                        <sphereGeometry args={[JUPITER.visualRadiusDl, 48, 32]} />
-                        {material instanceof THREE.ShaderMaterial ? (
-                            <primitive ref={matRef} object={material} attach="material" />
-                        ) : (
-                            <primitive object={material} attach="material" />
-                        )}
-                    </mesh>
-                </group>
-
-                {/* Brilho de borda: névoa de H₂/He, azul-acinzentado muito sutil. */}
-                <mesh scale={1.06}>
-                    <sphereGeometry args={[JUPITER.visualRadiusDl, 24, 16]} />
-                    <meshBasicMaterial
-                        color="#7090b8"
-                        transparent
-                        opacity={0.07}
-                        side={THREE.BackSide}
-                        depthWrite={false}
-                    />
+        <group position={position}>
+            <group ref={poleGroupRef}>
+                <mesh ref={meshRef}>
+                    <sphereGeometry args={[JUPITER.visualRadiusDl, 48, 32]} />
+                    {material instanceof THREE.ShaderMaterial ? (
+                        <primitive ref={matRef} object={material} attach="material" />
+                    ) : (
+                        <primitive object={material} attach="material" />
+                    )}
                 </mesh>
-
-                {!isFocused ? (
-                    <mesh
-                        onPointerOver={handlePointerOver}
-                        onPointerOut={handlePointerOut}
-                        onClick={handleClick}
-                    >
-                        <sphereGeometry args={[JUPITER.visualRadiusDl * 2.0, 12, 8]} />
-                        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-                    </mesh>
-                ) : null}
-
-                {showLabel ? (
-                    <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                        <span className="font-semibold">{locale === 'en' ? 'Jupiter' : 'Júpiter'}</span>
-                    </ScreenLabel>
-                ) : null}
             </group>
-        </>
+
+            {/* Brilho de borda: névoa de H₂/He, azul-acinzentado muito sutil. */}
+            <mesh scale={1.06}>
+                <sphereGeometry args={[JUPITER.visualRadiusDl, 24, 16]} />
+                <meshBasicMaterial
+                    color="#7090b8"
+                    transparent
+                    opacity={0.07}
+                    side={THREE.BackSide}
+                    depthWrite={false}
+                />
+            </mesh>
+
+            {!isFocused ? (
+                <mesh
+                    onPointerOver={handlePointerOver}
+                    onPointerOut={handlePointerOut}
+                    onClick={handleClick}
+                >
+                    <sphereGeometry args={[JUPITER.visualRadiusDl * 2.0, 12, 8]} />
+                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+            ) : null}
+
+            {showLabel ? (
+                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
+                    <span className="font-semibold">{locale === 'en' ? 'Jupiter' : 'Júpiter'}</span>
+                </ScreenLabel>
+            ) : null}
+        </group>
     );
 }
