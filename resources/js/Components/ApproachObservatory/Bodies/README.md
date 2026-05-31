@@ -103,3 +103,7 @@ Não reintroduza componentes `*Orbit` planetários nesta pasta apenas para desen
 As inclinações axiais aplicadas nos planetas são aproximações visuais de obliquidade para legibilidade da cena. Elas não representam, sozinhas, uma orientação IAU completa do polo no sistema de referência celeste.
 
 Sempre que a cena precisar de orientação física mais rigorosa, o cálculo deve ser introduzido fora de `Bodies`, nas camadas de efeméride, geometria orbital ou transformação de cena.
+
+## Testes relacionados
+
+Os contratos matemáticos e geométricos que sustentam `Bodies` e seus helpers são protegidos principalmente pela suíte em `tests/js/observatory/`.
