@@ -19,7 +19,11 @@ import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor
 import { JUPITER } from '@/lib/observatory/planetData';
 import { JUPITER_FRAG, JUPITER_VERT } from '@/lib/observatory/shaders/jupiter.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
-import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
+import {
+    BODY_HITBOX_MATERIAL,
+    BODY_ROTATION_EPOCH_UNIX_S,
+    BODY_SPHERE_SEGMENTS,
+} from '../bodyRenderConstants';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 import { useBodyTexture } from '../useBodyTexture';
@@ -28,6 +32,12 @@ import { useBodyTexture } from '../useBodyTexture';
 
 const JUPITER_SPIN_RATE_RAD_PER_S = (2 * Math.PI) / JUPITER.rotationPeriodS;
 
+/**
+ * Inclinação axial: 3,13° em torno de X eclíptico.
+ *
+ * Observação: esta é uma aproximação visual da obliquidade, não uma orientação
+ * completa do polo IAU no sistema de referência celeste.
+ */
 const JUPITER_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(1, 0, 0),
     (JUPITER.axialTiltDeg * Math.PI) / 180,
@@ -42,7 +52,6 @@ export function Jupiter({
     isFocused = false,
     showLabel = true,
 }: PlanetBodyProps) {
-
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         cursorPointerEnter();
@@ -124,7 +133,13 @@ export function Jupiter({
         <group position={position}>
             <group ref={poleGroupRef}>
                 <mesh ref={meshRef}>
-                    <sphereGeometry args={[JUPITER.visualRadiusDl, 48, 32]} />
+                    <sphereGeometry
+                        args={[
+                            JUPITER.visualRadiusDl,
+                            BODY_SPHERE_SEGMENTS.planet.width,
+                            BODY_SPHERE_SEGMENTS.planet.height,
+                        ]}
+                    />
                     {material instanceof THREE.ShaderMaterial ? (
                         <primitive ref={matRef} object={material} attach="material" />
                     ) : (
@@ -135,7 +150,13 @@ export function Jupiter({
 
             {/* Brilho de borda: névoa de H₂/He, azul-acinzentado muito sutil. */}
             <mesh scale={1.06}>
-                <sphereGeometry args={[JUPITER.visualRadiusDl, 24, 16]} />
+                <sphereGeometry
+                    args={[
+                        JUPITER.visualRadiusDl,
+                        BODY_SPHERE_SEGMENTS.rim.width,
+                        BODY_SPHERE_SEGMENTS.rim.height,
+                    ]}
+                />
                 <meshBasicMaterial
                     color="#7090b8"
                     transparent
@@ -151,8 +172,18 @@ export function Jupiter({
                     onPointerOut={handlePointerOut}
                     onClick={handleClick}
                 >
-                    <sphereGeometry args={[JUPITER.visualRadiusDl * 2.0, 12, 8]} />
-                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                    <sphereGeometry
+                        args={[
+                            JUPITER.visualRadiusDl * 2.0,
+                            BODY_SPHERE_SEGMENTS.hitbox.width,
+                            BODY_SPHERE_SEGMENTS.hitbox.height,
+                        ]}
+                    />
+                    <meshBasicMaterial
+                        transparent
+                        opacity={BODY_HITBOX_MATERIAL.opacity}
+                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
+                    />
                 </mesh>
             ) : null}
 

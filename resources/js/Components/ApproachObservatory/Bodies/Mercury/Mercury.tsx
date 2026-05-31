@@ -19,7 +19,11 @@ import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor
 import { MERCURY } from '@/lib/observatory/planetData';
 import { MERCURY_FRAG, MERCURY_VERT } from '@/lib/observatory/shaders/mercury.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
-import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
+import {
+    BODY_HITBOX_MATERIAL,
+    BODY_ROTATION_EPOCH_UNIX_S,
+    BODY_SPHERE_SEGMENTS,
+} from '../bodyRenderConstants';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 import { useBodyTexture } from '../useBodyTexture';
@@ -129,7 +133,13 @@ export function Mercury({
         <group position={position}>
             <group ref={poleGroupRef}>
                 <mesh ref={meshRef}>
-                    <sphereGeometry args={[MERCURY.visualRadiusDl, 48, 32]} />
+                    <sphereGeometry
+                        args={[
+                            MERCURY.visualRadiusDl,
+                            BODY_SPHERE_SEGMENTS.planet.width,
+                            BODY_SPHERE_SEGMENTS.planet.height,
+                        ]}
+                    />
                     {material instanceof THREE.ShaderMaterial ? (
                         <primitive ref={matRef} object={material} attach="material" />
                     ) : (
@@ -143,7 +153,13 @@ export function Mercury({
              * Mercúrio não tem atmosfera relevante, então a opacidade fica bem baixa.
              */}
             <mesh scale={1.08}>
-                <sphereGeometry args={[MERCURY.visualRadiusDl, 24, 16]} />
+                <sphereGeometry
+                    args={[
+                        MERCURY.visualRadiusDl,
+                        BODY_SPHERE_SEGMENTS.rim.width,
+                        BODY_SPHERE_SEGMENTS.rim.height,
+                    ]}
+                />
                 <meshBasicMaterial
                     color="#c8a87a"
                     transparent
@@ -159,8 +175,18 @@ export function Mercury({
                     onPointerOut={handlePointerOut}
                     onClick={handleClick}
                 >
-                    <sphereGeometry args={[MERCURY.visualRadiusDl * 3.5, 12, 8]} />
-                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                    <sphereGeometry
+                        args={[
+                            MERCURY.visualRadiusDl * 3.5,
+                            BODY_SPHERE_SEGMENTS.hitbox.width,
+                            BODY_SPHERE_SEGMENTS.hitbox.height,
+                        ]}
+                    />
+                    <meshBasicMaterial
+                        transparent
+                        opacity={BODY_HITBOX_MATERIAL.opacity}
+                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
+                    />
                 </mesh>
             ) : null}
 

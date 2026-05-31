@@ -19,7 +19,11 @@ import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor
 import { NEPTUNE } from '@/lib/observatory/planetData';
 import { NEPTUNE_FRAG, NEPTUNE_VERT } from '@/lib/observatory/shaders/neptune.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
-import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
+import {
+    BODY_HITBOX_MATERIAL,
+    BODY_ROTATION_EPOCH_UNIX_S,
+    BODY_SPHERE_SEGMENTS,
+} from '../bodyRenderConstants';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 import { useBodyTexture } from '../useBodyTexture';
@@ -129,7 +133,13 @@ export function Neptune({
         <group position={position}>
             <group ref={poleGroupRef}>
                 <mesh ref={meshRef}>
-                    <sphereGeometry args={[NEPTUNE.visualRadiusDl, 48, 32]} />
+                    <sphereGeometry
+                        args={[
+                            NEPTUNE.visualRadiusDl,
+                            BODY_SPHERE_SEGMENTS.planet.width,
+                            BODY_SPHERE_SEGMENTS.planet.height,
+                        ]}
+                    />
                     {material instanceof THREE.ShaderMaterial ? (
                         <primitive ref={matRef} object={material} attach="material" />
                     ) : (
@@ -140,7 +150,13 @@ export function Neptune({
 
             {/* Brilho de borda: halo azul-profundo de metano e cromóforos de Netuno. */}
             <mesh scale={1.06}>
-                <sphereGeometry args={[NEPTUNE.visualRadiusDl, 24, 16]} />
+                <sphereGeometry
+                    args={[
+                        NEPTUNE.visualRadiusDl,
+                        BODY_SPHERE_SEGMENTS.rim.width,
+                        BODY_SPHERE_SEGMENTS.rim.height,
+                    ]}
+                />
                 <meshBasicMaterial
                     color="#2060c8"
                     transparent
@@ -156,8 +172,18 @@ export function Neptune({
                     onPointerOut={handlePointerOut}
                     onClick={handleClick}
                 >
-                    <sphereGeometry args={[NEPTUNE.visualRadiusDl * 1.3, 12, 8]} />
-                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                    <sphereGeometry
+                        args={[
+                            NEPTUNE.visualRadiusDl * 1.3,
+                            BODY_SPHERE_SEGMENTS.hitbox.width,
+                            BODY_SPHERE_SEGMENTS.hitbox.height,
+                        ]}
+                    />
+                    <meshBasicMaterial
+                        transparent
+                        opacity={BODY_HITBOX_MATERIAL.opacity}
+                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
+                    />
                 </mesh>
             ) : null}
 

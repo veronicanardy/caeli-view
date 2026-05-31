@@ -20,7 +20,11 @@ import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor
 import { SATURN } from '@/lib/observatory/planetData';
 import { SATURN_FRAG, SATURN_VERT } from '@/lib/observatory/shaders/saturn.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
-import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
+import {
+    BODY_HITBOX_MATERIAL,
+    BODY_ROTATION_EPOCH_UNIX_S,
+    BODY_SPHERE_SEGMENTS,
+} from '../bodyRenderConstants';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 import { useBodyTexture } from '../useBodyTexture';
@@ -218,7 +222,13 @@ export function Saturn({
             <group ref={poleGroupRef}>
                 {/* Globo de Saturno. */}
                 <mesh ref={meshRef}>
-                    <sphereGeometry args={[SATURN.visualRadiusDl, 48, 32]} />
+                    <sphereGeometry
+                        args={[
+                            SATURN.visualRadiusDl,
+                            BODY_SPHERE_SEGMENTS.planet.width,
+                            BODY_SPHERE_SEGMENTS.planet.height,
+                        ]}
+                    />
                     {material instanceof THREE.ShaderMaterial ? (
                         <primitive ref={matRef} object={material} attach="material" />
                     ) : (
@@ -234,7 +244,13 @@ export function Saturn({
 
             {/* Brilho de borda: halo dourado-ocre da atmosfera de Saturno. */}
             <mesh scale={1.06}>
-                <sphereGeometry args={[SATURN.visualRadiusDl, 24, 16]} />
+                <sphereGeometry
+                    args={[
+                        SATURN.visualRadiusDl,
+                        BODY_SPHERE_SEGMENTS.rim.width,
+                        BODY_SPHERE_SEGMENTS.rim.height,
+                    ]}
+                />
                 <meshBasicMaterial
                     color="#c8b060"
                     transparent
@@ -251,8 +267,18 @@ export function Saturn({
                     onClick={handleClick}
                 >
                     {/* Hitbox maior que o globo, cobrindo também os anéis para facilitar o clique. */}
-                    <sphereGeometry args={[RING_OUTER_RADIUS * 1.1, 12, 8]} />
-                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                    <sphereGeometry
+                        args={[
+                            RING_OUTER_RADIUS * 1.1,
+                            BODY_SPHERE_SEGMENTS.hitbox.width,
+                            BODY_SPHERE_SEGMENTS.hitbox.height,
+                        ]}
+                    />
+                    <meshBasicMaterial
+                        transparent
+                        opacity={BODY_HITBOX_MATERIAL.opacity}
+                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
+                    />
                 </mesh>
             ) : null}
 

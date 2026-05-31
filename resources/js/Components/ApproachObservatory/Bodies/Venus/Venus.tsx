@@ -19,7 +19,11 @@ import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor
 import { VENUS } from '@/lib/observatory/planetData';
 import { VENUS_FRAG, VENUS_VERT } from '@/lib/observatory/shaders/venus.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
-import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
+import {
+    BODY_HITBOX_MATERIAL,
+    BODY_ROTATION_EPOCH_UNIX_S,
+    BODY_SPHERE_SEGMENTS,
+} from '../bodyRenderConstants';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 import { useBodyTexture } from '../useBodyTexture';
@@ -141,7 +145,13 @@ export function Venus({
         <group position={position}>
             <group ref={poleGroupRef}>
                 <mesh ref={meshRef}>
-                    <sphereGeometry args={[VENUS.visualRadiusDl, 48, 32]} />
+                    <sphereGeometry
+                        args={[
+                            VENUS.visualRadiusDl,
+                            BODY_SPHERE_SEGMENTS.planet.width,
+                            BODY_SPHERE_SEGMENTS.planet.height,
+                        ]}
+                    />
                     {material instanceof THREE.ShaderMaterial ? (
                         <primitive ref={matRef} object={material} attach="material" />
                     ) : (
@@ -155,7 +165,13 @@ export function Venus({
              * claramente visível — mais proeminente que em Mercúrio.
              */}
             <mesh scale={1.12}>
-                <sphereGeometry args={[VENUS.visualRadiusDl, 24, 16]} />
+                <sphereGeometry
+                    args={[
+                        VENUS.visualRadiusDl,
+                        BODY_SPHERE_SEGMENTS.rim.width,
+                        BODY_SPHERE_SEGMENTS.rim.height,
+                    ]}
+                />
                 <meshBasicMaterial
                     color="#c8a040"
                     transparent
@@ -171,8 +187,18 @@ export function Venus({
                     onPointerOut={handlePointerOut}
                     onClick={handleClick}
                 >
-                    <sphereGeometry args={[VENUS.visualRadiusDl * 3.5, 12, 8]} />
-                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                    <sphereGeometry
+                        args={[
+                            VENUS.visualRadiusDl * 3.5,
+                            BODY_SPHERE_SEGMENTS.hitbox.width,
+                            BODY_SPHERE_SEGMENTS.hitbox.height,
+                        ]}
+                    />
+                    <meshBasicMaterial
+                        transparent
+                        opacity={BODY_HITBOX_MATERIAL.opacity}
+                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
+                    />
                 </mesh>
             ) : null}
 

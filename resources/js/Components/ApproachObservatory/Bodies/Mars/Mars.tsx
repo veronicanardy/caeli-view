@@ -19,7 +19,11 @@ import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor
 import { MARS } from '@/lib/observatory/planetData';
 import { MARS_FRAG, MARS_VERT } from '@/lib/observatory/shaders/mars.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
-import { BODY_ROTATION_EPOCH_UNIX_S } from '../bodyRenderConstants';
+import {
+    BODY_HITBOX_MATERIAL,
+    BODY_ROTATION_EPOCH_UNIX_S,
+    BODY_SPHERE_SEGMENTS,
+} from '../bodyRenderConstants';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 import { useBodyTexture } from '../useBodyTexture';
@@ -28,6 +32,12 @@ import { useBodyTexture } from '../useBodyTexture';
 
 const MARS_SPIN_RATE_RAD_PER_S = (2 * Math.PI) / MARS.rotationPeriodS;
 
+/**
+ * Inclinação axial: 25,19° em torno de X eclíptico.
+ *
+ * Observação: esta é uma aproximação visual da obliquidade, não uma orientação
+ * completa do polo IAU no sistema de referência celeste.
+ */
 const MARS_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(1, 0, 0),
     (MARS.axialTiltDeg * Math.PI) / 180,
@@ -123,7 +133,13 @@ export function Mars({
         <group position={position}>
             <group ref={poleGroupRef}>
                 <mesh ref={meshRef}>
-                    <sphereGeometry args={[MARS.visualRadiusDl, 48, 32]} />
+                    <sphereGeometry
+                        args={[
+                            MARS.visualRadiusDl,
+                            BODY_SPHERE_SEGMENTS.planet.width,
+                            BODY_SPHERE_SEGMENTS.planet.height,
+                        ]}
+                    />
                     {material instanceof THREE.ShaderMaterial ? (
                         <primitive ref={matRef} object={material} attach="material" />
                     ) : (
@@ -134,7 +150,13 @@ export function Mars({
 
             {/* Brilho de borda: névoa de poeira marciana, vermelho/ferrugem muito sutil. */}
             <mesh scale={1.08}>
-                <sphereGeometry args={[MARS.visualRadiusDl, 24, 16]} />
+                <sphereGeometry
+                    args={[
+                        MARS.visualRadiusDl,
+                        BODY_SPHERE_SEGMENTS.rim.width,
+                        BODY_SPHERE_SEGMENTS.rim.height,
+                    ]}
+                />
                 <meshBasicMaterial
                     color="#c0501a"
                     transparent
@@ -150,8 +172,18 @@ export function Mars({
                     onPointerOut={handlePointerOut}
                     onClick={handleClick}
                 >
-                    <sphereGeometry args={[MARS.visualRadiusDl * 3.5, 12, 8]} />
-                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                    <sphereGeometry
+                        args={[
+                            MARS.visualRadiusDl * 3.5,
+                            BODY_SPHERE_SEGMENTS.hitbox.width,
+                            BODY_SPHERE_SEGMENTS.hitbox.height,
+                        ]}
+                    />
+                    <meshBasicMaterial
+                        transparent
+                        opacity={BODY_HITBOX_MATERIAL.opacity}
+                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
+                    />
                 </mesh>
             ) : null}
 
