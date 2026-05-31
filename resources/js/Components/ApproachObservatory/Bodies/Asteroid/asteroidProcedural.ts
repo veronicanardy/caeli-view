@@ -8,6 +8,21 @@ import { mulberry32 } from '@/lib/observatory/moonTextures';
 export type GenericAsteroidVariant = 'tiny' | 'small' | 'medium' | 'large' | 'unknown';
 
 /**
+ * Converte coordenadas esféricas em um vetor unitário.
+ *
+ * Convenção:
+ * - `theta`: ângulo polar a partir de +Z;
+ * - `phi`: ângulo azimutal no plano XY.
+ */
+export function sphericalDirection(theta: number, phi: number): THREE.Vector3 {
+    return new THREE.Vector3(
+        Math.sin(theta) * Math.cos(phi),
+        Math.sin(theta) * Math.sin(phi),
+        Math.cos(theta),
+    );
+}
+
+/**
  * Escolhe uma variante procedural com base no tamanho estimado do asteroide.
  */
 export function genericAsteroidVariantFor(object: ClosestNowObject): GenericAsteroidVariant {
@@ -76,11 +91,7 @@ export function buildAsteroidGeometry(
         const phi = 2 * Math.PI * w;
 
         return {
-            dir: new THREE.Vector3(
-                Math.sin(theta) * Math.cos(phi),
-                Math.sin(theta) * Math.sin(phi),
-                Math.cos(theta),
-            ),
+            dir: sphericalDirection(theta, phi),
             radius: profile.craterRadius[0] + rng() * (profile.craterRadius[1] - profile.craterRadius[0]),
             depth: profile.craterDepth[0] + rng() * (profile.craterDepth[1] - profile.craterDepth[0]),
         };

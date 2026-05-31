@@ -9,8 +9,8 @@ Ela não deve decidir seleção global, modo de câmera, critérios de lista, ra
 * `Earth`, `Moon` e `Sun`: corpos de referência principais da cena.
 * `Mercury` a `Neptune`: wrappers dos planetas ambiente focáveis, posicionados por `SceneEphemeris`.
 * `PlanetBody`: componente base para a renderização visual comum dos planetas ambiente.
-* `MoonOrbit`: guia visual da órbita lunar, centrado na Terra e orientado pelo plano orbital recebido da efeméride.
-* `Asteroid`: marcador, seleção de modelo real e fallback procedural para asteroides.
+* `MoonOrbit`: guia visual lunar mantido em `Bodies/Moon` por proximidade com a Lua. Ele ajuda a leitura visual da referência Terra-Lua, mas não calcula efeméride, trajetória nem órbita física. Se surgirem novos guias orbitais, eles devem ir para uma pasta explícita, como `OrbitalGuides`.
+* `Asteroid`: marcador visual de objetos próximos. Recebe a posição pronta de `currentPositionInScene`, escolhe modelo real ou fallback procedural, aplica rotação visual, hitbox, hover/seleção e rótulo. Não calcula órbita, ranking, Horizons, SBDB nem efemérides.
 * `bodyRenderConstants.ts`: constantes compartilhadas de renderização dos corpos, como época de rotação visual, segmentos de esfera, parâmetros do guia lunar, hitboxes e opacidades padrão.
 * `bodyLighting.ts`: helpers compartilhados de iluminação local dos corpos, como a direção dos planetas até o Sol visual da cena.
 * `planetBodyTypes.ts`: contrato comum de props para planetas ambiente focáveis.
@@ -48,18 +48,23 @@ Por isso, os planetas ambiente (`Mercury` a `Neptune`) não recebem `sunDirectio
 
 `useBodyTexture.ts` é responsável pelo ciclo de vida das texturas carregadas por ele.
 
+Por isso, componentes que usam `useBodyTexture` não devem chamar manualmente `dispose()` em texturas vindas do hook. Texturas carregadas por `useBodyTexture` continuam sendo responsabilidade do próprio hook.
+
+Recursos criados localmente pelo componente continuam sendo responsabilidade do próprio componente ou hook que os criou.
+
 Por isso, componentes que usam `useBodyTexture` não devem chamar manualmente:
 
 * `texture?.dispose()`;
 * `atmosphere?.dispose()`;
 * `ringTexture?.dispose()`.
 
-O componente que cria materiais, geometrias ou recursos WebGL próprios continua responsável por descartá-los.
-
 Exemplos:
 
 * `PlanetBody` descarta o material que cria para o globo.
 * `Saturn` descarta `ringMaterial` e `ringGeo`, porque esses recursos são criados no próprio componente.
+* `Moon` descarta o bump procedural criado localmente.
+* `ProceduralAsteroidRock` descarta geometria e texturas procedurais criadas localmente.
+* `RealAsteroidModel` descarta apenas os materiais clonados pelo próprio componente, sem descartar geometrias ou texturas compartilhadas do GLTF.
 * Texturas carregadas por `useBodyTexture` devem ser descartadas pelo hook.
 
 ## Casos especiais
@@ -72,9 +77,11 @@ Exemplos:
 
 ## Fora desta pasta
 
-As órbitas planetárias visíveis do radar não vivem em `Bodies`.
+As órbitas planetárias visíveis do radar, trajetórias e linhas futuras/passadas não vivem em `Bodies`.
 
-Guias orbitais heliocêntricos, trajetórias, linhas futuras/passadas e representações de caminho devem ficar em componentes de trajetória, como `Trajectory/HeliocentricLines.tsx`, ou nas camadas de cena apropriadas.
+Guias orbitais heliocêntricos, trajetórias e representações de caminho devem ficar em componentes de trajetória, como `Trajectory/HeliocentricLines.tsx`, ou nas camadas de cena apropriadas.
+
+`MoonOrbit` é uma exceção local e temporária: ele continua em `Bodies/Moon` por estar acoplado à leitura visual da Lua como referência de distância, não por representar um motor orbital. Se novos guias orbitais surgirem, ou se essa camada crescer, eles devem migrar para uma pasta explícita, como `OrbitalGuides`.
 
 Não reintroduza componentes `*Orbit` planetários nesta pasta apenas para desenhar anéis baseados na distância instantânea do planeta. Se algum guia de distância for necessário no futuro, ele deve ter nome explícito de guia/anel de distância, não de órbita física.
 
