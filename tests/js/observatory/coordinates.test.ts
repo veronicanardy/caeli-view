@@ -3,15 +3,14 @@ import { horizonsToScene, normalize3, sunDirectionFromIncoming } from '@/lib/obs
 import { compressDistanceDl, KM_PER_LD } from '@/lib/sceneEphemeris';
 
 describe('horizonsToScene', () => {
-    it('swaps Y ↔ Z (ecliptic plane goes to scene XZ, ecliptic north goes to scene +Y)', () => {
-        // A vector with a single non-zero ecliptic-Y component should land on scene +Y.
+    it('maps ecliptic +Y onto scene -Z so the ecliptic plane stays on scene XZ', () => {
+        // The scene convention is x -> x, z -> y, and -y -> z.
         const scene = horizonsToScene(0, KM_PER_LD, 0);
-        // After axis swap the input ecliptic-Y maps to scene-Z (index 2), and ecliptic-Z (input z=0)
-        // maps to scene-Y (index 1). So a (0, 1 DL, 0) input becomes (0, 0, scaled).
+        // So a pure +Y ecliptic vector becomes a pure -Z scene vector after compression.
         expect(Math.abs(scene[0])).toBeLessThan(1e-9);
         expect(Math.abs(scene[1])).toBeLessThan(1e-9);
-        // The compression is applied to the magnitude (1 DL → 1 scene unit by construction).
-        expect(scene[2]).toBeCloseTo(1, 9);
+        // The compression is applied to the magnitude (1 DL -> 1 scene unit by construction).
+        expect(scene[2]).toBeCloseTo(-1, 9);
     });
 
     it('maps a pure ecliptic-X km vector to scene +X with log compression on magnitude', () => {
@@ -22,7 +21,7 @@ describe('horizonsToScene', () => {
     });
 
     it('keeps direction honest: scene magnitude equals compressDistanceDl(real DL distance)', () => {
-        // Horizons km (3, 4, 0) → 5 km input → 5/KM_PER_LD DL real distance.
+        // Horizons km (3, 4, 0) -> 5 km input -> 5/KM_PER_LD DL real distance.
         const km = 5 * KM_PER_LD;
         const scene = horizonsToScene(3 * KM_PER_LD * 3 / 5, 4 * KM_PER_LD * 3 / 5, 0);
         // Simpler: feed (3, 4, 0) DL and check magnitude lines up with compressDistanceDl(5).
@@ -55,7 +54,7 @@ describe('normalize3', () => {
 
 describe('sunDirectionFromIncoming', () => {
     it('maps backend (x_ecl, y_ecl) onto scene (x, z) with z=0 in y', () => {
-        // Backend gives a 2D ecliptic direction; scene wants x→x, y_ecl→z, z_ecl(=0)→y.
+        // Backend gives a 2D ecliptic direction; scene wants x -> x, y_ecl -> z, z_ecl (=0) -> y.
         const v = sunDirectionFromIncoming({
             x: 1,
             y: 0,
