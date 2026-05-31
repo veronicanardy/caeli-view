@@ -13,7 +13,7 @@
  */
 
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { URANUS } from '@/lib/observatory/planetData';
@@ -51,15 +51,13 @@ interface UranusProps {
 }
 
 export function Uranus({ position, locale, onFocus, isFocused = false, showLabel = true }: UranusProps) {
-    const [hovered, setHovered] = useState(false);
+    
 
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
-        setHovered(true);
         cursorPointerEnter();
     };
     const handlePointerOut = () => {
-        setHovered(false);
         cursorPointerLeave();
     };
     const handleClick = (e: ThreeEvent<PointerEvent>) => {
