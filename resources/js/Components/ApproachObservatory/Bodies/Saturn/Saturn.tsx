@@ -13,19 +13,11 @@
  * Iluminação: shader próprio com atmosfera densa e limb dourado-ocre.
  */
 
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { SATURN } from '@/lib/observatory/planetData';
 import { SATURN_FRAG, SATURN_VERT } from '@/lib/observatory/shaders/saturn.glsl';
-import { ScreenLabel } from '../../Overlays/SceneLabels';
-import {
-    BODY_HITBOX_MATERIAL,
-    BODY_ROTATION_EPOCH_UNIX_S,
-    BODY_SPHERE_SEGMENTS,
-} from '../bodyRenderConstants';
-import { directionFromBodyToSceneSun } from '../bodyLighting';
+import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 import { useBodyTexture } from '../useBodyTexture';
 
@@ -53,6 +45,35 @@ const SATURN_TILT_QUAT = new THREE.Quaternion().setFromAxisAngle(
  */
 const RING_INNER_RADIUS = SATURN.visualRadiusDl * 1.11;
 const RING_OUTER_RADIUS = SATURN.visualRadiusDl * 2.27;
+
+const SATURN_VISUAL_CONFIG: PlanetVisualConfig = {
+    body: {
+        visualRadiusDl: SATURN.visualRadiusDl,
+        texturePath: SATURN.texturePath ?? '',
+        fallbackColor: SATURN.fallbackColor,
+    },
+    shaders: {
+        vertex: SATURN_VERT,
+        fragment: SATURN_FRAG,
+    },
+    label: {
+        pt: 'Saturno',
+        en: 'Saturn',
+        offset: RING_OUTER_RADIUS + 0.10 - SATURN.visualRadiusDl,
+    },
+    materialFallback: {
+        roughness: 0.85,
+        metalness: 0.0,
+    },
+    rim: {
+        color: '#c8b060',
+        opacity: 0.07,
+        scale: 1.06,
+    },
+    hitbox: {
+        radiusMultiplier: (RING_OUTER_RADIUS * 1.1) / SATURN.visualRadiusDl,
+    },
+};
 
 // --------------- Geometria dos anéis ------------------------------------------------------
 
@@ -100,82 +121,8 @@ function buildRingGeometry(innerRadius: number, outerRadius: number, segments = 
 
 // --------------- Componente ---------------------------------------------------------------
 
-export function Saturn({
-    position,
-    locale,
-    onFocus,
-    isFocused = false,
-    showLabel = true,
-}: PlanetBodyProps) {
-    const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        cursorPointerEnter();
-    };
-
-    const handlePointerOut = () => {
-        cursorPointerLeave();
-    };
-
-    const handleClick = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        onFocus();
-    };
-
-    const texture = useBodyTexture(SATURN.texturePath ?? '', 'srgb');
+export function Saturn(props: PlanetBodyProps) {
     const ringTexture = useBodyTexture('/images/saturn/saturn-ring-8k.png', 'srgb');
-
-    const poleGroupRef = useRef<THREE.Group>(null);
-    const meshRef = useRef<THREE.Mesh>(null);
-    const matRef = useRef<THREE.ShaderMaterial>(null);
-
-    useEffect(() => {
-        if (poleGroupRef.current) {
-            poleGroupRef.current.quaternion.copy(SATURN_TILT_QUAT);
-        }
-    }, []);
-
-    useFrame(() => {
-        if (!meshRef.current) return;
-
-        const nowS = Date.now() / 1000;
-        meshRef.current.rotation.y = SATURN_SPIN_RATE_RAD_PER_S * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
-
-        if (matRef.current) {
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
-                directionFromBodyToSceneSun(position),
-            );
-        }
-    });
-
-    const material = useMemo(() => {
-        const initialSunDir = directionFromBodyToSceneSun(position);
-
-        if (texture) {
-            return new THREE.ShaderMaterial({
-                uniforms: {
-                    surfaceMap: { value: texture },
-                    sunDir: { value: initialSunDir },
-                },
-                vertexShader: SATURN_VERT,
-                fragmentShader: SATURN_FRAG,
-            });
-        }
-
-        return new THREE.MeshStandardMaterial({
-            color: SATURN.fallbackColor,
-            roughness: 0.85,
-            metalness: 0.0,
-        });
-
-        // A direção ao Sol da cena é atualizada por frame via uniform.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [texture]);
-
-    useEffect(() => {
-        return () => {
-            material.dispose();
-        };
-    }, [material]);
 
     const ringMaterial = useMemo(() => {
         return new THREE.MeshBasicMaterial({
@@ -203,78 +150,17 @@ export function Saturn({
         };
     }, [ringGeo]);
 
-    const labelPos: [number, number, number] = [0, RING_OUTER_RADIUS + 0.10, 0];
-
     return (
-        <group position={position}>
-            <group ref={poleGroupRef}>
-                {/* Globo de Saturno. */}
-                <mesh ref={meshRef}>
-                    <sphereGeometry
-                        args={[
-                            SATURN.visualRadiusDl,
-                            BODY_SPHERE_SEGMENTS.planet.width,
-                            BODY_SPHERE_SEGMENTS.planet.height,
-                        ]}
-                    />
-                    {material instanceof THREE.ShaderMaterial ? (
-                        <primitive ref={matRef} object={material} attach="material" />
-                    ) : (
-                        <primitive object={material} attach="material" />
-                    )}
-                </mesh>
-
-                {/* Anéis de Saturno com textura radial e canal alpha para divisões visuais. */}
+        <PlanetBody
+            {...props}
+            config={SATURN_VISUAL_CONFIG}
+            spinRateRadPerS={SATURN_SPIN_RATE_RAD_PER_S}
+            tiltQuaternion={SATURN_TILT_QUAT}
+            childrenInsidePoleGroup={
                 <mesh geometry={ringGeo}>
                     <primitive object={ringMaterial} attach="material" />
                 </mesh>
-            </group>
-
-            {/* Brilho de borda: halo dourado-ocre da atmosfera de Saturno. */}
-            <mesh scale={1.06}>
-                <sphereGeometry
-                    args={[
-                        SATURN.visualRadiusDl,
-                        BODY_SPHERE_SEGMENTS.rim.width,
-                        BODY_SPHERE_SEGMENTS.rim.height,
-                    ]}
-                />
-                <meshBasicMaterial
-                    color="#c8b060"
-                    transparent
-                    opacity={0.07}
-                    side={THREE.BackSide}
-                    depthWrite={false}
-                />
-            </mesh>
-
-            {!isFocused ? (
-                <mesh
-                    onPointerOver={handlePointerOver}
-                    onPointerOut={handlePointerOut}
-                    onClick={handleClick}
-                >
-                    {/* Hitbox maior que o globo, cobrindo também os anéis para facilitar o clique. */}
-                    <sphereGeometry
-                        args={[
-                            RING_OUTER_RADIUS * 1.1,
-                            BODY_SPHERE_SEGMENTS.hitbox.width,
-                            BODY_SPHERE_SEGMENTS.hitbox.height,
-                        ]}
-                    />
-                    <meshBasicMaterial
-                        transparent
-                        opacity={BODY_HITBOX_MATERIAL.opacity}
-                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
-                    />
-                </mesh>
-            ) : null}
-
-            {showLabel ? (
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
-                    <span className="font-semibold">{locale === 'en' ? 'Saturn' : 'Saturno'}</span>
-                </ScreenLabel>
-            ) : null}
-        </group>
+            }
+        />
     );
 }

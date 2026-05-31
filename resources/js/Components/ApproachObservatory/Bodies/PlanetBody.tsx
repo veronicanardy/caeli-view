@@ -1,4 +1,5 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
@@ -47,15 +48,23 @@ export interface PlanetVisualConfig {
         radiusMultiplier: number;
     };
     textureColorSpace?: 'srgb' | 'raw';
-    extraTextures?: PlanetExtraTextureConfig[];
+    extraTexture?: PlanetExtraTextureConfig;
 }
 
 interface PlanetBodyComponentProps extends PlanetBodyProps {
     config: PlanetVisualConfig;
     spinRateRadPerS: number;
     tiltQuaternion: THREE.Quaternion;
+    childrenInsidePoleGroup?: ReactNode;
 }
 
+/**
+ * Centraliza a renderização local comum dos planetas ambiente.
+ *
+ * Este componente não calcula órbita, trajetória, ranking, câmera ou efeméride.
+ * Ele recebe posição, configuração visual, rotação e inclinação já prontas, e apenas
+ * renderiza o corpo com textura, shader, brilho de borda, hitbox e rótulo.
+ */
 export function PlanetBody({
     position,
     locale,
@@ -65,6 +74,7 @@ export function PlanetBody({
     config,
     spinRateRadPerS,
     tiltQuaternion,
+    childrenInsidePoleGroup,
 }: PlanetBodyComponentProps) {
     const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
@@ -84,21 +94,13 @@ export function PlanetBody({
         config.body.texturePath ?? '',
         config.textureColorSpace ?? 'srgb',
     );
-    const firstExtraTextureConfig = config.extraTextures?.[0];
-    const secondExtraTextureConfig = config.extraTextures?.[1];
-    const thirdExtraTextureConfig = config.extraTextures?.[2];
-
-    const firstExtraTexture = useBodyTexture(
-        firstExtraTextureConfig?.path ?? '',
-        firstExtraTextureConfig?.colorSpace ?? 'srgb',
-    );
-    const secondExtraTexture = useBodyTexture(
-        secondExtraTextureConfig?.path ?? '',
-        secondExtraTextureConfig?.colorSpace ?? 'srgb',
-    );
-    const thirdExtraTexture = useBodyTexture(
-        thirdExtraTextureConfig?.path ?? '',
-        thirdExtraTextureConfig?.colorSpace ?? 'srgb',
+    /**
+     * `extraTexture` cobre casos como Vênus, que usa `atmosphereMap`
+     * com fallback para `surfaceMap` enquanto o mapa auxiliar carrega.
+     */
+    const extraTexture = useBodyTexture(
+        config.extraTexture?.path ?? '',
+        config.extraTexture?.colorSpace ?? 'srgb',
     );
 
     const poleGroupRef = useRef<THREE.Group>(null);
@@ -126,11 +128,6 @@ export function PlanetBody({
 
     const material = useMemo(() => {
         const initialSunDir = directionFromBodyToSceneSun(position);
-        const extraTextureValues = [
-            firstExtraTexture,
-            secondExtraTexture,
-            thirdExtraTexture,
-        ];
 
         if (texture) {
             const uniforms: Record<string, { value: THREE.Texture | THREE.Vector3 | null }> = {
@@ -138,12 +135,12 @@ export function PlanetBody({
                 sunDir: { value: initialSunDir },
             };
 
-            config.extraTextures?.forEach((extraTextureConfig, index) => {
-                uniforms[extraTextureConfig.uniformName] = {
-                    value: extraTextureValues[index]
-                        ?? (extraTextureConfig.fallbackToSurfaceMap ? texture : null),
+            if (config.extraTexture) {
+                uniforms[config.extraTexture.uniformName] = {
+                    value: extraTexture
+                        ?? (config.extraTexture.fallbackToSurfaceMap ? texture : null),
                 };
-            });
+            }
 
             return new THREE.ShaderMaterial({
                 uniforms,
@@ -160,7 +157,7 @@ export function PlanetBody({
 
         // A direção ao Sol da cena é atualizada por frame via uniform.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [config, firstExtraTexture, position, secondExtraTexture, texture, thirdExtraTexture]);
+    }, [config, extraTexture, position, texture]);
 
     useEffect(() => {
         return () => {
@@ -187,6 +184,8 @@ export function PlanetBody({
                         <primitive object={material} attach="material" />
                     )}
                 </mesh>
+                {/* Slot para recursos que precisam acompanhar a inclinação visual, como os anéis de Saturno. */}
+                {childrenInsidePoleGroup}
             </group>
 
             <mesh scale={config.rim.scale}>

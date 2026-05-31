@@ -64,14 +64,12 @@ const VENUS_VISUAL_CONFIG: PlanetVisualConfig = {
     hitbox: {
         radiusMultiplier: 3.5,
     },
-    extraTextures: [
-        {
-            uniformName: 'atmosphereMap',
-            path: VENUS.atmospherePath ?? '',
-            colorSpace: 'srgb',
-            fallbackToSurfaceMap: true,
-        },
-    ],
+    extraTexture: {
+        uniformName: 'atmosphereMap',
+        path: VENUS.atmospherePath ?? '',
+        colorSpace: 'srgb',
+        fallbackToSurfaceMap: true,
+    },
 };
 
 // --------------- Componente ---------------------------------------------------------------
