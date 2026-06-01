@@ -10,7 +10,7 @@ O objetivo aqui é organizar a interface que permite ao usuário:
 - acionar focos e referências visuais;
 - navegar pelo manual do mapa.
 
-## Responsabilidade Da Pasta
+## Responsabilidade da pasta
 
 `Controls` deve cuidar de:
 
@@ -29,7 +29,7 @@ O objetivo aqui é organizar a interface que permite ao usuário:
 
 Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógica visual pode ficar aqui, mas a lógica de domínio deve permanecer fora desta pasta.
 
-## Organização Atual
+## Organização atual
 
 ### Shell E Ajuda
 
@@ -58,7 +58,7 @@ Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógi
 - `CompactConsoleBar.tsx`: versão condensada dos controles para espaços menores.
 - `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D.
 
-## Remoção Do Radar 2D
+## Remoção do radar 2D
 
 O controle `RadarFilters.tsx` foi removido junto com o radar 2D/SVG. A seleção principal de objetos agora fica em `RadarObjectControls.tsx`, usada pelo radar 3D.
 

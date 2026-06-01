@@ -1,4 +1,3 @@
-import { RadarObjectControls } from '../Controls/RadarObjectControls';
 import { ReferenceSection } from '../Controls/ReferenceControls';
 import { listTitle } from './MobilePanelControls';
 import { RadarNavigationObjectList, RefreshButton } from './RadarNavigationObjectList';
@@ -19,8 +18,6 @@ export function RadarNavigationDesktopContent({
     selectedId,
     objectLimit,
     selectionMode,
-    onLimitChange,
-    onModeChange,
     radarLoading,
     onRefresh,
     planetsOpen,
@@ -31,20 +28,6 @@ export function RadarNavigationDesktopContent({
 }: NavigationContentProps) {
     return (
         <>
-            {!orbitMode ? (
-                <div className="hidden border-b border-white/10 px-2 py-2 sm:block">
-                    <RadarObjectControls
-                        objectLimit={objectLimit}
-                        selectionMode={selectionMode}
-                        onLimitChange={onLimitChange}
-                        onModeChange={onModeChange}
-                        locale={locale}
-                        loading={radarLoading}
-                        criterionLocked={orbitMode}
-                    />
-                </div>
-            ) : null}
-
             <div className="hidden sm:block">
                 <ReferenceSection
                     en={en}

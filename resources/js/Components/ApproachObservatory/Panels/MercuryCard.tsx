@@ -32,7 +32,7 @@ export function MercuryCard({ onClose, locale }: MercuryCardProps) {
                 <button
                     type="button"
                     onClick={onClose}
-                    className="-mr-1 -mt-1 rounded-full p-1 text-white/55 transition outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                    className="-mr-1 -mt-1 rounded-full p-1 text-white/60 transition outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
                     aria-label={en ? 'Close' : 'Fechar'}
                 >
                     ×
@@ -41,7 +41,7 @@ export function MercuryCard({ onClose, locale }: MercuryCardProps) {
 
             {/* Context note */}
             <div className="mt-2 px-3">
-                <p className="text-[12px] leading-relaxed text-white/55">
+                <p className="text-[12px] leading-relaxed text-white/60">
                     {en
                         ? 'The smallest and innermost planet. Shown here for spatial context — not the focus of CaeliView.'
                         : 'O menor e mais interno dos planetas. Exibido como contexto espacial — não é o foco do CaeliView.'}

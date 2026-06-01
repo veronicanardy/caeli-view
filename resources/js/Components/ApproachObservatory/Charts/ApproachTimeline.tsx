@@ -56,7 +56,7 @@ export function ApproachTimeline({ approaches, locale, t }: Props) {
 
     if (!groups.length) {
         return (
-            <p className="rounded-lg border border-white/10 bg-white/[0.035] p-4 text-sm text-white/55">
+            <p className="rounded-lg border border-white/10 bg-white/[0.035] p-4 text-sm text-white/60">
                 {t('observatory.timeline.empty')}
             </p>
         );
@@ -264,7 +264,7 @@ function TimelineRow({
                 </div>
 
                 {/* Lado direito: distância em km e em distâncias lunares (oculto em mobile) */}
-                <div className="hidden shrink-0 items-center gap-3 text-xs text-white/55 sm:flex">
+                <div className="hidden shrink-0 items-center gap-3 text-xs text-white/60 sm:flex">
                     <span>{compactKm(approach.nominalDistanceKm)}</span>
                     <span className="text-white/40">·</span>
                     <span>{lunarDistanceLabel(lunarDistance)}</span>

@@ -12,7 +12,6 @@ import { ErrorMessage } from '@/Components/ErrorMessage';
 import { bestDistanceKm, buildRadarObjects } from '@/lib/radarData';
 import type { Translator } from '@/i18n';
 import { useTranslation } from '@/i18n';
-import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { buildCuratedHighlights, buildRangeInsights } from '@/lib/approachInterpretation';
 import { useClosestNow } from '@/hooks/useClosestNow';
 import { useRadarControls } from '@/hooks/useRadarControls';
@@ -59,7 +58,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
         date: filters.date_min,
         type: filters.type,
     });
-    const [query, setQuery] = useState('');
     const [sortKey, setSortKey] = useState(filters.sort === '-v-rel' ? 'relativeVelocityKph' : 'nominalDistanceKm');
     const [isUpdating, setIsUpdating] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -187,18 +185,8 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     const errorsBySource = data?.errorsBySource ?? {};
 
     const filtered = useMemo(() => {
-        const needle = query.trim().toLowerCase();
-
-        return approaches
-            .filter((approach) => {
-                if (!needle) return true;
-                const identity = resolveApproachIdentity(approach);
-                return [identity.displayName, identity.subtitle, identity.rawName, ...identity.aliases, approach.designation, approach.detailIdentifier, approach.sourceLabel]
-                    .filter(Boolean)
-                    .some((value) => String(value).toLowerCase().includes(needle));
-            })
-            .sort((left, right) => compareApproaches(left, right, sortKey, positionsById));
-    }, [approaches, positionsById, query, sortKey]);
+        return [...approaches].sort((left, right) => compareApproaches(left, right, sortKey, positionsById));
+    }, [approaches, positionsById, sortKey]);
 
     const radarApproaches = closestNowApproaches;
     const radarPositionsById = closestNowPositionsById;
@@ -303,21 +291,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
         });
     }
 
-    function quickSelectDate(date: string) {
-        setForm((current) => ({ ...current, date }));
-        setIsUpdating(true);
-        router.get('/radar', {
-            date_min: date,
-            date_max: date,
-            type: form.type,
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-            onFinish: () => setIsUpdating(false),
-        });
-    }
-
     return (
         <AppLayout>
             <Head title={t('observatory.title')} />
@@ -335,12 +308,15 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                             form={form}
                             onFormChange={setForm}
                             onSubmit={submit}
-                            onPresetDateSelect={quickSelectDate}
-                            query={query}
-                            onQueryChange={setQuery}
                             isUpdating={isUpdating}
                             errors={errors}
                             t={t}
+                            locale={locale}
+                            objectLimit={objectLimit}
+                            selectionMode={selectionMode}
+                            onLimitChange={setObjectLimit}
+                            onModeChange={setSelectionMode}
+                            radarLoading={closestNowLoading}
                         />
 
                         {closestNowData && lunarReference ? (

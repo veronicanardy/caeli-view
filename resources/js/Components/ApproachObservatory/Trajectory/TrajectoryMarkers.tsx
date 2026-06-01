@@ -61,7 +61,7 @@ export function ClosestApproachMarker({
             {emphasized && showLabel ? (
                 <FocusProtectedHtml position={[0, 0.09, 0]} center distanceFactor={5} zIndexRange={[8, 0]}>
                     <div className="pointer-events-none whitespace-nowrap rounded-md border border-white/10 bg-space-950/90 px-2 py-1 text-[11px] text-white/90 shadow-glow backdrop-blur">
-                        <div className="text-[9px] uppercase tracking-wide text-white/55">
+                        <div className="text-[9px] uppercase tracking-wide text-white/60">
                             {en ? 'Closest approach' : 'Máxima aproximação'}
                         </div>
                         <div className="font-semibold">

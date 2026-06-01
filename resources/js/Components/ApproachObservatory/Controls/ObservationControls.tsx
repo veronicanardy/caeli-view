@@ -45,13 +45,12 @@ export function ObservationControls({ form, onFormChange, onSubmit, onPresetDate
                             <CalendarDays className="size-3.5" aria-hidden="true" />
                             {t('observatory.controls.day')}
                         </div>
-                        {!compact ? <p className="mt-1 text-xs text-white/45">{t('observatory.filterNote')}</p> : null}
                     </div>
 
                     <button
                         type="submit"
                         disabled={isUpdating}
-                        className={`light-button shrink-0 rounded border border-signal-cyan/70 bg-signal-cyan/30 font-semibold text-white shadow-[0_0_22px_rgba(84,214,214,0.28)] outline-none transition hover:bg-signal-cyan/38 focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait disabled:opacity-70 ${compact ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm'}`}
+                        className={`light-button shrink-0 rounded border border-signal-cyan/70 bg-signal-cyan/30 font-semibold text-white shadow-[0_0_22px_rgba(84,214,214,0.28)] outline-none transition hover:bg-signal-cyan/40 focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait disabled:opacity-70 ${compact ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm'}`}
                     >
                         {isUpdating ? t('observatory.loading.submit') : t('observatory.update')}
                     </button>
@@ -71,7 +70,7 @@ export function ObservationControls({ form, onFormChange, onSubmit, onPresetDate
                                     type="date"
                                     value={form.date}
                                     onChange={(event) => onFormChange({ ...form, date: event.target.value })}
-                                    className="w-full rounded border border-white/20 bg-space-950/78 px-2.5 py-1.5 text-sm text-white outline-none focus:border-signal-cyan"
+                                    className="w-full rounded border border-white/20 bg-space-950/80 px-2.5 py-1.5 text-sm text-white outline-none focus:border-signal-cyan"
                                 />
                             </CompactField>
 
@@ -79,7 +78,7 @@ export function ObservationControls({ form, onFormChange, onSubmit, onPresetDate
                                 <select
                                     value={form.type}
                                     onChange={(event) => onFormChange({ ...form, type: event.target.value as ApproachObservatoryFilters['type'] })}
-                                    className="w-full rounded border border-white/20 bg-space-950/78 px-2.5 py-1.5 text-sm text-white outline-none focus:border-signal-cyan"
+                                    className="w-full rounded border border-white/20 bg-space-950/80 px-2.5 py-1.5 text-sm text-white outline-none focus:border-signal-cyan"
                                 >
                                     <option value="all">{t('observatory.all')}</option>
                                     <option value="asteroid">{t('observatory.asteroids')}</option>
@@ -94,7 +93,7 @@ export function ObservationControls({ form, onFormChange, onSubmit, onPresetDate
                                         value={query}
                                         onChange={(event) => onQueryChange(event.target.value)}
                                         placeholder={t('observatory.search')}
-                                        className="w-full rounded border border-white/20 bg-space-950/78 py-1.5 pl-8 pr-2.5 text-sm text-white placeholder:text-white/55 outline-none focus:border-signal-cyan"
+                                        className="w-full rounded border border-white/20 bg-space-950/80 py-1.5 pl-8 pr-2.5 text-sm text-white placeholder:text-white/60 outline-none focus:border-signal-cyan"
                                     />
                                 </div>
                             </CompactField>
@@ -135,7 +134,7 @@ export function ObservationControls({ form, onFormChange, onSubmit, onPresetDate
                                     value={query}
                                     onChange={(event) => onQueryChange(event.target.value)}
                                     placeholder={t('observatory.search')}
-                                    className="w-full rounded border border-white/10 bg-space-950/60 py-1.5 pl-8 pr-2.5 text-sm text-white placeholder:text-white/55 outline-none focus:border-signal-cyan"
+                                    className="w-full rounded border border-white/10 bg-space-950/60 py-1.5 pl-8 pr-2.5 text-sm text-white placeholder:text-white/60 outline-none focus:border-signal-cyan"
                                 />
                             </div>
                         </CompactField>
@@ -154,7 +153,7 @@ function DatePreset({ label, active, onClick }: { label: string; active: boolean
             className={`rounded-full border px-3 py-1.5 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-signal-cyan ${
                 active
                     ? 'border-signal-cyan/60 bg-signal-cyan/18 text-white shadow-[0_0_18px_rgba(84,214,214,0.18)]'
-                    : 'border-white/10 bg-white/[0.045] text-white/62 hover:border-white/20 hover:text-white'
+                    : 'border-white/10 bg-white/[0.045] text-white/60 hover:border-white/20 hover:text-white'
             }`}
         >
             {label}

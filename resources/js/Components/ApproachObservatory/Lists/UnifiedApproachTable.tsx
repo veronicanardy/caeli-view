@@ -27,7 +27,7 @@ export function UnifiedApproachTable({
             <div className="hidden overflow-hidden rounded-lg border border-white/10 bg-white/[0.035] md:block">
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-white/10 text-sm">
-                        <thead className="text-left text-white/55">
+                        <thead className="text-left text-white/60">
                             <tr>
                                 <th className="px-4 py-3 font-medium">Objeto</th>
                                 <th className="px-4 py-3 font-medium">Tipo</th>

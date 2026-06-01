@@ -39,7 +39,7 @@ const BAND_TONE: Record<DistanceBand, string> = {
     near: 'border-signal-amber/40 bg-signal-amber/10 text-signal-amber',
     beyond: 'border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan',
     farBeyond: 'border-white/15 bg-white/[0.06] text-white/70',
-    unknown: 'border-white/10 bg-white/[0.04] text-white/55',
+    unknown: 'border-white/10 bg-white/[0.04] text-white/60',
 };
 
 export function FocusObject({ approach, pool, locale, t }: Props) {
@@ -71,7 +71,7 @@ export function FocusObject({ approach, pool, locale, t }: Props) {
                         </span>
                     </div>
                     <h2 className="mt-3 break-words text-2xl font-semibold text-white sm:text-3xl">{identity.displayName}</h2>
-                    <p className="mt-1 text-sm text-white/55">
+                    <p className="mt-1 text-sm text-white/60">
                         {identity.subtitle ?? approach.designation ?? approach.detailIdentifier}
                         {approach.sourceLabel ? ` · ${approach.sourceLabel}` : ''}
                     </p>
@@ -126,7 +126,7 @@ export function FocusObject({ approach, pool, locale, t }: Props) {
                     {sizeHuman ? (
                         <>
                             <span className="font-medium text-white">{formatSize(sizeHuman.estimatedMeters)}</span>
-                            <span className="text-white/55"> · {sizeHuman.label}</span>
+                            <span className="text-white/60"> · {sizeHuman.label}</span>
                         </>
                     ) : (
                         <span className="text-white/45">{t('observatory.focus.size.unavailable')}</span>

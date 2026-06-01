@@ -97,7 +97,7 @@ export function useRadar3DFocusActions({
         clearPlanetTargets();
         setPlanetsOpen(false);
         setPanelCollapsed(false);
-        setMobilePanelSection('menu');
+        setMobilePanelSection('objects');
     }, [clearPlanetTargets, onClearSelection, setMobilePanelSection, setPanelCollapsed, setPlanetsOpen]);
 
     const closeFocusedObject = useCallback(() => {
@@ -170,8 +170,8 @@ export function useRadar3DFocusActions({
     useEffect(() => {
         if (!orbitMode) return;
         setPlanetsOpen(false);
-        if (mobilePanelSection === 'filters') {
-            setMobilePanelSection('menu');
+        if (mobilePanelSection !== 'objects') {
+            setMobilePanelSection('objects');
         }
     }, [mobilePanelSection, orbitMode, setMobilePanelSection, setPlanetsOpen]);
 

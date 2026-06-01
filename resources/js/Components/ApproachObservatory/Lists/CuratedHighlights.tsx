@@ -29,7 +29,7 @@ type Props = {
 export function CuratedHighlights({ highlights, t }: Props) {
     if (!highlights.length) {
         return (
-            <p className="rounded-lg border border-white/10 bg-white/[0.035] p-5 text-sm text-white/55">
+            <p className="rounded-lg border border-white/10 bg-white/[0.035] p-5 text-sm text-white/60">
                 {t('observatory.highlights.empty')}
             </p>
         );

@@ -63,7 +63,7 @@ export function PanelShell({
                     ) : null}
                     <div className="mt-0.5 truncate text-sm font-semibold text-white sm:text-base">{title}</div>
                     {subtitle ? (
-                        <div className="truncate text-[11px] text-white/55 sm:text-[12px]">{subtitle}</div>
+                        <div className="truncate text-[11px] text-white/60 sm:text-[12px]">{subtitle}</div>
                     ) : null}
                 </div>
                 {showCloseButton ? (

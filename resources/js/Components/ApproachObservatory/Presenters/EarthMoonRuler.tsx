@@ -38,7 +38,7 @@ export function EarthMoonRuler({
 
     if (lunarDistance === null) {
         return (
-            <div className="rounded-lg border border-white/10 bg-space-950/55 p-4 text-xs text-white/55">
+            <div className="rounded-lg border border-white/10 bg-space-950/55 p-4 text-xs text-white/60">
                 {unavailableLabel}
             </div>
         );

@@ -41,13 +41,7 @@ export function RadarNavigationPanel({
 }: RadarNavigationPanelProps) {
     const closeMobilePanel = () => {
         onPanelCollapsedChange(true);
-        onMobilePanelSectionChange('menu');
-        onPlanetsOpenChange(false);
-    };
-
-    const backToMenu = () => onMobilePanelSectionChange('menu');
-    const closeReferenceSection = () => {
-        onMobilePanelSectionChange('menu');
+        onMobilePanelSectionChange('objects');
         onPlanetsOpenChange(false);
     };
 
@@ -103,21 +97,9 @@ export function RadarNavigationPanel({
                         selectedId={selectedId}
                         objectLimit={objectLimit}
                         selectionMode={selectionMode}
-                        onLimitChange={onLimitChange}
-                        onModeChange={onModeChange}
                         radarLoading={radarLoading}
                         onRefresh={onRefresh}
-                        mobilePanelSection={mobilePanelSection}
-                        onMobilePanelSectionChange={onMobilePanelSectionChange}
-                        backToMenu={backToMenu}
-                        closeReferenceSection={closeReferenceSection}
-                        planetsOpen={planetsOpen}
-                        onPlanetsOpenChange={onPlanetsOpenChange}
-                        bodyCardOpen={bodyCardOpen}
                         onSelectObject={onSelectObject}
-                        onFocusBody={onFocusBody}
-                        onFocusPlanet={onFocusPlanet}
-                        onFocusSun={onFocusSun}
                     />
 
                     <RadarNavigationDesktopContent
@@ -140,7 +122,7 @@ export function RadarNavigationPanel({
                     />
                 </div>
 
-                {planetsOpen && !orbitMode && mobilePanelSection !== 'reference' ? (
+                {planetsOpen && !orbitMode ? (
                     <div
                         ref={planetFlyoutRef}
                         className="flex flex-col rounded-xl border border-white/10 bg-space-950/90 backdrop-blur-xl overflow-y-auto

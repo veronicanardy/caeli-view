@@ -31,7 +31,7 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
                 {closest ? (
                     <ClosestObject closest={closest} locale={locale} en={en} t={t} />
                 ) : (
-                    <p className="text-xs text-white/55">{t('observatory.radar.quality.closestEmpty')}</p>
+                    <p className="text-xs text-white/60">{t('observatory.radar.quality.closestEmpty')}</p>
                 )}
             </Block>
 
@@ -97,7 +97,7 @@ function Block({ icon, title, children }: { icon: ReactNode; title: string; chil
 function Row({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
     return (
         <div className="flex items-center justify-between gap-2">
-            <dt className="flex items-center gap-1.5 text-white/55">
+            <dt className="flex items-center gap-1.5 text-white/60">
                 {icon}
                 {label}
             </dt>
@@ -117,11 +117,11 @@ function ClosestObject({ closest, locale, en, t }: { closest: RadarObject; local
             <p className="truncate text-base font-semibold text-white">{identity.displayName}</p>
             <p className="text-sm text-white/75">
                 {compactKm(closest.distanceKm)}
-                {lunar !== null ? <span className="text-white/55"> Â· {lunarDistanceLabel(lunar)}</span> : null}
+                {lunar !== null ? <span className="text-white/60"> Â· {lunarDistanceLabel(lunar)}</span> : null}
             </p>
-            <p className="text-xs text-white/55">{t('observatory.radar.quality.closestTimeLabel')}: {approachTime}</p>
+            <p className="text-xs text-white/60">{t('observatory.radar.quality.closestTimeLabel')}: {approachTime}</p>
             {velocity !== null ? (
-                <p className="text-xs text-white/55">
+                <p className="text-xs text-white/60">
                     {en ? 'Velocity' : 'Velocidade'}: {formatNumber(velocity, 0)} km/h
                 </p>
             ) : null}

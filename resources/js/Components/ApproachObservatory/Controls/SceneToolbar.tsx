@@ -46,7 +46,7 @@ export function SceneToolbar({
         <div className="pointer-events-none absolute right-3 top-3 z-20">
             <div className="pointer-events-auto hidden sm:flex items-center gap-1.5">
                 {activeMode !== 'orbit' ? (
-                    <div className="flex items-center gap-1 rounded-full border border-white/10 bg-space-950/82 p-1 backdrop-blur">
+                    <div className="flex items-center gap-1 rounded-full border border-white/10 bg-space-950/80 p-1 backdrop-blur">
                         <ViewButton active={view === 'top' && !hasVisibleFocusedObject} onClick={() => onPickView('top')}>
                             {en ? 'Top' : 'Superior'}
                         </ViewButton>
@@ -77,7 +77,7 @@ export function SceneToolbar({
 
             <div className="pointer-events-auto flex sm:hidden flex-col items-center gap-1.5">
                 {activeMode !== 'orbit' ? (
-                    <div className="flex flex-col items-center gap-0.5 rounded-full border border-white/10 bg-space-950/82 py-1 px-1 backdrop-blur">
+                    <div className="flex flex-col items-center gap-0.5 rounded-full border border-white/10 bg-space-950/80 py-1 px-1 backdrop-blur">
                         <IconViewButton active={view === 'top' && !hasVisibleFocusedObject} onClick={() => onPickView('top')} title={en ? 'Top view' : 'Vista superior'}>
                             <svg viewBox="0 0 14 14" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
                                 <circle cx="7" cy="7" r="5.5" />
@@ -136,8 +136,8 @@ function IconToggleButton({
             className={[
                 'flex items-center justify-center rounded-full border p-1.5 backdrop-blur transition',
                 active
-                    ? 'border-white/10 bg-space-950/82 text-white/60 hover:border-white/25 hover:text-white'
-                    : 'border-white/20 bg-white/8 text-white/35 hover:text-white/60',
+                    ? 'border-white/10 bg-space-950/80 text-white/60 hover:border-white/25 hover:text-white'
+                    : 'border-white/20 bg-white/10 text-white/35 hover:text-white/60',
             ].join(' ')}
         >
             {children}

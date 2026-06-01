@@ -48,20 +48,24 @@ export function MobilePanelSectionHeader({
     trailing,
 }: {
     title: string;
-    backLabel: string;
-    onBack: () => void;
+    backLabel?: string;
+    onBack?: () => void;
     trailing?: ReactNode;
 }) {
     return (
         <div className="flex items-center justify-between border-b border-white/10 px-2 py-1.5">
-            <button
-                type="button"
-                onClick={onBack}
-                className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-signal-cyan/75 transition hover:text-signal-cyan"
-            >
-                <ChevronDown className="size-3 -rotate-90" aria-hidden />
-                {backLabel}
-            </button>
+            {backLabel && onBack ? (
+                <button
+                    type="button"
+                    onClick={onBack}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-signal-cyan/75 transition hover:text-signal-cyan"
+                >
+                    <ChevronDown className="size-3 -rotate-90" aria-hidden />
+                    {backLabel}
+                </button>
+            ) : (
+                <div className="min-w-4" />
+            )}
             <span className="text-[11px] font-medium uppercase tracking-wide text-white/45">{title}</span>
             <div className="flex min-w-4 items-center justify-end">{trailing}</div>
         </div>

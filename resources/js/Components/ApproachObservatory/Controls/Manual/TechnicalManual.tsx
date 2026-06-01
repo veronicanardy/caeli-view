@@ -90,7 +90,7 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                                 text: 'Calcula a posição do Sol (direção da luz), posição e fase da Lua, posição heliocêntrica da Terra (vista de órbita) e o ponto subsolar que alimenta o shader do terminador dia/noite. Baseada em algoritmos USNO/NOVAS — resultados de alta precisão para o sistema solar interno sem API externa.',
                             },
                         ]).map((src) => (
-                            <div key={src.name} className="rounded-md border border-white/8 bg-black/15 px-3 py-2.5">
+                            <div key={src.name} className="rounded-md border border-white/10 bg-black/15 px-3 py-2.5">
                                 <p className="text-[13px] font-semibold text-white/85">
                                     {src.name}{' '}
                                     <span className="font-normal text-white/40">{src.sub}</span>
@@ -135,7 +135,7 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                                 ? 'Sun and Moon vectors from astronomy-engine are also in J2000 equatorial, then rotated to the J2000 ecliptic frame (where Z points to the ecliptic north pole). All geocentric vectors — asteroids, Moon, Sun — then go through the same axis remap before placement in the Three.js scene:'
                                 : 'Os vetores do Sol e da Lua calculados pelo astronomy-engine também estão em J2000 equatorial, depois rotacionados para o referencial eclíptico J2000 (onde Z aponta para o polo norte eclíptico). Todos os vetores geocêntricos — asteroides, Lua, Sol — passam pelo mesmo remapeamento de eixos antes de serem posicionados na cena Three.js:'}
                         </p>
-                        <div className="mt-2 rounded-md border border-signal-cyan/15 bg-signal-cyan/[0.055] px-3 py-2.5 font-mono text-[12px] leading-relaxed text-cyan-100/88">
+                        <div className="mt-2 rounded-md border border-signal-cyan/15 bg-signal-cyan/[0.055] px-3 py-2.5 font-mono text-[12px] leading-relaxed text-cyan-100/90">
                             <div>{en ? 'scene(x, y, z) = (ecl.x, ecl.z, −ecl.y)   ← asteroid / Moon / Sun' : 'cena(x, y, z) = (ecl.x, ecl.z, −ecl.y)   ← asteroide / Lua / Sol'}</div>
                         </div>
                         <p className="mt-2 text-[13px] leading-relaxed text-white/60">
@@ -288,7 +288,7 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                             ]).map(([aspect, situation]) => (
                                 <tr key={aspect}>
                                     <td className="py-2 pr-4 align-top font-medium text-white/75">{aspect}</td>
-                                    <td className="py-2 leading-relaxed text-white/55">{situation}</td>
+                                    <td className="py-2 leading-relaxed text-white/60">{situation}</td>
                                 </tr>
                             ))}
                         </tbody>

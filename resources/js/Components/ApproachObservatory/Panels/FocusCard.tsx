@@ -43,7 +43,7 @@ export function FocusCard({
     const a = object.approach;
     const [tab, setTab] = useState<FocusTab>('summary');
     const [mobileSection, setMobileSection] = useState<FocusMobileSection | null>(null);
-    const ldText = object.currentDistanceLD !== null ? `${object.currentDistanceLD.toFixed(2)} DL` : 'â€”';
+    const ldText = object.currentDistanceLD !== null ? `${object.currentDistanceLD.toFixed(2)} DL` : '—';
     const auText = formatDistanceAU(object.currentDistanceKm, locale);
     const motion = motionLabel(object.trajectory?.motionState, en);
     const risk = riskAssessment(a, en);
@@ -54,7 +54,7 @@ export function FocusCard({
     const showSectionContent = mobileSection !== 'actions';
 
     const eyebrowText = orbitMode
-        ? (en ? 'On its orbit around the Sun' : 'Em sua Ã³rbita ao redor do Sol')
+        ? (en ? 'On its orbit around the Sun' : 'Em sua órbita ao redor do Sol')
         : (en ? 'Object in focus' : 'Objeto em Foco');
 
     const eyebrow = onShowPanel ? (
@@ -63,7 +63,7 @@ export function FocusCard({
                 type="button"
                 onClick={onShowPanel}
                 className="sm:hidden flex items-center gap-1 text-[11px] text-white/50 transition hover:text-white/80"
-                aria-label={en ? 'Back to list' : 'Voltar Ã  lista'}
+                aria-label={en ? 'Back to list' : 'Voltar à lista'}
             >
                 <ChevronDown className="-rotate-90 size-3" />
                 {en ? 'List' : 'Lista'}
@@ -91,9 +91,9 @@ export function FocusCard({
                 <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2 sm:hidden">
                     <div className="space-y-1.5">
                         <MobileFocusMenuButton label={en ? 'Summary' : 'Resumo'} onClick={() => setMobileSection('summary')} />
-                        <MobileFocusMenuButton label={en ? 'Physical data' : 'Dados fÃ­sicos'} onClick={() => setMobileSection('physical')} />
-                        <MobileFocusMenuButton label={en ? 'Approach details' : 'Detalhes da aproximaÃ§Ã£o'} onClick={() => setMobileSection('approach')} />
-                        <MobileFocusMenuButton label={en ? 'Actions' : 'AÃ§Ãµes'} onClick={() => setMobileSection('actions')} />
+                        <MobileFocusMenuButton label={en ? 'Physical data' : 'Dados físicos'} onClick={() => setMobileSection('physical')} />
+                        <MobileFocusMenuButton label={en ? 'Approach details' : 'Detalhes da aproximação'} onClick={() => setMobileSection('approach')} />
+                        <MobileFocusMenuButton label={en ? 'Actions' : 'Ações'} onClick={() => setMobileSection('actions')} />
                     </div>
                 </div>
             ) : null}
@@ -111,12 +111,12 @@ export function FocusCard({
                     </button>
                     <span className="text-[11px] font-medium uppercase tracking-wide text-white/45">
                         {mobileSection === 'actions'
-                            ? (en ? 'Actions' : 'AÃ§Ãµes')
+                            ? (en ? 'Actions' : 'Ações')
                             : activeSection === 'summary'
                                 ? (en ? 'Summary' : 'Resumo')
                                 : activeSection === 'physical'
-                                    ? (en ? 'Physical' : 'FÃ­sico')
-                                    : (en ? 'Approach' : 'AproximaÃ§Ã£o')}
+                                    ? (en ? 'Physical' : 'Físico')
+                                    : (en ? 'Approach' : 'Aproximação')}
                     </span>
                     <span className="w-8" aria-hidden />
                 </div>
@@ -147,8 +147,8 @@ export function FocusCard({
             {/* Abas */}
             <div className="mt-2 hidden gap-1 border-b border-white/10 px-2.5 sm:flex sm:mt-2.5 sm:px-3">
                 <FocusTabButton active={tab === 'summary'} onClick={() => setTab('summary')}>{en ? 'Summary' : 'Resumo'}</FocusTabButton>
-                <FocusTabButton active={tab === 'physical'} onClick={() => setTab('physical')}>{en ? 'Physical' : 'FÃ­sico'}</FocusTabButton>
-                <FocusTabButton active={tab === 'approach'} onClick={() => setTab('approach')}>{en ? 'Approach' : 'AproximaÃ§Ã£o'}</FocusTabButton>
+                <FocusTabButton active={tab === 'physical'} onClick={() => setTab('physical')}>{en ? 'Physical' : 'Físico'}</FocusTabButton>
+                <FocusTabButton active={tab === 'approach'} onClick={() => setTab('approach')}>{en ? 'Approach' : 'Aproximação'}</FocusTabButton>
             </div>
 
             {/* Conteudo da aba com rolagem quando necessario. */}
@@ -157,8 +157,8 @@ export function FocusCard({
                     <div className="space-y-2">
                         <p className="text-[13px] leading-relaxed text-white/80">{summary}</p>
                         <dl className="space-y-1.5 text-[13px]">
-                            <Row label={en ? 'Distance from Earth' : 'DistÃ¢ncia da Terra'}>
-                                {compactKm(object.currentDistanceKm)} <span className="text-white/55">Â· {ldText} Â· {auText}</span>
+                            <Row label={en ? 'Distance from Earth' : 'Distância da Terra'}>
+                                {compactKm(object.currentDistanceKm)} <span className="text-white/60">· {ldText} · {auText}</span>
                             </Row>
                             {motion ? (
                                 <Row label={en ? 'Status' : 'Status'}>
@@ -171,18 +171,18 @@ export function FocusCard({
 
                 {showSectionContent && activeSection === 'physical' ? (
                     <dl className="space-y-1.5 text-[13px]">
-                        <Row label={en ? 'Diameter' : 'DiÃ¢metro'}>
+                        <Row label={en ? 'Diameter' : 'Diâmetro'}>
                             {a.diameterMeters != null
                                 ? `${Math.round(a.diameterMeters)} m`
                                 : a.estimatedDiameterMinMeters != null
-                                  ? `${Math.round(a.estimatedDiameterMinMeters)}â€“${Math.round(a.estimatedDiameterMaxMeters ?? 0)} m`
-                                  : 'â€”'}
+                                  ? `${Math.round(a.estimatedDiameterMinMeters)}–${Math.round(a.estimatedDiameterMaxMeters ?? 0)} m`
+                                  : '—'}
                         </Row>
-                        <Row label={en ? 'Size compared to' : 'Tamanho comparÃ¡vel a'}>
+                        <Row label={en ? 'Size compared to' : 'Tamanho comparável a'}>
                             {sizeComparison(a.diameterMeters ?? a.estimatedDiameterMaxMeters, en)}
                         </Row>
                         <Row label={en ? 'Absolute magnitude (H)' : 'Magnitude absoluta (H)'}>
-                            {a.absoluteMagnitude != null ? a.absoluteMagnitude.toFixed(1) : 'â€”'}
+                            {a.absoluteMagnitude != null ? a.absoluteMagnitude.toFixed(1) : '—'}
                         </Row>
                         <Row label={en ? 'Type' : 'Tipo'}>
                             {a.objectType === 'comet' ? (en ? 'Comet' : 'Cometa') : (en ? 'Asteroid' : 'Asteroide')}
@@ -197,18 +197,18 @@ export function FocusCard({
                             return v != null ? (
                                 <Row label={en ? 'Velocity' : 'Velocidade'}>
                                     {new Intl.NumberFormat(locale).format(Math.round(v))} km/h
-                                    {a.relativeVelocityKph == null ? <span className="text-white/45"> Â· {en ? 'from vectors' : 'dos vetores'}</span> : null}
+                                    {a.relativeVelocityKph == null ? <span className="text-white/45"> · {en ? 'from vectors' : 'dos vetores'}</span> : null}
                                 </Row>
                             ) : null;
                         })()}
                         {a.approachDate ? (
-                            <Row label={en ? 'Closest approach' : 'MÃ¡xima aproximaÃ§Ã£o'}>
+                            <Row label={en ? 'Closest approach' : 'Máxima aproximação'}>
                                 {formatTimestamp(a.approachDate, locale)}
                             </Row>
                         ) : null}
-                        <Row label={en ? 'Min. distance' : 'DistÃ¢ncia mÃ­nima'}>
-                            {a.nominalDistanceKm != null ? compactKm(a.nominalDistanceKm) : 'â€”'}
-                            {a.lunarDistance != null ? <span className="text-white/55"> Â· {a.lunarDistance.toFixed(2)} DL</span> : null}
+                        <Row label={en ? 'Min. distance' : 'Distância mínima'}>
+                            {a.nominalDistanceKm != null ? compactKm(a.nominalDistanceKm) : '—'}
+                            {a.lunarDistance != null ? <span className="text-white/60"> · {a.lunarDistance.toFixed(2)} DL</span> : null}
                         </Row>
                         <Row label={en ? 'Source' : 'Fonte'}>JPL/Horizons</Row>
                     </dl>
@@ -224,7 +224,7 @@ export function FocusCard({
                                 title={!orbitMode && !canShowOrbitPosition
                                     ? (en
                                         ? 'Heliocentric orbit elements incomplete for this object (missing perihelion epoch).'
-                                        : 'Elementos da Ã³rbita heliocÃªntrica incompletos para este objeto (sem Ã©poca de periÃ©lio).')
+                                        : 'Elementos da órbita heliocêntrica incompletos para este objeto (sem época de periélio).')
                                     : undefined}
                                 className={[
                                     'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
@@ -236,8 +236,8 @@ export function FocusCard({
                                 ].join(' ')}
                             >
                                 {orbitMode
-                                    ? (en ? 'â†© Back to the asteroid' : 'â†© Voltar ao asteroide')
-                                    : (en ? 'ðŸ›° See its orbit around the Sun' : 'ðŸ›° Ver a Ã³rbita ao redor do Sol')}
+                                    ? (en ? '↩ Back to the asteroid' : '↩ Voltar ao asteroide')
+                                    : (en ? '🛰 See its orbit around the Sun' : '🛰 Ver a órbita ao redor do Sol')}
                             </button>
                         ) : null}
                         {onOpenFocus ? (
@@ -246,7 +246,7 @@ export function FocusCard({
                                 onClick={() => onOpenFocus(a)}
                                 className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-white/75 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
                             >
-                                {en ? 'Open full dossier' : 'Abrir dossiÃª completo'}
+                                {en ? 'Open full dossier' : 'Abrir dossiê completo'}
                             </button>
                         ) : null}
                     </div>
@@ -263,7 +263,7 @@ export function FocusCard({
                         title={!orbitMode && !canShowOrbitPosition
                             ? (en
                                 ? 'Heliocentric orbit elements incomplete for this object (missing perihelion epoch).'
-                                : 'Elementos da Ã³rbita heliocÃªntrica incompletos para este objeto (sem Ã©poca de periÃ©lio).')
+                                : 'Elementos da órbita heliocêntrica incompletos para este objeto (sem época de periélio).')
                             : undefined}
                         className={[
                             'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan sm:gap-1.5 sm:py-2.5 sm:text-[13px]',
@@ -275,8 +275,8 @@ export function FocusCard({
                         ].join(' ')}
                     >
                         {orbitMode
-                            ? (en ? 'â†© Back to the asteroid' : 'â†© Voltar ao asteroide')
-                            : (en ? 'ðŸ›° See its orbit around the Sun' : 'ðŸ›° Ver a Ã³rbita ao redor do Sol')}
+                            ? (en ? '↩ Back to the asteroid' : '↩ Voltar ao asteroide')
+                            : (en ? '🛰 See its orbit around the Sun' : '🛰 Ver a órbita ao redor do Sol')}
                     </button>
                 ) : null}
                 {onOpenFocus ? (
@@ -285,7 +285,7 @@ export function FocusCard({
                         onClick={() => onOpenFocus(a)}
                         className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-white/75 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan sm:py-2 sm:text-[12px]"
                     >
-                        {en ? 'Open full dossier' : 'Abrir dossiÃª completo'}
+                        {en ? 'Open full dossier' : 'Abrir dossiê completo'}
                     </button>
                 ) : null}
             </div>
@@ -314,7 +314,7 @@ function FocusTabButton({ active, onClick, children }: { active: boolean; onClic
             onClick={onClick}
             className={[
                 '-mb-px border-b-2 px-2 py-1.5 text-[13px] font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                active ? 'border-signal-cyan text-white' : 'border-transparent text-white/55 hover:text-white/80',
+                active ? 'border-signal-cyan text-white' : 'border-transparent text-white/60 hover:text-white/80',
             ].join(' ')}
         >
             {children}

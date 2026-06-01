@@ -13,6 +13,7 @@ export function ReferenceSection({
     onFocusEarth,
     onFocusMoon,
     onFocusSun,
+    compact = false,
 }: {
     en: boolean;
     orbitMode?: boolean;
@@ -21,9 +22,10 @@ export function ReferenceSection({
     onFocusEarth: () => void;
     onFocusMoon: () => void;
     onFocusSun: () => void;
+    compact?: boolean;
 }) {
     return (
-        <div className="border-b border-white/10 px-2 py-1.5">
+        <div className={compact ? '' : 'border-b border-white/10 px-2 py-1.5'}>
             <div className="flex flex-wrap items-center gap-1.5">
                 <ReferenceIconButton label={en ? 'Sun' : 'Sol'} icon="☀️" onClick={onFocusSun} />
                 <ReferenceIconButton label={en ? 'Earth' : 'Terra'} icon="🌍" onClick={onFocusEarth} />
@@ -92,7 +94,7 @@ const PLANET_LIST = [
  * Lista flutuante de planetas usada pelo atalho de referência.
  */
 export function PlanetFlyout({ en, focusedId, onFocus }: { en: boolean; focusedId: PlanetId | null; onFocus: (id: PlanetId) => void }) {
-    const btnCls = 'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan';
+    const btnCls = 'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] text-white/80 transition outline-none hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan';
     return (
         <div className="px-1 py-1 space-y-0.5">
             {PLANET_LIST.map((p) => (

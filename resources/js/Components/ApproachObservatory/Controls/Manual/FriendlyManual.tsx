@@ -137,8 +137,8 @@ function RadarFriendly({ en, nf, lunarDistanceKm }: { en: boolean; nf: Intl.Numb
                 </div>
             </div>
 
-            <div className="rounded-lg border border-white/8 bg-black/20 px-4 py-3">
-                <p className="text-[13px] leading-relaxed text-white/55">
+            <div className="rounded-lg border border-white/10 bg-black/20 px-4 py-3">
+                <p className="text-[13px] leading-relaxed text-white/60">
                     {en
                         ? "Now you have everything you need. Rotate, zoom, click on objects — and if you want to understand an asteroid's full trajectory, switch to orbit mode."
                         : 'Agora você tem tudo que precisa. Gire, aproxime, clique nos objetos — e se quiser entender a trajetória completa de um asteroide, troque para o modo órbita.'}
@@ -221,8 +221,8 @@ function OrbitFriendly({ en }: { en: boolean }) {
                 </div>
             </div>
 
-            <div className="rounded-lg border border-white/8 bg-black/20 px-4 py-3">
-                <p className="text-[13px] leading-relaxed text-white/55">
+            <div className="rounded-lg border border-white/10 bg-black/20 px-4 py-3">
+                <p className="text-[13px] leading-relaxed text-white/60">
                     {en
                         ? 'Now you know how to read an orbit. To see where the asteroid is relative to Earth right now, switch back to radar mode.'
                         : 'Agora você sabe ler uma órbita. Para ver onde o asteroide está em relação à Terra agora, troque para o modo radar.'}

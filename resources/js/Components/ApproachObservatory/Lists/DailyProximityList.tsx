@@ -25,7 +25,7 @@ export function DailyProximityList({ approaches, positionsById, focusId, selecte
 
     if (!sorted.length) {
         return (
-            <div className="rounded-lg border border-white/10 bg-white/[0.035] p-5 text-sm text-white/55">
+            <div className="rounded-lg border border-white/10 bg-white/[0.035] p-5 text-sm text-white/60">
                 {en ? 'No relevant close approach found for this date.' : 'Nenhuma aproxima\u00E7\u00E3o relevante encontrada para esta data.'}
             </div>
         );
@@ -82,7 +82,7 @@ export function DailyProximityList({ approaches, positionsById, focusId, selecte
                         </div>
 
                         {trajectory?.status === 'available' ? (
-                            <p className="mt-3 rounded border border-white/10 bg-space-950/55 px-3 py-2 text-xs leading-5 text-white/55">
+                            <p className="mt-3 rounded border border-white/10 bg-space-950/55 px-3 py-2 text-xs leading-5 text-white/60">
                                 {motionText(trajectory.motionState, trajectory.referencePoint?.distanceLunar ?? null, locale)}
                             </p>
                         ) : null}

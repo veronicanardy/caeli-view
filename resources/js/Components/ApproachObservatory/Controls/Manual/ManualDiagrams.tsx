@@ -75,7 +75,7 @@ export function RadarGuideDiagram({ locale, technical = false }: { locale: 'pt-B
                 <text x="412" y="105" fill="#e2e8f0" fontSize="14">{en ? 'object' : 'objeto'}</text>
                 <text x="448" y="72" fill="#67e8f9" fontSize="14" fontWeight="600">{en ? 'moving' : 'movimento'}</text>
             </svg>
-            <figcaption className="border-t border-white/10 px-4 py-3 text-[12px] leading-relaxed text-white/55">
+            <figcaption className="border-t border-white/10 px-4 py-3 text-[12px] leading-relaxed text-white/60">
                 {en
                     ? 'Earth at centre. Grey rings are distance bands (logarithmically spaced in the real view). The cone points in the direction of motion. The grey dashed line is the recent trajectory.'
                     : 'Terra no centro. Anéis cinzas são faixas de distância (com espaçamento logarítmico na vista real). O cone aponta na direção do movimento. A linha tracejada cinza é a trajetória recente.'}
@@ -172,7 +172,7 @@ export function OrbitGuideDiagram({ locale, technical = false }: { locale: 'pt-B
                 <text x="20" y="30" fill="#cbd5e1" fontSize="15" fontWeight="700">{en ? 'The full orbit — true to scale' : 'A órbita completa — em escala real'}</text>
                 <text x="20" y="50" fill="#64748b" fontSize="13">{en ? '— Sun sits at one focus of the ellipse, not the centre' : '— o Sol fica em um foco da elipse, não no centro'}</text>
             </svg>
-            <figcaption className="border-t border-white/10 px-4 py-3 text-[12px] leading-relaxed text-white/55">
+            <figcaption className="border-t border-white/10 px-4 py-3 text-[12px] leading-relaxed text-white/60">
                 {en
                     ? 'Sun (orange) at the left focus — not at the centre of the ellipse. Purple oval = full orbit. White dot = asteroid today. Yellow dot = perihelion, the closest point to the Sun.'
                     : 'Sol (laranja) no foco esquerdo — não no centro da elipse. Oval roxo = órbita completa. Ponto branco = asteroide hoje. Ponto amarelo = periélio, o ponto mais próximo do Sol.'}

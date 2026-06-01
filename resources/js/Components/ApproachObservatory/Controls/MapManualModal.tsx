@@ -221,7 +221,7 @@ function ManualTabButton({ active, onClick, icon, children }: {
             onClick={onClick}
             className={[
                 'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                active ? 'bg-signal-cyan text-space-950' : 'text-white/62 hover:bg-white/[0.08] hover:text-white',
+                active ? 'bg-signal-cyan text-space-950' : 'text-white/60 hover:bg-white/[0.08] hover:text-white',
             ].join(' ')}
         >
             <Icon className="size-3.5" aria-hidden />

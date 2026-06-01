@@ -39,7 +39,7 @@ export function BodyInfoCard({ body, onClose, locale, mobileTopAlign, panelRef }
         >
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain sm:overflow-visible">
                 <div className="px-2.5 pb-2.5 pt-1.5 pr-1.5 sm:px-3 sm:pb-3 sm:pt-2 sm:pr-2">
-                    <p className="text-[12px] leading-relaxed text-white/55 sm:text-[13px]">
+                    <p className="text-[12px] leading-relaxed text-white/60 sm:text-[13px]">
                         {en ? cfg.contextEn : cfg.contextPt}
                     </p>
 

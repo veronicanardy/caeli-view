@@ -104,7 +104,7 @@ export function DailyOrbitalRadar3D({
     const [planetsOpen, setPlanetsOpen] = useState(false);
     // Em mobile o painel começa colapsado para não cobrir o canvas.
     const [panelCollapsed, setPanelCollapsed] = useState(true);
-    const [mobilePanelSection, setMobilePanelSection] = useState<MobilePanelSection>('menu');
+    const [mobilePanelSection, setMobilePanelSection] = useState<MobilePanelSection>('objects');
     const {
         bodyCardOpen,
         cameraIntent,

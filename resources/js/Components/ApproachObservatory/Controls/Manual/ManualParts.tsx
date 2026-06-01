@@ -49,11 +49,11 @@ export function HighlightBox({ children }: { children: React.ReactNode }) {
 
 export function RulerRow({ label, color, value, desc }: { label: string; color: string; value: string; desc: string }) {
     return (
-        <div className="flex gap-3 rounded-md border border-white/8 bg-black/15 px-3 py-2.5">
+        <div className="flex gap-3 rounded-md border border-white/10 bg-black/15 px-3 py-2.5">
             <span className={`mt-0.5 shrink-0 font-mono text-sm font-bold ${color}`}>{label}</span>
             <div>
                 <span className="text-[13px] font-medium text-white/80">{value}</span>
-                <p className="mt-0.5 text-[12px] leading-relaxed text-white/55">{desc}</p>
+                <p className="mt-0.5 text-[12px] leading-relaxed text-white/60">{desc}</p>
             </div>
         </div>
     );
@@ -61,7 +61,7 @@ export function RulerRow({ label, color, value, desc }: { label: string; color: 
 
 export function VisualKey({ color, shape, label, desc }: { color: string; shape?: 'cone' | 'dashed' | 'ring' | 'ellipse'; label: string; desc: string }) {
     return (
-        <div className="flex items-start gap-2.5 rounded-md border border-white/8 bg-black/15 px-3 py-2">
+        <div className="flex items-start gap-2.5 rounded-md border border-white/10 bg-black/15 px-3 py-2">
             <span className="mt-1 shrink-0">
                 {shape === 'dashed'
                     ? <span className="inline-block h-0.5 w-5 border-t-2 border-dashed border-slate-400/80" />
@@ -75,7 +75,7 @@ export function VisualKey({ color, shape, label, desc }: { color: string; shape?
             </span>
             <div>
                 <span className="text-[13px] font-medium text-white/85">{label}</span>
-                <p className="text-[12px] leading-relaxed text-white/55">{desc}</p>
+                <p className="text-[12px] leading-relaxed text-white/60">{desc}</p>
             </div>
         </div>
     );
@@ -83,16 +83,16 @@ export function VisualKey({ color, shape, label, desc }: { color: string; shape?
 
 export function ReadingStep({ label, text }: { label: string; text: string }) {
     return (
-        <div className="rounded-md border border-white/8 bg-black/15 px-3 py-2.5">
+        <div className="rounded-md border border-white/10 bg-black/15 px-3 py-2.5">
             <p className="text-[13px] font-semibold text-white/85">{label}</p>
-            <p className="mt-1 text-[13px] leading-relaxed text-white/62">{text}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-white/60">{text}</p>
         </div>
     );
 }
 
 export function InteractionHint({ icon, label, desc }: { icon: string; label: string; desc: string }) {
     return (
-        <div className="flex items-center gap-2.5 rounded-md border border-white/8 bg-black/15 px-3 py-2">
+        <div className="flex items-center gap-2.5 rounded-md border border-white/10 bg-black/15 px-3 py-2">
             <span className="shrink-0 text-base leading-none" aria-hidden>{icon}</span>
             <span className="text-[13px] font-medium text-white/80">{label}</span>
             <span className="text-[12px] text-white/50">{desc}</span>
@@ -103,11 +103,11 @@ export function InteractionHint({ icon, label, desc }: { icon: string; label: st
 export function SwitchModeHint({ en, targetMode }: { en: boolean; targetMode: 'radar' | 'orbit' }) {
     const isRadar = targetMode === 'radar';
     return (
-        <div className="rounded-lg border border-white/8 bg-black/20 p-4">
+        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
             <p className="text-[13px] font-semibold text-white/70">
                 {en ? 'When to switch mode' : 'Quando trocar de modo'}
             </p>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-white/55">
+            <p className="mt-1.5 text-[13px] leading-relaxed text-white/60">
                 {isRadar
                     ? (en
                         ? 'Switch back to radar when you want to know the real distance to Earth right now, check the approach direction, or read the km/LD/AU numbers.'
@@ -136,7 +136,7 @@ export function TechLegend({ items, en }: { items: { kind: 'observed' | 'calcula
                     <span className={`mt-0.5 shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide ${colors[item.kind]}`}>
                         {tags[item.kind]}
                     </span>
-                    <span className="text-[12px] leading-relaxed text-white/55">{item.label}</span>
+                    <span className="text-[12px] leading-relaxed text-white/60">{item.label}</span>
                 </div>
             ))}
         </div>
@@ -145,7 +145,7 @@ export function TechLegend({ items, en }: { items: { kind: 'observed' | 'calcula
 
 export function TechInterpretItem({ label, text }: { label: string; text: string }) {
     return (
-        <div className="rounded-md border border-white/8 bg-black/15 px-3 py-2.5">
+        <div className="rounded-md border border-white/10 bg-black/15 px-3 py-2.5">
             <p className="text-[13px] font-semibold text-white/85">{label}</p>
             <p className="mt-1 text-[13px] leading-relaxed text-white/60">{text}</p>
         </div>
@@ -156,10 +156,10 @@ export function FormulaPanel({ title, formulas, note }: { title: string; formula
     return (
         <section className="rounded-lg border border-white/10 bg-black/20 p-4">
             <h3 className="text-sm font-semibold text-white">{title}</h3>
-            <div className="mt-3 space-y-0.5 rounded-md border border-signal-cyan/15 bg-signal-cyan/[0.055] px-3 py-2.5 font-mono text-[12px] leading-relaxed text-cyan-100/88">
+            <div className="mt-3 space-y-0.5 rounded-md border border-signal-cyan/15 bg-signal-cyan/[0.055] px-3 py-2.5 font-mono text-[12px] leading-relaxed text-cyan-100/90">
                 {formulas.map((formula) => <div key={formula}>{formula}</div>)}
             </div>
-            <p className="mt-3 text-[13px] leading-relaxed text-white/62">{note}</p>
+            <p className="mt-3 text-[13px] leading-relaxed text-white/60">{note}</p>
         </section>
     );
 }
@@ -189,7 +189,7 @@ export function CuriositiesSection({ en, mode }: { en: boolean; mode: SceneMode 
 function CuriosityItem({ question, answer }: { question: string; answer: string }) {
     const [open, setOpen] = useState(false);
     return (
-        <div className="overflow-hidden rounded-md border border-white/8 bg-black/15">
+        <div className="overflow-hidden rounded-md border border-white/10 bg-black/15">
             <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
@@ -203,7 +203,7 @@ function CuriosityItem({ question, answer }: { question: string; answer: string 
                 </span>
             </button>
             {open && (
-                <div className="border-t border-white/8 px-3 pb-3 pt-2.5">
+                <div className="border-t border-white/10 px-3 pb-3 pt-2.5">
                     <p className="text-[13px] leading-relaxed text-white/65">{answer}</p>
                 </div>
             )}

@@ -56,7 +56,7 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                         {en ? 'no pos.' : 'sem pos.'}
                     </span>
                 ) : null}
-                <span className="shrink-0 tabular-nums text-white/55">
+                <span className="shrink-0 tabular-nums text-white/60">
                     {trailingLabel}
                 </span>
             </button>

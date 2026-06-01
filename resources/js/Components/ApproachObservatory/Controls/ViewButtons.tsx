@@ -48,7 +48,7 @@ export function IconViewButton({
             aria-label={title}
             className={[
                 'rounded-full p-1.5 transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                active ? 'bg-white/15 text-white' : 'text-white/55 hover:text-white',
+                active ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white',
             ].join(' ')}
         >
             {children}

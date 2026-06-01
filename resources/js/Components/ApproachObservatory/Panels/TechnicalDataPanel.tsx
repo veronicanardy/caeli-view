@@ -31,7 +31,7 @@ export function TechnicalDataPanel({ title, description, openLabel, closeLabel, 
                         <p className="mt-0.5 truncate text-xs text-white/50">{description}</p>
                     </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2 text-xs text-white/55">
+                <div className="flex shrink-0 items-center gap-2 text-xs text-white/60">
                     <span className="rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5">{count}</span>
                     <span className="hidden sm:inline">{open ? closeLabel : openLabel}</span>
                     <ChevronDown className={`size-4 transition ${open ? 'rotate-180 text-signal-cyan' : ''}`} aria-hidden="true" />

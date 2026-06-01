@@ -39,7 +39,7 @@ export function RangeInsightsCards({ insights }: { insights: RangeInsight[] }) {
                             </span>
                             <p className="break-words text-base font-semibold leading-snug text-white">{insight.answer}</p>
                         </div>
-                        <p className="mt-2 text-xs text-white/55">{insight.detail}</p>
+                        <p className="mt-2 text-xs text-white/60">{insight.detail}</p>
                     </article>
                 );
             })}
