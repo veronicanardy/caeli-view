@@ -63,7 +63,7 @@ export function useRadar3DFocusActions({
 
     const collapseNavigationForMobile = useCallback(() => {
         if (typeof window === 'undefined') return;
-        if (!window.matchMedia('(max-width: 639px)').matches) return;
+        if (!window.matchMedia('(max-width: 1023px)').matches) return;
         setPlanetsOpen(false);
         setPanelCollapsed(true);
     }, [setPanelCollapsed, setPlanetsOpen]);

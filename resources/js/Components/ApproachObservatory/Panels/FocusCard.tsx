@@ -62,7 +62,7 @@ export function FocusCard({
             <button
                 type="button"
                 onClick={onShowPanel}
-                className="sm:hidden flex items-center gap-1 text-[11px] text-white/50 transition hover:text-white/80"
+                className="lg:hidden flex items-center gap-1 text-[11px] text-white/50 transition hover:text-white/80"
                 aria-label={en ? 'Back to list' : 'Voltar à lista'}
             >
                 <ChevronDown className="-rotate-90 size-3" />
@@ -81,14 +81,14 @@ export function FocusCard({
             title={a.displayName ?? a.name}
             subtitle={a.subtitle ?? undefined}
             borderClass="border-signal-cyan/25"
-            className="flex max-h-[34vh] sm:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] sm:w-[min(24rem,48%)] flex-col"
+            className="flex max-h-[34vh] lg:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] lg:w-[min(24rem,48%)] flex-col"
             mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
         >
 
             {/* Badge de risco com leitura visual baseada no flag NASA/JPL. */}
             {mobileSection === null ? (
-                <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2 sm:hidden">
+                <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2 lg:hidden">
                     <div className="space-y-1.5">
                         <MobileFocusMenuButton label={en ? 'Summary' : 'Resumo'} onClick={() => setMobileSection('summary')} />
                         <MobileFocusMenuButton label={en ? 'Physical data' : 'Dados físicos'} onClick={() => setMobileSection('physical')} />
@@ -98,9 +98,9 @@ export function FocusCard({
                 </div>
             ) : null}
 
-            <div className={mobileSection === null ? 'hidden sm:flex sm:flex-1 sm:min-h-0 sm:flex-col' : 'flex min-h-0 flex-1 flex-col'}>
+            <div className={mobileSection === null ? 'hidden lg:flex lg:flex-1 lg:min-h-0 lg:flex-col' : 'flex min-h-0 flex-1 flex-col'}>
             {mobileSection !== null ? (
-                <div className="flex items-center justify-between border-b border-white/10 px-2.5 py-1.5 sm:hidden">
+                <div className="flex items-center justify-between border-b border-white/10 px-2.5 py-1.5 lg:hidden">
                     <button
                         type="button"
                         onClick={() => setMobileSection(null)}
@@ -123,12 +123,12 @@ export function FocusCard({
             ) : null}
 
             {showSectionContent ? (
-                <div className="mt-1.5 px-2.5 sm:mt-2 sm:px-3">
-                    <div className={`flex items-start gap-1.5 rounded-lg border px-2 py-1 sm:items-center sm:gap-2 sm:px-2.5 sm:py-1.5 ${risk.className}`}>
-                        <span className="text-sm sm:text-base">{risk.icon}</span>
+                <div className="mt-1.5 px-2.5 lg:mt-2 lg:px-3">
+                    <div className={`flex items-start gap-1.5 rounded-lg border px-2 py-1 lg:items-center lg:gap-2 lg:px-2.5 lg:py-1.5 ${risk.className}`}>
+                        <span className="text-sm lg:text-base">{risk.icon}</span>
                         <div className="min-w-0">
-                            <div className="text-[12px] font-semibold leading-tight sm:text-[13px]">{risk.title}</div>
-                            <div className="hidden text-[11px] leading-tight opacity-80 sm:block">{risk.subtitle}</div>
+                            <div className="text-[12px] font-semibold leading-tight lg:text-[13px]">{risk.title}</div>
+                            <div className="hidden text-[11px] leading-tight opacity-80 lg:block">{risk.subtitle}</div>
                         </div>
                     </div>
                 </div>
@@ -136,7 +136,7 @@ export function FocusCard({
 
             {/* Status da trajetoria: exibido apenas quando os dados Horizons nao estao disponiveis. */}
             {showSectionContent && trajectoryStatus ? (
-                <div className="mt-1 px-2.5 sm:mt-1.5 sm:px-3">
+                <div className="mt-1 px-2.5 lg:mt-1.5 lg:px-3">
                     <div className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] ${trajectoryStatus.className}`}>
                         <span aria-hidden="true">{trajectoryStatus.icon}</span>
                         {trajectoryStatus.text}
@@ -145,14 +145,14 @@ export function FocusCard({
             ) : null}
 
             {/* Abas */}
-            <div className="mt-2 hidden gap-1 border-b border-white/10 px-2.5 sm:flex sm:mt-2.5 sm:px-3">
+            <div className="mt-2 hidden gap-1 border-b border-white/10 px-2.5 lg:flex lg:mt-2.5 lg:px-3">
                 <FocusTabButton active={tab === 'summary'} onClick={() => setTab('summary')}>{en ? 'Summary' : 'Resumo'}</FocusTabButton>
                 <FocusTabButton active={tab === 'physical'} onClick={() => setTab('physical')}>{en ? 'Physical' : 'Físico'}</FocusTabButton>
                 <FocusTabButton active={tab === 'approach'} onClick={() => setTab('approach')}>{en ? 'Approach' : 'Aproximação'}</FocusTabButton>
             </div>
 
             {/* Conteudo da aba com rolagem quando necessario. */}
-            <div className="flex-1 overflow-y-auto px-2.5 py-2 sm:px-3 sm:py-2.5">
+            <div className="flex-1 overflow-y-auto px-2.5 py-2 lg:px-3 lg:py-2.5">
                 {showSectionContent && activeSection === 'summary' ? (
                     <div className="space-y-2">
                         <p className="text-[13px] leading-relaxed text-white/80">{summary}</p>
@@ -254,7 +254,7 @@ export function FocusCard({
             </div>
 
             {/* Acoes: alternancia orbital como CTA principal; dossie como secundario. */}
-            <div className="hidden space-y-0.5 border-t border-white/10 px-2.5 py-1.5 sm:block sm:space-y-1.5 sm:px-3 sm:py-2.5">
+            <div className="hidden space-y-0.5 border-t border-white/10 px-2.5 py-1.5 lg:block lg:space-y-1.5 lg:px-3 lg:py-2.5">
                 {hasOrbit ? (
                     <button
                         type="button"
@@ -266,7 +266,7 @@ export function FocusCard({
                                 : 'Elementos da órbita heliocêntrica incompletos para este objeto (sem época de periélio).')
                             : undefined}
                         className={[
-                            'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan sm:gap-1.5 sm:py-2.5 sm:text-[13px]',
+                            'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan lg:gap-1.5 lg:py-2.5 lg:text-[13px]',
                             !orbitMode && !canShowOrbitPosition
                                 ? 'cursor-not-allowed border border-white/10 bg-white/5 text-white/40'
                                 : orbitMode
@@ -283,7 +283,7 @@ export function FocusCard({
                     <button
                         type="button"
                         onClick={() => onOpenFocus(a)}
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-white/75 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan sm:py-2 sm:text-[12px]"
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-white/75 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan lg:py-2 lg:text-[12px]"
                     >
                         {en ? 'Open full dossier' : 'Abrir dossiê completo'}
                     </button>

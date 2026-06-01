@@ -44,7 +44,7 @@ export function SceneToolbar({
 
     return (
         <div className="pointer-events-none absolute right-3 top-3 z-20">
-            <div className="pointer-events-auto hidden sm:flex items-center gap-1.5">
+            <div className="pointer-events-auto hidden lg:flex items-center gap-1.5">
                 {activeMode !== 'orbit' ? (
                     <div className="flex items-center gap-1 rounded-full border border-white/10 bg-space-950/80 p-1 backdrop-blur">
                         <ViewButton active={view === 'top' && !hasVisibleFocusedObject} onClick={() => onPickView('top')}>
@@ -75,7 +75,7 @@ export function SceneToolbar({
                 </IconToggleButton>
             </div>
 
-            <div className="pointer-events-auto flex sm:hidden flex-col items-center gap-1.5">
+            <div className="pointer-events-auto flex lg:hidden flex-col items-center gap-1.5">
                 {activeMode !== 'orbit' ? (
                     <div className="flex flex-col items-center gap-0.5 rounded-full border border-white/10 bg-space-950/80 py-1 px-1 backdrop-blur">
                         <IconViewButton active={view === 'top' && !hasVisibleFocusedObject} onClick={() => onPickView('top')} title={en ? 'Top view' : 'Vista superior'}>

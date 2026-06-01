@@ -28,7 +28,7 @@ export function RadarNavigationDesktopContent({
 }: NavigationContentProps) {
     return (
         <>
-            <div className="hidden sm:block">
+            <div className="hidden lg:block">
                 <ReferenceSection
                     en={en}
                     orbitMode={orbitMode}
@@ -40,7 +40,7 @@ export function RadarNavigationDesktopContent({
                 />
             </div>
 
-            <div className="hidden min-h-0 flex-1 flex-col px-2 py-2 sm:flex">
+            <div className="hidden min-h-0 flex-1 flex-col px-2 py-2 lg:flex">
                 <div className="flex items-center justify-between px-1 pb-1.5">
                     <span className="text-[11px] uppercase tracking-wide text-white/45">
                         {listTitle(closestNowObjects.length, selectionMode, en)}

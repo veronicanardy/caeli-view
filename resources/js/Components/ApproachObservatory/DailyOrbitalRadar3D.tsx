@@ -177,13 +177,13 @@ export function DailyOrbitalRadar3D({
     return (
         <section>
             {fullscreen && (
-                <div className="h-[calc(100vh-8rem)] min-h-[400px] sm:min-h-[560px] rounded-lg border border-white/5 bg-white/[0.02]" aria-hidden />
+                <div className="h-[calc(100vh-8rem)] min-h-[400px] lg:min-h-[560px] rounded-lg border border-white/5 bg-white/[0.02]" aria-hidden />
             )}
             <div
                 ref={canvasContainerRef}
                 className={fullscreen
                     ? 'fixed inset-0 z-50 bg-[#03060d]'
-                    : 'relative h-[calc(100vh-8rem)] min-h-[400px] sm:min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d]'}
+                    : 'relative h-[calc(100vh-8rem)] min-h-[400px] lg:min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d]'}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 <RadarSceneCanvas

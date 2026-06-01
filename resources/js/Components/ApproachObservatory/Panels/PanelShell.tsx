@@ -43,12 +43,12 @@ export function PanelShell({
             className={[
                 'pointer-events-auto absolute left-1/2 z-20 -translate-x-1/2 overflow-hidden rounded-xl border bg-space-950/90 shadow-glow backdrop-blur-xl',
                 mobileTopAlign ? 'top-3' : 'bottom-10',
-                'sm:left-3 sm:top-[54%] sm:bottom-auto sm:translate-x-0 sm:-translate-y-1/2',
+                'lg:left-3 lg:top-[54%] lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2',
                 borderClass,
                 className,
             ].join(' ')}
         >
-            <div className="flex items-start justify-between gap-2 px-2.5 pt-2.5 sm:px-3 sm:pt-3">
+            <div className="flex items-start justify-between gap-2 px-2.5 pt-2.5 lg:px-3 lg:pt-3">
                 <div className="min-w-0">
                     {eyebrow ? (
                         <div className="flex items-center gap-2">
@@ -58,12 +58,12 @@ export function PanelShell({
                                     style={{ backgroundColor: dotColor }}
                                 />
                             ) : null}
-                            <div className="text-[10px] uppercase tracking-wide text-white/45 sm:text-[11px]">{eyebrow}</div>
+                            <div className="text-[10px] uppercase tracking-wide text-white/45 lg:text-[11px]">{eyebrow}</div>
                         </div>
                     ) : null}
-                    <div className="mt-0.5 truncate text-sm font-semibold text-white sm:text-base">{title}</div>
+                    <div className="mt-0.5 truncate text-sm font-semibold text-white lg:text-base">{title}</div>
                     {subtitle ? (
-                        <div className="truncate text-[11px] text-white/60 sm:text-[12px]">{subtitle}</div>
+                        <div className="truncate text-[11px] text-white/60 lg:text-[12px]">{subtitle}</div>
                     ) : null}
                 </div>
                 {showCloseButton ? (

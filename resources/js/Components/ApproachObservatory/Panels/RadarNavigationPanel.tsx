@@ -47,13 +47,13 @@ export function RadarNavigationPanel({
 
     return (
         <div className="pointer-events-none absolute left-3 top-3 z-40">
-            <div className="pointer-events-auto relative flex flex-col items-start gap-2 overflow-visible sm:flex-row">
+            <div className="pointer-events-auto relative flex flex-col items-start gap-2 overflow-visible lg:flex-row">
                 {panelCollapsed ? (
                     <button
                         type="button"
                         onClick={onShowNavigationPanel}
                         aria-label={en ? 'Show navigation panel' : 'Mostrar painel de navegação'}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-space-950/90 px-2.5 py-1.5 text-[11px] font-medium text-white/75 shadow-glow backdrop-blur transition hover:border-white/25 hover:text-white sm:hidden"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-space-950/90 px-2.5 py-1.5 text-[11px] font-medium text-white/75 shadow-glow backdrop-blur transition hover:border-white/25 hover:text-white lg:hidden"
                     >
                         <ChevronDown className="size-3.5 -rotate-90" />
                         <span>{en ? 'Objects' : 'Objetos'}</span>
@@ -65,16 +65,16 @@ export function RadarNavigationPanel({
                         className={[
                             'flex flex-col overflow-visible rounded-xl border border-white/10 bg-space-950/90 backdrop-blur-xl',
                         orbitMode
-                            ? 'sm:flex sm:h-[min(18rem,49vh)] sm:w-[min(18rem,48vw)]'
-                            : 'sm:flex sm:h-[min(22rem,50vh)] sm:w-[min(18rem,48vw)]',
+                            ? 'lg:flex lg:h-[min(16rem,40vh)] lg:w-[min(18rem,48vw)]'
+                            : 'lg:flex lg:h-[min(20rem,40vh)] lg:w-[min(18rem,48vw)]',
                         panelCollapsed
-                            ? 'hidden sm:flex'
+                            ? 'hidden lg:flex'
                             : orbitMode
                                 ? 'flex h-[min(10.5rem,27vh)] w-[min(15rem,calc(100vw-5rem))]'
                                 : 'flex h-[min(13rem,33vh)] w-[min(15rem,calc(100vw-5rem))]',
                     ].join(' ')}
                 >
-                    <div className="border-b border-white/10 px-2 pt-1 pb-1.5 sm:hidden">
+                    <div className="border-b border-white/10 px-2 pt-1 pb-1.5 lg:hidden">
                         <button
                             type="button"
                             onClick={closeMobilePanel}
@@ -131,7 +131,7 @@ export function RadarNavigationPanel({
                         ref={planetFlyoutRef}
                         className="flex flex-col overflow-y-auto rounded-xl border border-white/10 bg-space-950/90 backdrop-blur-xl
                                    h-[min(13rem,34vh)] w-[min(15rem,calc(100vw-5rem))]
-                                   sm:h-[min(26rem,70vh)] sm:w-[min(14rem,40vw)]"
+                                   lg:h-[min(26rem,70vh)] lg:w-[min(14rem,40vw)]"
                     >
                         <div className="px-2 pt-2 pb-1 text-[11px] uppercase tracking-wide text-white/45 border-b border-white/10">
                             {en ? 'Planets' : 'Planetas'}
