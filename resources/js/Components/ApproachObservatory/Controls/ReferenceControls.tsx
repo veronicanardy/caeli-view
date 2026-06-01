@@ -26,7 +26,7 @@ export function ReferenceSection({
 }) {
     return (
         <div className={compact ? '' : 'border-b border-white/10 px-2 py-1.5'}>
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 overflow-visible">
                 <ReferenceIconButton label={en ? 'Sun' : 'Sol'} icon="☀️" onClick={onFocusSun} />
                 <ReferenceIconButton label={en ? 'Earth' : 'Terra'} icon="🌍" onClick={onFocusEarth} />
                 <ReferenceIconButton label={en ? 'Moon' : 'Lua'} icon="🌙" onClick={onFocusMoon} />
@@ -58,7 +58,7 @@ function ReferenceIconButton({
     className?: string;
 }) {
     return (
-        <span className={['group relative inline-flex', className].join(' ')}>
+        <span className={['group relative inline-flex overflow-visible', className].join(' ')}>
             <button
                 type="button"
                 onClick={onClick}
@@ -72,9 +72,9 @@ function ReferenceIconButton({
             >
                 <span aria-hidden>{icon}</span>
             </button>
-            <span className="pointer-events-none absolute bottom-full left-1/2 z-[90] mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-signal-cyan/35 bg-[#07111f] px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-[0_8px_28px_rgba(0,0,0,0.55),0_0_18px_rgba(34,211,238,0.14)] transition group-hover:translate-y-[-1px] group-hover:opacity-100 group-focus-within:translate-y-[-1px] group-focus-within:opacity-100">
+            <span className="pointer-events-none absolute left-1/2 top-full z-[120] mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-signal-cyan/35 bg-[#07111f] px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-[0_8px_28px_rgba(0,0,0,0.55),0_0_18px_rgba(34,211,238,0.14)] transition group-hover:translate-y-[1px] group-hover:opacity-100 group-focus-within:translate-y-[1px] group-focus-within:opacity-100 sm:block">
                 {label}
-                <span className="absolute left-1/2 top-full size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r border-signal-cyan/35 bg-[#07111f]" aria-hidden />
+                <span className="absolute left-1/2 top-0 size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-l border-t border-signal-cyan/35 bg-[#07111f]" aria-hidden />
             </span>
         </span>
     );

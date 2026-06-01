@@ -30,7 +30,7 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                 onClick={() => onSelect(o.approach)}
                 title={title}
                 className={[
-                    'flex w-full items-center gap-2 rounded-lg text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                    'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-lg text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                     compact ? 'px-2 py-1' : 'px-2 py-2',
                     orbitBlocked
                         ? 'cursor-not-allowed opacity-35'
@@ -40,23 +40,23 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                     !orbitBlocked && !hasScenePosition ? 'opacity-50' : '',
                 ].join(' ')}
             >
-                <span className="h-2 w-2 shrink-0 rounded-full ring-1 ring-white/10" style={{ backgroundColor: palette.future }} />
-                <span className="min-w-0 flex-1 truncate font-medium">
+                <span className="col-start-1 row-start-1 h-2 w-2 self-center rounded-full ring-1 ring-white/10" style={{ backgroundColor: palette.future }} />
+                <span className="col-start-2 row-start-1 min-w-0 truncate font-medium">
                     {o.approach.displayName ?? o.approach.name}
                 </span>
                 {hazard ? (
-                    <span className="shrink-0 text-[11px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>{'\u26A0\uFE0F'}</span>
+                    <span className="col-start-1 row-start-2 text-[11px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>{'\u26A0\uFE0F'}</span>
                 ) : null}
                 {orbitBlocked ? (
-                    <span className="shrink-0 text-[10px] text-white/30" aria-hidden>
+                    <span className={[hazard ? 'col-start-2 row-start-2' : 'col-start-1 row-start-2 col-span-2', 'min-w-0 truncate text-[10px] text-white/30'].join(' ')} aria-hidden>
                         {en ? 'no orbit' : 'sem \u00F3rbita'}
                     </span>
                 ) : !hasScenePosition ? (
-                    <span className="shrink-0 text-[10px] text-amber-200/60" aria-hidden>
+                    <span className={[hazard ? 'col-start-2 row-start-2' : 'col-start-1 row-start-2 col-span-2', 'min-w-0 truncate text-[10px] text-amber-200/60'].join(' ')} aria-hidden>
                         {en ? 'no pos.' : 'sem pos.'}
                     </span>
                 ) : null}
-                <span className="shrink-0 tabular-nums text-white/60">
+                <span className="col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap text-right tabular-nums text-[12px] text-white/60">
                     {trailingLabel}
                 </span>
             </button>

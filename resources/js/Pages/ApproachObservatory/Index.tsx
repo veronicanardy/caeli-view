@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { FormEvent, lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Head } from '@inertiajs/react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/Components/AppLayout';
 import { ApproachTimeline } from '@/Components/ApproachObservatory/Charts/ApproachTimeline';
 import { CompactConsoleBar } from '@/Components/ApproachObservatory/Controls/CompactConsoleBar';
@@ -10,7 +10,6 @@ import { RangeInsightsCards } from '@/Components/ApproachObservatory/Lists/Range
 import { TechnicalDataPanel } from '@/Components/ApproachObservatory/Panels/TechnicalDataPanel';
 import { ErrorMessage } from '@/Components/ErrorMessage';
 import { bestDistanceKm, buildRadarObjects } from '@/lib/radarData';
-import type { Translator } from '@/i18n';
 import { useTranslation } from '@/i18n';
 import { buildCuratedHighlights, buildRangeInsights } from '@/lib/approachInterpretation';
 import { useClosestNow } from '@/hooks/useClosestNow';
@@ -48,18 +47,8 @@ type Props = PageProps<{
     initialSunDirection: SunDirection;
 }>;
 
-type ObservatoryForm = {
-    date: string;
-    type: ApproachObservatoryFilters['type'];
-};
-
 export default function ApproachObservatoryIndex({ filters, initialSunDirection, errors = {} }: Props) {
-    const [form, setForm] = useState<ObservatoryForm>({
-        date: filters.date_min,
-        type: filters.type,
-    });
     const [sortKey, setSortKey] = useState(filters.sort === '-v-rel' ? 'relativeVelocityKph' : 'nominalDistanceKm');
-    const [isUpdating, setIsUpdating] = useState(false);
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<ObservatoryData | null>(null);
     const [fetchError, setFetchError] = useState<string | null>(null);
@@ -77,7 +66,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
 
     useEffect(() => {
         setSelectedFocusId(null);
-        setForm({ date: filters.date_min, type: filters.type });
     }, [filters.date_min, filters.date_max, filters.type]);
 
     const dataWindow = useMemo(() => ({ date_min: filters.date_min, date_max: filters.date_max }), [filters.date_min, filters.date_max]);
@@ -276,21 +264,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
         return () => controller.abort();
     }, [focusApproach, trajectoryKey, trajectoryByKey, closestNowTrajectoriesByObjectId]);
 
-    function submit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setIsUpdating(true);
-        router.get('/radar', {
-            date_min: form.date,
-            date_max: form.date,
-            type: form.type,
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-            onFinish: () => setIsUpdating(false),
-        });
-    }
-
     return (
         <AppLayout>
             <Head title={t('observatory.title')} />
@@ -305,12 +278,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                 ) : (
                     <>
                         <CompactConsoleBar
-                            form={form}
-                            onFormChange={setForm}
-                            onSubmit={submit}
-                            isUpdating={isUpdating}
-                            errors={errors}
-                            t={t}
                             locale={locale}
                             objectLimit={objectLimit}
                             selectionMode={selectionMode}

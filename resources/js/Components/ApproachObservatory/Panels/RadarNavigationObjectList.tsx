@@ -53,7 +53,7 @@ export function RadarNavigationObjectList({
         : objects.length === 0
             ? <EmptyModeMessage selectionMode={selectionMode} locale={locale} />
             : (
-                <ul className={mobile ? 'space-y-0.5' : 'min-h-0 flex-1 space-y-0.5 overflow-y-auto'}>
+                <ul className={mobile ? 'w-full min-w-0 space-y-0.5' : 'min-h-0 flex-1 space-y-0.5 overflow-y-auto'}>
                     {objects.map((object, index) => (
                         <ObjectListItem
                             key={object.approach.id}
@@ -73,8 +73,8 @@ export function RadarNavigationObjectList({
     if (!mobile) return list;
 
     return (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 py-2">
-            <div className="min-h-0 max-h-[8.75rem] flex-1 overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-space-950 px-1 py-1 shadow-[0_8px_24px_rgba(0,0,0,0.24)]">
+        <div className="flex min-h-0 flex-1 w-full px-2 py-2">
+            <div className="h-full min-h-0 w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-space-950/90 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.24)]">
                 {list}
             </div>
         </div>

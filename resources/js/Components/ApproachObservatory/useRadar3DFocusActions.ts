@@ -61,6 +61,13 @@ export function useRadar3DFocusActions({
         setSunFocusTarget(null);
     }, []);
 
+    const collapseNavigationForMobile = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        if (!window.matchMedia('(max-width: 639px)').matches) return;
+        setPlanetsOpen(false);
+        setPanelCollapsed(true);
+    }, [setPanelCollapsed, setPlanetsOpen]);
+
     const pickView = useCallback((key: CameraViewKey) => {
         onClearSelection?.();
         setBodyCardOpen(null);
@@ -109,35 +116,55 @@ export function useRadar3DFocusActions({
 
     const focusBody = useCallback((body: 'earth' | 'moon') => {
         onClearSelection?.();
+        setDismissedFocusObjectId(null);
         setBodyCardOpen(body);
         clearPlanetTargets();
         const doFocus = () => setCameraIntent((intent) => ({ kind: 'body', view: intent.view, body, nonce: nextCameraNonce(intent) }));
         if (orbitMode) {
-            triggerTransition(() => { setOrbitMode(false); doFocus(); });
+            triggerTransition(() => {
+                setOrbitMode(false);
+                collapseNavigationForMobile();
+                doFocus();
+            });
         } else {
+            collapseNavigationForMobile();
             doFocus();
         }
-    }, [clearPlanetTargets, onClearSelection, orbitMode, triggerTransition]);
+    }, [clearPlanetTargets, collapseNavigationForMobile, onClearSelection, orbitMode, triggerTransition]);
 
     const focusPlanet = useCallback((id: PlanetId) => {
         onClearSelection?.();
-        setBodyCardOpen(id);
-        setPlanetsOpen(false);
-        setSunFocusTarget(null);
         const cfg = PLANET_CONFIG[id];
         const pos = ephemeris?.[cfg.ephemerisKey];
-        if (pos) {
-            setPlanetFocusTargets({ [id]: framingForBody(new THREE.Vector3(...pos), cfg.framingRadius) });
+        const doFocus = () => {
+            setDismissedFocusObjectId(null);
+            setBodyCardOpen(id);
+            setPlanetsOpen(false);
+            setSunFocusTarget(null);
+            collapseNavigationForMobile();
+            if (pos) {
+                setPlanetFocusTargets({ [id]: framingForBody(new THREE.Vector3(...pos), cfg.framingRadius) });
+            } else {
+                setPlanetFocusTargets({});
+            }
+        };
+        if (orbitMode) {
+            triggerTransition(() => {
+                setOrbitMode(false);
+                doFocus();
+            });
         } else {
-            setPlanetFocusTargets({});
+            doFocus();
         }
-    }, [ephemeris, onClearSelection, setPlanetsOpen]);
+    }, [collapseNavigationForMobile, ephemeris, onClearSelection, orbitMode, setPlanetsOpen, triggerTransition]);
 
     const focusSun = useCallback(() => {
         onClearSelection?.();
-        setBodyCardOpen('sun');
-        clearPlanetTargets();
         const doFocus = () => {
+            setDismissedFocusObjectId(null);
+            setBodyCardOpen('sun');
+            clearPlanetTargets();
+            collapseNavigationForMobile();
             setSunFocusTarget(framingForBody(new THREE.Vector3(0, 0, 0), 0.5));
         };
         if (orbitMode) {
@@ -145,7 +172,7 @@ export function useRadar3DFocusActions({
         } else {
             doFocus();
         }
-    }, [clearPlanetTargets, onClearSelection, orbitMode, triggerTransition]);
+    }, [clearPlanetTargets, collapseNavigationForMobile, onClearSelection, orbitMode, triggerTransition]);
 
     const resetView = useCallback(() => {
         onClearSelection?.();

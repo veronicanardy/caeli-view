@@ -46,8 +46,8 @@ export function RadarNavigationPanel({
     };
 
     return (
-        <div className="pointer-events-none absolute left-3 top-3 z-10">
-            <div className="pointer-events-auto relative flex flex-col sm:flex-row items-start gap-2">
+        <div className="pointer-events-none absolute left-3 top-3 z-40">
+            <div className="pointer-events-auto relative flex flex-col items-start gap-2 overflow-visible sm:flex-row">
                 {panelCollapsed ? (
                     <button
                         type="button"
@@ -62,8 +62,8 @@ export function RadarNavigationPanel({
 
                 <div
                     ref={sidePanelRef}
-                    className={[
-                        'flex flex-col rounded-xl border border-white/10 bg-space-950/90 backdrop-blur-xl',
+                        className={[
+                            'flex flex-col overflow-visible rounded-xl border border-white/10 bg-space-950/90 backdrop-blur-xl',
                         orbitMode
                             ? 'sm:flex sm:h-[min(18rem,49vh)] sm:w-[min(18rem,48vw)]'
                             : 'sm:flex sm:h-[min(22rem,50vh)] sm:w-[min(18rem,48vw)]',
@@ -99,7 +99,11 @@ export function RadarNavigationPanel({
                         selectionMode={selectionMode}
                         radarLoading={radarLoading}
                         onRefresh={onRefresh}
+                        planetsOpen={planetsOpen}
+                        onPlanetsOpenChange={onPlanetsOpenChange}
                         onSelectObject={onSelectObject}
+                        onFocusBody={onFocusBody}
+                        onFocusSun={onFocusSun}
                     />
 
                     <RadarNavigationDesktopContent
@@ -125,7 +129,7 @@ export function RadarNavigationPanel({
                 {planetsOpen && !orbitMode ? (
                     <div
                         ref={planetFlyoutRef}
-                        className="flex flex-col rounded-xl border border-white/10 bg-space-950/90 backdrop-blur-xl overflow-y-auto
+                        className="flex flex-col overflow-y-auto rounded-xl border border-white/10 bg-space-950/90 backdrop-blur-xl
                                    h-[min(13rem,34vh)] w-[min(15rem,calc(100vw-5rem))]
                                    sm:h-[min(26rem,70vh)] sm:w-[min(14rem,40vw)]"
                     >

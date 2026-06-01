@@ -26,7 +26,7 @@ export function RadarNavigationMobileContent({
     onFocusSun,
 }: NavigationContentProps) {
     return (
-        <div className="flex flex-1 flex-col sm:hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden sm:hidden">
             <div className="flex min-h-0 flex-1 flex-col">
                 <MobilePanelSectionHeader
                     title={en ? 'Nearest objects' : 'Objetos proximos'}
