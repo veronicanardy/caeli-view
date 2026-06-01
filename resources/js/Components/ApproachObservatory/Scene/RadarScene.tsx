@@ -19,7 +19,7 @@ import { Uranus } from '../Bodies/Uranus/Uranus';
 import { Neptune } from '../Bodies/Neptune/Neptune';
 import { PlanetOrbitEllipseHelio } from '../Trajectory/HeliocentricLines';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
-import { RingsLayer } from '../Overlays/RingsLayer';
+import { SceneRingsLayer } from '../Overlays/SceneRingsLayer';
 import { LabelOccluderContext, useCompactLabelMode, useHideAsteroidLabelsMode } from '../Overlays/SceneLabels';
 import { NowTrajectory } from '../Trajectory/NowTrajectory';
 import { HeliocentricScene } from './HeliocentricScene';
@@ -253,7 +253,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                             protectLabelFromFocus={bodyFocus?.body !== 'earth'}
                             isFocused={bodyFocus?.body === 'earth'}
                         />
-                        <RingsLayer onEarthFocus={focusEarth} showLabels={showLabels && !compactLabels && !orbitLabelsOnly} />
+                        <SceneRingsLayer onEarthFocus={focusEarth} showLabels={showLabels && !compactLabels && !orbitLabelsOnly} />
                     </group>
                     {/* Lua: position absoluto para o grupo 3D e labels; geocentricPosition para tidal lock. */}
                     <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} sunDirection={sunDir} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} />

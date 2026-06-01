@@ -2,20 +2,22 @@ import * as THREE from 'three';
 import { compressDistanceDl } from '@/lib/sceneEphemeris';
 import { SceneLabel } from './SceneLabels';
 
-// Anéis primários de DL desabilitados aqui; a referência de 1 DL pertence à órbita da Lua.
-const RING_STOPS_DL: number[] = [];
-const GUIDE_RING_STOPS_DL: number[] = [];
-
 /**
- * Anéis guia tênues além da Lua com seus rótulos de distância. O anel de 1 DL fica na linha de
- * órbita da Lua — apenas rótulos guia de distâncias maiores vivem aqui. Os anéis ficam no plano
- * eclíptico (a rotação do grupo posiciona a geometria no plano XZ).
+ * Camada de guias circulares 3D da cena.
+ *
+ * Os arrays de aneis podem permanecer vazios de proposito quando a referencia
+ * principal estiver no radar SVG ou em outros guias visuais. Mantenha este
+ * componente como ponto de extensao visual, sem mover calculo orbital para ca.
  */
-export function RingsLayer({ onEarthFocus, showLabels }: { onEarthFocus: () => void; showLabels: boolean }) {
+
+// Aneis primarios de DL desabilitados aqui; a referencia de 1 DL pertence a orbita da Lua.
+const SCENE_RING_STOPS_DL: number[] = [];
+const SCENE_GUIDE_RING_STOPS_DL: number[] = [];
+
+export function SceneRingsLayer({ onEarthFocus, showLabels }: { onEarthFocus: () => void; showLabels: boolean }) {
     return (
         <group rotation={[Math.PI / 2, 0, 0]}>
-            {/* Anéis internos opcionais (atualmente nenhum). */}
-            {RING_STOPS_DL.map((ld) => (
+            {SCENE_RING_STOPS_DL.map((ld) => (
                 <mesh key={ld}>
                     <ringGeometry
                         args={[
@@ -32,9 +34,7 @@ export function RingsLayer({ onEarthFocus, showLabels }: { onEarthFocus: () => v
                     />
                 </mesh>
             ))}
-            {/* Anéis guia tênues além de 1 DL para que asteroides distantes ainda tenham referência
-                de distância, sem competir visualmente com a zona Terra-Lua. */}
-            {GUIDE_RING_STOPS_DL.map((ld) => (
+            {SCENE_GUIDE_RING_STOPS_DL.map((ld) => (
                 <mesh key={`guide-${ld}`}>
                     <ringGeometry
                         args={[
@@ -46,7 +46,7 @@ export function RingsLayer({ onEarthFocus, showLabels }: { onEarthFocus: () => v
                     <meshBasicMaterial color="#ffffff" transparent opacity={0.05} side={THREE.DoubleSide} />
                 </mesh>
             ))}
-            {showLabels ? GUIDE_RING_STOPS_DL.map((ld) => (
+            {showLabels ? SCENE_GUIDE_RING_STOPS_DL.map((ld) => (
                 <SceneLabel
                     key={`glabel-${ld}`}
                     position={[

@@ -10,11 +10,11 @@ import { EarthGlobe } from '@/Components/Nasa/EarthGlobe';
 import { Moon3D } from './Bodies/Moon/Moon3D';
 import { RadarFilters } from './Controls/RadarFilters';
 import {
-    EarthLayer, LabelsLayer, MoonLayer, NowTrajectoriesLayer, ObjectsLayer,
-    RingsLayer, SunLayer, TrajectoryLayer, VectorsLayer,
+    MoonLayer,
+    RadarSvgLayers,
     formatRingHoverLabel, visualMoonRadius,
     type RingHoverState,
-} from './Overlays/RadarSvgLayers';
+} from './Overlays/RadarSvg/RadarSvgLayers';
 
 type Props = {
     approaches: UnifiedApproach[];
@@ -246,22 +246,17 @@ export function DailyOrbitalRadar({
                         onClick={() => onClearSelection?.()}
                     >
                         <g style={{ transform: `scale(${zoom})`, transformOrigin: `${size.width / 2}px ${size.height / 2}px`, transition: 'transform 220ms ease-out' }}>
-                            <RingsLayer layout={layout} hoveredRingLD={hoveredRing?.ld ?? null} onRingHoverChange={setHoveredRing} />
-                            <NowTrajectoriesLayer layout={layout} />
-                            <TrajectoryLayer layout={layout} referenceMode={referenceMode} />
-                            <VectorsLayer layout={layout} referenceMode={referenceMode} />
-                            <SunLayer layout={layout} />
-                            <EarthLayer layout={layout} />
-                            <MoonGlobeLayer layout={layout} zoom={zoom} canvasSize={size} />
-                            <MoonLayer layout={layout} />
-                            <ObjectsLayer
+                            <RadarSvgLayers
                                 layout={layout}
+                                hoveredRingLD={hoveredRing?.ld ?? null}
+                                onRingHoverChange={setHoveredRing}
                                 onSelect={onSelect}
                                 referenceMode={referenceMode}
                                 t={t}
                                 locale={locale}
                             />
-                            <LabelsLayer layout={layout} />
+                            <MoonGlobeLayer layout={layout} zoom={zoom} canvasSize={size} />
+                            <MoonLayer layout={layout} />
                         </g>
                     </svg>
 

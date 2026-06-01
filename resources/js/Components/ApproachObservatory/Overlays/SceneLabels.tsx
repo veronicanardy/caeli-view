@@ -5,6 +5,14 @@ import { createContext, useContext, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 /**
+ * Primitivas de labels HTML sobre a cena 3D.
+ *
+ * Este modulo cuida de apresentacao, oclusao visual e protecao de espaco em
+ * tela para labels ja posicionados por outros componentes. Ele nao deve virar
+ * camada de calculo orbital, selecao global ou fetch de dados.
+ */
+
+/**
  * Zonas proibidas para labels — retângulos em pixels (coordenadas do canvas) que os labels
  * devem evitar. Usado para impedir que labels apareçam sobre qualquer card flutuante.
  */
