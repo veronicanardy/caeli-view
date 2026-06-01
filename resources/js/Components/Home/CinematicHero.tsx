@@ -54,6 +54,9 @@ type Props = {
 export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighlight }: Props) {
     const { locale, t } = useTranslation();
     const en = locale === 'en';
+    const heroDescription = en
+        ? 'Track approaches, visible objects, and real astronomical data in a visual experience built from public NASA/JPL data.'
+        : 'Acompanhe aproximações, objetos visíveis e dados astronômicos reais em uma experiência visual baseada em dados públicos da NASA/JPL.';
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [earthReady, setEarthReady] = useState(false);
     const sceneRef = useRef<HTMLElement | null>(null);
@@ -125,9 +128,7 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                         <h1 className="hero-headline mt-7 text-5xl font-semibold leading-[0.95] text-white sm:text-7xl lg:text-8xl">
                             {t('home.hero.heading')}
                         </h1>
-                        <p className="mt-7 max-w-xl text-lg leading-8 text-white/74">
-                            {t('home.hero.description')}
-                        </p>
+                        <p className="mt-7 max-w-xl text-lg leading-8 text-white/74">{heroDescription}</p>
 
                         <div className="relative mt-10 flex flex-wrap items-center gap-3 lg:justify-start">
                             <button

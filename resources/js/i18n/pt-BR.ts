@@ -12,7 +12,7 @@ const ptBR = {
     'home.title': 'Início',
     'home.hero.badge': 'Central de observação com dados NASA/JPL',
     'home.hero.heading': 'CaeliView',
-    'home.hero.description': 'Acompanhe aproximações, objetos visíveis e dados astronômicos reais em uma experiência visual conectada à NASA e ao JPL.',
+    'home.hero.description': 'Acompanhe aproximações, objetos visíveis e dados astronômicos reais em uma Experiência visual baseada em dados públicos da NASA/JPL.',
     'home.hero.sources': 'Fontes: NASA/JPL · Distâncias em km · Referência lunar: 384.400 km',
     'home.hero.openObservatory': 'Abrir Observatório',
     'home.hero.options': 'Começar agora',
