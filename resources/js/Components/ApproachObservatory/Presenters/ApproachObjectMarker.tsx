@@ -1,9 +1,9 @@
 import { Link } from '@inertiajs/react';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { classifyApproachAttention } from '@/lib/approachAttention';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { compactMeters, formatNumber, lunarDistanceFromKm, lunarDistanceLabel } from '@/lib/format';
-import { UnifiedApproach } from '@/types';
+import type { UnifiedApproach } from '@/types';
 import { AsteroidMarkerShape } from './AsteroidMarkerShape';
 import { DistancePresenter } from './DistancePresenter';
 import { ObjectTypeBadge } from './ObjectTypeBadge';

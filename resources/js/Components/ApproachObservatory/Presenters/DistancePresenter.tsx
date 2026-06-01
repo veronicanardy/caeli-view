@@ -1,5 +1,5 @@
 import { compactKm, formatNumber, lunarDistanceLabel } from '@/lib/format';
-import { DistanceContext } from '@/types';
+import type { DistanceContext } from '@/types';
 
 export function DistancePresenter({
     distance,

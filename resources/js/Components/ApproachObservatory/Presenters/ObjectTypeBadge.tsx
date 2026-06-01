@@ -1,5 +1,5 @@
 import { Orbit, Sparkles } from 'lucide-react';
-import { SmallBodyObjectType } from '@/types';
+import type { SmallBodyObjectType } from '@/types';
 
 const labels: Record<SmallBodyObjectType, string> = {
     asteroid: 'Asteroide',

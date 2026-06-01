@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { compactKm, formatNumber } from '@/lib/format';
 import { Moon3D } from '../Bodies/Moon/Moon3D';
 
@@ -32,6 +33,9 @@ export function EarthMoonRuler({
     titleLabel,
     unavailableLabel,
 }: Props) {
+    const reactId = useId();
+    const trackGradientId = `ruler-track-${reactId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
     if (lunarDistance === null) {
         return (
             <div className="rounded-lg border border-white/10 bg-space-950/55 p-4 text-xs text-white/55">
@@ -58,14 +62,14 @@ export function EarthMoonRuler({
                     aria-label={`${earthLabel}, ${moonLabel}, ${objectLabel}`}
                 >
                     <defs>
-                        <linearGradient id="ruler-track" x1="0%" x2="100%" y1="0%" y2="0%">
+                        <linearGradient id={trackGradientId} x1="0%" x2="100%" y1="0%" y2="0%">
                             <stop offset="0%" stopColor="rgba(84,214,214,0.55)" />
                             <stop offset="40%" stopColor="rgba(167,139,250,0.4)" />
                             <stop offset="100%" stopColor="rgba(255,255,255,0.15)" />
                         </linearGradient>
                     </defs>
 
-                    <line x1={EARTH_X} x2={RIGHT_EDGE} y1={TRACK_Y} y2={TRACK_Y} stroke="url(#ruler-track)" strokeWidth={2} strokeLinecap="round" />
+                    <line x1={EARTH_X} x2={RIGHT_EDGE} y1={TRACK_Y} y2={TRACK_Y} stroke={`url(#${trackGradientId})`} strokeWidth={2} strokeLinecap="round" />
 
                     {Array.from({ length: 4 }).map((_, index) => {
                         const x = positionForLunarDistance((index + 2));

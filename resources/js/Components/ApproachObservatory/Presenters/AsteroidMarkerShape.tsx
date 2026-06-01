@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { SmallBodyObjectType } from '@/types';
+import { useId, useMemo } from 'react';
+import type { SmallBodyObjectType } from '@/types';
 
 type Props = {
     seed: string;
@@ -14,9 +14,10 @@ const SIZE_PALETTE = {
 };
 
 export function AsteroidMarkerShape({ seed, type, sizePx }: Props) {
+    const reactId = useId();
     const shape = useMemo(() => generateShape(seed), [seed]);
     const palette = SIZE_PALETTE[type] ?? SIZE_PALETTE.other;
-    const gradientId = `asteroid-gradient-${sanitize(seed)}`;
+    const gradientId = useMemo(() => `asteroid-gradient-${sanitize(seed)}-${sanitize(reactId)}`, [reactId, seed]);
     const craterPositions = shape.craters;
 
     return (

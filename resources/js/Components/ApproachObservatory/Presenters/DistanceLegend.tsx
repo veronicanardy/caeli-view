@@ -1,6 +1,6 @@
 import { Moon } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
-import { LunarReference } from '@/types';
+import type { LunarReference } from '@/types';
 
 export function DistanceLegend({ reference, locale = 'pt-BR' }: { reference: LunarReference; locale?: 'pt-BR' | 'en' }) {
     const en = locale === 'en';
@@ -14,7 +14,7 @@ export function DistanceLegend({ reference, locale = 'pt-BR' }: { reference: Lun
                     <h3 className="text-sm font-semibold text-white">
                         {en ? 'Moon as a ruler' : 'Lua como régua de escala'}
                     </h3>
-                    <p className="mt-1 text-xs leading-5 text-white/58">
+                    <p className="mt-1 text-xs leading-5 text-white/60">
                         {reference.label}: {formatNumber(reference.distanceKm, 0)} km{en ? ', about ' : ', cerca de '}{formatNumber(reference.earthDiametersApprox, 0)} {en ? 'Earths.' : 'Terras.'}
                         {' '}
                         {en ? 'Objects beyond this mark appear outside the lunar ring.' : 'Objetos além dessa marca aparecem fora do anel lunar.'}
