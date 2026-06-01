@@ -4,6 +4,7 @@ import { compactKm, formatNumber, lunarDistanceFromKm } from '@/lib/format';
 import { bestDistanceKm, bestDistanceLD } from '@/lib/radarData';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { AsteroidTrajectory, HorizonsPositionResult, UnifiedApproach } from '@/types';
+import { dailyReasonText, distanceBandLabel, formatApproachTime, horizonsStatusLabel, isToday, motionText } from './dailyProximityPresentation';
 
 type Props = {
     approaches: UnifiedApproach[];
@@ -15,6 +16,7 @@ type Props = {
     trajectoryLoadingKey: string | null;
 };
 
+// Renderiza os cards diarios a partir de dados ja preparados por outras camadas.
 export function DailyProximityList({ approaches, positionsById, focusId, selectedDate, locale, trajectoryByKey, trajectoryLoadingKey }: Props) {
     const en = locale === 'en';
     const sorted = approaches
@@ -24,7 +26,7 @@ export function DailyProximityList({ approaches, positionsById, focusId, selecte
     if (!sorted.length) {
         return (
             <div className="rounded-lg border border-white/10 bg-white/[0.035] p-5 text-sm text-white/55">
-                {en ? 'No relevant close approach found for this date.' : 'Nenhuma aproximação relevante encontrada para esta data.'}
+                {en ? 'No relevant close approach found for this date.' : 'Nenhuma aproxima\u00E7\u00E3o relevante encontrada para esta data.'}
             </div>
         );
     }
@@ -73,9 +75,9 @@ export function DailyProximityList({ approaches, positionsById, focusId, selecte
                         </p>
 
                         <div className="mt-4 grid gap-2 text-xs text-white/58 sm:grid-cols-2">
-                            <Fact icon={<Moon className="size-3.5" />} label={en ? 'Lunar distance' : 'Distância lunar'} value={lunar !== null ? `${formatNumber(lunar, lunar < 10 ? 1 : 0)} DL` : '—'} />
-                            <Fact icon={<LocateFixed className="size-3.5" />} label={todaySelected ? (en ? 'Distance now' : 'Distância agora') : (en ? 'Distance' : 'Distância')} value={compactKm(distanceKm)} />
-                            <Fact icon={<CalendarClock className="size-3.5" />} label={en ? 'Closest approach' : 'Máxima aproximação'} value={time} />
+                            <Fact icon={<Moon className="size-3.5" />} label={en ? 'Lunar distance' : 'Dist\u00E2ncia lunar'} value={lunar !== null ? `${formatNumber(lunar, lunar < 10 ? 1 : 0)} DL` : '\u2014'} />
+                            <Fact icon={<LocateFixed className="size-3.5" />} label={todaySelected ? (en ? 'Distance now' : 'Dist\u00E2ncia agora') : (en ? 'Distance' : 'Dist\u00E2ncia')} value={compactKm(distanceKm)} />
+                            <Fact icon={<CalendarClock className="size-3.5" />} label={en ? 'Closest approach' : 'M\u00E1xima aproxima\u00E7\u00E3o'} value={time} />
                             <Fact icon={<SatelliteDish className="size-3.5" />} label="Horizons" value={horizonsStatusLabel(trajectory, isLoading, isFocus, locale)} />
                         </div>
 
@@ -91,6 +93,7 @@ export function DailyProximityList({ approaches, positionsById, focusId, selecte
     );
 }
 
+// Bloco visual pequeno para manter a grade de fatos legivel dentro do card.
 function Fact({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
     return (
         <div className="rounded border border-white/10 bg-space-950/45 px-3 py-2">
@@ -101,105 +104,4 @@ function Fact({ icon, label, value }: { icon: ReactNode; label: string; value: s
             <p className="mt-1 font-medium text-white/78">{value}</p>
         </div>
     );
-}
-
-function dailyReasonText(name: string, lunar: number | null, time: string, selectedDate: string, todaySelected: boolean, locale: 'pt-BR' | 'en'): string {
-    const en = locale === 'en';
-    const dateLabel = formatSelectedDay(selectedDate, locale);
-    const lunarText = lunar !== null ? formatNumber(lunar, lunar < 10 ? 1 : 0) : null;
-
-    if (todaySelected) {
-        if (en) {
-            return lunarText
-                ? `${name} is listed because it is among the closest monitored objects right now, at ${lunarText} lunar distances. Closest approach: ${time}.`
-                : `${name} is listed because it is among the closest monitored objects right now. Closest approach: ${time}.`;
-        }
-
-        return lunarText
-            ? `${name} aparece porque está entre os objetos monitorados mais próximos agora, a ${lunarText} distâncias lunares. Máxima aproximação: ${time}.`
-            : `${name} aparece porque está entre os objetos monitorados mais próximos agora. Máxima aproximação: ${time}.`;
-    }
-
-    if (en) {
-        return lunarText
-            ? `${name} is listed because its closest approach to Earth happens on ${dateLabel}, at ${lunarText} lunar distances. Maximum approach occurs at ${time}.`
-            : `${name} is listed because its closest approach to Earth happens on ${dateLabel}. Maximum approach occurs at ${time}.`;
-    }
-
-    return lunarText
-        ? `${name} está aqui porque sua máxima aproximação com a Terra ocorre em ${dateLabel}, a ${lunarText} distâncias lunares. A máxima aproximação ocorre às ${time}.`
-        : `${name} está aqui porque sua máxima aproximação com a Terra ocorre em ${dateLabel}. A máxima aproximação ocorre às ${time}.`;
-}
-
-function isToday(value: string): boolean {
-    return value === localDateIso(new Date());
-}
-
-function localDateIso(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-function horizonsStatusLabel(trajectory: AsteroidTrajectory | null, isLoading: boolean, isFocus: boolean, locale: 'pt-BR' | 'en'): string {
-    const en = locale === 'en';
-    if (isLoading) return en ? 'Calculating now...' : 'Calculando agora...';
-    if (trajectory?.status === 'available') return en ? 'Available' : 'Disponível';
-    if (trajectory?.status === 'fallback') return en ? 'Fallback' : 'Fallback';
-    if (trajectory?.status === 'unavailable') return en ? 'Unavailable' : 'Indisponível';
-    return isFocus ? (en ? 'Waiting' : 'Aguardando') : (en ? 'Not requested' : 'Não consultado');
-}
-
-function motionText(state: AsteroidTrajectory['motionState'], currentLunar: number | null, locale: 'pt-BR' | 'en'): string {
-    const en = locale === 'en';
-    const distance = currentLunar !== null ? ` ${formatNumber(currentLunar, currentLunar < 10 ? 1 : 0)} DL` : '';
-
-    if (state === 'approaching') {
-        return en ? `Current Horizons point suggests the object is still approaching Earth.${distance}` : `O ponto atual do Horizons sugere que o objeto ainda está se aproximando da Terra.${distance}`;
-    }
-
-    if (state === 'receding') {
-        return en ? `Current Horizons point suggests the object is moving away from Earth.${distance}` : `O ponto atual do Horizons sugere que o objeto está se afastando da Terra.${distance}`;
-    }
-
-    if (state === 'near_closest') {
-        return en ? `Current Horizons point is near the closest-approach window.${distance}` : `O ponto atual do Horizons está perto da janela de máxima aproximação.${distance}`;
-    }
-
-    return en ? `Current position calculated, but motion direction is inconclusive.${distance}` : `Posição atual calculada, mas a direção do movimento é inconclusiva.${distance}`;
-}
-
-function distanceBandLabel(lunar: number | null, locale: 'pt-BR' | 'en'): string {
-    const en = locale === 'en';
-    if (lunar === null) return en ? 'Unknown' : 'Sem distância';
-    if (lunar < 1) return en ? '0-1 LD · Inside Moon' : '0-1 DL · Dentro da Lua';
-    if (lunar <= 5) return en ? '1-5 LD · Very close' : '1-5 DL · Muito próximo';
-    if (lunar <= 20) return en ? '5-20 LD · Close' : '5-20 DL · Próximo';
-    return en ? '20+ LD · Monitored' : '20+ DL · Monitorado';
-}
-
-function formatApproachTime(value: string | null, locale: 'pt-BR' | 'en'): string {
-    if (!value) return '—';
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-
-    return new Intl.DateTimeFormat(locale, {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'UTC',
-        timeZoneName: 'short',
-    }).format(parsed);
-}
-
-function formatSelectedDay(value: string, locale: 'pt-BR' | 'en'): string {
-    const parsed = new Date(`${value}T00:00:00Z`);
-    if (Number.isNaN(parsed.getTime())) return value;
-
-    return new Intl.DateTimeFormat(locale, {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'UTC',
-    }).format(parsed);
 }

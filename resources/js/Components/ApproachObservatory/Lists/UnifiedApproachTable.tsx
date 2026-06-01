@@ -6,6 +6,13 @@ import { compactKm, compactMeters, formatNumber, lunarDistanceFromKm, lunarDista
 import { UnifiedApproach } from '@/types';
 import { ObjectTypeBadge } from '../Presenters/ObjectTypeBadge';
 
+const headers = [
+    ['approachDate', 'Aproxima\u00E7\u00E3o'],
+    ['nominalDistanceKm', 'Dist\u00E2ncia da Terra'],
+    ['relativeVelocityKph', 'Velocidade'],
+] as const;
+
+// Mantem a tabela desktop e a lista mobile sincronizadas a partir do mesmo preparo de linha.
 export function UnifiedApproachTable({
     approaches,
     sortKey,
@@ -15,12 +22,6 @@ export function UnifiedApproachTable({
     sortKey: string;
     onSort: (key: string) => void;
 }) {
-    const headers = [
-        ['approachDate', 'Aproximação'],
-        ['nominalDistanceKm', 'Distância da Terra'],
-        ['relativeVelocityKph', 'Velocidade'],
-    ] as const;
-
     return (
         <>
             <div className="hidden overflow-hidden rounded-lg border border-white/10 bg-white/[0.035] md:block">
@@ -38,35 +39,33 @@ export function UnifiedApproachTable({
                                         </button>
                                     </th>
                                 ))}
-                                <th className="px-4 py-3 font-medium">Comparação com a Lua</th>
+                                <th className="px-4 py-3 font-medium">Compara\u00E7\u00E3o com a Lua</th>
                                 <th className="px-4 py-3 font-medium">Tamanho estimado</th>
-                                <th className="px-4 py-3 font-medium">Atenção</th>
+                                <th className="px-4 py-3 font-medium">Aten\u00E7\u00E3o</th>
                                 <th className="px-4 py-3 font-medium" />
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/10">
                             {approaches.map((approach) => {
-                                const attention = classifyApproachAttention(approach);
-                                const lunarDistance = lunarDistanceFromKm(approach.nominalDistanceKm) ?? approach.lunarDistance;
-                                const identity = resolveApproachIdentity(approach);
+                                const row = buildApproachRow(approach);
 
                                 return (
                                     <tr key={approach.id} className="transition hover:bg-white/[0.03]">
                                         <td className="px-4 py-3">
                                             <Link className="font-medium text-white hover:text-signal-cyan" href={approach.detailRoute}>
-                                                {identity.displayName}
+                                                {row.identity.displayName}
                                             </Link>
-                                            <p className="mt-0.5 text-xs text-white/40">{identity.subtitle ?? approach.designation ?? approach.detailIdentifier}</p>
+                                            <p className="mt-0.5 text-xs text-white/40">{row.subtitle}</p>
                                         </td>
                                         <td className="px-4 py-3"><ObjectTypeBadge type={approach.objectType} /></td>
-                                        <td className="px-4 py-3 text-white/65">{approach.approachDate ?? 'Sem data'}</td>
-                                        <td className="px-4 py-3 text-white/65">{compactKm(approach.nominalDistanceKm)}</td>
-                                        <td className="px-4 py-3 text-white/65">{formatNumber(approach.relativeVelocityKph, 0)} km/h</td>
-                                        <td className="px-4 py-3 text-white/65">{lunarDistanceLabel(lunarDistance)}</td>
-                                        <td className="px-4 py-3 text-white/65">{sizeLabel(approach)}</td>
+                                        <td className="px-4 py-3 text-white/65">{row.approachDateLabel}</td>
+                                        <td className="px-4 py-3 text-white/65">{row.distanceLabel}</td>
+                                        <td className="px-4 py-3 text-white/65">{row.velocityLabel}</td>
+                                        <td className="px-4 py-3 text-white/65">{row.lunarDistanceLabel}</td>
+                                        <td className="px-4 py-3 text-white/65">{row.sizeLabel}</td>
                                         <td className="px-4 py-3">
                                             <span className="inline-flex rounded-full border border-signal-violet/25 bg-signal-violet/10 px-2.5 py-0.5 text-xs font-medium text-signal-violet">
-                                                {attention.label}
+                                                {row.attention.label}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
@@ -85,9 +84,7 @@ export function UnifiedApproachTable({
 
             <ul className="grid gap-2 md:hidden">
                 {approaches.map((approach) => {
-                    const attention = classifyApproachAttention(approach);
-                    const lunarDistance = lunarDistanceFromKm(approach.nominalDistanceKm) ?? approach.lunarDistance;
-                    const identity = resolveApproachIdentity(approach);
+                    const row = buildApproachRow(approach);
 
                     return (
                         <li key={approach.id}>
@@ -97,34 +94,34 @@ export function UnifiedApproachTable({
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
-                                        <p className="truncate text-sm font-medium text-white">{identity.displayName}</p>
-                                        <p className="mt-0.5 truncate text-[11px] text-white/40">{identity.subtitle ?? approach.designation ?? approach.detailIdentifier}</p>
+                                        <p className="truncate text-sm font-medium text-white">{row.identity.displayName}</p>
+                                        <p className="mt-0.5 truncate text-[11px] text-white/40">{row.subtitle}</p>
                                     </div>
                                     <ObjectTypeBadge type={approach.objectType} />
                                 </div>
                                 <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
                                     <div>
-                                        <dt className="text-white/40">Distância</dt>
-                                        <dd className="text-white/75">{compactKm(approach.nominalDistanceKm)}</dd>
+                                        <dt className="text-white/40">Dist\u00E2ncia</dt>
+                                        <dd className="text-white/75">{row.distanceLabel}</dd>
                                     </div>
                                     <div>
                                         <dt className="text-white/40">Lua</dt>
-                                        <dd className="text-white/75">{lunarDistanceLabel(lunarDistance)}</dd>
+                                        <dd className="text-white/75">{row.lunarDistanceLabel}</dd>
                                     </div>
                                     <div>
                                         <dt className="text-white/40">Velocidade</dt>
-                                        <dd className="text-white/75">{formatNumber(approach.relativeVelocityKph, 0)} km/h</dd>
+                                        <dd className="text-white/75">{row.velocityLabel}</dd>
                                     </div>
                                     <div>
                                         <dt className="text-white/40">Data</dt>
-                                        <dd className="text-white/75">{approach.approachDate ?? 'Sem data'}</dd>
+                                        <dd className="text-white/75">{row.approachDateLabel}</dd>
                                     </div>
                                 </dl>
                                 <div className="mt-2 flex items-center justify-between">
                                     <span className="inline-flex rounded-full border border-signal-violet/25 bg-signal-violet/10 px-2 py-0.5 text-[10px] font-medium text-signal-violet">
-                                        {attention.label}
+                                        {row.attention.label}
                                     </span>
-                                    <span className="text-[10px] text-white/40">{sizeLabel(approach)}</span>
+                                    <span className="text-[10px] text-white/40">{row.sizeLabel}</span>
                                 </div>
                             </Link>
                         </li>
@@ -144,5 +141,23 @@ function sizeLabel(approach: UnifiedApproach): string {
         return `${compactMeters(approach.estimatedDiameterMinMeters)} a ${compactMeters(approach.estimatedDiameterMaxMeters)}`;
     }
 
-    return 'Indisponível';
+    return 'Indispon\u00EDvel';
+}
+
+// Concentra apenas derivacoes de apresentacao reutilizadas entre desktop e mobile.
+function buildApproachRow(approach: UnifiedApproach) {
+    const attention = classifyApproachAttention(approach);
+    const identity = resolveApproachIdentity(approach);
+    const lunarDistance = lunarDistanceFromKm(approach.nominalDistanceKm) ?? approach.lunarDistance;
+
+    return {
+        approachDateLabel: approach.approachDate ?? 'Sem data',
+        attention,
+        distanceLabel: compactKm(approach.nominalDistanceKm),
+        identity,
+        lunarDistanceLabel: lunarDistanceLabel(lunarDistance),
+        sizeLabel: sizeLabel(approach),
+        subtitle: identity.subtitle ?? approach.designation ?? approach.detailIdentifier,
+        velocityLabel: `${formatNumber(approach.relativeVelocityKph, 0)} km/h`,
+    };
 }
