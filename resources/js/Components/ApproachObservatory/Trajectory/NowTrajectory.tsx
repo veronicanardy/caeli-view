@@ -1,13 +1,12 @@
 import { useMemo } from 'react';
 import type { AsteroidTrajectory } from '@/types';
 import type { Palette } from '@/lib/observatory/palette';
-import { clipPolylineByLength, collectTimeTicks, findClosestApproachPoint, toVec3 } from '@/lib/observatory/trajectorySampling';
+import { collectTimeTicks, findClosestApproachPoint, toVec3 } from '@/lib/observatory/trajectorySampling';
 import { DirectionCone } from './DirectionCone';
 import { GradientTrajectoryLine } from './GradientTrajectoryLine';
 import {
     getConeDirection,
     getTrajectoryOpacities,
-    getTrajectoryReach,
     isPointOnDrawnPath,
 } from './nowTrajectoryPresentation';
 import { ClosestApproachMarker, TimeTick } from './TrajectoryMarkers';
@@ -27,52 +26,42 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
         () => (trajectory.pastPoints ?? []).map((point) => toVec3(point)),
         [trajectory.pastPoints],
     );
-    const futureVecs = useMemo(
-        () => (trajectory.futurePoints ?? []).map((point) => toVec3(point)),
-        [trajectory.futurePoints],
-    );
     const currentVec = useMemo(
         () => (trajectory.currentPoint ? toVec3(trajectory.currentPoint) : null),
         [trajectory.currentPoint],
     );
 
     const closestApproach = useMemo(() => findClosestApproachPoint(trajectory), [trajectory]);
-    const { pastReach, futureReach } = getTrajectoryReach(emphasized);
 
     const fullPast = useMemo(() => {
-        const joined = currentVec && pastVecs.length > 0 ? [...pastVecs, currentVec] : pastVecs;
-        return clipPolylineByLength([...joined].reverse(), pastReach).reverse();
-    }, [pastVecs, currentVec, pastReach]);
-
-    const fullFuture = useMemo(() => {
-        const joined = currentVec && futureVecs.length > 0 ? [currentVec, ...futureVecs] : futureVecs;
-        return clipPolylineByLength(joined, futureReach);
-    }, [futureVecs, currentVec, futureReach]);
+        if (currentVec && pastVecs.length > 0) return [...pastVecs, currentVec];
+        if (currentVec) return [currentVec];
+        return pastVecs;
+    }, [pastVecs, currentVec]);
 
     const closestApproachOnPath = useMemo(
-        () => isPointOnDrawnPath(closestApproach, fullPast, fullFuture),
-        [closestApproach, fullPast, fullFuture],
+        () => isPointOnDrawnPath(closestApproach, fullPast),
+        [closestApproach, fullPast],
     );
 
     const endArrow = useMemo(() => {
         if (!currentVec) return null;
 
-        const direction = getConeDirection(trajectory.currentPoint, fullFuture);
+        const direction = getConeDirection(trajectory.currentPoint, fullPast);
         if (!direction) return null;
 
         return { tip: currentVec.clone(), direction };
-    }, [currentVec, trajectory.currentPoint, fullFuture]);
+    }, [currentVec, trajectory.currentPoint, fullPast]);
 
     const timeTicks = useMemo(() => {
         if (!emphasized) return [];
 
-        const drawn = [...fullPast, ...fullFuture];
         return collectTimeTicks(trajectory).filter((tick) =>
-            drawn.some((point) => point.distanceToSquared(tick.vec) < 0.35 * 0.35),
+            fullPast.some((point) => point.distanceToSquared(tick.vec) < 0.35 * 0.35),
         );
-    }, [emphasized, trajectory, fullPast, fullFuture]);
+    }, [emphasized, trajectory, fullPast]);
 
-    const { pastPeakOpacity, futurePeakOpacity, coneOpacity } = getTrajectoryOpacities(emphasized, dimmed);
+    const { pastPeakOpacity, coneOpacity } = getTrajectoryOpacities(emphasized, dimmed);
 
     return (
         <group>
@@ -83,15 +72,6 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
                     color={palette.past}
                     peakOpacity={pastPeakOpacity}
                     peakAtEnd
-                />
-            ) : null}
-
-            {!coneOnly && fullFuture.length >= 2 ? (
-                <GradientTrajectoryLine
-                    points={fullFuture}
-                    color={palette.future}
-                    peakOpacity={futurePeakOpacity}
-                    peakAtEnd={false}
                 />
             ) : null}
 
@@ -110,7 +90,7 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
                   ))
                 : null}
 
-            {!coneOnly && closestApproach && (emphasized || closestApproachOnPath) ? (
+            {!coneOnly && closestApproach && closestApproachOnPath ? (
                 <ClosestApproachMarker
                     point={closestApproach}
                     color={palette.current}

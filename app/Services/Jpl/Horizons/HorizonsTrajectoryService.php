@@ -22,7 +22,7 @@ final class HorizonsTrajectoryService
     /** Versões de cache por tipo de consulta — incrementar ao mudar o formato da resposta. */
     private const TRAJECTORY_CACHE_VERSION = 'command-v4';
     private const POSITION_CACHE_VERSION = 'reftime-v3';
-    private const NOW_TRAJECTORY_CACHE_VERSION = 'now-traj-v3-short-window';
+    private const NOW_TRAJECTORY_CACHE_VERSION = 'now-traj-v4-past-72h';
 
     /** Arredondamento de tempo para cache compartilhado entre objetos no mesmo tick. */
     private const CURRENT_MODE_BUCKET_MINUTES = 15;

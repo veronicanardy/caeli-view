@@ -1,6 +1,6 @@
 /**
- * Pure helpers for sampling and clipping geocentric trajectories before they are handed to the
- * scene. Everything here operates on plain data + THREE.Vector3 — no R3F, no React.
+ * Helpers puros para amostrar e recortar trajetórias geocêntricas antes de entregá-las para a
+ * cena. Tudo aqui opera sobre dados simples + THREE.Vector3, sem R3F nem React.
  */
 
 import * as THREE from 'three';
@@ -10,12 +10,13 @@ import { horizonsToScene } from './coordinates';
 
 export type EarthHelioAU = { x: number; y: number; z: number };
 
-/** Snap threshold (scene units) used by closestApproachNearPosition. */
+/** Limite de snap (em unidades de cena) usado por closestApproachNearPosition. */
 export const CLOSEST_APPROACH_MERGE_DISTANCE_SCENE = 0.45;
 
-// NEOs can be at most ~5 AU geocentric (e.g. Eros aphelion ~1.78 AU + Earth ~1 AU ≈ 2.8 AU).
-// Beyond 750 M km the Horizons vector is almost certainly wrong (barycentre mis-centring or
-// unit confusion), so we discard it rather than placing the object at a nonsensical position.
+// NEOs podem chegar a algo perto de ~5 UA geocêntricas.
+// Acima de 750 milhões de km, o vetor do Horizons quase certamente está incorreto
+// (descentramento no baricentro ou confusão de unidade), então descartamos o ponto
+// em vez de posicionar o objeto em um lugar sem sentido.
 const MAX_GEOCENTRIC_KM = 750_000_000;
 
 export function currentPositionInScene(object: ClosestNowObject): [number, number, number] | null {
@@ -32,10 +33,11 @@ export function toVec3(point: { x: number; y: number; z?: number | null }): THRE
 }
 
 /**
- * Walks a polyline from its FIRST point and keeps points until the accumulated length reaches
- * `maxLengthDL`, inserting a final interpolated point exactly at that length. Used to clip the
- * visible trajectory to a readable span around "now" without distorting its shape — the kept
- * portion is the true path, just shorter. Returns at least the first two points when available.
+ * Percorre uma polilinha a partir do PRIMEIRO ponto e mantém amostras até que o comprimento
+ * acumulado atinja `maxLengthDL`, inserindo um ponto final interpolado exatamente nesse limite.
+ * Serve para recortar a trajetória visível a um trecho legível em torno do "agora", sem
+ * distorcer sua forma: o trecho mantido continua sendo o caminho real, apenas mais curto.
+ * Retorna pelo menos os dois primeiros pontos quando possível.
  */
 export function clipPolylineByLength(points: THREE.Vector3[], maxLengthDL: number): THREE.Vector3[] {
     if (points.length <= 1) return points;
@@ -107,9 +109,10 @@ export function closestApproachNearPosition(
 }
 
 /**
- * Picks the trajectory samples closest to now-24h, now+24h and now+72h and returns their scene
- * positions + short labels. "now" is the currentPoint's timestamp (the instant Horizons anchored
- * the trajectory to). Only ticks with a real sample within ~6h of the target time are emitted.
+ * Escolhe as amostras de trajetória mais próximas de agora-24h, agora-7d e agora-30d e retorna
+ * suas posições na cena com rótulos curtos. O "agora" é o timestamp do currentPoint, isto é,
+ * o instante ao qual o Horizons ancorou a trajetória. Só emitimos marcadores quando existe uma
+ * amostra real dentro de ~6h do instante alvo.
  */
 export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: THREE.Vector3; label: string }> {
     const now = trajectory.currentPoint?.timestamp ? new Date(trajectory.currentPoint.timestamp).getTime() : NaN;
@@ -124,9 +127,9 @@ export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: T
 
     const HOUR = 3_600_000;
     const targets: Array<{ deltaH: number; label: string }> = [
-        { deltaH: -24, label: '−24h' },
-        { deltaH: 24, label: '+24h' },
-        { deltaH: 72, label: '+72h' },
+        { deltaH: -24, label: '-24h' },
+        { deltaH: -168, label: '-7d' },
+        { deltaH: -720, label: '-30d' },
     ];
 
     const ticks: Array<{ vec: THREE.Vector3; label: string }> = [];
@@ -140,7 +143,7 @@ export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: T
             const delta = Math.abs(stamp - targetTime);
             if (delta < bestDelta) { bestDelta = delta; best = point; }
         }
-        // Only show the tick if we actually have a sample within 6h of the target.
+        // Só mostra o marcador quando realmente existe uma amostra dentro de 6h do alvo.
         if (best && bestDelta <= 6 * HOUR) {
             ticks.push({ vec: toVec3(best), label });
         }

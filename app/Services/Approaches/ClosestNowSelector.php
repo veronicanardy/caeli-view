@@ -56,38 +56,25 @@ final class ClosestNowSelector
     /** Modos de seleção válidos — o critério que define quais objetos são priorizados */
     private const VALID_MODES = ['nearest', 'upcoming', 'attention'];
 
-    /**
-     * Janela temporal padrão enviada ao Horizons: ±2 dias com passo de 6 horas (~17 pontos).
-     *
-     * Janela curta tem dois efeitos positivos:
-     *   1. Respostas muito menores → menos timeout quando 30 objetos são consultados em paralelo.
-     *   2. A distância atual interpolada fica mais precisa (ponto mais próximo de "agora").
-     * Para o critério "mais próximos agora" não precisamos de órbita completa — só queremos
-     * saber onde o objeto está hoje. A trajetória de ±2 dias é suficiente para a cena 3D
-     * mostrar a curva de passagem sem exigir 60 pontos por objeto.
-     *
-     * Objetos muito distantes (> 50M km) recebem janelas adaptativas maiores — veja
-     * trajectoryWindowFor(). A compressão logarítmica da cena "achata" o espaço lá longe,
-     * fazendo com que ±2 dias produzam um arco invisível para objetos acima de ~500 DL.
-     */
-    private const HORIZONS_WINDOW = [
-        'startOffsetHours' => -48,    // -2 dias
-        'stopOffsetHours'  => 48,     // +2 dias
-        'stepSize'         => '6 hours',
+    /** Janela retrospectiva para objetos mais próximos: 30 dias, resolução de 6h. */
+    private const HORIZONS_WINDOW_NEAR = [
+        'startOffsetHours' => -72,
+        'stopOffsetHours'  => 0,
+        'stepSize'         => '1 hour',
     ];
 
-    /** Janela adaptativa para objetos a 50M–500M km: ±15 dias, passo 1 dia (~31 pontos). */
+    /** Janela retrospectiva para objetos intermediários: 120 dias, resolução de 1 dia. */
     private const HORIZONS_WINDOW_MEDIUM = [
-        'startOffsetHours' => -360,   // -15 dias
-        'stopOffsetHours'  => 360,    // +15 dias
-        'stepSize'         => '1 day',
+        'startOffsetHours' => -72,
+        'stopOffsetHours'  => 0,
+        'stepSize'         => '2 hours',
     ];
 
-    /** Janela adaptativa para objetos além de 500M km: ±120 dias, passo 5 dias (~49 pontos). */
+    /** Janela retrospectiva para objetos mais distantes: 240 dias, resolução de 2 dias. */
     private const HORIZONS_WINDOW_WIDE = [
-        'startOffsetHours' => -2880,  // -120 dias
-        'stopOffsetHours'  => 2880,   // +120 dias
-        'stepSize'         => '5 days',
+        'startOffsetHours' => -72,
+        'stopOffsetHours'  => 0,
+        'stepSize'         => '4 hours',
     ];
 
     /** Máximo de objetos consultados simultaneamente no Horizons. Acima disso os timeouts explodem. */
@@ -144,7 +131,11 @@ final class ClosestNowSelector
         // é executado novamente com limit=15. O custo adicional é mínimo: o cache
         // individual do Horizons por objectId (TTL 30min) reutiliza automaticamente os
         // ~10 objetos já consultados — apenas os objetos 11–20 geram novas chamadas à API.
-        $windowSignature = implode(',', self::HORIZONS_WINDOW);
+        $windowSignature = implode(',', [
+            ...self::HORIZONS_WINDOW_NEAR,
+            ...self::HORIZONS_WINDOW_MEDIUM,
+            ...self::HORIZONS_WINDOW_WIDE,
+        ]);
         $cacheKey        = 'closest-now:v12:' . md5($dateMin . '|' . $dateMax . '|' . $mode . '|' . $limit . '|' . $anchor . '|' . $windowSignature);
 
         if ($forceRefresh) {
@@ -696,16 +687,10 @@ final class ClosestNowSelector
     // -------------------------------------------------------------------------
 
     /**
-     * Escolhe a janela de trajetória com base na distância nominal do objeto.
+     * O radar de proximidade usa uma janela retrospectiva longa e adaptativa.
      *
-     * A cena 3D aplica compressão logarítmica (r_cena = K·ln(1 + r/R0)). Para objetos
-     * muito distantes, a derivada d(r_cena)/dr é pequena, então ±2 dias geram um arco
-     * praticamente invisível. Limiares derivados da condição "arco ≥ 0.3 unidades de cena":
-     *   - null (desconhecida) → WIDE por segurança (objetos sem passagem recente no CAD
-     *     podem estar em qualquer distância)
-     *   - < 50M km  → ±2 dias, passo 6h   (padrão; arco visível em <1 dia)
-     *   - 50M–500M km → ±15 dias, passo 1d (Vesta, Ceres — precisa ~10 dias para arco visível)
-     *   - > 500M km → ±120 dias, passo 5d  (Eros, objetos além da faixa de asteroides — ~100 dias)
+     * Como a cena já aplica a mesma compressão logarítmica ao rastro e à posição atual,
+     * podemos trazer mais histórico sem quebrar a coerência visual do radar.
      */
     private function trajectoryWindowFor(?float $distanceKm): array
     {
@@ -715,7 +700,7 @@ final class ClosestNowSelector
         if ($distanceKm > 50_000_000) {
             return self::HORIZONS_WINDOW_MEDIUM;
         }
-        return self::HORIZONS_WINDOW;
+        return self::HORIZONS_WINDOW_NEAR;
     }
 
     /** Converte o shape de uma aproximação unificada para o payload esperado pelo HorizonsTrajectoryService. */

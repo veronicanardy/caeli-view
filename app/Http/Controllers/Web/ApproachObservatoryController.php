@@ -231,10 +231,51 @@ class ApproachObservatoryController
             'detailIdentifier' => ['nullable', 'string', 'max:120'],
             'spkId' => ['nullable', 'string', 'max:80'],
             'approachTime' => ['required', 'string', 'max:80'],
+            'anchor' => ['nullable', 'string', 'in:approach,now'],
+            'history_days' => ['nullable', 'integer', 'min:7', 'max:720'],
         ]);
+
+        $anchor = (string) ($payload['anchor'] ?? 'approach');
+        if ($anchor === 'now') {
+            $historyDays = (int) ($payload['history_days'] ?? 365);
+
+            return response()->json(
+                $this->horizons->trajectoryAroundNow($payload, $this->selectedNowTrajectoryWindow($historyDays))
+            )->header('Cache-Control', 'public, max-age=1800, stale-while-revalidate=1800');
+        }
 
         return response()->json($this->horizons->trajectory($payload))
             ->header('Cache-Control', 'public, max-age=86400, stale-while-revalidate=3600');
+    }
+
+    /**
+     * @return array{startOffsetHours:int, stopOffsetHours:int, stepSize:string}
+     */
+    private function selectedNowTrajectoryWindow(int $historyDays): array
+    {
+        $days = max(7, min($historyDays, 720));
+
+        if ($days <= 45) {
+            return [
+                'startOffsetHours' => -($days * 24),
+                'stopOffsetHours' => 0,
+                'stepSize' => '6 hours',
+            ];
+        }
+
+        if ($days <= 365) {
+            return [
+                'startOffsetHours' => -($days * 24),
+                'stopOffsetHours' => 0,
+                'stepSize' => '1 day',
+            ];
+        }
+
+        return [
+            'startOffsetHours' => -($days * 24),
+            'stopOffsetHours' => 0,
+            'stepSize' => '3 days',
+        ];
     }
 
     public function asteroidModel(Request $request): JsonResponse

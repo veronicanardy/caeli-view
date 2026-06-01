@@ -107,14 +107,14 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                                 { kind: 'observed', label: 'From SBDB: physical parameters, orbital elements, SPK-ID' },
                                 { kind: 'observed', label: 'From Horizons: asteroid position r, velocity v (per-object, for the 3D scene)' },
                                 { kind: 'calculated', label: 'Locally: Sun/Moon/Earth positions, subsolar point, distance units, log compression, cone direction, trail' },
-                                { kind: 'visual', label: 'Visual choice: body radii amplified ~10,000–100,000×; trail window −24 h / +72 h' },
+                                { kind: 'visual', label: 'Visual choice: body radii amplified ~10,000-100,000x; trail window -72 h / now' },
                             ]
                             : [
                                 { kind: 'observed', label: 'NeoWs + CAD: lista de aproximações, distâncias, velocidades, flag de perigo' },
                                 { kind: 'observed', label: 'SBDB: parâmetros físicos, elementos orbitais, SPK-ID' },
                                 { kind: 'observed', label: 'Horizons: posição r e velocidade v do asteroide (por objeto, para a cena 3D)' },
                                 { kind: 'calculated', label: 'Localmente: posições do Sol/Lua/Terra, ponto subsolar, unidades de distância, compressão log, direção do cone, trilha' },
-                                { kind: 'visual', label: 'Escolha visual: raios dos corpos amplificados ~10.000–100.000×; janela da trilha −24 h / +72 h' },
+                                { kind: 'visual', label: 'Escolha visual: raios dos corpos amplificados ~10.000-100.000x; janela da trilha -72 h / agora' },
                             ]}
                     />
                 </div>
