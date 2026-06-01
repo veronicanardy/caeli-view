@@ -58,23 +58,23 @@ export function DailyProximityList({ approaches, positionsById, focusId, selecte
                                 <div className="flex flex-wrap items-center gap-2">
                                     <h3 className="truncate text-base font-semibold text-white">{identity.displayName}</h3>
                                     {isFocus ? (
-                                        <span className="rounded-full border border-signal-cyan/35 bg-signal-cyan/12 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-signal-cyan">
+                                        <span className="rounded-full border border-signal-cyan/35 bg-signal-cyan/[0.12] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-signal-cyan">
                                             {en ? 'In focus' : 'Em foco'}
                                         </span>
                                     ) : null}
                                 </div>
                                 {identity.subtitle ? <p className="mt-0.5 truncate text-xs text-white/45">{identity.subtitle}</p> : null}
                             </div>
-                            <span className="shrink-0 rounded-full border border-white/10 bg-space-950/70 px-2 py-1 text-xs text-white/62">
+                            <span className="shrink-0 rounded-full border border-white/10 bg-space-950/70 px-2 py-1 text-xs text-white/[0.62]">
                                 {distanceBandLabel(lunar, locale)}
                             </span>
                         </div>
 
-                        <p className="mt-3 text-sm leading-6 text-white/68">
+                        <p className="mt-3 text-sm leading-6 text-white/[0.68]">
                             {dailyReasonText(identity.displayName, lunar, time, selectedDate, todaySelected, locale)}
                         </p>
 
-                        <div className="mt-4 grid gap-2 text-xs text-white/58 sm:grid-cols-2">
+                        <div className="mt-4 grid gap-2 text-xs text-white/[0.58] sm:grid-cols-2">
                             <Fact icon={<Moon className="size-3.5" />} label={en ? 'Lunar distance' : 'Dist\u00E2ncia lunar'} value={lunar !== null ? `${formatNumber(lunar, lunar < 10 ? 1 : 0)} DL` : '\u2014'} />
                             <Fact icon={<LocateFixed className="size-3.5" />} label={todaySelected ? (en ? 'Distance now' : 'Dist\u00E2ncia agora') : (en ? 'Distance' : 'Dist\u00E2ncia')} value={compactKm(distanceKm)} />
                             <Fact icon={<CalendarClock className="size-3.5" />} label={en ? 'Closest approach' : 'M\u00E1xima aproxima\u00E7\u00E3o'} value={time} />
@@ -97,11 +97,11 @@ export function DailyProximityList({ approaches, positionsById, focusId, selecte
 function Fact({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
     return (
         <div className="rounded border border-white/10 bg-space-950/45 px-3 py-2">
-            <div className="flex items-center gap-1.5 text-white/42">
+            <div className="flex items-center gap-1.5 text-white/[0.42]">
                 {icon}
                 {label}
             </div>
-            <p className="mt-1 font-medium text-white/78">{value}</p>
+            <p className="mt-1 font-medium text-white/[0.78]">{value}</p>
         </div>
     );
 }

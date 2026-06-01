@@ -36,7 +36,7 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                         ? 'cursor-not-allowed opacity-35'
                         : isSelected
                           ? 'bg-signal-cyan/15 text-white ring-1 ring-signal-cyan/40'
-                          : 'text-white/75 hover:bg-white/8 hover:text-white',
+                          : 'text-white/75 hover:bg-white/[0.08] hover:text-white',
                     !orbitBlocked && !hasScenePosition ? 'opacity-50' : '',
                 ].join(' ')}
             >
