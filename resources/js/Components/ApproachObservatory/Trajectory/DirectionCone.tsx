@@ -18,9 +18,9 @@ export function DirectionCone({
     color: string;
     opacity: number;
 }) {
-    const coneLength = 0.13;
-    const coneRadius = 0.036;
-    const airGapFromRock = 0.13;
+    const coneLength = 0.075;
+    const coneRadius = 0.020;
+    const airGapFromRock = 0.07;
 
     const { quaternion, position } = useMemo(() => {
         const normalizedDirection = direction.clone().normalize();

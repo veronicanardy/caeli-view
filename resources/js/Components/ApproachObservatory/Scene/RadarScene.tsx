@@ -6,12 +6,13 @@ import { KM_PER_LD } from '@/lib/sceneEphemeris';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
 import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
+import { JUPITER, MARS, MERCURY, NEPTUNE, SATURN, URANUS, VENUS } from '@/lib/observatory/planetData';
 import { Sun } from '../Bodies/Sun/Sun';
 import { Earth } from '../Bodies/Earth/Earth';
 import { Moon } from '../Bodies/Moon/Moon';
 import { MoonOrbit } from '../Bodies/Moon/MoonOrbit';
 import { SceneRingsLayer } from '../Overlays/SceneRingsLayer';
-import { LabelOccluderContext, useCompactLabelMode, useHideAsteroidLabelsMode } from '../Overlays/SceneLabels';
+import { LabelOccluderContext, SceneObjectOccludersContext, useCompactLabelMode, useHideAsteroidLabelsMode } from '../Overlays/SceneLabels';
 import { HeliocentricScene } from './HeliocentricScene';
 import { AsteroidSceneLayer } from './AsteroidSceneLayer';
 import { CameraRig } from './CameraRig';
@@ -150,6 +151,27 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
 
     const focusedObjectPosition = focusedObjectScenePosition(focusedObject, earthPos);
     const labelOccluder = computeLabelOccluder({ bodyFocus, earthPos, moonPos, focusedObjectPosition });
+    const useHelioScene = shouldUseHelioScene(orbitMode, selectedHasOrbit, focusedObject);
+    const sceneObjectOccluders = useMemo(() => {
+        if (useHelioScene) {
+            return [{ center: new THREE.Vector3(0, 0, 0), radius: SUN_RADIUS_SCENE }];
+        }
+
+        const occluders = [
+            { center: new THREE.Vector3(0, 0, 0), radius: SUN_RADIUS_SCENE },
+            { center: new THREE.Vector3(...earthPos), radius: EARTH_RADIUS_DL },
+            { center: new THREE.Vector3(...moonPos), radius: MOON_RADIUS_DL },
+            ...(planetPositions.mercuryPos ? [{ center: new THREE.Vector3(...planetPositions.mercuryPos), radius: MERCURY.visualRadiusDl }] : []),
+            ...(planetPositions.venusPos ? [{ center: new THREE.Vector3(...planetPositions.venusPos), radius: VENUS.visualRadiusDl }] : []),
+            ...(planetPositions.marsPos ? [{ center: new THREE.Vector3(...planetPositions.marsPos), radius: MARS.visualRadiusDl }] : []),
+            ...(planetPositions.jupiterPos ? [{ center: new THREE.Vector3(...planetPositions.jupiterPos), radius: JUPITER.visualRadiusDl }] : []),
+            ...(planetPositions.saturnPos ? [{ center: new THREE.Vector3(...planetPositions.saturnPos), radius: SATURN.visualRadiusDl * 2.3 }] : []),
+            ...(planetPositions.uranusPos ? [{ center: new THREE.Vector3(...planetPositions.uranusPos), radius: URANUS.visualRadiusDl }] : []),
+            ...(planetPositions.neptunePos ? [{ center: new THREE.Vector3(...planetPositions.neptunePos), radius: NEPTUNE.visualRadiusDl }] : []),
+        ];
+
+        return occluders;
+    }, [earthPos, moonPos, planetPositions, useHelioScene]);
 
     // Arbitragem de modo: a cena solar-orbital toma conta quando (a) o usuário pediu modo órbita
     // E (b) o objeto selecionado tem elementos osculadores com época utilizável (tpJd ≠ 0).
@@ -160,12 +182,12 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     const focusedPalette = focusedObject
         ? OBJECT_PALETTE[Math.max(0, closestNowObjects.findIndex((o) => o.approach.id === focusedObject.approach.id)) % OBJECT_PALETTE.length]
         : OBJECT_PALETTE[0];
-    const useHelioScene = shouldUseHelioScene(orbitMode, selectedHasOrbit, focusedObject);
 
     return (
-        <LabelOccluderContext.Provider value={labelOccluder}>
-            <color attach="background" args={['#03060d']} />
-            <ambientLight intensity={0.16} />
+        <SceneObjectOccludersContext.Provider value={sceneObjectOccluders}>
+            <LabelOccluderContext.Provider value={labelOccluder}>
+                <color attach="background" args={['#03060d']} />
+                <ambientLight intensity={0.16} />
 
             {useHelioScene && focusedElements && focusedObject ? (
                 <HeliocentricScene
@@ -258,13 +280,14 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
 
             <InertialZoom minDistance={EARTH_RADIUS_DL * 2.2} maxDistance={MAX_CAMERA_DISTANCE} />
 
-            <CameraRig
-                view={cameraIntent.view}
-                viewNonce={cameraIntent.kind === 'preset' ? cameraIntent.nonce : 0}
-                focusTarget={activeFocus}
-                focusNonce={focusNonce}
-                earthPos={earthPos}
-            />
-        </LabelOccluderContext.Provider>
+                <CameraRig
+                    view={cameraIntent.view}
+                    viewNonce={cameraIntent.kind === 'preset' ? cameraIntent.nonce : 0}
+                    focusTarget={activeFocus}
+                    focusNonce={focusNonce}
+                    earthPos={earthPos}
+                />
+            </LabelOccluderContext.Provider>
+        </SceneObjectOccludersContext.Provider>
     );
 }

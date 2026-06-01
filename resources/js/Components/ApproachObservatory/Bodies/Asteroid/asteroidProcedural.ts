@@ -153,7 +153,7 @@ function addAsteroidVertexColors(
     const rng = mulberry32(hashString(`${seed}:${variant}:color`));
     const baseHue = 0.095 + rng() * 0.02;
     const sat = 0.02 + rng() * 0.035;
-    const baseLight = variant === 'tiny' ? 0.55 : variant === 'large' ? 0.46 : 0.51;
+    const baseLight = variant === 'tiny' ? 0.66 : variant === 'large' ? 0.6 : 0.63;
     const v = new THREE.Vector3();
     const c = new THREE.Color();
 
@@ -170,7 +170,7 @@ function addAsteroidVertexColors(
         c.setHSL(
             baseHue + grain * 0.035,
             sat,
-            THREE.MathUtils.clamp(baseLight + grain * 0.55 + latitudeShade, 0.34, 0.68),
+            THREE.MathUtils.clamp(baseLight + grain * 0.28 + latitudeShade, 0.54, 0.78),
         );
 
         colors.push(c.r, c.g, c.b);
@@ -204,7 +204,7 @@ export function buildAsteroidSurfaceTextures(
     const rng = mulberry32(hashString(`${seed}:${variant}:surface`));
     const baseHue = 38 + rng() * 8;
     const baseSat = 3 + rng() * 5;
-    const baseLight = variant === 'tiny' ? 58 : variant === 'large' ? 50 : 55;
+    const baseLight = variant === 'tiny' ? 68 : variant === 'large' ? 64 : 66;
 
     const image = colorCtx.createImageData(width, height);
     const bump = bumpCtx.createImageData(width, height);
@@ -229,7 +229,7 @@ export function buildAsteroidSurfaceTextures(
                 Math.sin((u - v) * Math.PI * 71.0 + phase[5]) * 0.08;
 
             const grain = large + fine + (rng() - 0.5) * 0.22;
-            const light = THREE.MathUtils.clamp(baseLight + grain * 7, 40, 74);
+            const light = THREE.MathUtils.clamp(baseLight + grain * 4.2, 58, 80);
             const sat = THREE.MathUtils.clamp(baseSat + fine * 6, 1, 10);
             const color = new THREE.Color(`hsl(${baseHue + grain * 3}, ${sat}%, ${light}%)`);
 
@@ -260,9 +260,9 @@ export function buildAsteroidSurfaceTextures(
         const radius = (6 + rng() * 28) * (variant === 'tiny' ? 0.65 : variant === 'large' ? 1.25 : 1);
 
         const colorGrad = colorCtx.createRadialGradient(x, y, radius * 0.08, x, y, radius);
-        colorGrad.addColorStop(0, 'rgba(58, 56, 52, 0.18)');
-        colorGrad.addColorStop(0.58, 'rgba(112, 108, 99, 0.08)');
-        colorGrad.addColorStop(0.78, 'rgba(232, 224, 204, 0.14)');
+        colorGrad.addColorStop(0, 'rgba(128, 120, 110, 0.08)');
+        colorGrad.addColorStop(0.58, 'rgba(162, 154, 142, 0.06)');
+        colorGrad.addColorStop(0.78, 'rgba(242, 236, 225, 0.1)');
         colorGrad.addColorStop(1, 'rgba(128,128,128,0)');
 
         colorCtx.fillStyle = colorGrad;
@@ -312,53 +312,53 @@ function genericAsteroidProfile(variant: GenericAsteroidVariant): {
     switch (variant) {
         case 'tiny':
             return {
-                detail: 5,
-                axes: [1.55, 0.62, 0.72],
-                roughness: 0.18,
-                craterCount: 2,
-                craterRadius: [0.18, 0.34],
-                craterDepth: [0.03, 0.075],
+                detail: 6,
+                axes: [1.16, 0.92, 0.82],
+                roughness: 0.24,
+                craterCount: 3,
+                craterRadius: [0.16, 0.28],
+                craterDepth: [0.025, 0.06],
             };
 
         case 'small':
             return {
-                detail: 5,
-                axes: [1.28, 0.78, 0.92],
-                roughness: 0.16,
+                detail: 6,
+                axes: [1.12, 0.94, 0.86],
+                roughness: 0.22,
                 craterCount: 4,
-                craterRadius: [0.2, 0.42],
-                craterDepth: [0.04, 0.095],
+                craterRadius: [0.18, 0.34],
+                craterDepth: [0.03, 0.075],
             };
 
         case 'medium':
             return {
-                detail: 6,
-                axes: [1.08, 0.95, 0.88],
-                roughness: 0.13,
+                detail: 7,
+                axes: [1.08, 0.96, 0.84],
+                roughness: 0.18,
                 craterCount: 5,
-                craterRadius: [0.22, 0.48],
-                craterDepth: [0.045, 0.11],
+                craterRadius: [0.18, 0.36],
+                craterDepth: [0.035, 0.085],
             };
 
         case 'large':
             return {
-                detail: 6,
-                axes: [1.42, 0.86, 0.96],
-                roughness: 0.11,
-                craterCount: 7,
-                craterRadius: [0.24, 0.56],
-                craterDepth: [0.04, 0.1],
+                detail: 7,
+                axes: [1.18, 0.96, 0.88],
+                roughness: 0.17,
+                craterCount: 6,
+                craterRadius: [0.2, 0.4],
+                craterDepth: [0.03, 0.08],
             };
 
         case 'unknown':
         default:
             return {
-                detail: 5,
-                axes: [1.14, 0.88, 0.94],
-                roughness: 0.145,
+                detail: 6,
+                axes: [1.1, 0.94, 0.86],
+                roughness: 0.2,
                 craterCount: 4,
-                craterRadius: [0.2, 0.44],
-                craterDepth: [0.04, 0.095],
+                craterRadius: [0.18, 0.34],
+                craterDepth: [0.03, 0.075],
             };
     }
 }

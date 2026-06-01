@@ -50,15 +50,15 @@ export default function ProceduralAsteroidRock({
     return (
         <mesh geometry={rockGeometry}>
             <meshStandardMaterial
-                color="#f2f0e7"
+                color="#a59b8b"
                 vertexColors
                 map={surface?.map ?? undefined}
                 bumpMap={surface?.bump ?? undefined}
-                bumpScale={0.032}
+                bumpScale={0.012}
                 roughnessMap={surface?.roughness ?? undefined}
-                emissive="#38342c"
-                emissiveIntensity={0.28}
-                roughness={0.82}
+                emissive="#4c4339"
+                emissiveIntensity={0.09}
+                roughness={0.88}
                 metalness={0.0}
                 flatShading={false}
                 transparent

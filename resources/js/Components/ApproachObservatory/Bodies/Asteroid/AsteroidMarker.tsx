@@ -19,9 +19,13 @@ const HITBOX_RADIUS = 0.14;
 const HITBOX_SEGMENTS = 16;
 const LABEL_POSITION: [number, number, number] = [0, 0.16, 0];
 const LIGHT_POSITION: [number, number, number] = [1.5, 1.2, 1.8];
-const LIGHT_INTENSITY = 0.18;
+const LIGHT_INTENSITY = 0.3;
 const LIGHT_DISTANCE = 2.4;
 const LIGHT_COLOR = '#f2f7ff';
+const AMBIENT_LIGHT_INTENSITY = 0.38;
+const HEMI_LIGHT_INTENSITY = 0.34;
+const HEMI_SKY_COLOR = '#c8d8e8';
+const HEMI_GROUND_COLOR = '#7f7367';
 const ROTATION_Y_SPEED = 0.045;
 const ROTATION_X_SPEED = 0.018;
 
@@ -100,6 +104,12 @@ export function AsteroidMarker({
     return (
         <group position={position}>
             <group ref={rockRef} scale={rockScale}>
+                <ambientLight intensity={AMBIENT_LIGHT_INTENSITY} />
+                <hemisphereLight
+                    intensity={HEMI_LIGHT_INTENSITY}
+                    color={HEMI_SKY_COLOR}
+                    groundColor={HEMI_GROUND_COLOR}
+                />
                 <pointLight position={LIGHT_POSITION} intensity={LIGHT_INTENSITY} distance={LIGHT_DISTANCE} color={LIGHT_COLOR} />
                 {renderModel.kind === 'real' ? (
                     <RealAsteroidModel asset={renderModel.asset} opacity={opacity} />
