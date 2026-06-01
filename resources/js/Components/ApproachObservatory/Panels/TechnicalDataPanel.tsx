@@ -1,5 +1,6 @@
 import { ChevronDown, Terminal } from 'lucide-react';
-import { ReactNode, useState } from 'react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 
 type Props = {
     title: string;

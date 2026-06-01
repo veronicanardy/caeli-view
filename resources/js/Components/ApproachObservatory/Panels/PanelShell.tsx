@@ -4,13 +4,13 @@ type PanelShellProps = {
     onClose: () => void;
     closeLabel: string;
     showCloseButton?: boolean;
-    /** Conteudo da linha de subtitulo acima do titulo principal. */
+    /** Conteúdo da linha de subtítulo acima do título principal. */
     eyebrow?: ReactNode;
     title: ReactNode;
     subtitle?: ReactNode;
-    /** Cor do dot decorativo (hex). Quando ausente, o dot nao e exibido. */
+    /** Cor do dot decorativo (hex). Quando ausente, o dot não é exibido. */
     dotColor?: string;
-    /** Borda colorida do container - padrao: branca/15. */
+    /** Borda colorida do container - padrão: branca/15. */
     borderClass?: string;
     children: ReactNode;
     className?: string;
@@ -20,7 +20,7 @@ type PanelShellProps = {
 };
 
 /**
- * Shell comum dos paineis flutuantes da cena 3D (FocusCard, BodyInfoCard).
+ * Shell comum dos painéis flutuantes da cena 3D (FocusCard, BodyInfoCard).
  * Garante posicionamento, bordas, backdrop e estrutura de header consistentes.
  */
 export function PanelShell({
@@ -41,7 +41,7 @@ export function PanelShell({
         <div
             ref={panelRef}
             className={[
-                'pointer-events-auto absolute left-1/2 z-20 -translate-x-1/2 overflow-hidden rounded-xl border bg-space-950/92 shadow-glow backdrop-blur-xl',
+                'pointer-events-auto absolute left-1/2 z-20 -translate-x-1/2 overflow-hidden rounded-xl border bg-space-950/90 shadow-glow backdrop-blur-xl',
                 mobileTopAlign ? 'top-3' : 'bottom-10',
                 'sm:left-3 sm:top-[54%] sm:bottom-auto sm:translate-x-0 sm:-translate-y-1/2',
                 borderClass,
@@ -70,7 +70,7 @@ export function PanelShell({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="-mr-1 -mt-1 shrink-0 rounded-full border border-white/12 bg-white/6 p-1.5 text-white/70 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                        className="-mr-1 -mt-1 shrink-0 rounded-full border border-white/10 bg-white/5 p-1.5 text-white/70 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
                         aria-label={closeLabel}
                     >
                         x

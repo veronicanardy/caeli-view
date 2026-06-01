@@ -23,7 +23,7 @@ export function SceneLegend({
     const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
     return (
-        <div className="pointer-events-auto absolute bottom-3 right-3 z-10 w-auto sm:w-[min(22rem,46%)] overflow-hidden rounded-xl border border-white/18 bg-space-950/92 shadow-glow backdrop-blur-xl">
+        <div className="pointer-events-auto absolute bottom-3 right-3 z-10 w-auto sm:w-[min(22rem,46%)] overflow-hidden rounded-xl border border-white/20 bg-space-950/90 shadow-glow backdrop-blur-xl">
             <div className="hidden sm:block space-y-2 px-3 pt-3">
                 <div className="flex items-baseline justify-between gap-2 text-[13px]">
                     <span className="font-medium text-white/75">

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 interface MercuryCardProps {
     onClose: () => void;
     locale: 'pt-BR' | 'en';
@@ -16,7 +18,7 @@ export function MercuryCard({ onClose, locale }: MercuryCardProps) {
     const en = locale === 'en';
 
     return (
-        <div className="pointer-events-auto absolute left-3 top-[66%] z-20 h-[19rem] w-[min(22rem,48%)] -translate-y-1/2 overflow-hidden rounded-xl border border-white/15 bg-space-950/92 shadow-glow backdrop-blur-xl">
+        <div className="pointer-events-auto absolute left-3 top-[66%] z-20 h-[19rem] w-[min(22rem,48%)] -translate-y-1/2 overflow-hidden rounded-xl border border-white/15 bg-space-950/90 shadow-glow backdrop-blur-xl">
             {/* Header */}
             <div className="flex items-start justify-between gap-2 px-3 pt-3">
                 <div>
@@ -59,7 +61,7 @@ export function MercuryCard({ onClose, locale }: MercuryCardProps) {
     );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="flex items-baseline justify-between gap-3">
             <dt className="text-white/45">{label}</dt>

@@ -1,9 +1,10 @@
-import { AlertTriangle, Clock, Database, Eye, Moon, SatelliteDish, Target } from 'lucide-react';
+﻿import { AlertTriangle, Clock, Database, Eye, Moon, SatelliteDish, Target } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { Translator } from '@/i18n';
 import { compactKm, formatNumber, lunarDistanceLabel } from '@/lib/format';
 import type { RadarObject } from '@/lib/radarData';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
-import type { HorizonsFailureKind } from '@/types';
+import { formatApproachTime } from './panelFormatters';
 
 type Props = {
     objects: RadarObject[];
@@ -81,9 +82,9 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
     );
 }
 
-function Block({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function Block({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
     return (
-        <div className="rounded border border-white/8 bg-space-950/45 p-3">
+        <div className="rounded border border-white/10 bg-space-950/45 p-3">
             <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-white/45">
                 {icon}
                 {title}
@@ -93,7 +94,7 @@ function Block({ icon, title, children }: { icon: React.ReactNode; title: string
     );
 }
 
-function Row({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+function Row({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
     return (
         <div className="flex items-center justify-between gap-2">
             <dt className="flex items-center gap-1.5 text-white/55">
@@ -116,7 +117,7 @@ function ClosestObject({ closest, locale, en, t }: { closest: RadarObject; local
             <p className="truncate text-base font-semibold text-white">{identity.displayName}</p>
             <p className="text-sm text-white/75">
                 {compactKm(closest.distanceKm)}
-                {lunar !== null ? <span className="text-white/55"> · {lunarDistanceLabel(lunar)}</span> : null}
+                {lunar !== null ? <span className="text-white/55"> Â· {lunarDistanceLabel(lunar)}</span> : null}
             </p>
             <p className="text-xs text-white/55">{t('observatory.radar.quality.closestTimeLabel')}: {approachTime}</p>
             {velocity !== null ? (
@@ -135,18 +136,4 @@ function pickClosest(objects: RadarObject[]): RadarObject | null {
         if (!best || (best.distanceKm ?? Infinity) > object.distanceKm) best = object;
     }
     return best;
-}
-
-function formatApproachTime(value: string | null, locale: 'pt-BR' | 'en'): string {
-    if (!value) return '—';
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-    return new Intl.DateTimeFormat(locale, {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'UTC',
-        timeZoneName: 'short',
-    }).format(parsed);
 }

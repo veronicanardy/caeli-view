@@ -2,6 +2,13 @@ import type { ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { SelectionMode } from '@/types';
 
+/**
+ * Controles reutilizáveis do painel mobile.
+ *
+ * Este arquivo renderiza botões, cabeçalhos e mensagens vazias. Ele não decide
+ * ranking, seleção global, filtros reais ou modo orbital.
+ */
+
 export type MobilePanelSection = 'menu' | 'filters' | 'reference' | 'objects';
 
 export function listTitle(count: number, mode: SelectionMode, en: boolean): string {
@@ -23,7 +30,7 @@ export function MobilePanelMenuButton({
         <button
             type="button"
             onClick={onClick}
-            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition outline-none hover:bg-white/8 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-signal-cyan"
         >
             <div className="min-w-0">
                 <div className="text-[12px] font-medium text-white/85">{label}</div>

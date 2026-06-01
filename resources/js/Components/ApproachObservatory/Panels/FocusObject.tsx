@@ -1,12 +1,12 @@
 import { Link } from '@inertiajs/react';
 import { CalendarClock, Gauge, MoveRight, Ruler, Sparkles, Target } from 'lucide-react';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { TranslationKey, Translator } from '@/i18n';
 import { averageDiameterMeters, classifyApproachAttention } from '@/lib/approachAttention';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { compactKm, formatNumber, lunarDistanceFromKm, lunarDistanceLabel } from '@/lib/format';
-import { UnifiedApproach } from '@/types';
-import { DistanceBand, FocusReason, distanceBand, humanizeSize, humanizeVelocity, pickFocusReasons } from '@/lib/approachInterpretation';
+import type { UnifiedApproach } from '@/types';
+import { distanceBand, humanizeSize, humanizeVelocity, pickFocusReasons, type DistanceBand, type FocusReason } from '@/lib/approachInterpretation';
 import { EarthMoonRuler } from '../Presenters/EarthMoonRuler';
 import { ObjectTypeBadge } from '../Presenters/ObjectTypeBadge';
 
@@ -82,7 +82,7 @@ export function FocusObject({ approach, pool, locale, t }: Props) {
                         <ul className="mt-2 flex flex-wrap gap-1.5">
                             {reasons.map((reason) => (
                                 <li key={reason}>
-                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-2.5 py-1 text-[11px] text-white/75">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-white/75">
                                         <span className="size-1.5 rounded-full bg-signal-cyan" aria-hidden="true" />
                                         {t(REASON_KEY[reason])}
                                     </span>

@@ -10,27 +10,11 @@ import { compactKm, formatNumber } from '@/lib/format';
 import type { AsteroidModelMetadata, UnifiedApproach } from '@/types';
 import { AsteroidFidelityModel } from '../Presenters/AsteroidFidelityModel';
 import { ObjectTypeBadge } from '../Presenters/ObjectTypeBadge';
+import { formatApproachDate, formatAstronomicalUnit } from './panelFormatters';
 
 const AsteroidScaleComparison = lazy(() =>
     import('@/Components/SmallBodies/AsteroidScaleComparison').then((module) => ({ default: module.AsteroidScaleComparison })),
 );
-
-const EN_MONTH_NUMBER: Record<string, string> = {
-    Jan: '01',
-    Feb: '02',
-    Mar: '03',
-    Apr: '04',
-    May: '05',
-    Jun: '06',
-    Jul: '07',
-    Aug: '08',
-    Sep: '09',
-    Oct: '10',
-    Nov: '11',
-    Dec: '12',
-};
-
-const ASTRONOMICAL_UNIT_KM = 149_597_870.7;
 
 type Props = {
     approach: UnifiedApproach | null;
@@ -99,7 +83,7 @@ export function ObservatoryFocusPanel({
                 </div>
             </header>
 
-            <dl className="divide-y divide-white/8 rounded-lg border border-white/10 bg-space-950/40">
+            <dl className="divide-y divide-white/10 rounded-lg border border-white/10 bg-space-950/40">
                 <Metric
                     label={t('observatory.panel.metrics.distance')}
                     primary={compactKm(approach.nominalDistanceKm)}
@@ -129,7 +113,7 @@ export function ObservatoryFocusPanel({
                 className="overflow-hidden rounded-lg border border-white/10 bg-space-950/35"
                 aria-labelledby="focus-scale-eyebrow"
             >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/8 px-3 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
                     <p id="focus-scale-eyebrow" className="text-[10px] uppercase tracking-wide text-white/55">
                         {t('observatory.panel.scale.eyebrow')}
                     </p>
@@ -180,7 +164,7 @@ export function ObservatoryFocusPanel({
                         </div>
                     ) : null}
 
-                    <div className="flex items-center justify-center gap-1 border-t border-white/8 px-3 py-2">
+                    <div className="flex items-center justify-center gap-1 border-t border-white/10 px-3 py-2">
                         <VisualModeButton active={visualMode === 'model'} onClick={() => setVisualMode('model')}>
                             3D
                         </VisualModeButton>
@@ -265,7 +249,7 @@ function Badge({
 }) {
     const classes = {
         neutral: 'border-white/15 bg-white/[0.04] text-white/65',
-        hazard: 'border-signal-coral/45 bg-signal-coral/12 text-signal-coral',
+        hazard: 'border-signal-coral/45 bg-signal-coral/10 text-signal-coral',
         estimated: 'border-signal-amber/35 bg-signal-amber/10 text-signal-amber',
     }[tone];
     return (
@@ -293,35 +277,4 @@ function formatDiameterRange(approach: UnifiedApproach): string {
         return `${formatNumber(avg, 0)} m`;
     }
     return '-';
-}
-
-function formatAstronomicalUnit(distanceKm: number | null, locale: 'pt-BR' | 'en'): string | null {
-    if (distanceKm === null) return null;
-
-    const au = distanceKm / ASTRONOMICAL_UNIT_KM;
-    const precision = au < 0.1 ? 4 : 3;
-    const formatted = formatNumber(au, precision);
-
-    return locale === 'en'
-        ? `${formatted} AU`
-        : `${formatted} UA`;
-}
-
-function formatApproachDate(value: string | null, locale: 'pt-BR' | 'en'): string {
-    if (!value) return '-';
-
-    const normalized = value.replace(
-        /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/,
-        (month) => EN_MONTH_NUMBER[month] ?? month,
-    );
-    const match = normalized.match(/^(\d{4})[-/](\d{2})[-/](\d{2})(?:[ T](\d{2}):(\d{2}))?/);
-
-    if (!match) return value;
-
-    const [, year, month, day, hour, minute] = match;
-    if (locale === 'en') {
-        return `${year}-${month}-${day}${hour ? ` ${hour}:${minute}` : ''}`;
-    }
-
-    return `${day}/${month}/${year}${hour ? ` ${hour}:${minute}` : ''}`;
 }

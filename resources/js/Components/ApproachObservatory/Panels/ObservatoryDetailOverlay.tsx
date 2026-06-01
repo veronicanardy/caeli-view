@@ -5,6 +5,7 @@ import type { TranslationKey, Translator } from '@/i18n';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import type { AsteroidModelMetadata, AsteroidTrajectory, UnifiedApproach } from '@/types';
 import { AsteroidFidelityModel } from '../Presenters/AsteroidFidelityModel';
+import { formatIsoToLocal } from './panelFormatters';
 
 const AsteroidScaleComparison = lazy(() =>
     import('@/Components/SmallBodies/AsteroidScaleComparison').then((module) => ({ default: module.AsteroidScaleComparison })),
@@ -62,7 +63,7 @@ export function ObservatoryDetailOverlay({
             role="dialog"
             aria-label={title}
         >
-            <header className="flex items-center justify-between gap-3 border-b border-white/8 px-4 py-3">
+            <header className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
                 <div className="min-w-0">
                     <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-signal-cyan/85">
                         <TitleIcon className="size-3.5" aria-hidden="true" />
@@ -176,18 +177,4 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
             <dd className="mt-0.5 text-sm font-medium text-white">{children}</dd>
         </div>
     );
-}
-
-function formatIsoToLocal(value: string, locale: 'pt-BR' | 'en'): string {
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-    return new Intl.DateTimeFormat(locale, {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'UTC',
-        timeZoneName: 'short',
-    }).format(parsed);
 }

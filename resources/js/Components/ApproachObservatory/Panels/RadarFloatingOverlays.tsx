@@ -89,7 +89,7 @@ export function RadarFloatingOverlays({
                 <h2 className="text-[11px] font-medium text-white/40">
                     {en ? 'Orbital radar · 3D' : 'Radar orbital · 3D'}
                 </h2>
-                <span className="inline-flex items-center gap-1 rounded-full border border-signal-cyan/30 bg-signal-cyan/8 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-signal-cyan/70">
+                <span className="inline-flex items-center gap-1 rounded-full border border-signal-cyan/30 bg-signal-cyan/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-signal-cyan/70">
                     {en ? 'Live' : 'Ao vivo'}
                 </span>
             </div>
