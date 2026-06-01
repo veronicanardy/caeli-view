@@ -216,33 +216,6 @@ export type ClosestNowResponse = {
     lunarReference: LunarReference;
 };
 
-export type RadarMode = 'closest-5-now' | 'today' | 'next-7d' | 'pha' | 'all';
-
-export type AsteroidModelFidelityLevel = 'N1' | 'N2' | 'N3' | 'N4' | 'N5';
-
-export type AsteroidModelKind = 'real_shape' | 'catalog_reference' | 'procedural' | 'size_placeholder';
-
-export type AsteroidModelMetadata = {
-    objectId: string;
-    objectName: string;
-    status: 'available' | 'fallback';
-    fidelityLevel: AsteroidModelFidelityLevel;
-    modelKind: AsteroidModelKind;
-    modelUrl: string | null;
-    sourceName: string;
-    sourceUrl: string | null;
-    cacheTtlSeconds: number;
-    generatedAt: string;
-    shapeSeed: number;
-    diameterMeters: number | null;
-    diameterMinMeters: number | null;
-    diameterMaxMeters: number | null;
-    rotationPeriodHours: number | null;
-    albedo: number | null;
-    confidence: number;
-    note: string;
-};
-
 export type HorizonsPositionFailureReason =
     | 'no_command_candidates'
     | 'no_ephemeris'
@@ -288,20 +261,11 @@ export type HorizonsPositionResult = {
     note: string | null;
 };
 
-export type HorizonsReferenceMode = 'current' | 'closest_approach';
-
 export type SunDirection = {
     longitudeDeg: number;
     x: number;
     y: number;
     timestamp: string;
-};
-
-export type HorizonsPositionsResponse = {
-    positions: Record<string, HorizonsPositionResult>;
-    referenceMode: HorizonsReferenceMode;
-    sunDirection: SunDirection | null;
-    generatedAt: string;
 };
 
 export type ApproachObservatorySummary = {

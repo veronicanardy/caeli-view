@@ -6,10 +6,15 @@ const ORBIT_LINE_SEGMENTS = 192;
 const DEFAULT_ORBIT_LINE_OPACITY = 0.85;
 
 /**
+ * Utilitários visuais para linhas heliocêntricas já amostradas ou descritas por
+ * parâmetros orbitais simples. Esta camada apenas monta geometrias de cena.
+ */
+
+/**
  * Cria uma linha THREE a partir de pontos XYZ.
  *
- * Mantem frustumCulled desativado porque orbitas e guias podem ocupar areas
- * grandes da cena e nao devem sumir agressivamente pelo frustum da camera.
+ * Mantém `frustumCulled` desativado porque órbitas e guias podem ocupar áreas
+ * grandes da cena e não devem sumir agressivamente pelo frustum da câmera.
  */
 function createOrbitLine(points: Float32Array, color: string, opacity: number) {
     const geometry = new THREE.BufferGeometry();
@@ -34,11 +39,11 @@ function disposeOrbitLine(lineObject: THREE.Line) {
 }
 
 /**
- * Elipse orbital heliocentrica no plano ecliptico.
+ * Elipse orbital heliocêntrica no plano eclíptico.
  *
- * Constroi a elipse em coordenadas eclipticas (x, y) e depois converte para
+ * Constrói a elipse em coordenadas eclípticas (x, y) e depois converte para
  * coordenadas de cena (scene_x = ecl_x, scene_z = -ecl_y), o mesmo mapeamento
- * de helioToScene em sceneEphemeris. O Sol fica no foco (deslocamento c = a * e).
+ * de `helioToScene` em `sceneEphemeris`. O Sol fica no foco (deslocamento c = a * e).
  */
 function buildEllipsePoints(
     semiMajorAU: number,
@@ -55,8 +60,8 @@ function buildEllipsePoints(
     const sinW = Math.sin(w);
     const points: number[] = [];
 
-    for (let i = 0; i <= segments; i += 1) {
-        const t = (i / segments) * Math.PI * 2;
+    for (let index = 0; index <= segments; index += 1) {
+        const t = (index / segments) * Math.PI * 2;
         const xP = a * Math.cos(t) - c;
         const yP = b * Math.sin(t);
         const eclX = xP * cosW - yP * sinW;
@@ -99,10 +104,10 @@ interface OrbitLineHelioProps {
 }
 
 /**
- * Linha de orbita heliocentrica generica desenhada a partir de pontos XYZ.
+ * Linha de órbita heliocêntrica genérica desenhada a partir de pontos XYZ.
  *
- * Usada pela cena heliocentrica para renderizar trajetorias orbitais completas,
- * como a orbita de um asteroide. Os pontos ja devem estar no sistema correto.
+ * Usada pela cena heliocêntrica para renderizar trajetórias orbitais completas,
+ * como a órbita de um asteroide. Os pontos já devem estar no sistema correto.
  */
 export function OrbitLineHelio({ points, color, opacity = DEFAULT_ORBIT_LINE_OPACITY }: OrbitLineHelioProps) {
     const lineObject = useMemo(() => createOrbitLine(points, color, opacity), [points, color, opacity]);

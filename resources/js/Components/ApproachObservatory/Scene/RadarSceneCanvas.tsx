@@ -1,10 +1,12 @@
 import { Canvas } from '@react-three/fiber';
 import { Suspense } from 'react';
-import type { ClosestNowObject, ObjectLimit, UnifiedApproach } from '@/types';
+import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
-import { LabelNoGoContext, type NoGoRect } from '../Overlays/SceneLabels';
+import { LabelNoGoContext } from '../Overlays/SceneLabels';
+import type { NoGoRect } from '../Overlays/SceneLabels';
+import { CAMERA_FOV_DEG, MAX_CAMERA_DISTANCE } from './cameraConstants';
+import type { FocusFraming } from './cameraFraming';
 import type { PlanetId } from './planetConfig';
-import { CAMERA_FOV_DEG, MAX_CAMERA_DISTANCE, type FocusFraming } from './CameraRig';
 import type { CameraIntent } from './cameraIntent';
 import { RadarScene } from './RadarScene';
 
@@ -21,7 +23,6 @@ type Props = {
     ephemeris: SceneEphemeris | null;
     fallbackSunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
-    objectLimit: ObjectLimit;
     showLabels: boolean;
     bodyCardOpen: 'earth' | 'moon' | 'sun' | PlanetId | null;
     onBodyCardOpenChange: (body: 'earth' | 'moon' | 'sun' | PlanetId | null) => void;
@@ -50,7 +51,6 @@ export function RadarSceneCanvas({
     ephemeris,
     fallbackSunDirection,
     locale,
-    objectLimit,
     showLabels,
     bodyCardOpen,
     onBodyCardOpenChange,
@@ -83,7 +83,6 @@ export function RadarSceneCanvas({
                         ephemeris={ephemeris}
                         fallbackSunDirection={fallbackSunDirection}
                         locale={locale}
-                        objectLimit={objectLimit}
                         showLabels={showLabels}
                         onFocusSun={onFocusSun}
                         isSunFocused={bodyCardOpen === 'sun'}

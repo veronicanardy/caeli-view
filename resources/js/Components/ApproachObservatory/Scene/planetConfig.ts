@@ -1,5 +1,8 @@
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 
+/**
+ * Mapeia cada planeta focalizável para sua posição de efeméride e raio de enquadramento.
+ */
 export type PlanetId = 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune';
 
 type PlanetCfg = {

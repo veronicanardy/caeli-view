@@ -3,21 +3,24 @@
 Esta pasta concentra os componentes de controle e UX do `ApproachObservatory`.
 
 O objetivo aqui é organizar a interface que permite ao usuário:
+
 - ajustar filtros e datas;
 - alternar vistas e modos de cena;
 - abrir ajuda contextual;
 - acionar focos e referências visuais;
 - navegar pelo manual do mapa.
 
-## Responsabilidade da pasta
+## Responsabilidade Da Pasta
 
 `Controls` deve cuidar de:
+
 - composição de interface;
 - estado local de interação;
 - botões, formulários, toasts, flyouts e barras de ferramentas;
 - apresentação do manual e da ajuda contextual.
 
 `Controls` não deve cuidar de:
+
 - cálculo de efemérides;
 - ranking de objetos;
 - seleção global de domínio;
@@ -26,65 +29,40 @@ O objetivo aqui é organizar a interface que permite ao usuário:
 
 Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógica visual pode ficar aqui, mas a lógica de domínio deve permanecer fora desta pasta.
 
-## Organização atual
+## Organização Atual
 
-### Shell e ajuda
+### Shell E Ajuda
 
-- `MapManualModal.tsx`
-  Shell do modal do manual: arraste, resize, abas e fechamento.
-
-- `WelcomeToast.tsx`
-  Toasts de primeira visita para radar e órbita.
+- `MapManualModal.tsx`: shell do modal do manual, com arraste, resize, abas e fechamento.
+- `WelcomeToast.tsx`: toast de primeira visita para radar e órbita.
 
 ### Manual
 
-- `Manual/`
-  Subpasta com o conteúdo do manual do mapa.
+- `Manual/`: subpasta com o conteúdo do manual do mapa.
+- `Manual/FriendlyManual.tsx`: guia de leitura em linguagem mais amigável.
+- `Manual/TechnicalManual.tsx`: explicações técnicas, fórmulas e limitações.
+- `Manual/ManualParts.tsx`: blocos visuais reutilizáveis do manual.
+- `Manual/ManualDiagrams.tsx`: diagramas SVG usados pelo manual.
+- `Manual/manualCuriosities.ts`: conteúdo textual das curiosidades e FAQ.
+- `Manual/manualTypes.ts`: tipos locais compartilhados pelo manual e por controles relacionados.
 
-- `Manual/FriendlyManual.tsx`
-  Guia de leitura em linguagem mais amigável.
+### Controles Principais Da Cena
 
-- `Manual/TechnicalManual.tsx`
-  Explicações técnicas, fórmulas e limitações.
+- `SceneToolbar.tsx`: toolbar de vistas, labels e fullscreen.
+- `ReferenceControls.tsx`: atalhos de foco para Sol, Terra, Lua e planetas.
+- `ViewButtons.tsx`: botões base usados pela toolbar.
 
-- `Manual/ManualParts.tsx`
-  Blocos visuais reutilizáveis do manual.
+### Filtros E Formulários
 
-- `Manual/ManualDiagrams.tsx`
-  Diagramas SVG usados pelo manual.
+- `ObservationControls.tsx`: formulário principal de data, tipo e busca.
+- `CompactConsoleBar.tsx`: versão condensada dos controles para espaços menores.
+- `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D.
 
-- `Manual/manualCuriosities.ts`
-  Conteúdo textual das curiosidades e FAQ.
+## Remoção Do Radar 2D
 
-- `Manual/manualTypes.ts`
-  Tipos locais compartilhados pelo manual e por controles relacionados.
+O controle `RadarFilters.tsx` foi removido junto com o radar 2D/SVG. A seleção principal de objetos agora fica em `RadarObjectControls.tsx`, usada pelo radar 3D.
 
-### Controles principais da cena
-
-- `SceneToolbar.tsx`
-  Toolbar de vistas, labels e fullscreen.
-
-- `ReferenceControls.tsx`
-  Atalhos de foco para Sol, Terra, Lua e planetas.
-
-- `ViewButtons.tsx`
-  Botões base usados pela toolbar.
-
-### Filtros e formulários
-
-- `ObservationControls.tsx`
-  Formulário principal de data, tipo e busca.
-
-- `CompactConsoleBar.tsx`
-  Versão condensada dos controles para espaços menores.
-
-- `RadarFilters.tsx`
-  Abas de modo do radar.
-
-- `RadarObjectControls.tsx`
-  Controle de critério e quantidade de objetos mostrados.
-
-## Diretrizes de manutenção
+## Diretrizes De Manutenção
 
 - Prefira componentes pequenos com responsabilidade única.
 - Se um arquivo começar a misturar shell interativo com muito conteúdo editorial, extraia.
@@ -92,9 +70,10 @@ Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógi
 - Comentários devem ser curtos, úteis e em português.
 - Evite transformar esta pasta em lugar de lógica de domínio.
 
-## Sinal de alerta para refatoração
+## Sinal De Alerta Para Refatoração
 
 Vale separar um componente quando ele começar a acumular ao mesmo tempo:
+
 - estado de interação;
 - conteúdo textual grande;
 - SVGs/diagramas;
@@ -102,6 +81,7 @@ Vale separar um componente quando ele começar a acumular ao mesmo tempo:
 - regras de apresentação reutilizáveis.
 
 Nesses casos, a divisão preferencial é:
+
 - shell do componente principal;
 - subcomponentes visuais;
 - tipos compartilhados;

@@ -1,13 +1,10 @@
 import { Head, router } from '@inertiajs/react';
 import { FormEvent, lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
 import { AppLayout } from '@/Components/AppLayout';
 import { ApproachTimeline } from '@/Components/ApproachObservatory/Charts/ApproachTimeline';
 import { CompactConsoleBar } from '@/Components/ApproachObservatory/Controls/CompactConsoleBar';
 import { CuratedHighlights } from '@/Components/ApproachObservatory/Lists/CuratedHighlights';
 import { DailyProximityList } from '@/Components/ApproachObservatory/Lists/DailyProximityList';
-import { ObservatoryDetailOverlay } from '@/Components/ApproachObservatory/Panels/ObservatoryDetailOverlay';
-import { ObservatoryFocusPanel } from '@/Components/ApproachObservatory/Panels/ObservatoryFocusPanel';
 import { RadarDataQualityCard } from '@/Components/ApproachObservatory/Panels/RadarDataQualityCard';
 import { RangeInsightsCards } from '@/Components/ApproachObservatory/Lists/RangeInsightsCards';
 import { TechnicalDataPanel } from '@/Components/ApproachObservatory/Panels/TechnicalDataPanel';
@@ -23,22 +20,14 @@ import {
     ApproachObservatoryCharts,
     ApproachObservatoryFilters,
     ApproachObservatorySummary,
-    AsteroidModelMetadata,
     AsteroidTrajectory,
-    HomeEarthImage,
     HorizonsPositionResult,
-    HorizonsPositionsResponse,
-    HorizonsReferenceMode,
     LunarReference,
     PageProps,
-    RadarMode,
     SunDirection,
     UnifiedApproach,
 } from '@/types';
 
-const DailyOrbitalRadar = lazy(() =>
-    import('@/Components/ApproachObservatory/DailyOrbitalRadar').then((module) => ({ default: module.DailyOrbitalRadar })),
-);
 const DailyOrbitalRadar3D = lazy(() =>
     import('@/Components/ApproachObservatory/DailyOrbitalRadar3D').then((module) => ({ default: module.DailyOrbitalRadar3D })),
 );
@@ -51,7 +40,6 @@ type ObservatoryData = {
     summary: ApproachObservatorySummary;
     charts: ApproachObservatoryCharts;
     errorsBySource: Record<string, string>;
-    earthImage: HomeEarthImage | null;
     lunarReference: LunarReference;
     visualNote: string;
 };
@@ -80,60 +68,23 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     const [selectedFocusId, setSelectedFocusId] = useState<string | null>(null);
     const [trajectoryByKey, setTrajectoryByKey] = useState<Record<string, AsteroidTrajectory>>({});
     const [trajectoryLoadingKey, setTrajectoryLoadingKey] = useState<string | null>(null);
-    const [modelByKey, setModelByKey] = useState<Record<string, AsteroidModelMetadata>>({});
-    const [modelLoadingKey, setModelLoadingKey] = useState<string | null>(null);
-    const [activePanel, setActivePanel] = useState<'scale' | 'trajectory' | null>(null);
     const { locale, t } = useTranslation();
     const en = locale === 'en';
     const selectedDate = filters.date_min;
 
-    const [referenceMode, setReferenceMode] = useState<HorizonsReferenceMode>(() => defaultReferenceMode(filters.date_min));
-    const [positionsById, setPositionsById] = useState<Record<string, HorizonsPositionResult>>({});
-    const [sunDirection, setSunDirection] = useState<SunDirection | null>(null);
-    const [positionsLoading, setPositionsLoading] = useState(false);
-    const [radarMode, setRadarMode] = useState<RadarMode>('closest-5-now');
-    const [use3DPrototype, setUse3DPrototype] = useState(true);
+    const positionsById = useMemo<Record<string, HorizonsPositionResult>>(() => ({}), []);
 
     const { objectLimit, selectionMode, setObjectLimit, setSelectionMode } = useRadarControls();
     const [refreshNonce, setRefreshNonce] = useState(0);
 
-    // Reset reference mode to the date-appropriate default whenever the selected date changes.
-    useEffect(() => {
-        setReferenceMode(defaultReferenceMode(filters.date_min));
-        setPositionsById({});
-    }, [filters.date_min]);
-
     useEffect(() => {
         setSelectedFocusId(null);
-        setActivePanel(null);
         setForm({ date: filters.date_min, type: filters.type });
     }, [filters.date_min, filters.date_max, filters.type]);
 
-    useEffect(() => {
-        setActivePanel(null);
-    }, [selectedFocusId]);
-
-    // Resolve the effective date window for the bulk /radar/data fetch based on the radar mode.
-    // - closest-5-now: same as `today` (we still want the supporting sections — timeline, table —
-    //   to reflect the day. But this effect is skipped entirely in that mode below.)
-    // - today: just the selected day.
-    // - next-7d: selected day + 6 more days.
-    // - pha / all: full selected window (defaults to a single day; the user can widen via filters).
-    const dataWindow = useMemo(() => {
-        if (radarMode === 'next-7d') {
-            const end = addDaysIso(filters.date_min, 6);
-            return { date_min: filters.date_min, date_max: end };
-        }
-        return { date_min: filters.date_min, date_max: filters.date_max };
-    }, [radarMode, filters.date_min, filters.date_max]);
+    const dataWindow = useMemo(() => ({ date_min: filters.date_min, date_max: filters.date_max }), [filters.date_min, filters.date_max]);
 
     useEffect(() => {
-        // closest-5-now ships its own approaches list via /radar/closest-now, so don't
-        // double-fetch the bulk data feed in that mode.
-        if (radarMode === 'closest-5-now') {
-            setLoading(false);
-            return undefined;
-        }
 
         const controller = new AbortController();
         setLoading(true);
@@ -169,10 +120,8 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
             });
 
         return () => controller.abort();
-    }, [dataWindow.date_min, dataWindow.date_max, filters.type, filters.dist_max, filters.sort, filters.distance_unit, en, radarMode]);
+    }, [dataWindow.date_min, dataWindow.date_max, filters.type, filters.dist_max, filters.sort, filters.distance_unit, en]);
 
-    // Fetch do closest-now encapsulado no hook — reage a mudanças de limit, mode e data.
-    // Só activo no modo 'closest-5-now'; nos outros modos o hook fica ocioso (limit/mode irrelevantes).
     const {
         data:    closestNowData,
         loading: closestNowLoading,
@@ -180,63 +129,19 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     } = useClosestNow(
         filters.date_min,
         filters.date_max,
-        radarMode === 'closest-5-now' ? objectLimit : 5,
-        radarMode === 'closest-5-now' ? selectionMode : 'nearest',
+        objectLimit,
+        selectionMode,
         refreshNonce,
     );
 
-    useEffect(() => {
-        // Skip positions fetch in closest-5-now mode — trajectories carry the positional data.
-        if (radarMode === 'closest-5-now') return undefined;
 
-        const controller = new AbortController();
-        setPositionsLoading(true);
-
-        const params = new URLSearchParams({
-            date_min: dataWindow.date_min,
-            date_max: dataWindow.date_max,
-            type: filters.type,
-            dist_max: filters.dist_max ?? '0.2',
-            sort: filters.sort ?? 'dist',
-            distance_unit: filters.distance_unit ?? 'km',
-            reference_mode: referenceMode,
-        });
-
-        fetch(`/radar/positions?${params.toString()}`, {
-            signal: controller.signal,
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
-        })
-            .then((response) => {
-                if (!response.ok) throw new Error('Positions unavailable.');
-                return response.json() as Promise<HorizonsPositionsResponse>;
-            })
-            .then((payload) => {
-                setPositionsById(payload.positions ?? {});
-                setSunDirection(payload.sunDirection ?? null);
-            })
-            .catch((err: unknown) => {
-                if (err instanceof DOMException && err.name === 'AbortError') return;
-                setPositionsById({});
-                setSunDirection(null);
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setPositionsLoading(false);
-            });
-
-        return () => controller.abort();
-    }, [dataWindow.date_min, dataWindow.date_max, filters.type, filters.dist_max, filters.sort, filters.distance_unit, referenceMode, radarMode]);
-
-    // When the radar is in closest-5-now mode, the approaches list that feeds the radar comes from
-    // /radar/closest-now (already ranked and limited), not the bulk /radar/data feed.
-    // Approaches for the supporting sections (proximity list, timeline, table) still come from data.
     const closestNowApproaches = useMemo<UnifiedApproach[]>(() => {
-        if (radarMode !== 'closest-5-now' || !closestNowData) return [];
+        if (!closestNowData) return [];
         return closestNowData.objects.map((object) => object.approach);
-    }, [radarMode, closestNowData]);
+    }, [closestNowData]);
 
     const closestNowPositionsById = useMemo<Record<string, HorizonsPositionResult>>(() => {
-        if (radarMode !== 'closest-5-now' || !closestNowData) return {};
+        if (!closestNowData) return {};
         const map: Record<string, HorizonsPositionResult> = {};
         for (const object of closestNowData.objects) {
             const traj = object.trajectory;
@@ -264,23 +169,20 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
             };
         }
         return map;
-    }, [radarMode, closestNowData]);
+    }, [closestNowData]);
 
     const closestNowTrajectoriesByObjectId = useMemo<Record<string, AsteroidTrajectory>>(() => {
-        if (radarMode !== 'closest-5-now' || !closestNowData) return {};
+        if (!closestNowData) return {};
         const map: Record<string, AsteroidTrajectory> = {};
         for (const object of closestNowData.objects) {
             if (object.trajectory) map[object.approach.id] = object.trajectory;
         }
         return map;
-    }, [radarMode, closestNowData]);
+    }, [closestNowData]);
 
     const approaches = data?.approaches ?? [];
     const summary = data?.summary;
     const charts = data?.charts;
-    const earthImage = data?.earthImage ?? null;
-    // lunarReference may come from /data OR /closest-now — whichever finished first. The shape
-    // is identical, so either is fine for the radar's "1 DL = …" footer.
     const lunarReference = data?.lunarReference ?? closestNowData?.lunarReference;
     const errorsBySource = data?.errorsBySource ?? {};
 
@@ -298,17 +200,8 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
             .sort((left, right) => compareApproaches(left, right, sortKey, positionsById));
     }, [approaches, positionsById, query, sortKey]);
 
-    // The list that actually feeds the radar depends on the mode.
-    // - closest-5-now: only the 5 objects the backend selected.
-    // - pha: filter the bulk feed down to flagged objects.
-    // - other modes: the full filtered feed.
-    const radarApproaches = useMemo<UnifiedApproach[]>(() => {
-        if (radarMode === 'closest-5-now') return closestNowApproaches;
-        if (radarMode === 'pha') return filtered.filter((approach) => approach.hazardFlag);
-        return filtered;
-    }, [radarMode, closestNowApproaches, filtered]);
-
-    const radarPositionsById = radarMode === 'closest-5-now' ? closestNowPositionsById : positionsById;
+    const radarApproaches = closestNowApproaches;
+    const radarPositionsById = closestNowPositionsById;
 
     const radarObjects = useMemo(() => buildRadarObjects(radarApproaches, radarPositionsById), [radarApproaches, radarPositionsById]);
 
@@ -333,22 +226,13 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     }, [summary, charts, filtered, locale]);
 
     const trajectoryKey = focusApproach ? `${focusApproach.id}:${focusApproach.approachDate ?? ''}` : null;
-    const focusTrajectory = trajectoryKey ? trajectoryByKey[trajectoryKey] ?? null : null;
-    const trajectoryLoading = trajectoryKey !== null && trajectoryLoadingKey === trajectoryKey;
-    const modelKey = focusApproach ? focusApproach.id : null;
-    const focusModel = modelKey ? modelByKey[modelKey] ?? null : null;
-    const modelLoading = modelKey !== null && modelLoadingKey === modelKey;
 
     useEffect(() => {
         if (!focusApproach || !trajectoryKey || !focusApproach.approachDate || trajectoryByKey[trajectoryKey]) {
             return undefined;
         }
 
-        // In closest-5-now mode we already have the better (now-anchored) trajectory inside
-        // closestNowTrajectoriesByObjectId. Hitting /radar/trajectory here would just
-        // overlay a second ±2-day-around-closest-approach polyline on top of the already-drawn
-        // past/current/future arrows — visually noisy and slower.
-        if (radarMode === 'closest-5-now' && closestNowTrajectoriesByObjectId[focusApproach.id]) {
+        if (closestNowTrajectoriesByObjectId[focusApproach.id]) {
             return undefined;
         }
 
@@ -402,52 +286,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
             });
 
         return () => controller.abort();
-    }, [focusApproach, trajectoryKey, trajectoryByKey, radarMode, closestNowTrajectoriesByObjectId]);
-
-    useEffect(() => {
-        if (!focusApproach || !modelKey || modelByKey[modelKey]) {
-            return undefined;
-        }
-
-        const controller = new AbortController();
-        const params = new URLSearchParams({
-            id: focusApproach.id,
-            name: focusApproach.name,
-            displayName: focusApproach.displayName ?? focusApproach.name,
-            designation: focusApproach.provisionalDesignation ?? focusApproach.designation ?? '',
-            detailIdentifier: focusApproach.detailIdentifier,
-            spkId: focusApproach.spkId ?? '',
-            objectType: focusApproach.objectType,
-        });
-
-        appendNumeric(params, 'diameterMeters', focusApproach.diameterMeters);
-        appendNumeric(params, 'diameterMinMeters', focusApproach.estimatedDiameterMinMeters);
-        appendNumeric(params, 'diameterMaxMeters', focusApproach.estimatedDiameterMaxMeters);
-        appendNumeric(params, 'absoluteMagnitude', focusApproach.absoluteMagnitude);
-
-        setModelLoadingKey(modelKey);
-
-        fetch(`/radar/asteroid-model?${params.toString()}`, {
-            signal: controller.signal,
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
-        })
-            .then((response) => {
-                if (!response.ok) throw new Error('Asteroid model unavailable.');
-                return response.json() as Promise<AsteroidModelMetadata>;
-            })
-            .then((model) => {
-                setModelByKey((current) => ({ ...current, [modelKey]: model }));
-            })
-            .catch((error: unknown) => {
-                if (error instanceof DOMException && error.name === 'AbortError') return;
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setModelLoadingKey(null);
-            });
-
-        return () => controller.abort();
-    }, [focusApproach, modelByKey, modelKey]);
+    }, [focusApproach, trajectoryKey, trajectoryByKey, closestNowTrajectoriesByObjectId]);
 
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -488,30 +327,23 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                 <ErrorMessage message={fetchError} />
                 <ErrorMessage message={closestNowError} />
 
-                {loading && radarMode !== 'closest-5-now' ? (
-                    <ObservatoryLoadingSkeleton t={t} />
-                ) : closestNowLoading && radarMode === 'closest-5-now' && !closestNowData ? (
+                {loading || (closestNowLoading && !closestNowData) ? (
                     <ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />
                 ) : (
                     <>
-                        {/* Prototype toggle: only available in closest-5-now mode (it's the only mode the 3D
-                            prototype knows how to render). The SVG radar remains the default and only path
-                            for every other mode. */}
-                        {radarMode === 'closest-5-now' && closestNowData ? (
-                            <div className="flex justify-end">
-                                <button
-                                    type="button"
-                                    onClick={() => setUse3DPrototype((v) => !v)}
-                                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-100 transition outline-none hover:border-emerald-300/60 hover:bg-emerald-500/15 focus-visible:ring-2 focus-visible:ring-signal-cyan"
-                                >
-                                    {use3DPrototype
-                                        ? (en ? 'Switch to 2D radar' : 'Mudar para radar 2D')
-                                        : (en ? '← Back to 3D radar' : '← Voltar ao radar 3D')}
-                                </button>
-                            </div>
-                        ) : null}
+                        <CompactConsoleBar
+                            form={form}
+                            onFormChange={setForm}
+                            onSubmit={submit}
+                            onPresetDateSelect={quickSelectDate}
+                            query={query}
+                            onQueryChange={setQuery}
+                            isUpdating={isUpdating}
+                            errors={errors}
+                            t={t}
+                        />
 
-                        {use3DPrototype && radarMode === 'closest-5-now' && closestNowData && lunarReference ? (
+                        {closestNowData && lunarReference ? (
                             <Suspense fallback={<ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />}>
                                 <DailyOrbitalRadar3D
                                     closestNowObjects={closestNowData.objects}
@@ -523,17 +355,12 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                                     radarLoading={closestNowLoading}
                                     onRefresh={() => setRefreshNonce((n) => n + 1)}
                                     onSelect={(approach) => {
-                                        // Click toggles selection — clicking the same object again deselects.
                                         setSelectedFocusId((current) => (current === approach.id ? null : approach.id));
-                                        setActivePanel(null);
                                     }}
                                     onClearSelection={() => {
                                         setSelectedFocusId(null);
-                                        setActivePanel(null);
                                     }}
                                     onOpenFocus={(approach) => {
-                                        // The dossier is a regular Inertia route — same destination the SVG radar
-                                        // points at via the asteroid marker link.
                                         window.location.href = approach.detailRoute;
                                     }}
                                     lunarReference={lunarReference}
@@ -542,69 +369,10 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                                 />
                             </Suspense>
                         ) : (
-                        <Suspense fallback={<ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />}>
-                            {lunarReference && (
-                                <DailyOrbitalRadar
-                                    approaches={radarApproaches}
-                                    positionsById={radarPositionsById}
-                                    sunDirection={sunDirection}
-                                    positionsLoading={radarMode === 'closest-5-now' ? closestNowLoading : positionsLoading}
-                                    referenceMode={referenceMode}
-                                    onReferenceModeChange={setReferenceMode}
-                                    earthImage={earthImage}
-                                    lunarReference={lunarReference}
-                                    locale={locale}
-                                    t={t}
-                                    selectedDate={selectedDate}
-                                    selectedId={focusApproach?.id ?? null}
-                                    trajectory={radarMode === 'closest-5-now' ? null : focusTrajectory}
-                                    trajectoryLoading={radarMode === 'closest-5-now' ? false : trajectoryLoading}
-                                    radarMode={radarMode}
-                                    onRadarModeChange={setRadarMode}
-                                    nowTrajectoriesByObjectId={closestNowTrajectoriesByObjectId}
-                                    onSelect={(approach) => {
-                                        setSelectedFocusId(approach.id);
-                                        setActivePanel(null);
-                                    }}
-                                    onClearSelection={() => {
-                                        setSelectedFocusId(null);
-                                        setActivePanel(null);
-                                    }}
-                                    emptyMessage={!radarApproaches.length
-                                        ? emptyMessageForMode(radarMode, en)
-                                        : null}
-                                    controls={(
-                                        <CompactConsoleBar
-                                            form={form}
-                                            onFormChange={setForm}
-                                            onSubmit={submit}
-                                            onPresetDateSelect={quickSelectDate}
-                                            query={query}
-                                            onQueryChange={setQuery}
-                                            isUpdating={isUpdating}
-                                            errors={errors}
-                                            t={t}
-                                        />
-                                    )}
-                                    sidePanel={renderRadarSidePanel({
-                                        activePanel,
-                                        focusApproach,
-                                        focusTrajectory,
-                                        trajectoryLoading,
-                                        focusModel,
-                                        modelLoading,
-                                        locale,
-                                        t,
-                                        onClose: () => setActivePanel(null),
-                                        onOpenScale: () => focusApproach && setActivePanel('scale'),
-                                        onOpenTrajectory: () => focusApproach && setActivePanel('trajectory'),
-                                    })}
-                                />
-                            )}
-                        </Suspense>
+                            <ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />
                         )}
 
-                        {filtered.length ? (
+                        {radarObjects.length ? (
                             <RadarDataQualityCard
                                 objects={radarObjects}
                                 locale={locale}
@@ -677,16 +445,6 @@ function SectionHeading({ title, description, muted = false }: { title: string; 
     );
 }
 
-function ObservatoryLoadingSkeleton({ t }: { t: Translator }) {
-    return (
-        <div className="space-y-6">
-            <ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />
-            <ObservatorySkeleton label={t('observatory.loading.cards')} rows={3} compact />
-            <ObservatorySkeleton label={t('observatory.loading.table')} rows={5} />
-        </div>
-    );
-}
-
 function ObservatorySkeleton({ label, rows, compact = false }: { label: string; rows: number; compact?: boolean }) {
     return (
         <div className={`rounded-lg border border-white/10 bg-white/[0.035] p-4 ${compact ? 'grid gap-3 md:grid-cols-3' : 'space-y-3'}`}>
@@ -701,69 +459,6 @@ function ObservatorySkeleton({ label, rows, compact = false }: { label: string; 
     );
 }
 
-function renderRadarSidePanel({
-    activePanel,
-    focusApproach,
-    focusTrajectory,
-    trajectoryLoading,
-    focusModel,
-    modelLoading,
-    locale,
-    t,
-    onClose,
-    onOpenScale,
-    onOpenTrajectory,
-}: {
-    activePanel: 'scale' | 'trajectory' | null;
-    focusApproach: UnifiedApproach | null;
-    focusTrajectory: AsteroidTrajectory | null;
-    trajectoryLoading: boolean;
-    focusModel: AsteroidModelMetadata | null;
-    modelLoading: boolean;
-    locale: 'pt-BR' | 'en';
-    t: Translator;
-    onClose: () => void;
-    onOpenScale: () => void;
-    onOpenTrajectory: () => void;
-}): ReactNode {
-    if (!focusApproach) {
-        return null;
-    }
-
-    if (activePanel && focusApproach) {
-        return (
-            <ObservatoryDetailOverlay
-                activePanel={activePanel}
-                approach={focusApproach}
-                trajectory={focusTrajectory}
-                trajectoryLoading={trajectoryLoading}
-                model={focusModel}
-                modelLoading={modelLoading}
-                locale={locale}
-                t={t}
-                onClose={onClose}
-            />
-        );
-    }
-
-    return (
-        <ObservatoryFocusPanel
-            approach={focusApproach ?? null}
-            locale={locale}
-            t={t}
-            onOpenScale={onOpenScale}
-            onOpenTrajectory={onOpenTrajectory}
-            trajectoryLoading={trajectoryLoading}
-            hasTrajectory={Boolean(focusTrajectory && focusTrajectory.status === 'available' && focusTrajectory.points.length >= 2)}
-            model={focusModel}
-            modelLoading={modelLoading}
-        />
-    );
-}
-
-function defaultReferenceMode(selectedDate: string): HorizonsReferenceMode {
-    return selectedDate === localDateIso(new Date()) ? 'current' : 'closest_approach';
-}
 
 function compareApproaches(
     left: UnifiedApproach,
@@ -784,45 +479,4 @@ function compareApproaches(
     }
 
     return String(leftValue ?? '').localeCompare(String(rightValue ?? ''));
-}
-
-function appendNumeric(params: URLSearchParams, key: string, value: number | null): void {
-    if (value !== null && Number.isFinite(value)) {
-        params.set(key, String(value));
-    }
-}
-
-function localDateIso(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-function addDaysIso(iso: string, days: number): string {
-    const date = new Date(`${iso}T00:00:00Z`);
-    if (Number.isNaN(date.getTime())) return iso;
-    date.setUTCDate(date.getUTCDate() + days);
-    return date.toISOString().slice(0, 10);
-}
-
-function emptyMessageForMode(mode: RadarMode, en: boolean): string {
-    if (mode === 'closest-5-now') {
-        return en
-            ? 'No nearby objects found right now.'
-            : 'Nenhum objeto próximo encontrado agora.';
-    }
-    if (mode === 'pha') {
-        return en
-            ? 'No potentially hazardous objects flagged for this window.'
-            : 'Nenhum objeto potencialmente perigoso sinalizado para esta janela.';
-    }
-    if (mode === 'next-7d') {
-        return en
-            ? 'No close approaches in the next 7 days for the current filters.'
-            : 'Nenhuma aproximação nos próximos 7 dias com os filtros atuais.';
-    }
-    return en
-        ? 'No close approach found for this day with the current filters. Try another date or type to continue.'
-        : 'Nenhuma aproximação encontrada para este dia com os filtros atuais. Tente outra data ou tipo para continuar.';
 }

@@ -4,39 +4,49 @@
 
 `Panels` contém painéis, cards, overlays laterais e controles visuais usados pelo `ApproachObservatory`.
 
-Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de radar, trajetória, seleção e interpretação.
+Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de radar 3D, trajetória, seleção e interpretação.
 
-## O que pode conter
+## O Que Pode Conter
 
-- Cards de foco e cards informativos de corpos celestes.
-- Painéis de navegação desktop/mobile.
-- Overlays laterais de detalhe, escala e trajetória.
-- Mensagens de disponibilidade, qualidade e origem dos dados.
-- Helpers locais de apresentação, textos, badges e formatação simples.
+- cards de foco e cards informativos de corpos celestes;
+- painéis de navegação desktop/mobile;
+- mensagens de disponibilidade, qualidade e origem dos dados;
+- helpers locais de apresentação, textos, badges e formatação simples.
 
-## O que não deve conter
+## O Que Não Deve Conter
 
-- Chamadas de API externas.
-- Cálculo orbital, efemérides ou trajetórias reais.
-- Ranking global de aproximações.
-- Fallback Horizons/CAD.
-- Alteração direta de seleção global, foco global ou modo de câmera.
-- Conversão de posição simbólica em posição real.
+- chamadas de API externas;
+- cálculo orbital, efemérides ou trajetórias reais;
+- ranking global de aproximações;
+- fallback Horizons/CAD;
+- alteração direta de seleção global, foco global ou modo de câmera;
+- conversão de posição simbólica em posição real.
 
 ## Estrutura
 
 - `BodyInfoCard.tsx`: renderiza o card informativo de Sol, Terra, Lua e planetas.
 - `bodyInfoContent.ts`: textos e fatos estáticos exibidos pelo `BodyInfoCard`.
-- `FocusCard.tsx`: card compacto do objeto em foco no radar.
+- `FocusCard.tsx`: card compacto do objeto em foco no radar 3D.
+- `FocusObject.tsx`: conteúdo principal do objeto selecionado.
 - `focusCardPresentation.ts`: textos, badges e status de apresentação do `FocusCard`.
-- `RadarNavigationPanel.tsx`: moldura, colapso e flyout lateral da navegação do radar.
+- `MobilePanelControls.tsx`: controles de navegação mobile.
+- `RadarDataQualityCard.tsx`: resumo visual de qualidade dos dados.
+- `RadarFloatingOverlays.tsx`: overlays flutuantes da cena 3D.
+- `RadarNavigationPanel.tsx`: moldura, colapso e flyout lateral da navegação do radar 3D.
 - `RadarNavigationMobileContent.tsx`: conteúdo mobile da navegação.
 - `RadarNavigationDesktopContent.tsx`: conteúdo desktop da navegação.
 - `RadarNavigationObjectList.tsx`: lista visual de objetos e botão de atualização.
 - `radarNavigationTypes.ts`: contratos compartilhados pelos subcomponentes de navegação.
+- `PanelShell.tsx`: shell visual reutilizável para painéis.
+- `SceneLegend.tsx`: legenda da cena.
+- `TechnicalDataPanel.tsx`: painel técnico expansível.
 - `panelFormatters.ts`: formatadores locais de datas e unidades exibidas nos painéis.
 
-## Cards de foco
+## Remoção Do Caminho 2D
+
+Os painéis `ObservatoryFocusPanel.tsx` e `ObservatoryDetailOverlay.tsx` foram removidos junto com o radar 2D/SVG. O foco visual agora passa pelo `FocusCard`, `FocusObject`, `RadarFloatingOverlays` e pela navegação do radar 3D.
+
+## Cards De Foco
 
 `FocusCard.tsx` e `FocusObject.tsx` recebem dados já resolvidos e apenas montam a leitura visual: nome, distância, velocidade, tamanho, risco de monitoramento e ações disponíveis.
 
@@ -48,23 +58,6 @@ Helpers de texto e status devem ficar em arquivos locais de apresentação quand
 
 Filtros, referências, abertura de planetas, seleção de objetos, modo orbital e colapso devem preservar os contratos recebidos por props.
 
-## Dados técnicos e qualidade
+## Regra Para IA
 
-`TechnicalDataPanel.tsx`, `RadarDataQualityCard.tsx`, `ObservatoryDetailOverlay.tsx` e `ObservatoryFocusPanel.tsx` exibem dados técnicos, qualidade de fonte, escala e trajetória quando esses dados já foram preparados fora da pasta.
-
-Formatadores simples podem ficar em `panelFormatters.ts` quando forem estritamente de apresentação.
-
-## Regras para IA/refatoração
-
-- Refatore de forma moderada e local.
-- Preserve textos exibidos, classes visuais e comportamento interativo sempre que possível.
-- Use `import type` para símbolos usados apenas como tipo.
-- Prefira arquivos auxiliares pequenos e claros quando um componente acumular helpers de apresentação.
-- Não crie abstrações genéricas sem necessidade real.
-- Não adicione dependências novas para resolver problemas de organização.
-
-## Regra para IA
-
-Ao editar esta pasta, não mova cálculo orbital, ranking de aproximação,
-chamadas de API, fallback Horizons/CAD ou seleção global para componentes
-de painel. Painéis devem apenas renderizar e organizar dados já recebidos.
+Ao editar esta pasta, não mova cálculo orbital, ranking de aproximação, chamadas de API, fallback Horizons/CAD ou seleção global para componentes de painel. Painéis devem apenas renderizar e organizar dados já recebidos.

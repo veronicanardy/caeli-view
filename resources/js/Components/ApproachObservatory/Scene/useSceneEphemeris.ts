@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
-import { computeSceneEphemeris, type SceneEphemeris } from '@/lib/sceneEphemeris';
+import { computeSceneEphemeris } from '@/lib/sceneEphemeris';
+import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 
+/**
+ * Mantém a efeméride local da cena atualizada em intervalo curto.
+ */
 export function useSceneEphemeris(): SceneEphemeris | null {
     const [ephemeris, setEphemeris] = useState<SceneEphemeris | null>(null);
 

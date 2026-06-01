@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ClosestNowObject } from '@/types';
-import { computeFocusFraming, type FocusFraming } from './CameraRig';
+import { computeFocusFraming } from './cameraFraming';
+import type { FocusFraming } from './cameraFraming';
 
+/**
+ * Deriva o enquadramento de câmera da seleção atual sem reagir a cada tick de efeméride.
+ */
 export function useSelectionFocusFraming(
     focusedObject: ClosestNowObject | null,
     selectionFocusNonce: number,
@@ -27,7 +31,7 @@ export function useSelectionFocusFraming(
             latestEarthHelio.current,
             latestEarthScene.current ?? [0, 0, 0],
         ));
-        // refs intentionally read outside dependencies.
+        // refs lidas intencionalmente fora das dependências.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [focusedObject?.approach.id, selectionFocusNonce, orbitMode]);
 

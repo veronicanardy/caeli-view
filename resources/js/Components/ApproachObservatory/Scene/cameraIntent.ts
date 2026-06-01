@@ -1,5 +1,8 @@
-import type { CameraViewKey } from './CameraRig';
+import type { CameraViewKey } from './cameraConstants';
 
+/**
+ * Representa a intenção corrente da câmera e permite refocar o mesmo alvo por nonce.
+ */
 export type CameraIntent =
     | { kind: 'preset'; view: CameraViewKey; nonce: number }
     | { kind: 'object'; view: CameraViewKey; nonce: number }
