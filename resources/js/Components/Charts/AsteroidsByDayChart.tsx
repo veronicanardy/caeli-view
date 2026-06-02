@@ -1,16 +1,42 @@
-﻿import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+/**
+ * Gráfico de volume diário de asteroides.
+ *
+ * Responsabilidade: exibir a contagem de aproximações por data recebida da
+ * página de asteroides. O componente não calcula estatísticas; ele apenas
+ * apresenta a série já agregada.
+ */
 
-export function AsteroidsByDayChart({ data }: { data: Array<{ date: string; total: number }> }) {
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+    CHART_AXIS_TICK,
+    CHART_BAR_RADIUS,
+    CHART_BODY_HEIGHT,
+    CHART_CARD_CLASS,
+    CHART_COLORS,
+    CHART_GRID_STROKE,
+    CHART_TOOLTIP_STYLE,
+} from './chartTheme';
+
+export interface AsteroidsByDayChartPoint {
+    date: string;
+    total: number;
+}
+
+interface AsteroidsByDayChartProps {
+    data: AsteroidsByDayChartPoint[];
+}
+
+export function AsteroidsByDayChart({ data }: AsteroidsByDayChartProps) {
     return (
-        <div className="h-72 rounded-lg border border-white/10 bg-white/[0.045] p-4 shadow-glow">
+        <div className={CHART_CARD_CLASS}>
             <h2 className="mb-4 text-sm font-semibold text-white">Asteroides por dia</h2>
-            <ResponsiveContainer width="100%" height="85%">
+            <ResponsiveContainer width="100%" height={CHART_BODY_HEIGHT}>
                 <BarChart data={data}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-                    <XAxis dataKey="date" tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 12 }} />
-                    <YAxis tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 12 }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ background: '#11131a', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }} />
-                    <Bar dataKey="total" fill="#54d6d6" radius={[4, 4, 0, 0]} />
+                    <CartesianGrid stroke={CHART_GRID_STROKE} />
+                    <XAxis dataKey="date" tick={CHART_AXIS_TICK} />
+                    <YAxis tick={CHART_AXIS_TICK} allowDecimals={false} />
+                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                    <Bar dataKey="total" fill={CHART_COLORS.asteroidCount} radius={CHART_BAR_RADIUS} />
                 </BarChart>
             </ResponsiveContainer>
         </div>

@@ -1,19 +1,42 @@
-﻿import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+/**
+ * Gráfico de classificação de risco dos asteroides.
+ *
+ * Responsabilidade: apresentar a distribuição entre objetos potencialmente
+ * perigosos e não perigosos. A classificação vem pronta da página; este
+ * componente só aplica a visualização em pizza.
+ */
 
-const colors = ['#ff7b72', '#76e4b5'];
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import {
+    CHART_BODY_HEIGHT,
+    CHART_CARD_CLASS,
+    CHART_COLORS,
+    CHART_TOOLTIP_STYLE,
+} from './chartTheme';
 
-export function HazardChart({ data }: { data: Array<{ name: string; value: number }> }) {
+const HAZARD_COLORS = [CHART_COLORS.hazardous, CHART_COLORS.safe];
+
+export interface HazardChartSlice {
+    name: string;
+    value: number;
+}
+
+interface HazardChartProps {
+    data: HazardChartSlice[];
+}
+
+export function HazardChart({ data }: HazardChartProps) {
     return (
-        <div className="h-72 rounded-lg border border-white/10 bg-white/[0.045] p-4 shadow-glow">
+        <div className={CHART_CARD_CLASS}>
             <h2 className="mb-4 text-sm font-semibold text-white">Classificação de risco</h2>
-            <ResponsiveContainer width="100%" height="85%">
+            <ResponsiveContainer width="100%" height={CHART_BODY_HEIGHT}>
                 <PieChart>
                     <Pie data={data} dataKey="value" nameKey="name" outerRadius={88} label>
                         {data.map((entry, index) => (
-                            <Cell key={entry.name} fill={colors[index % colors.length]} />
+                            <Cell key={entry.name} fill={HAZARD_COLORS[index % HAZARD_COLORS.length]} />
                         ))}
                     </Pie>
-                    <Tooltip contentStyle={{ background: '#11131a', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }} />
+                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
                 </PieChart>
             </ResponsiveContainer>
         </div>
