@@ -1,15 +1,14 @@
+/**
+ * Cone/fita de direção da trajetória.
+ *
+ * Responsabilidade: renderizar o indicador visual de deslocamento com escala
+ * adaptada à distância da câmera. Recebe vetor de direção já resolvido.
+ */
+
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-
-const VECTOR_LENGTH = 0.086;
-const VECTOR_WIDTH = 0.0042;
-const VECTOR_HEAD_LENGTH = 0.026;
-const VECTOR_HEAD_WIDTH = 0.018;
-const VECTOR_AIR_GAP = 0.064;
-const VECTOR_MIN_SCALE = 0.94;
-const VECTOR_MAX_SCALE = 1.28;
-const VECTOR_DISTANCE_SCALE = 0.028;
+import { DIRECTION_CONE_GEOMETRY, DIRECTION_CONE_SCALE } from './trajectoryConstants';
 
 /**
  * Indicador orbital de movimento.
@@ -38,17 +37,17 @@ export function DirectionCone({
             new THREE.Vector3(0, 1, 0),
             movementDirection,
         );
-        const positionValue = tip.clone().add(movementDirection.multiplyScalar(VECTOR_AIR_GAP));
+        const positionValue = tip.clone().add(movementDirection.multiplyScalar(DIRECTION_CONE_GEOMETRY.airGap));
         const ribbon = buildVectorRibbonGeometry();
         const lines = new Float32Array([
             0, 0, 0.001,
-            0, VECTOR_LENGTH, 0.001,
+            0, DIRECTION_CONE_GEOMETRY.length, 0.001,
 
-            -VECTOR_HEAD_WIDTH * 0.5, VECTOR_LENGTH - VECTOR_HEAD_LENGTH, 0.001,
-            0, VECTOR_LENGTH, 0.001,
+            -DIRECTION_CONE_GEOMETRY.headWidth * 0.5, DIRECTION_CONE_GEOMETRY.length - DIRECTION_CONE_GEOMETRY.headLength, 0.001,
+            0, DIRECTION_CONE_GEOMETRY.length, 0.001,
 
-            VECTOR_HEAD_WIDTH * 0.5, VECTOR_LENGTH - VECTOR_HEAD_LENGTH, 0.001,
-            0, VECTOR_LENGTH, 0.001,
+            DIRECTION_CONE_GEOMETRY.headWidth * 0.5, DIRECTION_CONE_GEOMETRY.length - DIRECTION_CONE_GEOMETRY.headLength, 0.001,
+            0, DIRECTION_CONE_GEOMETRY.length, 0.001,
         ]);
 
         return {
@@ -65,9 +64,9 @@ export function DirectionCone({
         const worldPosition = markerRef.current.getWorldPosition(worldPositionRef.current);
         const cameraDistance = camera.position.distanceTo(worldPosition);
         const dynamicScale = THREE.MathUtils.clamp(
-            0.9 + cameraDistance * VECTOR_DISTANCE_SCALE,
-            VECTOR_MIN_SCALE,
-            VECTOR_MAX_SCALE,
+            0.9 + cameraDistance * DIRECTION_CONE_SCALE.distanceFactor,
+            DIRECTION_CONE_SCALE.min,
+            DIRECTION_CONE_SCALE.max,
         );
 
         markerRef.current.scale.setScalar(dynamicScale);
@@ -102,9 +101,9 @@ export function DirectionCone({
 }
 
 function buildVectorRibbonGeometry(): THREE.BufferGeometry {
-    const shaftEnd = VECTOR_LENGTH - VECTOR_HEAD_LENGTH * 0.72;
-    const halfWidth = VECTOR_WIDTH * 0.5;
-    const headY = VECTOR_LENGTH - VECTOR_HEAD_LENGTH;
+    const shaftEnd = DIRECTION_CONE_GEOMETRY.length - DIRECTION_CONE_GEOMETRY.headLength * 0.72;
+    const halfWidth = DIRECTION_CONE_GEOMETRY.width * 0.5;
+    const headY = DIRECTION_CONE_GEOMETRY.length - DIRECTION_CONE_GEOMETRY.headLength;
     const positions = new Float32Array([
         -halfWidth, 0, 0,
         halfWidth, 0, 0,
@@ -114,13 +113,13 @@ function buildVectorRibbonGeometry(): THREE.BufferGeometry {
         halfWidth * 0.75, shaftEnd, 0,
         -halfWidth * 0.75, shaftEnd, 0,
 
-        -VECTOR_HEAD_WIDTH * 0.5, headY, 0,
-        0, VECTOR_LENGTH, 0,
+        -DIRECTION_CONE_GEOMETRY.headWidth * 0.5, headY, 0,
+        0, DIRECTION_CONE_GEOMETRY.length, 0,
         -halfWidth * 0.35, shaftEnd, 0,
 
-        VECTOR_HEAD_WIDTH * 0.5, headY, 0,
+        DIRECTION_CONE_GEOMETRY.headWidth * 0.5, headY, 0,
         halfWidth * 0.35, shaftEnd, 0,
-        0, VECTOR_LENGTH, 0,
+        0, DIRECTION_CONE_GEOMETRY.length, 0,
     ]);
     const geometry = new THREE.BufferGeometry();
 

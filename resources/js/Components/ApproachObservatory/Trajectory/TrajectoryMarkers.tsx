@@ -1,3 +1,10 @@
+/**
+ * Marcadores visuais de trajetória.
+ *
+ * Responsabilidade: renderizar ticks temporais e máxima aproximação a partir de
+ * pontos já resolvidos, sem calcular ranking, seleção ou fallback científico.
+ */
+
 import * as THREE from 'three';
 import { compactKm } from '@/lib/format';
 import { formatTimestamp } from '@/lib/observatory/format';

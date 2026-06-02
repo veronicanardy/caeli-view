@@ -25,12 +25,16 @@ Renderizar trajetórias visuais, linhas heliocêntricas, marcadores e cone de di
 - `GradientTrajectoryLine.tsx`: linha 3D com gradiente de opacidade.
 - `DirectionCone.tsx`: cone 3D que aponta a direção de deslocamento.
 - `TrajectoryMarkers.tsx`: ticks temporais e marcador de máxima aproximação.
-- `nowTrajectoryPresentation.ts`: constantes e helpers leves de apresentação.
+- `trajectoryConstants.ts`: constantes visuais compartilhadas por linhas, cone e marcadores.
+- `nowTrajectoryPresentation.ts`: helpers puros de apresentação.
+- `useNowTrajectoryPresentation.ts`: hook que deriva a apresentação da trajetória atual para manter `NowTrajectory` como compositor fino.
 - `HeliocentricLines.tsx`: órbitas heliocêntricas já amostradas ou geradas por elipse simples.
 
 ## Trajetória atual
 
 `NowTrajectory` recebe `pastPoints`, `futurePoints` e `currentPoint` já preparados, recorta o trecho visível, mantém a regra de `coneOnly`, preserva a priorização da direção por velocidade real e só mostra o marcador de máxima aproximação quando o ponto está no trecho desenhado ou quando o objeto está enfatizado.
+
+`NowTrajectory.tsx` deve permanecer como compositor visual. Derivações de vetores, ticks, opacidades e marcador de direção devem ficar em `useNowTrajectoryPresentation.ts` ou helpers puros de `nowTrajectoryPresentation.ts`.
 
 ## Linhas heliocêntricas
 
@@ -45,6 +49,8 @@ Os marcadores e o cone recebem posições e vetores já resolvidos. Eles não co
 - Preserve comportamento visual, científico, matemático e interativo.
 - Não mova lógica pesada de `@/lib/observatory/trajectorySampling` para esta pasta.
 - Evite abstrações genéricas demais; prefira helpers pequenos e locais.
+- Todo arquivo de `Trajectory` deve iniciar com documentação em português explicando responsabilidade e fronteiras.
+- Constantes visuais compartilhadas devem ficar em `trajectoryConstants.ts`.
 - Use esta pasta para renderização e adaptação visual, não para decidir a verdade dos dados.
 
 ## Regra para IA

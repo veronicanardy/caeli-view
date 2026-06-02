@@ -1,15 +1,16 @@
-import { useMemo } from 'react';
+/**
+ * Compositor da trajetória geocêntrica atual.
+ *
+ * Responsabilidade: montar linha, cone de direção, ticks temporais e marcador de
+ * máxima aproximação a partir de dados de apresentação já derivados por hook local.
+ */
+
 import type { AsteroidTrajectory } from '@/types';
 import type { Palette } from '@/lib/observatory/palette';
-import { collectTimeTicks, findClosestApproachPoint, toVec3 } from '@/lib/observatory/trajectorySampling';
 import { DirectionCone } from './DirectionCone';
 import { GradientTrajectoryLine } from './GradientTrajectoryLine';
-import {
-    getMovementDirection,
-    getTrajectoryOpacities,
-    isPointOnDrawnPath,
-} from './nowTrajectoryPresentation';
 import { ClosestApproachMarker, TimeTick } from './TrajectoryMarkers';
+import { useNowTrajectoryPresentation } from './useNowTrajectoryPresentation';
 
 type NowTrajectoryProps = {
     trajectory: AsteroidTrajectory;
@@ -22,46 +23,15 @@ type NowTrajectoryProps = {
 };
 
 export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale, coneOnly = false }: NowTrajectoryProps) {
-    const pastVecs = useMemo(
-        () => (trajectory.pastPoints ?? []).map((point) => toVec3(point)),
-        [trajectory.pastPoints],
-    );
-    const currentVec = useMemo(
-        () => (trajectory.currentPoint ? toVec3(trajectory.currentPoint) : null),
-        [trajectory.currentPoint],
-    );
-
-    const closestApproach = useMemo(() => findClosestApproachPoint(trajectory), [trajectory]);
-
-    const fullPast = useMemo(() => {
-        if (currentVec && pastVecs.length > 0) return [...pastVecs, currentVec];
-        if (currentVec) return [currentVec];
-        return pastVecs;
-    }, [pastVecs, currentVec]);
-
-    const closestApproachOnPath = useMemo(
-        () => isPointOnDrawnPath(closestApproach, fullPast),
-        [closestApproach, fullPast],
-    );
-
-    const directionMarker = useMemo(() => {
-        if (!currentVec) return null;
-
-        const movementDirection = getMovementDirection(trajectory.currentPoint, fullPast);
-        if (!movementDirection) return null;
-
-        return { tip: currentVec.clone(), movementDirection };
-    }, [currentVec, trajectory.currentPoint, fullPast]);
-
-    const timeTicks = useMemo(() => {
-        if (!emphasized) return [];
-
-        return collectTimeTicks(trajectory).filter((tick) =>
-            fullPast.some((point) => point.distanceToSquared(tick.vec) < 0.35 * 0.35),
-        );
-    }, [emphasized, trajectory, fullPast]);
-
-    const { pastPeakOpacity, coneOpacity } = getTrajectoryOpacities(emphasized, dimmed);
+    const {
+        fullPast,
+        closestApproach,
+        closestApproachOnPath,
+        directionMarker,
+        timeTicks,
+        pastPeakOpacity,
+        coneOpacity,
+    } = useNowTrajectoryPresentation({ trajectory, emphasized, dimmed });
 
     return (
         <group>

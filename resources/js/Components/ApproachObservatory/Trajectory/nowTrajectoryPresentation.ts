@@ -1,6 +1,14 @@
+/**
+ * Helpers puros de apresentação da trajetória atual.
+ *
+ * Responsabilidade: decidir opacidades, presença de pontos no trecho desenhado
+ * e direção visual a partir de dados já preparados por `trajectorySampling`.
+ */
+
 import * as THREE from 'three';
 import type { ClosestApproachSample } from '@/lib/observatory/trajectorySampling';
 import type { TrajectoryPoint } from '@/types';
+import { TRAJECTORY_MARKER_THRESHOLDS } from './trajectoryConstants';
 
 export function isPointOnDrawnPath(
     point: ClosestApproachSample | null,
@@ -8,7 +16,16 @@ export function isPointOnDrawnPath(
 ) {
     if (!point) return false;
 
-    return fullPast.some((candidate) => candidate.distanceToSquared(point.vec) < 0.25 * 0.25);
+    const threshold = TRAJECTORY_MARKER_THRESHOLDS.closestApproachOnPathDistance;
+    return fullPast.some((candidate) => candidate.distanceToSquared(point.vec) < threshold * threshold);
+}
+
+export function isTimeTickOnDrawnPath(
+    point: THREE.Vector3,
+    fullPast: THREE.Vector3[],
+) {
+    const threshold = TRAJECTORY_MARKER_THRESHOLDS.timeTickOnPathDistance;
+    return fullPast.some((candidate) => candidate.distanceToSquared(point) < threshold * threshold);
 }
 
 /**

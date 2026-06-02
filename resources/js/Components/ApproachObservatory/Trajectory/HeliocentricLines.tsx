@@ -1,9 +1,14 @@
+/**
+ * Linhas e elipses heliocêntricas da visualização orbital.
+ *
+ * Responsabilidade: transformar pontos ou parâmetros simples já recebidos em
+ * geometria THREE persistente, com cleanup dos recursos criados localmente.
+ */
+
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
-
-const ORBIT_LINE_SEGMENTS = 192;
-const DEFAULT_ORBIT_LINE_OPACITY = 0.85;
+import { DEFAULT_ORBIT_LINE_OPACITY, ORBIT_LINE_SEGMENTS } from './trajectoryConstants';
 
 /**
  * Utilitários visuais para linhas heliocêntricas já amostradas ou descritas por

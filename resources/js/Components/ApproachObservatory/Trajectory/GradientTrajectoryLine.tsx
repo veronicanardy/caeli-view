@@ -1,3 +1,10 @@
+/**
+ * Linha geocêntrica com gradiente de opacidade.
+ *
+ * Responsabilidade: converter pontos já calculados em geometria visual suave,
+ * sem interpretar órbita, ranking ou fallback de dados.
+ */
+
 import { useMemo } from 'react';
 import * as THREE from 'three';
 
