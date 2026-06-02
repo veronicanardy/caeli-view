@@ -7,7 +7,8 @@
  */
 
 import { OrbitControls } from '@react-three/drei';
-import { useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useMemo, useRef } from 'react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
@@ -65,9 +66,21 @@ type RadarSceneProps = {
     isSunFocused?: boolean;
     /** Quando false, todas as labels 3D (planetas, asteroides, Terra, Lua) ficam ocultas. */
     showLabels?: boolean;
+    /** Chamado uma única vez após o primeiro frame da cena ser renderizado na GPU. */
+    onFirstFrame?: () => void;
 };
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true }: RadarSceneProps) {
+function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
+    const fired = useRef(false);
+    useFrame(() => {
+        if (fired.current) return;
+        fired.current = true;
+        onFirstFrame();
+    });
+    return null;
+}
+
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, onFirstFrame }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -154,7 +167,14 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         <SceneObjectOccludersContext.Provider value={sceneObjectOccluders}>
             <LabelOccluderContext.Provider value={labelOccluder}>
                 <color attach="background" args={['#03060d']} />
-                <ambientLight intensity={0.16} />
+                {/* Iluminação global compartilhada por todos os asteroides da cena.
+                    Intensidades somadas a partir do rig anterior por marcador (ambient 0.28 + hemi 0.12)
+                    mais a base de cena (0.16), centralizadas aqui para evitar N luzes duplicadas. */}
+                <ambientLight intensity={0.44} />
+                <hemisphereLight intensity={0.12} color="#6a7e92" groundColor="#1e1a16" />
+                <directionalLight position={[1.7, 0.5, 2.3]} intensity={0.22} color="#e8dcc8" />
+                <pointLight position={[-1.6, -0.3, -1.2]} intensity={0.1} distance={3.1} color="#5a6a7a" />
+                <pointLight position={[-1.4, 0.9, 1.6]} intensity={0.18} distance={3.2} color="#8aa0b4" />
 
             {useHelioScene && focusedElements && focusedObject ? (
                 <HeliocentricScene
@@ -227,6 +247,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     />
                 </>
             )}
+
+            {onFirstFrame && <FirstFrameNotifier onFirstFrame={onFirstFrame} />}
 
             <OrbitControls
                 makeDefault

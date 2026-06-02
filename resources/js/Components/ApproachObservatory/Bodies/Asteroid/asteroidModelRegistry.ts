@@ -1,3 +1,4 @@
+import { useGLTF } from '@react-three/drei';
 import type { ClosestNowObject } from '@/types';
 
 /**
@@ -36,6 +37,16 @@ export const REAL_ASTEROID_MODELS: AsteroidModelAsset[] = [
     { key: 'eros', url: '/models/asteroids/eros.glb', rotation: [0.15, -0.32, -0.1], aliases: ['eros'], numbers: ['433'] },
     { key: 'vesta', url: '/models/asteroids/vesta.glb', rotation: [-0.06, 0.3, -0.04], aliases: ['vesta'], numbers: ['4'] },
 ];
+
+// Inicia o download e parse dos GLBs imediatamente ao importar o módulo,
+// antes de qualquer Canvas ou componente montar. Quando useGLTF for chamado
+// dentro da cena os arquivos já estarão no cache do drei — elimina o travamento
+// em cadeia no primeiro render.
+const ALL_ASTEROID_URLS = [
+    GENERIC_ASTEROID_MODEL.url,
+    ...REAL_ASTEROID_MODELS.map((a) => a.url),
+];
+ALL_ASTEROID_URLS.forEach((url) => useGLTF.preload(url));
 
 /**
  * Seleciona o modelo GLB para um objeto próximo.

@@ -14,21 +14,6 @@ const HITBOX_SEGMENTS = 16;
 const LABEL_POSITION: [number, number, number] = [0, 0.16, 0];
 const SELECTED_HALO_OPACITY = 0.025;
 const SELECTED_HALO_COLOR = '#6ecfdc';
-const KEY_LIGHT_POSITION: [number, number, number] = [1.7, 0.5, 2.3];
-const KEY_LIGHT_INTENSITY = 0.22;
-const KEY_LIGHT_COLOR = '#e8dcc8';
-const FILL_LIGHT_POSITION: [number, number, number] = [-1.6, -0.3, -1.2];
-const FILL_LIGHT_INTENSITY = 0.1;
-const FILL_LIGHT_DISTANCE = 3.1;
-const FILL_LIGHT_COLOR = '#5a6a7a';
-const RIM_LIGHT_POSITION: [number, number, number] = [-1.4, 0.9, 1.6];
-const RIM_LIGHT_INTENSITY = 0.18;
-const RIM_LIGHT_DISTANCE = 3.2;
-const RIM_LIGHT_COLOR = '#8aa0b4';
-const AMBIENT_LIGHT_INTENSITY = 0.28;
-const HEMI_LIGHT_INTENSITY = 0.12;
-const HEMI_SKY_COLOR = '#6a7e92';
-const HEMI_GROUND_COLOR = '#1e1a16';
 
 /**
  * Propriedades usadas para renderizar um marcador de asteroide no radar 3D.
@@ -79,16 +64,6 @@ export function AsteroidMarker({
 
     return (
         <group position={position}>
-            <ambientLight intensity={AMBIENT_LIGHT_INTENSITY} />
-            <hemisphereLight
-                intensity={HEMI_LIGHT_INTENSITY}
-                color={HEMI_SKY_COLOR}
-                groundColor={HEMI_GROUND_COLOR}
-            />
-            <directionalLight position={KEY_LIGHT_POSITION} intensity={KEY_LIGHT_INTENSITY} color={KEY_LIGHT_COLOR} />
-            <pointLight position={FILL_LIGHT_POSITION} intensity={FILL_LIGHT_INTENSITY} distance={FILL_LIGHT_DISTANCE} color={FILL_LIGHT_COLOR} />
-            <pointLight position={RIM_LIGHT_POSITION} intensity={RIM_LIGHT_INTENSITY} distance={RIM_LIGHT_DISTANCE} color={RIM_LIGHT_COLOR} />
-
             <group scale={rockScale} renderOrder={1}>
                 <RealAsteroidModel asset={renderModel.asset} opacity={opacity} seed={object.approach.id} />
             </group>

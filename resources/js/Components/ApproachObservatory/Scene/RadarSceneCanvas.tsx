@@ -6,7 +6,7 @@
  */
 
 import { Canvas } from '@react-three/fiber';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import { LabelNoGoContext } from '../Overlays/SceneLabels';
@@ -67,9 +67,18 @@ export function RadarSceneCanvas({
     onFocusBody,
 }: Props) {
     const activeFocusTarget = focusTarget ?? sunFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
+    const [sceneReady, setSceneReady] = useState(false);
 
     return (
         <LabelNoGoContext.Provider value={noGoRects}>
+            {!sceneReady && (
+                <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
+                    <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-space-950/90 px-4 py-2.5 text-[13px] text-white/70 shadow-glow">
+                        <span className="size-2 animate-pulse rounded-full bg-signal-cyan" aria-hidden />
+                        {locale === 'en' ? 'Loading…' : 'Carregando…'}
+                    </div>
+                </div>
+            )}
             <Canvas
                 camera={{ position: [0, 4.5, 9], fov: CAMERA_FOV_DEG, near: 0.01, far: MAX_CAMERA_DISTANCE * 3 }}
                 dpr={[1, 1.6]}
@@ -91,6 +100,7 @@ export function RadarSceneCanvas({
                         fallbackSunDirection={fallbackSunDirection}
                         locale={locale}
                         showLabels={showLabels}
+                        onFirstFrame={() => setSceneReady(true)}
                         onFocusSun={onFocusSun}
                         isSunFocused={bodyCardOpen === 'sun'}
                         onFocusMercury={() => onFocusPlanet('mercury')}

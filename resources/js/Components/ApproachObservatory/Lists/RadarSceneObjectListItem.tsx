@@ -41,18 +41,18 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                 ].join(' ')}
             >
                 <span className="col-start-1 row-start-1 h-2 w-2 self-center rounded-full ring-1 ring-white/10" style={{ backgroundColor: palette.future }} />
-                <span className="col-start-2 row-start-1 min-w-0 truncate font-medium">
-                    {o.approach.displayName ?? o.approach.name}
+                <span className="col-start-2 row-start-1 flex min-w-0 items-center gap-1 font-medium">
+                    <span className="min-w-0 truncate">{o.approach.displayName ?? o.approach.name}</span>
+                    {hazard ? (
+                        <span className="shrink-0 text-[11px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>{'\u26A0\uFE0F'}</span>
+                    ) : null}
                 </span>
-                {hazard ? (
-                    <span className="col-start-1 row-start-2 text-[11px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>{'\u26A0\uFE0F'}</span>
-                ) : null}
                 {orbitBlocked ? (
-                    <span className={[hazard ? 'col-start-2 row-start-2' : 'col-start-1 row-start-2 col-span-2', 'min-w-0 truncate text-[10px] text-white/30'].join(' ')} aria-hidden>
+                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 truncate text-[10px] text-white/30" aria-hidden>
                         {en ? 'no orbit' : 'sem \u00F3rbita'}
                     </span>
                 ) : !hasScenePosition ? (
-                    <span className={[hazard ? 'col-start-2 row-start-2' : 'col-start-1 row-start-2 col-span-2', 'min-w-0 truncate text-[10px] text-amber-200/60'].join(' ')} aria-hidden>
+                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 truncate text-[10px] text-amber-200/60" aria-hidden>
                         {en ? 'no pos.' : 'sem pos.'}
                     </span>
                 ) : null}

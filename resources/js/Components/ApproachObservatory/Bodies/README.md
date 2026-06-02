@@ -11,7 +11,7 @@ Ela não deve decidir seleção global, modo de câmera, critérios de lista, ra
 * `PlanetBody`: componente base para a renderização visual comum dos planetas ambiente.
 * `BodyHitbox`: hitbox invisível compartilhada para interação local dos corpos. Centraliza `stopPropagation`, cursor pointer, clique, hover opcional e limpeza do cursor ao desmontar.
 * `MoonOrbit`: guia visual lunar mantido em `Bodies/Moon` por proximidade com a Lua. Ele ajuda a leitura visual da referência Terra-Lua, mas não calcula efeméride, trajetória nem órbita física. Se surgirem novos guias orbitais, eles devem ir para uma pasta explícita, como `OrbitalGuides`.
-* `Asteroid`: marcador visual de objetos próximos. Recebe posição e estados de proximidade já preparados pela camada de cena/trajetória, escolhe modelo real ou fallback procedural, aplica rotação visual, hitbox, hover/seleção e rótulo. Não calcula órbita, ranking, Horizons, SBDB nem efemérides.
+* `Asteroid`: marcador visual de objetos próximos. Recebe posição e estados de proximidade já preparados pela camada de cena/trajetória, escolhe o modelo real via `asteroidModelRegistry`, aplica rotação visual, hitbox, hover/seleção e rótulo. Não calcula órbita, ranking, Horizons, SBDB nem efemérides.
 * `bodyRenderConstants.ts`: constantes compartilhadas de renderização dos corpos, como época de rotação visual, segmentos de esfera, parâmetros do guia lunar, hitboxes e opacidades padrão.
 * `bodyLighting.ts`: helpers compartilhados de iluminação local dos corpos, como a direção dos planetas até o Sol visual da cena.
 * `planetBodyTypes.ts`: contrato comum de props para planetas ambiente focáveis.
@@ -64,7 +64,6 @@ Exemplos:
 * `PlanetBody` descarta o material que cria para o globo.
 * `Saturn` descarta `ringMaterial` e `ringGeo`, porque esses recursos são criados no próprio componente.
 * `Moon` descarta o bump procedural criado localmente.
-* `ProceduralAsteroidRock` descarta geometria e texturas procedurais criadas localmente.
 * `RealAsteroidModel` descarta apenas os materiais clonados pelo próprio componente, sem descartar geometrias ou texturas compartilhadas do GLTF.
 * Texturas carregadas por `useBodyTexture` devem ser descartadas pelo hook.
 
