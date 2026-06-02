@@ -15,6 +15,7 @@ import {
     isPointOnDrawnPath,
     isTimeTickOnDrawnPath,
 } from './nowTrajectoryPresentation';
+import { ASTEROID_TRAIL_END_RADIUS } from './trajectoryConstants';
 
 export function useNowTrajectoryPresentation({
     trajectory,
@@ -36,10 +37,22 @@ export function useNowTrajectoryPresentation({
 
     const closestApproach = useMemo(() => findClosestApproachPoint(trajectory), [trajectory]);
 
+    // fullPast termina na borda do marcador (não no centro) para a linha não atravessar o modelo.
     const fullPast = useMemo(() => {
-        if (currentVec && pastVecs.length > 0) return [...pastVecs, currentVec];
-        if (currentVec) return [currentVec];
-        return pastVecs;
+        if (!currentVec) return pastVecs;
+
+        const points = pastVecs.length > 0 ? [...pastVecs, currentVec] : [currentVec];
+
+        if (points.length >= 2) {
+            const last = points[points.length - 1];
+            const prev = points[points.length - 2];
+            const dir = last.clone().sub(prev).normalize();
+            // fazendo a linha parar na borda do marcador em vez de no centro.
+            const trimmed = last.clone().sub(dir.multiplyScalar(ASTEROID_TRAIL_END_RADIUS));
+            return [...points.slice(0, -1), trimmed];
+        }
+
+        return points;
     }, [pastVecs, currentVec]);
 
     const closestApproachOnPath = useMemo(

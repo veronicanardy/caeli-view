@@ -63,14 +63,14 @@ final class ClosestNowSelector
         'stepSize'         => '1 hour',
     ];
 
-    /** Janela retrospectiva para objetos intermediários: 120 dias, resolução de 1 dia. */
+    /** Janela para objetos intermediários. */
     private const HORIZONS_WINDOW_MEDIUM = [
         'startOffsetHours' => -72,
         'stopOffsetHours'  => 0,
         'stepSize'         => '2 hours',
     ];
 
-    /** Janela retrospectiva para objetos mais distantes: 240 dias, resolução de 2 dias. */
+    /** Janela para objetos mais distantes. */
     private const HORIZONS_WINDOW_WIDE = [
         'startOffsetHours' => -72,
         'stopOffsetHours'  => 0,

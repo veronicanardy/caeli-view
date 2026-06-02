@@ -43,28 +43,19 @@ export function TimeTick({
 
 export function ClosestApproachMarker({
     point,
-    color,
     emphasized,
-    dimmed,
     locale,
     showLabel = true,
 }: {
     point: ClosestApproachSample;
-    color: string;
     emphasized: boolean;
-    dimmed: boolean;
     locale: 'pt-BR' | 'en';
     showLabel?: boolean;
 }) {
     const en = locale === 'en';
-    const opacity = dimmed ? 0.3 : 0.85;
 
     return (
         <group position={point.vec}>
-            <mesh>
-                <sphereGeometry args={[0.016, 16, 16]} />
-                <meshBasicMaterial color={color} transparent opacity={opacity} />
-            </mesh>
             {emphasized && showLabel ? (
                 <FocusProtectedHtml position={[0, 0.09, 0]} center distanceFactor={5} zIndexRange={[8, 0]}>
                     <div className="pointer-events-none whitespace-nowrap rounded-md border border-white/10 bg-space-950/90 px-2 py-1 text-[11px] text-white/90 shadow-glow backdrop-blur">

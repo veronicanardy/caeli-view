@@ -11,6 +11,7 @@ import { DirectionCone } from './DirectionCone';
 import { GradientTrajectoryLine } from './GradientTrajectoryLine';
 import { ClosestApproachMarker, TimeTick } from './TrajectoryMarkers';
 import { useNowTrajectoryPresentation } from './useNowTrajectoryPresentation';
+import { ASTEROID_TRAIL_END_RADIUS } from './trajectoryConstants';
 
 type NowTrajectoryProps = {
     trajectory: AsteroidTrajectory;
@@ -42,6 +43,7 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
                     color={palette.past}
                     peakOpacity={pastPeakOpacity}
                     peakAtEnd
+                    exclusionRadius={ASTEROID_TRAIL_END_RADIUS}
                 />
             ) : null}
 
@@ -63,9 +65,7 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
             {!coneOnly && closestApproach && closestApproachOnPath ? (
                 <ClosestApproachMarker
                     point={closestApproach}
-                    color={palette.current}
                     emphasized={emphasized}
-                    dimmed={dimmed}
                     locale={locale}
                     showLabel={false}
                 />

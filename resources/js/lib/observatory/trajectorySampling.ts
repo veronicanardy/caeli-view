@@ -128,6 +128,8 @@ export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: T
     const HOUR = 3_600_000;
     const targets: Array<{ deltaH: number; label: string }> = [
         { deltaH: -24, label: '-24h' },
+        { deltaH: -48, label: '-48h' },
+        { deltaH: -72, label: '-72h' },
         { deltaH: -168, label: '-7d' },
         { deltaH: -720, label: '-30d' },
     ];

@@ -1,35 +1,33 @@
 import type { ClosestNowObject } from '@/types';
-import {
-    genericAsteroidVariantFor,
-    type GenericAsteroidVariant,
-} from './asteroidProcedural';
 
 /**
  * Metadados de um modelo 3D real de asteroide que pode ser usado na cena.
- *
- * Esses modelos são usados apenas quando a identidade do objeto pode ser
- * determinada com segurança por alias ou número de catálogo.
  */
 export type AsteroidModelAsset = {
-    key: 'bennu' | 'ceres' | 'eros' | 'itokawa' | 'vesta';
+    key: 'bennu' | 'ceres' | 'eros' | 'itokawa' | 'vesta' | 'generic';
     url: string;
     rotation: [number, number, number];
     aliases: string[];
     numbers: string[];
+    excludedVariants?: string[];
 };
 
 /**
  * Representação visual escolhida para um asteroide.
- *
- * Um objeto pode ser renderizado como um modelo real conhecido ou como uma
- * rocha procedural genérica quando não há correspondência segura.
  */
-export type AsteroidRenderableModel =
-    | { kind: 'real'; asset: AsteroidModelAsset }
-    | { kind: 'generic'; variant: GenericAsteroidVariant };
+export type AsteroidRenderableModel = { kind: 'real'; asset: AsteroidModelAsset };
+
+const GENERIC_ASTEROID_MODEL: AsteroidModelAsset = {
+    key: 'generic',
+    url: '/models/asteroids/Asteroid_2f_small.glb',
+    rotation: [0, 0, 0],
+    aliases: [],
+    numbers: [],
+    excludedVariants: ['Asteroid_2f6'],
+};
 
 /**
- * Modelos GLB de asteroides reais usados para corpos com identidade conhecida.
+ * Modelos GLB de asteroides com identidade conhecida.
  */
 export const REAL_ASTEROID_MODELS: AsteroidModelAsset[] = [
     { key: 'bennu', url: '/models/asteroids/bennu.glb', rotation: [-0.12, 0.38, 0.04], aliases: ['bennu', 'rq36'], numbers: ['101955'] },
@@ -40,18 +38,13 @@ export const REAL_ASTEROID_MODELS: AsteroidModelAsset[] = [
 ];
 
 /**
- * Seleciona a representação visual mais adequada para um objeto próximo.
+ * Seleciona o modelo GLB para um objeto próximo.
  *
- * Primeiro tenta combinar o objeto com um modelo real conhecido. Caso não
- * haja correspondência segura, devolve uma variante procedural genérica.
+ * Usa o modelo específico quando a identidade é conhecida; caso contrário
+ * usa o modelo genérico de asteroide.
  */
 export function asteroidRenderableModelFor(object: ClosestNowObject): AsteroidRenderableModel {
-    const realAsset = realAsteroidModelFor(object);
-    if (realAsset) {
-        return { kind: 'real', asset: realAsset };
-    }
-
-    return { kind: 'generic', variant: genericAsteroidVariantFor(object) };
+    return { kind: 'real', asset: realAsteroidModelFor(object) ?? GENERIC_ASTEROID_MODEL };
 }
 
 /**

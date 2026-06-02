@@ -1,39 +1,34 @@
-import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import RealAsteroidModel from './RealAsteroidModel';
-import ProceduralAsteroidRock from './ProceduralAsteroidRock';
 import { asteroidRenderableModelFor } from './asteroidModelRegistry';
 
-const ASTEROID_ROCK_SCALE = 0.051;
+const ASTEROID_ROCK_SCALE = 0.026;
 const DIMMED_OPACITY = 0.4;
 const FULL_OPACITY = 1;
 const HITBOX_RADIUS = 0.14;
 const HITBOX_SEGMENTS = 16;
 const LABEL_POSITION: [number, number, number] = [0, 0.16, 0];
+const SELECTED_HALO_OPACITY = 0.025;
+const SELECTED_HALO_COLOR = '#6ecfdc';
 const KEY_LIGHT_POSITION: [number, number, number] = [1.7, 0.5, 2.3];
-const KEY_LIGHT_INTENSITY = 1.12;
-const KEY_LIGHT_COLOR = '#fff2dd';
+const KEY_LIGHT_INTENSITY = 0.22;
+const KEY_LIGHT_COLOR = '#e8dcc8';
 const FILL_LIGHT_POSITION: [number, number, number] = [-1.6, -0.3, -1.2];
-const FILL_LIGHT_INTENSITY = 0.3;
+const FILL_LIGHT_INTENSITY = 0.1;
 const FILL_LIGHT_DISTANCE = 3.1;
-const FILL_LIGHT_COLOR = '#7f93ab';
+const FILL_LIGHT_COLOR = '#5a6a7a';
 const RIM_LIGHT_POSITION: [number, number, number] = [-1.4, 0.9, 1.6];
-const RIM_LIGHT_INTENSITY = 0.3;
+const RIM_LIGHT_INTENSITY = 0.18;
 const RIM_LIGHT_DISTANCE = 3.2;
-const RIM_LIGHT_COLOR = '#b9cad8';
-const AMBIENT_LIGHT_INTENSITY = 0.15;
-const HEMI_LIGHT_INTENSITY = 0.26;
-const HEMI_SKY_COLOR = '#8ea4bb';
-const HEMI_GROUND_COLOR = '#312a23';
-const ROTATION_Y_SPEED = 0.045;
-const ROTATION_X_SPEED = 0.018;
-const SELECTED_HALO_SCALE = 1.62;
-const SELECTED_HALO_OPACITY = 0.055;
-const SELECTED_HALO_COLOR = '#8de8f2';
+const RIM_LIGHT_COLOR = '#8aa0b4';
+const AMBIENT_LIGHT_INTENSITY = 0.28;
+const HEMI_LIGHT_INTENSITY = 0.12;
+const HEMI_SKY_COLOR = '#6a7e92';
+const HEMI_GROUND_COLOR = '#1e1a16';
 
 /**
  * Propriedades usadas para renderizar um marcador de asteroide no radar 3D.
@@ -75,16 +70,8 @@ export function AsteroidMarker({
     locale,
 }: AsteroidMarkerProps) {
     const [hovered, setHovered] = useState(false);
-    const rockRef = useRef<THREE.Group>(null);
-
     const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
-
-    useFrame((_, delta) => {
-        if (rockRef.current) {
-            rockRef.current.rotation.y += delta * ROTATION_Y_SPEED;
-            rockRef.current.rotation.x += delta * ROTATION_X_SPEED;
-        }
-    });
+    const haloGeometry = useMemo(() => new THREE.SphereGeometry(ASTEROID_ROCK_SCALE * 1.25, 32, 16), []);
 
     const rockScale = ASTEROID_ROCK_SCALE;
     const opacity = dimmed ? DIMMED_OPACITY : FULL_OPACITY;
@@ -102,26 +89,21 @@ export function AsteroidMarker({
             <pointLight position={FILL_LIGHT_POSITION} intensity={FILL_LIGHT_INTENSITY} distance={FILL_LIGHT_DISTANCE} color={FILL_LIGHT_COLOR} />
             <pointLight position={RIM_LIGHT_POSITION} intensity={RIM_LIGHT_INTENSITY} distance={RIM_LIGHT_DISTANCE} color={RIM_LIGHT_COLOR} />
 
-            <group ref={rockRef} scale={rockScale}>
-                {renderModel.kind === 'real' ? (
-                    <RealAsteroidModel asset={renderModel.asset} opacity={opacity} />
-                ) : (
-                    <ProceduralAsteroidRock seed={object.approach.id} variant={renderModel.variant} opacity={opacity} />
-                )}
-
-                {isSelected ? (
-                    <mesh scale={SELECTED_HALO_SCALE}>
-                        <sphereGeometry args={[1, 32, 16]} />
-                        <meshBasicMaterial
-                            color={SELECTED_HALO_COLOR}
-                            transparent
-                            opacity={SELECTED_HALO_OPACITY}
-                            depthWrite={false}
-                            side={THREE.BackSide}
-                        />
-                    </mesh>
-                ) : null}
+            <group scale={rockScale} renderOrder={1}>
+                <RealAsteroidModel asset={renderModel.asset} opacity={opacity} seed={object.approach.id} />
             </group>
+
+            {isSelected ? (
+                <mesh geometry={haloGeometry}>
+                    <meshBasicMaterial
+                        color={SELECTED_HALO_COLOR}
+                        transparent
+                        opacity={SELECTED_HALO_OPACITY}
+                        depthWrite={false}
+                        side={THREE.BackSide}
+                    />
+                </mesh>
+            ) : null}
 
             {!isSelected ? (
                 <BodyHitbox

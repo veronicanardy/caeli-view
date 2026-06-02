@@ -19,30 +19,37 @@ export function GradientTrajectoryLine({
     color,
     peakOpacity,
     peakAtEnd,
+    exclusionRadius,
 }: {
     points: THREE.Vector3[];
     color: string;
     peakOpacity: number;
     peakAtEnd: boolean;
+    exclusionRadius?: number;
 }) {
     const { positions, colors } = useMemo(() => {
         const base = new THREE.Color(color);
+        const endpoint = points[points.length - 1];
         const sampled = points.length >= 3
             ? new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.5)
                 .getPoints(Math.min(180, Math.max(40, points.length * 20)))
             : points;
-        const count = sampled.length;
+
+        const filtered = exclusionRadius != null && endpoint
+            ? sampled.filter((p) => p.distanceTo(endpoint) >= exclusionRadius)
+            : sampled;
+        const count = filtered.length;
         const positionsArray = new Float32Array(count * 3);
         const colorsArray = new Float32Array(count * 4);
 
         for (let index = 0; index < count; index += 1) {
-            const point = sampled[index];
+            const point = filtered[index];
             positionsArray[index * 3] = point.x;
             positionsArray[index * 3 + 1] = point.y;
             positionsArray[index * 3 + 2] = point.z;
 
             const t = peakAtEnd ? index / (count - 1) : 1 - index / (count - 1);
-            const alpha = peakOpacity * (t * t);
+            const alpha = peakOpacity * (t * t * t);
 
             colorsArray[index * 4] = base.r;
             colorsArray[index * 4 + 1] = base.g;
@@ -51,17 +58,19 @@ export function GradientTrajectoryLine({
         }
 
         return { positions: positionsArray, colors: colorsArray };
-    }, [points, color, peakOpacity, peakAtEnd]);
+    }, [points, color, peakOpacity, peakAtEnd, exclusionRadius]);
 
     const count = positions.length / 3;
 
+    const version = `${count}-${peakOpacity}`;
+
     return (
-        <line key={count}>
+        <line key={version} renderOrder={2}>
             <bufferGeometry attach="geometry">
                 <bufferAttribute attach="attributes-position" args={[positions, 3]} />
                 <bufferAttribute attach="attributes-color" args={[colors, 4]} />
             </bufferGeometry>
-            <lineBasicMaterial vertexColors transparent depthWrite={false} />
+            <lineBasicMaterial vertexColors transparent depthWrite={false} depthTest />
         </line>
     );
 }
