@@ -222,7 +222,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         <SceneRingsLayer onEarthFocus={focusEarth} showLabels={showLabels && !compactLabels && !orbitLabelsOnly} />
                     </group>
                     {/* Lua: position absoluto para o grupo 3D e labels; geocentricPosition para tidal lock. */}
-                    <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} sunDirection={sunDir} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} />
+                    <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} illuminatedFraction={ephemeris?.moonIlluminatedFraction} />
                     {showLabels ? <MoonOrbit moonPos={moonPos} earthPos={earthPos} orbitNormal={moonOrbitNormal} /> : null}
                     {/* Planetas — posições heliocêntricas reais, Sol na origem. */}
                     <PlanetLayer

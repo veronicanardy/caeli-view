@@ -298,7 +298,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                                     radarLoading={closestNowLoading}
                                     onRefresh={() => setRefreshNonce((n) => n + 1)}
                                     onSelect={(approach) => {
-                                        setSelectedFocusId((current) => (current === approach.id ? null : approach.id));
+                                        setSelectedFocusId(approach.id);
                                     }}
                                     onClearSelection={() => {
                                         setSelectedFocusId(null);

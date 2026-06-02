@@ -42,7 +42,7 @@ export function CameraRig({
 
     const tweening = useRef(false);
     useEffect(() => {
-        tweening.current = true; // nova intenção, começa a conduzir
+        tweening.current = true;
     }, [desired]);
 
     // Qualquer interação do usuário cancela o tween imediatamente e devolve o controle.
