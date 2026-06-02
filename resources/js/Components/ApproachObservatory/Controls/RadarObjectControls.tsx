@@ -43,8 +43,8 @@ export function RadarObjectControls({
 
     return (
         <div className="grid gap-2.5 md:inline-flex md:flex-wrap md:items-end md:gap-3">
-            <label className="flex min-w-0 flex-col gap-1 md:w-[18rem] lg:w-[19.5rem]" title={en ? 'Choose how the live radar ranks objects.' : 'Escolha como o radar ao vivo ordena os objetos.'}>
-                <span className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85" title={en ? 'Choose how the live radar ranks objects.' : 'Escolha como o radar ao vivo ordena os objetos.'}>
+            <label className="flex min-w-0 flex-col gap-1 md:w-[18rem] lg:w-[19.5rem]">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85">
                     {en ? 'Criterion' : 'Critério'}
                 </span>
                 <div className="relative">
@@ -53,8 +53,7 @@ export function RadarObjectControls({
                         onChange={(event) => onModeChange(event.target.value as SelectionMode)}
                         disabled={loading || criterionLocked}
                         aria-label={en ? 'Selection criterion' : 'Critério de seleção'}
-                        title={modeDescriptions[selectionMode]}
-                        className="w-full appearance-none rounded-xl border border-white/10 bg-space-950/70 px-3 py-1.5 pr-9 text-[13px] text-white outline-none transition focus:border-signal-cyan disabled:cursor-not-allowed disabled:opacity-50"
+                        className="h-10 w-full appearance-none rounded-xl border border-white/10 bg-space-950/70 px-3 pr-9 text-[13px] text-white outline-none transition focus:border-signal-cyan disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {MODE_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -66,11 +65,11 @@ export function RadarObjectControls({
                 </div>
             </label>
 
-            <div className="flex min-w-0 flex-col gap-1" title={en ? 'Limits how many objects appear in the live radar list.' : 'Limita quantos objetos aparecem na lista do radar ao vivo.'}>
-                <span className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85" title={en ? 'Limits how many objects appear in the live radar list.' : 'Limita quantos objetos aparecem na lista do radar ao vivo.'}>
+            <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85">
                     {en ? 'Show up to' : 'Exibir até'}
                 </span>
-                <div className="flex flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-space-950/70 p-1.5 md:flex-nowrap">
+                <div className="flex h-10 flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-space-950/70 px-1.5 md:flex-nowrap">
                     {LIMITS.map((limit) => (
                         <button
                             key={limit}
@@ -78,7 +77,6 @@ export function RadarObjectControls({
                             disabled={loading}
                             onClick={() => onLimitChange(limit)}
                             aria-pressed={objectLimit === limit}
-                            title={en ? `Show up to ${limit} objects in the live radar.` : `Exibir até ${limit} objetos no radar ao vivo.`}
                             className={[
                                 'min-w-[2.6rem] rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition outline-none',
                                 'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait',
