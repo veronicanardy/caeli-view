@@ -14,6 +14,8 @@ export type FocusFraming = {
     target: THREE.Vector3;
     /** Posição onde a câmera deve ficar. */
     position: THREE.Vector3;
+    /** Sugere ao rig como transitar até o enquadramento. */
+    transition?: 'default' | 'preserve_heading';
 };
 
 /**
@@ -24,11 +26,11 @@ export type FocusFraming = {
 export function framingForBody(center: THREE.Vector3, radius: number): FocusFraming {
     const dir = new THREE.Vector3(0.4, 0.45, 0.8).normalize();
     const distance = Math.max(radius * 20, 0.2);
-    return { target: center.clone(), position: center.clone().add(dir.multiplyScalar(distance)) };
+    return { target: center.clone(), position: center.clone().add(dir.multiplyScalar(distance)), transition: 'default' };
 }
 
 export function framingForOverview(): FocusFraming {
-    return { target: new THREE.Vector3(0, 0, 0), position: CAMERA_VIEWS.perspective.clone() };
+    return { target: new THREE.Vector3(0, 0, 0), position: CAMERA_VIEWS.perspective.clone(), transition: 'default' };
 }
 
 /**
@@ -74,7 +76,7 @@ export function computeFocusFraming(
                 MAX_CAMERA_DISTANCE,
             );
             const dir = new THREE.Vector3(0.32, 0.72, 0.62).normalize();
-            return { target: sphere.center, position: sphere.center.clone().add(dir.multiplyScalar(distance)) };
+            return { target: sphere.center, position: sphere.center.clone().add(dir.multiplyScalar(distance)), transition: 'default' };
         }
 
         // Elementos rejeitados pelo construtor de órbita. Cai para o close-up para mostrar algo.
@@ -91,5 +93,5 @@ export function computeFocusFraming(
     const distance = 2.1;
     const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
     const position = target.clone().add(dir.multiplyScalar(distance));
-    return { target, position };
+    return { target, position, transition: 'preserve_heading' };
 }

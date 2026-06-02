@@ -21,6 +21,7 @@ export function CameraRig({
     focusNonce: number;
     earthPos: [number, number, number];
 }) {
+    const camera = useThree((s) => s.camera);
     const controls = useThree((s) => s.controls) as unknown as
         | { target: THREE.Vector3; update: () => void; addEventListener: (t: string, fn: () => void) => void; removeEventListener: (t: string, fn: () => void) => void }
         | null;
@@ -40,10 +41,29 @@ export function CameraRig({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view, viewNonce, focusTarget, focusNonce]);
 
+    const effectiveDesired = useMemo(() => {
+        if (!focusTarget || focusTarget.transition !== 'preserve_heading') {
+            return desired;
+        }
+
+        const currentTarget = controls?.target?.clone() ?? new THREE.Vector3(0, 0, 0);
+        const currentOffset = camera.position.clone().sub(currentTarget);
+        if (currentOffset.lengthSq() < 1e-8) {
+            return desired;
+        }
+
+        const desiredDistance = focusTarget.position.distanceTo(focusTarget.target);
+        const preservedOffset = currentOffset.normalize().multiplyScalar(desiredDistance);
+        return {
+            position: focusTarget.target.clone().add(preservedOffset),
+            target: focusTarget.target.clone(),
+        };
+    }, [camera.position, controls, desired, focusTarget]);
+
     const tweening = useRef(false);
     useEffect(() => {
         tweening.current = true;
-    }, [desired]);
+    }, [effectiveDesired]);
 
     // Qualquer interação do usuário cancela o tween imediatamente e devolve o controle.
     useEffect(() => {
@@ -53,20 +73,20 @@ export function CameraRig({
         return () => controls.removeEventListener('start', cancel);
     }, [controls]);
 
-    useFrame(({ camera }) => {
+    useFrame(({ camera: frameCamera }) => {
         if (!tweening.current) return;
 
-        camera.position.lerp(desired.position, 0.1);
+        frameCamera.position.lerp(effectiveDesired.position, 0.1);
         if (controls?.target) {
-            controls.target.lerp(desired.target, 0.1);
+            controls.target.lerp(effectiveDesired.target, 0.1);
             controls.update();
         } else {
-            camera.lookAt(desired.target);
+            frameCamera.lookAt(effectiveDesired.target);
         }
 
         // Chegou perto o suficiente: para de conduzir e libera a câmera para o usuário.
-        const posClose = camera.position.distanceToSquared(desired.position) < 1e-4;
-        const tgtClose = !controls?.target || controls.target.distanceToSquared(desired.target) < 1e-4;
+        const posClose = frameCamera.position.distanceToSquared(effectiveDesired.position) < 1e-4;
+        const tgtClose = !controls?.target || controls.target.distanceToSquared(effectiveDesired.target) < 1e-4;
         if (posClose && tgtClose) tweening.current = false;
     });
 
