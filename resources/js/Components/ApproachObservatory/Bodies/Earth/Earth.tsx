@@ -211,6 +211,7 @@ export function Earth({
                     position={LABEL_POSITION}
                     emphasized={hovered}
                     protectFromFocus={protectLabelFromFocus}
+                    allowSceneOverlap={isFocused}
                     onClick={isFocused ? undefined : onFocus}
                     title={isFocused ? undefined : 'Voltar para a visão geral'}
                 >

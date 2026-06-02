@@ -223,7 +223,7 @@ export function PlanetBody({
             ) : null}
 
             {showLabel ? (
-                <ScreenLabel position={labelPos} protectFromFocus={false} onClick={isFocused ? undefined : onFocus}>
+                <ScreenLabel position={labelPos} protectFromFocus={!isFocused} allowSceneOverlap={isFocused} onClick={isFocused ? undefined : onFocus}>
                     <span className="font-semibold">{locale === 'en' ? config.label.en : config.label.pt}</span>
                 </ScreenLabel>
             ) : null}

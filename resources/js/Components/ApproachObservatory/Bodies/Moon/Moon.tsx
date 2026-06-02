@@ -136,6 +136,7 @@ export function Moon({
                     position={moonLabelOffset(earthToMoonVector, compactLabel)}
                     emphasized={hovered}
                     protectFromFocus={protectLabelFromFocus}
+                    allowSceneOverlap={isFocused}
                     onClick={isFocused ? undefined : onFocus}
                     title={isFocused ? undefined : title}
                 >

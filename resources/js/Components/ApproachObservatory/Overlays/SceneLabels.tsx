@@ -33,6 +33,7 @@ const LABEL_HIDE_MIN_RADIUS_PX = 72;
 const LABEL_HIDE_BODY_PADDING_PX = 72;
 const LABEL_OBJECT_HIDE_PADDING_PX = 8;
 const LABEL_OBJECT_SHOW_PADDING_PX = 18;
+const LABEL_OBJECT_MIN_OCCLUDER_RADIUS_PX = 18;
 
 export type LabelOccluder = { center: THREE.Vector3; radius: number } | null;
 
@@ -58,6 +59,7 @@ export function SceneLabel({
     tier,
     highlighted = false,
     protectFromFocus = true,
+    allowSceneOverlap = false,
     onClick,
     title,
 }: {
@@ -67,6 +69,7 @@ export function SceneLabel({
     tier: 'primary' | 'ring';
     highlighted?: boolean;
     protectFromFocus?: boolean;
+    allowSceneOverlap?: boolean;
     onClick?: () => void;
     title?: string;
 }) {
@@ -75,7 +78,7 @@ export function SceneLabel({
     const focusOccluder = useContext(LabelOccluderContext);
     const hiddenByFocus = useLabelHiddenByFocusRef(labelRef, protectFromFocus ? focusOccluder : null);
     const hiddenByNoGo = useLabelInNoGoZone(labelRef);
-    const hiddenByObjects = useLabelOverlapsSceneObjects(buttonRef);
+    const hiddenByObjects = useLabelOverlapsSceneObjects(buttonRef, allowSceneOverlap);
     const cls =
         tier === 'primary'
             ? [
@@ -125,6 +128,7 @@ export function ScreenLabel({
     position,
     emphasized = false,
     protectFromFocus = true,
+    allowSceneOverlap = false,
     children,
     onClick,
     title,
@@ -132,6 +136,7 @@ export function ScreenLabel({
     position: [number, number, number];
     emphasized?: boolean;
     protectFromFocus?: boolean;
+    allowSceneOverlap?: boolean;
     children: React.ReactNode;
     onClick?: () => void;
     title?: string;
@@ -141,7 +146,7 @@ export function ScreenLabel({
     const focusOccluder = useContext(LabelOccluderContext);
     const hiddenByFocus = useLabelHiddenByFocusRef(labelRef, protectFromFocus ? focusOccluder : null);
     const hiddenByNoGo = useLabelInNoGoZone(labelRef);
-    const hiddenByObjects = useLabelOverlapsSceneObjects(buttonRef);
+    const hiddenByObjects = useLabelOverlapsSceneObjects(buttonRef, allowSceneOverlap);
 
     return (
         <group ref={labelRef} position={position}>
@@ -379,7 +384,10 @@ function useLabelHiddenByFocusRef(
     return hidden;
 }
 
-function useLabelOverlapsSceneObjects(labelElementRef: React.RefObject<HTMLElement | null>): boolean {
+function useLabelOverlapsSceneObjects(
+    labelElementRef: React.RefObject<HTMLElement | null>,
+    allowSceneOverlap: boolean,
+): boolean {
     const { camera, gl, size } = useThree();
     const occluders = useContext(SceneObjectOccludersContext);
     const [hidden, setHidden] = useState(false);
@@ -388,7 +396,7 @@ function useLabelOverlapsSceneObjects(labelElementRef: React.RefObject<HTMLEleme
 
     useFrame(() => {
         const element = labelElementRef.current;
-        if (!element || occluders.length === 0) {
+        if (allowSceneOverlap || !element || occluders.length === 0) {
             if (hiddenRef.current) {
                 hiddenRef.current = false;
                 setHidden(false);
@@ -422,10 +430,11 @@ function useLabelOverlapsSceneObjects(labelElementRef: React.RefObject<HTMLEleme
                 x: canvasRect.left + (edge.x * 0.5 + 0.5) * size.width,
                 y: canvasRect.top + (-edge.y * 0.5 + 0.5) * size.height,
             };
-            const radiusPx = Math.hypot(edgePx.x - centerPx.x, edgePx.y - centerPx.y) + paddingPx;
+            const radiusPx = Math.hypot(edgePx.x - centerPx.x, edgePx.y - centerPx.y);
+            if (radiusPx < LABEL_OBJECT_MIN_OCCLUDER_RADIUS_PX) return false;
             const nearestX = Math.max(labelRect.left, Math.min(centerPx.x, labelRect.right));
             const nearestY = Math.max(labelRect.top, Math.min(centerPx.y, labelRect.bottom));
-            return Math.hypot(centerPx.x - nearestX, centerPx.y - nearestY) < radiusPx;
+            return Math.hypot(centerPx.x - nearestX, centerPx.y - nearestY) < radiusPx + paddingPx;
         });
 
         if (nextHidden !== hiddenRef.current) {

@@ -104,7 +104,7 @@ export function Sun({
                     </mesh>
                 ) : null}
                 {showLabel ? (
-                    <ScreenLabel position={[0, radius + 0.42, 0]} protectFromFocus={false} onClick={onFocus}>
+                    <ScreenLabel position={[0, radius + 0.42, 0]} protectFromFocus={!isFocused} allowSceneOverlap={isFocused} onClick={onFocus}>
                         <span className="font-semibold">{en ? 'Sun' : 'Sol'}</span>
                     </ScreenLabel>
                 ) : null}

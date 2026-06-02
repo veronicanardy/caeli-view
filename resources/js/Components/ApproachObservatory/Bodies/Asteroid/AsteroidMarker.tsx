@@ -146,6 +146,7 @@ export function AsteroidMarker({
                     position={LABEL_POSITION}
                     emphasized={isSelected || hovered}
                     protectFromFocus={protectLabelFromFocus}
+                    allowSceneOverlap={isSelected}
                     onClick={isSelected ? undefined : () => onSelect(object.approach)}
                     title={isSelected ? undefined : `Focar ${object.approach.displayName ?? object.approach.name}`}
                 >
