@@ -1,3 +1,10 @@
+/**
+ * Cards visuais de dados físicos.
+ *
+ * Responsabilidade: exibir magnitude, diâmetro, albedo e rotação quando a NASA/JPL
+ * retorna dados suficientes. A ausência de dados é tratada com estado vazio.
+ */
+
 import { Diameter, Moon, RotateCw, Sparkle } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 import { SmallBody } from '@/types';

@@ -1,3 +1,10 @@
+/**
+ * Objetos de referência para comparação de escala.
+ *
+ * Responsabilidade: manter a lista estática de silhuetas usadas para comparar
+ * diâmetros de asteroides em metros.
+ */
+
 export type ComparisonObjectType = 'person' | 'car' | 'bus' | 'building' | 'christ' | 'plane' | 'liberty' | 'field';
 
 export type ComparisonObject = {

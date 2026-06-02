@@ -1,3 +1,10 @@
+/**
+ * Grade visual de elementos orbitais.
+ *
+ * Responsabilidade: apresentar parâmetros orbitais em cartões legíveis, mantendo
+ * a explicação visual perto dos valores recebidos da API.
+ */
+
 import { Activity, Compass, Orbit, RotateCcw, Timer, Waypoints } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 import { OrbitalElement } from '@/types';

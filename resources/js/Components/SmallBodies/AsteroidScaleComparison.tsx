@@ -1,3 +1,10 @@
+/**
+ * Comparação visual de escala do asteroide.
+ *
+ * Responsabilidade: comparar o diâmetro estimado do objeto com referências humanas
+ * e urbanas, preservando proporção visual dentro de uma cena didática.
+ */
+
 import { ChevronDown, Ruler } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';

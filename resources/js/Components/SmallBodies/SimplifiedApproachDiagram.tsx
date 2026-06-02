@@ -1,3 +1,10 @@
+/**
+ * Diagrama simplificado de aproximação.
+ *
+ * Responsabilidade: oferecer uma leitura visual didática da passagem de um
+ * pequeno corpo. O desenho prioriza compreensão, não simulação física completa.
+ */
+
 import { compactKm, formatNumber } from '@/lib/format';
 import { SmallBody, SmallBodyCloseApproach } from '@/types';
 import { ObjectTypeBadge } from './ObjectTypeBadge';

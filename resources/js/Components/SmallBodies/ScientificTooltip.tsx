@@ -1,3 +1,10 @@
+/**
+ * Tooltip científico reutilizável.
+ *
+ * Responsabilidade: exibir explicações curtas para termos técnicos sem espalhar
+ * lógica de tooltip pelos componentes da pasta.
+ */
+
 import { Info } from 'lucide-react';
 import { PropsWithChildren } from 'react';
 

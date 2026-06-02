@@ -1,3 +1,10 @@
+/**
+ * Resumo útil do pequeno corpo.
+ *
+ * Responsabilidade: condensar identificação, tipo, tamanho, velocidade, distância,
+ * data, magnitude e fonte de dados em cartões de leitura rápida.
+ */
+
 import { BadgeInfo, CalendarClock, Gauge, Moon, Ruler, ShieldAlert, Sparkles, Telescope } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { compactKm, compactMeters, formatNumber, lunarDistanceFromKm, lunarDistanceLabel } from '@/lib/format';

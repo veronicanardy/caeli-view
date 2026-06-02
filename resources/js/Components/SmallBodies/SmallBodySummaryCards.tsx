@@ -1,3 +1,10 @@
+/**
+ * Cards de resumo para pequenos corpos.
+ *
+ * Responsabilidade: apresentar métricas principais já recebidas da página em
+ * cartões curtos. Não busca dados nem recalcula propriedades orbitais.
+ */
+
 import { CalendarClock, Gauge, Orbit, Sparkles, Target } from 'lucide-react';
 import { ComponentType, ReactNode } from 'react';
 import { compactKm, formatNumber } from '@/lib/format';

@@ -1,3 +1,10 @@
+/**
+ * Protótipo 3D didático de asteroide.
+ *
+ * Responsabilidade: renderizar um modelo procedural leve para comunicar forma e
+ * escala aproximadas. Não representa topografia real do objeto observado.
+ */
+
 import { Ruler } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n';

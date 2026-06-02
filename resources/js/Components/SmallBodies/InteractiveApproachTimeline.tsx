@@ -1,3 +1,10 @@
+/**
+ * Linha do tempo de aproximações.
+ *
+ * Responsabilidade: listar passagens próximas em ordem visual e destacar métricas
+ * úteis de cada evento. Não ordena nem enriquece dados fora da própria exibição.
+ */
+
 import { useState } from 'react';
 import { compactKm, formatNumber } from '@/lib/format';
 import { SmallBodyCloseApproach } from '@/types';

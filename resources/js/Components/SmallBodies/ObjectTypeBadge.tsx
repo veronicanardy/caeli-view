@@ -1,3 +1,10 @@
+/**
+ * Badge de tipo de pequeno corpo.
+ *
+ * Responsabilidade: padronizar rótulo, ícone e tom visual para asteroides,
+ * cometas e outros objetos pequenos.
+ */
+
 import { Orbit, Sparkles } from 'lucide-react';
 import { SmallBodyObjectType } from '@/types';
 

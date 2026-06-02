@@ -1,3 +1,10 @@
+/**
+ * Comparação textual de distância.
+ *
+ * Responsabilidade: contextualizar a distância mínima de aproximação com unidade
+ * lunar e escala terrestre quando houver dados disponíveis.
+ */
+
 import { SmallBodyCloseApproach } from '@/types';
 import { ApproachDistanceScale } from './ApproachDistanceScale';
 import { LunarDistanceCard } from './LunarDistanceCard';

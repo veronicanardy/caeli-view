@@ -1,3 +1,10 @@
+/**
+ * Card de distância lunar.
+ *
+ * Responsabilidade: apresentar a distância de aproximação em distâncias lunares,
+ * mantendo a leitura rápida para o usuário.
+ */
+
 import { Moon } from 'lucide-react';
 import { compactKm, formatNumber, lunarDistanceLabel } from '@/lib/format';
 

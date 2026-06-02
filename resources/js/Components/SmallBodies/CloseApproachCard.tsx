@@ -1,3 +1,10 @@
+/**
+ * Card de aproximação próxima.
+ *
+ * Responsabilidade: exibir uma passagem individual como link navegável para o
+ * dossiê do objeto, com distância e velocidade em destaque.
+ */
+
 import { Link } from '@inertiajs/react';
 import { CalendarDays, MoveRight } from 'lucide-react';
 import { compactKm, formatNumber } from '@/lib/format';

@@ -1,3 +1,10 @@
+/**
+ * Painel de gráficos de aproximações.
+ *
+ * Responsabilidade: apresentar séries agregadas da página de pequenos corpos em
+ * gráficos Recharts. Não calcula estatísticas; recebe `charts` já preparado.
+ */
+
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ReactNode } from 'react';
 import { JplApproachCharts } from '@/types';

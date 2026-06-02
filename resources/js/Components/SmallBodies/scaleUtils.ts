@@ -1,3 +1,10 @@
+/**
+ * Utilitários de escala para comparações visuais de pequenos corpos.
+ *
+ * Responsabilidade: normalizar diâmetros, formatar metros e montar frases de
+ * comparação. Não renderiza UI e não consulta dados externos.
+ */
+
 import { ComparisonObject } from './comparisonObjects';
 
 export function getAsteroidAverageDiameter(min: number | null, max: number | null, fallback: number | null): number | null {

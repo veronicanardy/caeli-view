@@ -1,3 +1,10 @@
+/**
+ * Escala visual de distância de aproximação.
+ *
+ * Responsabilidade: converter uma distância em UA para uma barra comparativa
+ * simples, útil em cards e listas.
+ */
+
 import { formatNumber } from '@/lib/format';
 
 export function ApproachDistanceScale({ distanceAu, label = 'Escala de passagem' }: { distanceAu: number | null | undefined; label?: string }) {

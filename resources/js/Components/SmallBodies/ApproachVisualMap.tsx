@@ -1,3 +1,10 @@
+/**
+ * Mapa visual de aproximações.
+ *
+ * Responsabilidade: posicionar passagens em uma escala didática de distância,
+ * ajudando a comparar eventos sem simular uma órbita completa.
+ */
+
 import { Link } from '@inertiajs/react';
 import { JplCloseApproach } from '@/types';
 import { ObjectTypeBadge } from './ObjectTypeBadge';

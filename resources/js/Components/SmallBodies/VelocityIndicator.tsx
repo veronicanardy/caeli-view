@@ -1,3 +1,10 @@
+/**
+ * Indicador visual de velocidade relativa.
+ *
+ * Responsabilidade: traduzir uma velocidade em km/s para barra e leitura visual
+ * compacta. Não calcula aproximações nem classifica risco orbital.
+ */
+
 import { Gauge } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 

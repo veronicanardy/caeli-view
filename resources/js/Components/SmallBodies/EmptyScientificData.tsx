@@ -1,3 +1,10 @@
+/**
+ * Estado vazio para dados científicos.
+ *
+ * Responsabilidade: comunicar ausência de dados de forma consistente nas seções
+ * de pequenos corpos.
+ */
+
 import { Telescope } from 'lucide-react';
 
 export function EmptyScientificData({ title, message }: { title: string; message: string }) {

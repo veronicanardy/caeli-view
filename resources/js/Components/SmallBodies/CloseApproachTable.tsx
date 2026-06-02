@@ -1,3 +1,10 @@
+/**
+ * Tabela de aproximações próximas.
+ *
+ * Responsabilidade: renderizar a lista tabular de passagens e delegar ordenação
+ * para a página via callback.
+ */
+
 import { Link } from '@inertiajs/react';
 import { ArrowUpDown } from 'lucide-react';
 import { compactKm, formatNumber } from '@/lib/format';

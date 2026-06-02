@@ -1,3 +1,10 @@
+/**
+ * Cabeçalho do dossiê orbital.
+ *
+ * Responsabilidade: identificar o pequeno corpo selecionado e exibir metadados
+ * principais antes das seções científicas detalhadas.
+ */
+
 import { Link } from '@inertiajs/react';
 import { ArrowLeft, Orbit } from 'lucide-react';
 import { useTranslation } from '@/i18n';
