@@ -1,13 +1,13 @@
-import type { Ref } from 'react';
-import { BODIES, type BodyId } from './bodyInfoContent';
-import { PanelShell } from './PanelShell';
-
 /**
  * Card informativo para corpos celestes de referência.
  *
- * Recebe dados estáticos já definidos para os corpos e apenas organiza a leitura
- * visual. Não calcula posição, órbita ou efeméride.
+ * Responsabilidade: organizar textos e fatos estáticos definidos em
+ * `bodyInfoContent`, sem calcular posição, órbita ou efeméride.
  */
+
+import type { Ref } from 'react';
+import { BODIES, type BodyId } from './bodyInfoContent';
+import { PanelShell } from './PanelShell';
 
 interface BodyInfoCardProps {
     body: BodyId;

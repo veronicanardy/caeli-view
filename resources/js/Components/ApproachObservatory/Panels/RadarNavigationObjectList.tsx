@@ -1,15 +1,15 @@
+/**
+ * Lista de objetos próximos do radar.
+ *
+ * Responsabilidade: apresentar objetos já filtrados/rankeados por camadas
+ * superiores e encaminhar a intenção de seleção para o componente pai.
+ */
+
 import { RefreshCw } from 'lucide-react';
 import type { ClosestNowObject, ObjectLimit, SelectionMode, UnifiedApproach } from '@/types';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
 import { ObjectListItem } from '../Lists/RadarSceneObjectListItem';
 import { EmptyModeMessage } from './MobilePanelControls';
-
-/**
- * Lista de objetos próximos do radar.
- *
- * Apenas apresenta os objetos já filtrados/rankeados por camadas superiores e
- * encaminha a intenção de seleção para o componente pai.
- */
 
 export function RefreshButton({ en, onRefresh, loading }: { en: boolean; onRefresh?: () => void; loading: boolean }) {
     if (!onRefresh) return null;

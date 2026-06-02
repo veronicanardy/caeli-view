@@ -1,3 +1,10 @@
+/**
+ * Dossiê principal do objeto selecionado.
+ *
+ * Responsabilidade: apresentar identidade, motivos de foco, métricas e
+ * comparações a partir de dados já resolvidos pelas camadas superiores.
+ */
+
 import { Link } from '@inertiajs/react';
 import { CalendarClock, Gauge, MoveRight, Ruler, Sparkles, Target } from 'lucide-react';
 import type { ReactNode } from 'react';

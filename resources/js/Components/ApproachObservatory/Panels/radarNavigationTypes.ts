@@ -1,14 +1,15 @@
+/**
+ * Contratos compartilhados da navegação do radar.
+ *
+ * Responsabilidade: separar props do painel principal das props realmente usadas
+ * pelos conteúdos mobile/desktop, evitando que callbacks de filtros vazem para
+ * subcomponentes que não os renderizam.
+ */
+
 import type { RefObject } from 'react';
 import type { ClosestNowObject, ObjectLimit, SelectionMode, UnifiedApproach } from '@/types';
 import type { MobilePanelSection } from './MobilePanelControls';
 import type { PlanetId } from '../Scene/planetConfig';
-
-/**
- * Tipos compartilhados pelos subcomponentes do painel de navegação do radar.
- *
- * Mantém contratos de UI perto de Panels sem mover seleção global, ranking ou
- * regras orbitais para os componentes visuais.
- */
 
 export type RadarNavigationPanelProps = {
     en: boolean;
@@ -40,6 +41,6 @@ export type RadarNavigationPanelProps = {
 
 export type NavigationContentProps = Pick<RadarNavigationPanelProps,
     'en' | 'locale' | 'orbitMode' | 'closestNowObjects' | 'selectedId' | 'objectLimit' |
-    'selectionMode' | 'onLimitChange' | 'onModeChange' | 'radarLoading' | 'onRefresh' |
+    'selectionMode' | 'radarLoading' | 'onRefresh' |
     'planetsOpen' | 'onPlanetsOpenChange' | 'onSelectObject' | 'onFocusBody' | 'onFocusSun'
 >;

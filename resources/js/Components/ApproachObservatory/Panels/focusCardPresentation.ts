@@ -1,12 +1,11 @@
-import type { AsteroidTrajectory, ClosestNowObject, HorizonsFailureKind, UnifiedApproach } from '@/types';
-
 /**
- * Helpers de apresentação do FocusCard.
+ * Helpers de apresentação do `FocusCard`.
  *
- * Este módulo monta textos, badges e leituras visuais a partir de dados já
- * recebidos. Não chama APIs, não calcula órbita, não decide ranking e não mexe
- * em fallback Horizons/CAD.
+ * Responsabilidade: montar textos, badges e leituras visuais a partir de dados
+ * já recebidos. Não chama APIs, não calcula órbita e não decide ranking.
  */
+
+import type { AsteroidTrajectory, ClosestNowObject, HorizonsFailureKind, UnifiedApproach } from '@/types';
 
 export function riskAssessment(a: UnifiedApproach, en: boolean): { icon: string; title: string; subtitle: string; className: string } {
     if (a.hazardFlag) {

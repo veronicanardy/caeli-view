@@ -1,3 +1,10 @@
+/**
+ * Painel expansível para dados técnicos.
+ *
+ * Responsabilidade: oferecer disclosure visual para conteúdo técnico recebido
+ * por composição, sem interpretar ou transformar os dados exibidos.
+ */
+
 import { ChevronDown, Terminal } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';

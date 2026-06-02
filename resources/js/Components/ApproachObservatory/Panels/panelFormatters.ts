@@ -1,11 +1,11 @@
-import { formatNumber } from '@/lib/format';
-
 /**
  * Formatadores locais de apresentação usados pelos painéis.
  *
- * Este arquivo padroniza datas e unidades exibidas na UI. Não calcula órbita,
- * ranking, trajetória ou posições reais da cena.
+ * Responsabilidade: padronizar datas e unidades exibidas na UI. Não calcula
+ * órbita, ranking, trajetória ou posições reais da cena.
  */
+
+import { formatNumber } from '@/lib/format';
 
 const EN_MONTH_NUMBER: Record<string, string> = {
     Jan: '01',

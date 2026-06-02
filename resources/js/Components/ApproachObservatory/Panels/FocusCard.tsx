@@ -1,4 +1,12 @@
-﻿import { useState, type ReactNode, type Ref } from 'react';
+/**
+ * Card compacto do objeto em foco no radar 3D.
+ *
+ * Responsabilidade: organizar leitura visual, abas, resumo, dados físicos,
+ * detalhes de aproximação e ações locais. Recebe dados prontos e não decide
+ * ranking, seleção global, cálculo orbital ou fallback científico.
+ */
+
+import { useState, type ReactNode, type Ref } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';

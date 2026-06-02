@@ -1,3 +1,10 @@
+/**
+ * Shell visual comum dos painéis flutuantes.
+ *
+ * Responsabilidade: padronizar posicionamento, header, bordas, backdrop e botão
+ * de fechamento usados por cards como `FocusCard` e `BodyInfoCard`.
+ */
+
 import type { ReactNode, Ref } from 'react';
 
 type PanelShellProps = {
@@ -19,10 +26,6 @@ type PanelShellProps = {
     panelRef?: Ref<HTMLDivElement>;
 };
 
-/**
- * Shell comum dos painéis flutuantes da cena 3D (FocusCard, BodyInfoCard).
- * Garante posicionamento, bordas, backdrop e estrutura de header consistentes.
- */
 export function PanelShell({
     onClose,
     closeLabel,

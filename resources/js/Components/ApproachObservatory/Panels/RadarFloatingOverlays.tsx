@@ -1,3 +1,10 @@
+/**
+ * Overlays flutuantes da experiência 3D.
+ *
+ * Responsabilidade: agrupar cards, loading, toasts e legenda posicionados sobre
+ * o canvas, mantendo o componente principal livre de UI sobreposta.
+ */
+
 import type { RefObject } from 'react';
 import type { ClosestNowObject, LunarReference, UnifiedApproach } from '@/types';
 import type { SceneMode } from '../Controls/Manual/manualTypes';
@@ -30,12 +37,6 @@ type Props = {
     lunarReference: LunarReference;
 };
 
-/**
- * Camada de overlays da experiência 3D.
- *
- * Agrupa cards flutuantes, badge inferior, loading, toasts e legenda para manter o
- * componente principal livre de UI posicionada sobre o canvas.
- */
 export function RadarFloatingOverlays({
     en,
     locale,

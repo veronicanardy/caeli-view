@@ -1,3 +1,10 @@
+/**
+ * Legenda e acesso ao manual da cena.
+ *
+ * Responsabilidade: exibir referências de escala e abrir o manual contextual do
+ * modo atual, sem controlar câmera, seleção ou dados orbitais.
+ */
+
 import { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { BookOpen, ChevronDown } from 'lucide-react';

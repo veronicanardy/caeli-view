@@ -1,13 +1,13 @@
-import type { ReactNode } from 'react';
-import { ChevronDown } from 'lucide-react';
-import type { SelectionMode } from '@/types';
-
 /**
  * Controles reutilizáveis do painel mobile.
  *
- * Este arquivo renderiza botões, cabeçalhos e mensagens vazias. Ele não decide
+ * Responsabilidade: renderizar botões, cabeçalhos e mensagens vazias. Não decide
  * ranking, seleção global, filtros reais ou modo orbital.
  */
+
+import type { ReactNode } from 'react';
+import { ChevronDown } from 'lucide-react';
+import type { SelectionMode } from '@/types';
 
 export type MobilePanelSection = 'menu' | 'filters' | 'reference' | 'objects';
 

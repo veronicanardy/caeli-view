@@ -1,3 +1,11 @@
+/**
+ * Painel de navegação do radar 3D.
+ *
+ * Responsabilidade: manter moldura desktop/mobile, colapso e flyout lateral de
+ * planetas. O conteúdo interno fica em componentes locais para preservar
+ * legibilidade sem mover seleção, ranking ou regras orbitais para `Panels`.
+ */
+
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { PlanetFlyout } from '../Controls/ReferenceControls';
 import type { PlanetId } from '../Scene/planetConfig';
@@ -5,13 +13,6 @@ import { RadarNavigationDesktopContent } from './RadarNavigationDesktopContent';
 import { RadarNavigationMobileContent } from './RadarNavigationMobileContent';
 import type { RadarNavigationPanelProps } from './radarNavigationTypes';
 
-/**
- * Painel de navegação do radar 3D.
- *
- * Mantém a moldura desktop/mobile, colapso e flyout lateral de planetas. O
- * conteúdo interno fica em componentes locais para preservar legibilidade sem
- * mover seleção, ranking ou regras orbitais para Panels.
- */
 export function RadarNavigationPanel({
     en,
     locale,
@@ -20,8 +21,6 @@ export function RadarNavigationPanel({
     selectedId,
     objectLimit,
     selectionMode,
-    onLimitChange,
-    onModeChange,
     radarLoading,
     onRefresh,
     panelCollapsed,
@@ -114,8 +113,6 @@ export function RadarNavigationPanel({
                         selectedId={selectedId}
                         objectLimit={objectLimit}
                         selectionMode={selectionMode}
-                        onLimitChange={onLimitChange}
-                        onModeChange={onModeChange}
                         radarLoading={radarLoading}
                         onRefresh={onRefresh}
                         planetsOpen={planetsOpen}

@@ -1,14 +1,14 @@
+/**
+ * Conteúdo desktop do painel de navegação.
+ *
+ * Responsabilidade: renderizar referências e lista de objetos em fluxo lateral,
+ * usando apenas dados e callbacks recebidos do painel principal.
+ */
+
 import { ReferenceSection } from '../Controls/ReferenceControls';
 import { listTitle } from './MobilePanelControls';
 import { RadarNavigationObjectList, RefreshButton } from './RadarNavigationObjectList';
 import type { NavigationContentProps } from './radarNavigationTypes';
-
-/**
- * Conteudo desktop do painel de navegacao.
- *
- * Mantem filtros, referencias e lista em fluxo unico, apenas renderizando dados
- * e callbacks recebidos do componente principal.
- */
 
 export function RadarNavigationDesktopContent({
     en,

@@ -36,7 +36,7 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 - `RadarNavigationMobileContent.tsx`: conteúdo mobile da navegação.
 - `RadarNavigationDesktopContent.tsx`: conteúdo desktop da navegação.
 - `RadarNavigationObjectList.tsx`: lista visual de objetos e botão de atualização.
-- `radarNavigationTypes.ts`: contratos compartilhados pelos subcomponentes de navegação.
+- `radarNavigationTypes.ts`: contratos compartilhados da navegação, separando props do painel principal das props realmente usadas por conteúdos mobile/desktop.
 - `PanelShell.tsx`: shell visual reutilizável para painéis.
 - `SceneLegend.tsx`: legenda da cena.
 - `TechnicalDataPanel.tsx`: painel técnico expansível.
@@ -44,7 +44,7 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 
 ## Remoção Do Caminho 2D
 
-Os painéis `ObservatoryFocusPanel.tsx` e `ObservatoryDetailOverlay.tsx` foram removidos junto com o radar 2D/SVG. O foco visual agora passa pelo `FocusCard`, `FocusObject`, `RadarFloatingOverlays` e pela navegação do radar 3D.
+Os painéis `ObservatoryFocusPanel.tsx`, `ObservatoryDetailOverlay.tsx` e o card legado `MercuryCard.tsx` foram removidos junto com caminhos duplicados de UI. O foco visual agora passa pelo `FocusCard`, `FocusObject`, `BodyInfoCard`, `RadarFloatingOverlays` e pela navegação do radar 3D.
 
 ## Cards De Foco
 
@@ -57,6 +57,14 @@ Helpers de texto e status devem ficar em arquivos locais de apresentação quand
 `RadarNavigationPanel.tsx` coordena a moldura visual e delega o conteúdo para componentes mobile, desktop e lista.
 
 Filtros, referências, abertura de planetas, seleção de objetos, modo orbital e colapso devem preservar os contratos recebidos por props.
+
+## Padrões Locais
+
+- Todo arquivo de `Panels` deve iniciar com documentação em português explicando responsabilidade e fronteiras.
+- Componentes de painel devem receber dados e callbacks por props; não devem acessar seleção global, câmera ou APIs diretamente.
+- `radarNavigationTypes.ts` deve evitar contratos largos demais para subcomponentes. Conteúdos mobile/desktop devem receber apenas as props que realmente renderizam.
+- Cards de corpos celestes devem passar por `BodyInfoCard.tsx` e `bodyInfoContent.ts`, evitando cards específicos duplicados por planeta.
+- Helpers de texto, badges e formatação devem ficar em arquivos locais de apresentação, como `focusCardPresentation.ts` e `panelFormatters.ts`.
 
 ## Regra Para IA
 

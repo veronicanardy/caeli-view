@@ -1,14 +1,15 @@
+/**
+ * Conteúdo mobile do painel de navegação.
+ *
+ * Responsabilidade: priorizar a lista de objetos no mobile e incluir referências
+ * compactas, sem assumir filtros ou callbacks que não são renderizados aqui.
+ */
+
 import { ReferenceSection } from '../Controls/ReferenceControls';
 import { MobilePanelSectionHeader } from './MobilePanelControls';
 import { RadarNavigationObjectList, RefreshButton } from './RadarNavigationObjectList';
 import type { NavigationContentProps } from './radarNavigationTypes';
 
-/**
- * Conteudo mobile do painel de navegacao.
- *
- * No mobile o painel agora abre direto no ranking de objetos para evitar a
- * navegacao extra por secoes.
- */
 export function RadarNavigationMobileContent({
     en,
     locale,

@@ -1,4 +1,11 @@
-﻿import { AlertTriangle, Clock, Database, Eye, Moon, SatelliteDish, Target } from 'lucide-react';
+/**
+ * Card de qualidade dos dados do radar.
+ *
+ * Responsabilidade: resumir cobertura Horizons, objetos simbólicos e aproximações
+ * próximas a partir de objetos já calculados por camadas superiores.
+ */
+
+import { AlertTriangle, Clock, Database, Eye, Moon, SatelliteDish, Target } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Translator } from '@/i18n';
 import { compactKm, formatNumber, lunarDistanceLabel } from '@/lib/format';
