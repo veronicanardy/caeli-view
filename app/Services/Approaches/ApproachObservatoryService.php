@@ -11,6 +11,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Concurrency;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Orquestrador principal do observatório de aproximações.
@@ -157,15 +158,21 @@ final class ApproachObservatoryService
         $cadItems   = collect();
 
         if (isset($results['neows'])) {
-            $results['neows']['ok']
-                ? $neoWsItems = $results['neows']['data']
-                : $errors['neows'] = $results['neows']['error'];
+            if ($results['neows']['ok']) {
+                $neoWsItems = $results['neows']['data'];
+            } else {
+                $errors['neows'] = $results['neows']['error'];
+                Log::warning('[Observatory] NeoWs falhou', ['error' => $results['neows']['error'], 'date_min' => $normalized['date_min'], 'date_max' => $normalized['date_max']]);
+            }
         }
 
         if (isset($results['cad'])) {
-            $results['cad']['ok']
-                ? $cadItems = $results['cad']['data']
-                : $errors['cad'] = $results['cad']['error'];
+            if ($results['cad']['ok']) {
+                $cadItems = $results['cad']['data'];
+            } else {
+                $errors['cad'] = $results['cad']['error'];
+                Log::warning('[Observatory] CAD falhou', ['error' => $results['cad']['error'], 'date_min' => $normalized['date_min'], 'date_max' => $normalized['date_max']]);
+            }
         }
 
         return [$neoWsItems, $cadItems, $errors];
@@ -201,23 +208,15 @@ final class ApproachObservatoryService
             $windows[] = [$ws->toDateString(), $we->toDateString()];
         }
 
-        // Intervalo cabe em uma janela — chama direto sem concorrência
-        if (count($windows) === 1) {
-            [$s, $e] = $windows[0];
+        $all = collect();
+        foreach ($windows as [$s, $e]) {
             $feed = $this->neoWs->feed($s, $e);
-
-            return collect($feed['asteroids'] ?? [])
-                ->map(fn (array $a) => UnifiedApproachData::fromNeoWs($a));
+            $all  = $all->merge(
+                collect($feed['asteroids'] ?? [])->map(fn (array $a) => UnifiedApproachData::fromNeoWs($a))
+            );
         }
 
-        $tasks   = array_map(fn (array $w) => fn () => $this->neoWs->feed($w[0], $w[1]), $windows);
-        $results = Concurrency::run($tasks);
-
-        return collect($results)
-            ->filter(fn ($r) => is_array($r))
-            ->flatMap(fn (array $feed) => collect($feed['asteroids'] ?? [])
-                ->map(fn (array $a) => UnifiedApproachData::fromNeoWs($a)))
-            ->values();
+        return $all->values();
     }
 
     /**

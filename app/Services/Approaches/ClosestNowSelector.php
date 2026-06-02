@@ -81,6 +81,17 @@ final class ClosestNowSelector
     private const HORIZONS_BATCH_SIZE = 8;
 
     /**
+     * Janelas de busca por modo — fonte única de verdade sobre quantos dias cada modo abrange.
+     * Mudar um valor aqui reflete automaticamente tanto na query ao CAD/NeoWs quanto no filtro
+     * interno de pickUpcomingCandidates/pickAttentionCandidates.
+     */
+    private const MODE_WINDOW_DAYS = [
+        'nearest'   => ['past' => 3,  'future' => 3],
+        'upcoming'  => ['past' => 0,  'future' => 30],
+        'attention' => ['past' => 90, 'future' => 90],
+    ];
+
+    /**
      * TTL do cache para o resultado resolvido.
      * Curto o suficiente para "mais próximo agora" ficar fresco, longo o suficiente para
      * coalescer recarregamentos simultâneos do frontend.
@@ -184,19 +195,20 @@ final class ClosestNowSelector
         // Passo 1: candidatos do CAD + NeoWs.
         // 'attention' usa janela de ± 90 dias sem dist_max para garantir que PHAs sejam
         // encontrados mesmo fora da janela diária.
-        // 'upcoming' usa janela alargada para capturar os próximos 3 dias.
+        // 'upcoming' usa janela alargada para capturar os próximos 10 dias.
+        $anchor    = CarbonImmutable::parse($anchorDate, 'UTC');
         $observeParams = match ($mode) {
             'attention' => [
-                'date_min'      => CarbonImmutable::parse($anchorDate, 'UTC')->subDays(90)->toDateString(),
-                'date_max'      => CarbonImmutable::parse($anchorDate, 'UTC')->addDays(90)->toDateString(),
+                'date_min'      => $anchor->subDays(self::MODE_WINDOW_DAYS['attention']['past'])->toDateString(),
+                'date_max'      => $anchor->addDays(self::MODE_WINDOW_DAYS['attention']['future'])->toDateString(),
                 'type'          => 'comet', // pula NeoWs (só asteroides) — CAD basta e evita crash com janela ±90d
                 'dist_max'      => '1.0',   // até 1 UA — inclui objetos famosos distantes
                 'sort'          => 'dist',
                 'distance_unit' => 'km',
             ],
             'upcoming' => [
-                'date_min'      => $dateMin,
-                'date_max'      => $dateMax,
+                'date_min'      => $anchorDate,
+                'date_max'      => $anchor->addDays(self::MODE_WINDOW_DAYS['upcoming']['future'])->toDateString(),
                 'type'          => 'all',
                 'dist_max'      => '0.05',  // mesmo critério do Eyes on Asteroids
                 'sort'          => 'dist',
@@ -362,7 +374,7 @@ final class ClosestNowSelector
     }
 
     /**
-     * Modo 'upcoming': objetos cuja data de máxima aproximação cai nos próximos 3 dias
+     * Modo 'upcoming': objetos cuja data de máxima aproximação cai nos próximos 30 dias
      * a partir da data âncora (inclusive). Ordenados por proximidade temporal com o instante atual.
      *
      * Atenção: approachDate pode vir em formatos distintos da NASA (ex: "2026-May-28 12:42"
@@ -378,7 +390,7 @@ final class ClosestNowSelector
         $anchorStart = CarbonImmutable::parse($dateMin, 'UTC')->startOfDay();
         // Corte a partir de agora (não do início do dia) para não incluir aproximações já passadas.
         $windowStart = $anchorStart->greaterThan($now) ? $anchorStart : $now;
-        $anchorEnd   = $anchorStart->addDays(3)->endOfDay();
+        $anchorEnd   = $anchorStart->addDays(self::MODE_WINDOW_DAYS['upcoming']['future'])->endOfDay();
 
         $filtered = array_values(array_filter(
             $approaches,

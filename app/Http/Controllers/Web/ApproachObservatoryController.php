@@ -183,12 +183,16 @@ class ApproachObservatoryController
         $mode         = (string) ($validated['mode'] ?? 'nearest');
         $forceRefresh = (bool) ($validated['force_refresh'] ?? false);
 
-        // "Closest right now" is not the same as "approaches that peak today". An object that had
-        // its peak 2 days ago can still be one of the 5 closest to Earth right now, and so can one
-        // that peaks tomorrow. We widen the candidate window symmetrically to catch both.
+        // Para 'nearest': alarga ±3 dias para capturar objetos cujo pico foi ontem mas ainda
+        // estão entre os mais próximos agora. Para outros modos o selector define a própria janela.
         try {
-            $dateMin = CarbonImmutable::parse($anchorMin, 'UTC')->subDays(3)->toDateString();
-            $dateMax = CarbonImmutable::parse($anchorMax, 'UTC')->addDays(3)->toDateString();
+            if ($mode === 'nearest') {
+                $dateMin = CarbonImmutable::parse($anchorMin, 'UTC')->subDays(3)->toDateString();
+                $dateMax = CarbonImmutable::parse($anchorMax, 'UTC')->addDays(3)->toDateString();
+            } else {
+                $dateMin = $anchorMin;
+                $dateMax = $anchorMax;
+            }
         } catch (\Throwable) {
             $dateMin = $anchorMin;
             $dateMax = $anchorMax;

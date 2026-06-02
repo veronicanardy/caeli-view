@@ -74,7 +74,7 @@ export function MobilePanelSectionHeader({
 
 const EMPTY_MODE_MESSAGES: Record<SelectionMode, { pt: string; en: string }> = {
     nearest: { pt: 'Nenhum objeto próximo encontrado agora.', en: 'No nearby objects found right now.' },
-    upcoming: { pt: 'Nenhuma aproximação prevista para hoje.', en: 'No close approaches scheduled for today.' },
+    upcoming: { pt: 'Nenhuma aproximação prevista para os próximos dias.', en: 'No close approaches scheduled for the next few days.' },
     attention: {
         pt: 'Nenhum objeto monitorado pela NASA/JPL com posição disponível no radar agora.',
         en: 'No NASA/JPL-monitored objects with a position available in the radar right now.',
