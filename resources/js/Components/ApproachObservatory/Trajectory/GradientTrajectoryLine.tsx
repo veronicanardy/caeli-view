@@ -49,7 +49,9 @@ export function GradientTrajectoryLine({
             positionsArray[index * 3 + 2] = point.z;
 
             const t = peakAtEnd ? index / (count - 1) : 1 - index / (count - 1);
-            const alpha = peakOpacity * (t * t * t);
+            const rampIn = t < 0.5 ? t / 0.5 : 1;
+            const fadeOut = t > 0.9 ? 1 - (t - 0.9) / 0.1 : 1;
+            const alpha = peakOpacity * rampIn * fadeOut;
 
             colorsArray[index * 4] = base.r;
             colorsArray[index * 4 + 1] = base.g;
