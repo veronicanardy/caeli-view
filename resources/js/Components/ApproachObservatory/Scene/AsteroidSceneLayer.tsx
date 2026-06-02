@@ -1,11 +1,20 @@
+import { useMemo } from 'react';
+import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, UnifiedApproach } from '@/types';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
+import {
+    closestApproachNearPosition,
+    currentPositionInScene,
+} from '@/lib/observatory/trajectorySampling';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { NowTrajectory } from '../Trajectory/NowTrajectory';
 import type { SceneVector } from './scenePositions';
 
 /**
  * Asteroides e trajetórias geocêntricas log-comprimidas, offsetadas pela Terra.
+ *
+ * Esta camada prepara posição atual e estados derivados de trajetória antes de
+ * enviar os dados para `Bodies/Asteroid`, mantendo os corpos apenas renderizando.
  */
 export function AsteroidSceneLayer({
     closestNowObjects,
@@ -26,12 +35,37 @@ export function AsteroidSceneLayer({
     showLabels: boolean;
     showLabelForObject: (id: string) => boolean;
 }) {
+    const renderableAsteroids = useMemo(
+        () => closestNowObjects
+            .map((object) => {
+                const position = currentPositionInScene(object);
+                if (!position) return null;
+
+                return {
+                    object,
+                    position,
+                    nearbyClosestApproach: Boolean(closestApproachNearPosition(
+                        object.trajectory,
+                        new THREE.Vector3(...position),
+                    )),
+                };
+            })
+            .filter((entry): entry is {
+                object: ClosestNowObject;
+                position: SceneVector;
+                nearbyClosestApproach: boolean;
+            } => entry !== null),
+        [closestNowObjects],
+    );
+
     return (
         <group position={earthPos}>
-            {closestNowObjects.map((object) => (
+            {renderableAsteroids.map(({ object, position, nearbyClosestApproach }) => (
                 <AsteroidMarker
                     key={object.approach.id}
                     object={object}
+                    position={position}
+                    nearbyClosestApproach={nearbyClosestApproach}
                     isSelected={object.approach.id === selectedId}
                     dimmed={hasSelection && object.approach.id !== selectedId}
                     onSelect={onSelect}

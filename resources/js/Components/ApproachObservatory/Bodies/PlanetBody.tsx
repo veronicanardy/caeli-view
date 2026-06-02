@@ -1,14 +1,23 @@
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
+/**
+ * Corpo base dos planetas ambiente do Approach Observatory.
+ *
+ * Responsabilidade: renderizar a estrutura visual comum dos planetas focáveis
+ * de Mercúrio a Netuno: textura/fallback, shader, rotação visual, inclinação,
+ * brilho de borda, hitbox local e rótulo. O componente recebe posição e
+ * configuração prontas; não calcula efeméride, órbita, ranking, câmera ou
+ * seleção global.
+ */
+
+import { useFrame } from '@react-three/fiber';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { ScreenLabel } from '../Overlays/SceneLabels';
 import {
-    BODY_HITBOX_MATERIAL,
     BODY_ROTATION_EPOCH_UNIX_S,
     BODY_SPHERE_SEGMENTS,
 } from './bodyRenderConstants';
+import { BodyHitbox } from './BodyHitbox';
 import { directionFromBodyToSceneSun } from './bodyLighting';
 import type { PlanetBodyProps } from './planetBodyTypes';
 import { useBodyTexture } from './useBodyTexture';
@@ -76,20 +85,6 @@ export function PlanetBody({
     tiltQuaternion,
     childrenInsidePoleGroup,
 }: PlanetBodyComponentProps) {
-    const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        cursorPointerEnter();
-    };
-
-    const handlePointerOut = () => {
-        cursorPointerLeave();
-    };
-
-    const handleClick = (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        onFocus();
-    };
-
     const texture = useBodyTexture(
         config.body.texturePath ?? '',
         config.textureColorSpace ?? 'srgb',
@@ -202,24 +197,11 @@ export function PlanetBody({
             </mesh>
 
             {!isFocused ? (
-                <mesh
-                    onPointerOver={handlePointerOver}
-                    onPointerOut={handlePointerOut}
-                    onClick={handleClick}
-                >
-                    <sphereGeometry
-                        args={[
-                            config.body.visualRadiusDl * config.hitbox.radiusMultiplier,
-                            BODY_SPHERE_SEGMENTS.hitbox.width,
-                            BODY_SPHERE_SEGMENTS.hitbox.height,
-                        ]}
-                    />
-                    <meshBasicMaterial
-                        transparent
-                        opacity={BODY_HITBOX_MATERIAL.opacity}
-                        depthWrite={BODY_HITBOX_MATERIAL.depthWrite}
-                    />
-                </mesh>
+                <BodyHitbox
+                    radius={config.body.visualRadiusDl * config.hitbox.radiusMultiplier}
+                    segments={[BODY_SPHERE_SEGMENTS.hitbox.width, BODY_SPHERE_SEGMENTS.hitbox.height]}
+                    onClick={onFocus}
+                />
             ) : null}
 
             {showLabel ? (

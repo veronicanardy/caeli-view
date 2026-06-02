@@ -1,11 +1,11 @@
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { orientMoonTidal } from '@/lib/observatory/earthOrientation';
 import { MOON_HITBOX_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
 import { MOON_FRAG, MOON_VERT } from '@/lib/observatory/shaders/moon.glsl';
 import { DistanceCulledScreenLabel } from '../../Overlays/SceneLabels';
+import { BodyHitbox } from '../BodyHitbox';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
 import { useBodyTexture } from '../useBodyTexture';
 
@@ -94,22 +94,6 @@ export function Moon({
         </span>
     ) : null;
 
-    const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
-        event.stopPropagation();
-        setHovered(true);
-        cursorPointerEnter();
-    };
-
-    const handlePointerOut = () => {
-        setHovered(false);
-        cursorPointerLeave();
-    };
-
-    const handleClick = (event: ThreeEvent<PointerEvent>) => {
-        event.stopPropagation();
-        onFocus();
-    };
-
     return (
         <group position={position}>
             <mesh ref={meshRef}>
@@ -122,14 +106,12 @@ export function Moon({
             </mesh>
 
             {!isFocused ? (
-                <mesh
-                    onPointerOver={handlePointerOver}
-                    onPointerOut={handlePointerOut}
-                    onClick={handleClick}
-                >
-                    <sphereGeometry args={[MOON_HITBOX_DL, 16, 16]} />
-                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-                </mesh>
+                <BodyHitbox
+                    radius={MOON_HITBOX_DL}
+                    segments={[16, 16]}
+                    onClick={onFocus}
+                    onHoverChange={setHovered}
+                />
             ) : null}
 
             {showLabel ? (

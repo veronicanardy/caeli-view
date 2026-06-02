@@ -1,9 +1,10 @@
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { SUN_GLOW_FRAG, SUN_GLOW_VERT } from '@/lib/observatory/shaders/sun.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { BodyHitbox } from '../BodyHitbox';
+import { useBodyTexture } from '../useBodyTexture';
 
 interface SunProps {
     position: [number, number, number];
@@ -36,15 +37,7 @@ export function Sun({
 }: SunProps) {
     const en = locale === 'en';
     const surfaceMesh = useRef<THREE.Mesh>(null);
-
-    const sunTexture = useMemo(() => {
-        const loader = new THREE.TextureLoader();
-        const tex = loader.load('/images/sun/sun-8k.jpg');
-        tex.colorSpace = THREE.SRGBColorSpace;
-        return tex;
-    }, []);
-
-    useEffect(() => () => sunTexture.dispose(), [sunTexture]);
+    const sunTexture = useBodyTexture('/images/sun/sun-8k.jpg', 'srgb');
 
     // Brilho da corona como uma única casca fresnel: uma esfera de faces voltadas para
     // dentro cuja opacidade cai suavemente em direção à borda. Isso produz um halo suave
@@ -94,14 +87,11 @@ export function Sun({
                 </mesh>
                 <SunProminences radius={radius} />
                 {onFocus && !isFocused ? (
-                    <mesh
-                        onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onFocus(); }}
-                        onPointerOver={() => { cursorPointerEnter(); }}
-                        onPointerOut={() => { cursorPointerLeave(); }}
-                    >
-                        <sphereGeometry args={[radius * 2.5, 12, 8]} />
-                        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-                    </mesh>
+                    <BodyHitbox
+                        radius={radius * 2.5}
+                        segments={[12, 8]}
+                        onClick={onFocus}
+                    />
                 ) : null}
                 {showLabel ? (
                     <ScreenLabel position={[0, radius + 0.42, 0]} protectFromFocus={!isFocused} allowSceneOverlap={isFocused} onClick={onFocus}>

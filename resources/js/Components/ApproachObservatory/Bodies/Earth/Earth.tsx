@@ -12,14 +12,13 @@
  * Escala: preserva `EARTH_RADIUS_DL` e a hitbox dedicada do observatório.
  */
 
-import { type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { orientEarth } from '@/lib/observatory/earthOrientation';
 import { CLOUDS_FRAG, EARTH_FRAG, EARTH_VERT } from '@/lib/observatory/shaders/earth.glsl';
 import { EARTH_HITBOX_DL, EARTH_RADIUS_DL } from '@/lib/observatory/bodyScale';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { BodyHitbox } from '../BodyHitbox';
 import { useBodyTexture } from '../useBodyTexture';
 
 // --------------- Constantes ---------------------------------------------------------------
@@ -68,12 +67,6 @@ export function Earth({
     const cloudsMatRef = useRef<THREE.ShaderMaterial>(null);
     const matRef = useRef<THREE.ShaderMaterial>(null);
     const [hovered, setHovered] = useState(false);
-
-    useEffect(() => {
-        return () => {
-            cursorPointerLeave();
-        };
-    }, []);
 
     // Os materiais nascem uma vez por textura; sunDir é sincronizado depois por efeito.
     const cloudsMaterial = useMemo(() => {
@@ -133,22 +126,6 @@ export function Earth({
         }
     }, [subsolarLatDeg, subsolarLonDeg, sunDirection]);
 
-    const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
-        event.stopPropagation();
-        setHovered(true);
-        cursorPointerEnter();
-    };
-
-    const handlePointerOut = () => {
-        setHovered(false);
-        cursorPointerLeave();
-    };
-
-    const handleClick = (event: ThreeEvent<PointerEvent>) => {
-        event.stopPropagation();
-        onFocus();
-    };
-
     return (
         <group>
             {/* Superfície e nuvens compartilham a orientação científica aplicada por orientEarth(). */}
@@ -196,14 +173,12 @@ export function Earth({
             </mesh>
 
             {!isFocused ? (
-                <mesh
-                    onPointerOver={handlePointerOver}
-                    onPointerOut={handlePointerOut}
-                    onClick={handleClick}
-                >
-                    <sphereGeometry args={[EARTH_HITBOX_DL, HITBOX_SPHERE_SEGMENTS, HITBOX_SPHERE_SEGMENTS]} />
-                    <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-                </mesh>
+                <BodyHitbox
+                    radius={EARTH_HITBOX_DL}
+                    segments={[HITBOX_SPHERE_SEGMENTS, HITBOX_SPHERE_SEGMENTS]}
+                    onClick={onFocus}
+                    onHoverChange={setHovered}
+                />
             ) : null}
 
             {showLabel ? (
