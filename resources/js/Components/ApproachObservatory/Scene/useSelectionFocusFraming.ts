@@ -1,3 +1,10 @@
+/**
+ * Hook de enquadramento para seleção atual.
+ *
+ * Responsabilidade: recalcular o foco da câmera apenas quando a seleção, o nonce
+ * ou o modo orbital mudam, evitando tremores a cada tick de efeméride.
+ */
+
 import { useEffect, useRef, useState } from 'react';
 import type { ClosestNowObject } from '@/types';
 import { computeFocusFraming } from './cameraFraming';

@@ -1,3 +1,10 @@
+/**
+ * Regras locais de foco, labels e oclusão da cena.
+ *
+ * Responsabilidade: decidir visibilidade de labels, oclusores e uso da cena
+ * heliocêntrica a partir de estado já recebido. Não busca dados nem altera seleção.
+ */
+
 import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
 import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';

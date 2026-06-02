@@ -1,3 +1,10 @@
+/**
+ * Contrato de intenção de câmera.
+ *
+ * Responsabilidade: representar pedidos de preset, objeto e corpo com nonce para
+ * permitir refocar o mesmo alvo sem depender de mudanças de identidade.
+ */
+
 import type { CameraViewKey } from './cameraConstants';
 
 /**

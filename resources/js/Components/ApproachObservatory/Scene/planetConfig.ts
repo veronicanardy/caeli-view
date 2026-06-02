@@ -1,3 +1,10 @@
+/**
+ * Configuração compartilhada dos planetas focáveis da cena.
+ *
+ * Responsabilidade: centralizar IDs, chaves de efeméride e raios usados por
+ * enquadramento, evitando listas divergentes entre controles e cena.
+ */
+
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 
 /**

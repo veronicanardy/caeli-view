@@ -1,3 +1,11 @@
+/**
+ * Rig de câmera da cena 3D.
+ *
+ * Responsabilidade: executar intenções explícitas de câmera, interpolando entre
+ * presets e focos calculados por helpers puros. Não decide seleção, ranking nem
+ * dados científicos; apenas move câmera e alvo dos controles.
+ */
+
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';

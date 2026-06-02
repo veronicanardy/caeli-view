@@ -1,3 +1,10 @@
+/**
+ * Helpers puros de enquadramento de câmera.
+ *
+ * Responsabilidade: calcular posição e alvo para foco em corpos, overview e
+ * objetos selecionados. Não toca OrbitControls nem executa transições.
+ */
+
 import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
 import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';

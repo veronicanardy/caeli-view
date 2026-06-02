@@ -1,3 +1,10 @@
+/**
+ * Constantes de câmera da cena 3D.
+ *
+ * Responsabilidade: manter FOV, distância máxima e presets de câmera em um único
+ * ponto para evitar divergência entre Canvas, rig e helpers de enquadramento.
+ */
+
 import * as THREE from 'three';
 import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
 

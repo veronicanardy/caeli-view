@@ -1,3 +1,10 @@
+/**
+ * Fronteira entre UI React e Canvas Three.js.
+ *
+ * Responsabilidade: criar o Canvas, fornecer áreas bloqueadas para labels e
+ * traduzir intenções globais da interface em props granulares para `RadarScene`.
+ */
+
 import { Canvas } from '@react-three/fiber';
 import { Suspense } from 'react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';

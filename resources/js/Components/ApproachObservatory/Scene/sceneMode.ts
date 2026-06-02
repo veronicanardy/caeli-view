@@ -1,3 +1,10 @@
+/**
+ * Derivação do modo visual ativo.
+ *
+ * Responsabilidade: reduzir seleção e flag de órbita a `radar` ou `orbit`,
+ * validando apenas se há elementos orbitais utilizáveis para a cena.
+ */
+
 import type { ClosestNowObject } from '@/types';
 import type { SceneMode } from '../Controls/Manual/manualTypes';
 

@@ -1,3 +1,10 @@
+/**
+ * Adaptação de posições para coordenadas de cena.
+ *
+ * Responsabilidade: converter dados de efeméride já resolvidos em vetores usados
+ * pela cena 3D, incluindo fallbacks leves de Sol/Terra/Lua.
+ */
+
 import { compressDistanceDl, compressSceneVector, SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 

@@ -1,3 +1,11 @@
+/**
+ * Zoom inercial da cena 3D.
+ *
+ * Responsabilidade: substituir o zoom nativo do OrbitControls por um dolly suave,
+ * preservando limites de distância e avisando o rig quando o usuário retomou o
+ * controle. Não altera seleção nem enquadramento global.
+ */
+
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';

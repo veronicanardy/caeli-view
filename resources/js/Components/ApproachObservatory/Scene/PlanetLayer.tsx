@@ -1,3 +1,10 @@
+/**
+ * Camada declarativa dos planetas ambiente.
+ *
+ * Responsabilidade: montar os wrappers visuais dos planetas a partir das posições
+ * heliocêntricas já resolvidas, repassando foco local e visibilidade de labels.
+ */
+
 import { Jupiter } from '../Bodies/Jupiter/Jupiter';
 import { Mars } from '../Bodies/Mars/Mars';
 import { Mercury } from '../Bodies/Mercury/Mercury';

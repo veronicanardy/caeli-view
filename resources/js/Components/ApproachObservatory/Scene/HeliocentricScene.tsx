@@ -1,13 +1,20 @@
+/**
+ * Cena heliocêntrica do objeto selecionado.
+ *
+ * Responsabilidade: renderizar Sol, órbita Kepleriana e posição atual estimada
+ * do asteroide quando o modo orbital está ativo e os elementos orbitais são
+ * utilizáveis. Não cria fallback de dados nem recalcula ranking.
+ */
+
 import { useEffect, useMemo, useState } from 'react';
 import type { OrbitalElements } from '@/types';
-import { buildHeliocentricOrbit, helioAUToSunCenteredScene, KM_PER_LD, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
+import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
 import { FocusProtectedHtml, ScreenLabel } from '../Overlays/SceneLabels';
 import { Sun } from '../Bodies/Sun/Sun';
 import { OrbitLineHelio } from '../Trajectory/HeliocentricLines';
+import { SUN_RADIUS_SCENE } from './sceneBodyConstants';
 
-const SUN_RADIUS_KM = 695_700;
-const SUN_RADIUS_HELIO = SUN_RADIUS_KM / KM_PER_LD;
 const ASTEROID_RADIUS_HELIO = 0.06;
 
 type HeliocentricSceneProps = {
@@ -48,7 +55,7 @@ export function HeliocentricScene({
         <group>
             <directionalLight position={[0, 0, 0]} intensity={2.2} color="#fff6e8" />
             <pointLight position={[0, 0, 0]} intensity={0.5} distance={ORBIT_AU_SCALE * 8} color="#ffdca8" />
-            <Sun position={[0, 0, 0]} radius={SUN_RADIUS_HELIO} locale={locale} />
+            <Sun position={[0, 0, 0]} radius={SUN_RADIUS_SCENE} locale={locale} />
 
             {orbitPoints ? <OrbitLineHelio points={orbitPoints} color={color} opacity={0.95} /> : null}
 

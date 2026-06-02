@@ -1,12 +1,17 @@
+/**
+ * Compositor principal da cena radar.
+ *
+ * Responsabilidade: arbitrar entre cena geocêntrica e heliocêntrica, montar corpos,
+ * camadas, labels, oclusores e câmera a partir de dados já preparados. Não busca
+ * APIs, não calcula ranking e não transforma dados orbitais em nova verdade física.
+ */
+
 import { OrbitControls } from '@react-three/drei';
-import { useEffect, useMemo, useState } from 'react';
-import * as THREE from 'three';
+import { useMemo } from 'react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
-import { KM_PER_LD } from '@/lib/sceneEphemeris';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
-import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
-import { JUPITER, MARS, MERCURY, NEPTUNE, SATURN, URANUS, VENUS } from '@/lib/observatory/planetData';
+import { EARTH_RADIUS_DL } from '@/lib/observatory/bodyScale';
 import { Sun } from '../Bodies/Sun/Sun';
 import { Earth } from '../Bodies/Earth/Earth';
 import { Moon } from '../Bodies/Moon/Moon';
@@ -17,18 +22,16 @@ import { HeliocentricScene } from './HeliocentricScene';
 import { AsteroidSceneLayer } from './AsteroidSceneLayer';
 import { CameraRig } from './CameraRig';
 import { MAX_CAMERA_DISTANCE } from './cameraConstants';
-import { framingForBody } from './cameraFraming';
 import type { FocusFraming } from './cameraFraming';
 import type { CameraIntent } from './cameraIntent';
 import { InertialZoom } from './InertialZoom';
 import { PlanetLayer } from './PlanetLayer';
 import { PlanetOrbitLayer } from './PlanetOrbitLayer';
 import { computeLabelOccluder, focusedObjectScenePosition, shouldShowLabelForObject, shouldUseHelioScene } from './sceneFocus';
-import type { BodyFocus } from './sceneFocus';
+import { SUN_RADIUS_SCENE } from './sceneBodyConstants';
+import { computeSceneObjectOccluders } from './sceneOcclusion';
 import { computeEarthPosition, computeMoonGeoPosition, computeMoonPosition, computeSunDirection, planetScenePositions } from './scenePositions';
-
-const SUN_RADIUS_KM = 695_700;
-const SUN_RADIUS_SCENE = SUN_RADIUS_KM / KM_PER_LD;
+import { useBodyFocus } from './useBodyFocus';
 // --------------- Scene ---------------
 
 type RadarSceneProps = {
@@ -101,41 +104,16 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     const compactLabels = useCompactLabelMode();
     const hideAsteroidLabels = useHideAsteroidLabelsMode();
 
-    // Clicar na Terra ou na Lua re-enquadra a câmera naquele corpo sem "selecioná-lo". Ambos usam
-    // o mesmo enquadramento próximo (framingForBody), então o comportamento é idêntico seja
-    // disparado da cena 3D, dos botões de anel ou da lista lateral. Uma seleção de objeto
-    // (focusTarget) sempre vence e limpa qualquer foco de corpo.
-    const [bodyFocus, setBodyFocus] = useState<BodyFocus | null>(null);
+    // Foco Terra/Lua fica em hook local para preservar a precedência: seleção > corpo > preset.
     const focusEarth = () => onFocusBody('earth');
     const focusMoon = () => onFocusBody('moon');
+    const { bodyFocus, activeFocus, focusNonce } = useBodyFocus({
+        cameraIntent,
+        focusTarget,
+        earthPos,
+        moonPos,
+    });
 
-    // Reagir a um foco de Terra/Lua solicitado de fora da cena. Chaveado pelo nonce de intenção
-    // para que o mesmo corpo possa ser re-focado; usa o enquadramento próximo para ambos.
-    useEffect(() => {
-        if (cameraIntent.kind !== 'body') return;
-        if (cameraIntent.body === 'earth') {
-            setBodyFocus({ body: 'earth', framing: framingForBody(new THREE.Vector3(...earthPos), EARTH_RADIUS_DL), nonce: cameraIntent.nonce });
-        } else {
-            setBodyFocus({ body: 'moon', framing: framingForBody(new THREE.Vector3(...moonPos), MOON_RADIUS_DL), nonce: cameraIntent.nonce });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cameraIntent.kind === 'body' ? cameraIntent.nonce : -1]);
-
-    // Selecionar um objeto limpa qualquer foco de corpo pendente para os dois não conflitarem.
-    useEffect(() => {
-        if (focusTarget) setBodyFocus(null);
-    }, [focusTarget]);
-
-    // Escolher uma visão predefinida (Superior/Lateral/Resetar) limpa qualquer foco de corpo ativo.
-    useEffect(() => {
-        if (cameraIntent.kind !== 'preset') return;
-        setBodyFocus(null);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cameraIntent.kind === 'preset' ? cameraIntent.nonce : -1]);
-
-    // Seleção de objeto tem precedência; depois foco de corpo; depois a visão predefinida.
-    const activeFocus = focusTarget ?? bodyFocus?.framing ?? null;
-    const focusNonce = focusTarget ? cameraIntent.nonce : bodyFocus?.nonce ?? 0;
     const orbitLabelsOnly = orbitMode && selectedHasOrbit;
 
     // Labels visíveis para todos os objetos enquanto a câmera não estiver muito afastada.
@@ -152,26 +130,15 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     const focusedObjectPosition = focusedObjectScenePosition(focusedObject, earthPos);
     const labelOccluder = computeLabelOccluder({ bodyFocus, earthPos, moonPos, focusedObjectPosition });
     const useHelioScene = shouldUseHelioScene(orbitMode, selectedHasOrbit, focusedObject);
-    const sceneObjectOccluders = useMemo(() => {
-        if (useHelioScene) {
-            return [{ center: new THREE.Vector3(0, 0, 0), radius: SUN_RADIUS_SCENE }];
-        }
-
-        const occluders = [
-            { center: new THREE.Vector3(0, 0, 0), radius: SUN_RADIUS_SCENE },
-            { center: new THREE.Vector3(...earthPos), radius: EARTH_RADIUS_DL },
-            { center: new THREE.Vector3(...moonPos), radius: MOON_RADIUS_DL },
-            ...(planetPositions.mercuryPos ? [{ center: new THREE.Vector3(...planetPositions.mercuryPos), radius: MERCURY.visualRadiusDl }] : []),
-            ...(planetPositions.venusPos ? [{ center: new THREE.Vector3(...planetPositions.venusPos), radius: VENUS.visualRadiusDl }] : []),
-            ...(planetPositions.marsPos ? [{ center: new THREE.Vector3(...planetPositions.marsPos), radius: MARS.visualRadiusDl }] : []),
-            ...(planetPositions.jupiterPos ? [{ center: new THREE.Vector3(...planetPositions.jupiterPos), radius: JUPITER.visualRadiusDl }] : []),
-            ...(planetPositions.saturnPos ? [{ center: new THREE.Vector3(...planetPositions.saturnPos), radius: SATURN.visualRadiusDl * 2.3 }] : []),
-            ...(planetPositions.uranusPos ? [{ center: new THREE.Vector3(...planetPositions.uranusPos), radius: URANUS.visualRadiusDl }] : []),
-            ...(planetPositions.neptunePos ? [{ center: new THREE.Vector3(...planetPositions.neptunePos), radius: NEPTUNE.visualRadiusDl }] : []),
-        ];
-
-        return occluders;
-    }, [earthPos, moonPos, planetPositions, useHelioScene]);
+    const sceneObjectOccluders = useMemo(
+        () => computeSceneObjectOccluders({
+            useHelioScene,
+            earthPos,
+            moonPos,
+            planetPositions,
+        }),
+        [earthPos, moonPos, planetPositions, useHelioScene],
+    );
 
     // Arbitragem de modo: a cena solar-orbital toma conta quando (a) o usuário pediu modo órbita
     // E (b) o objeto selecionado tem elementos osculadores com época utilizável (tpJd ≠ 0).

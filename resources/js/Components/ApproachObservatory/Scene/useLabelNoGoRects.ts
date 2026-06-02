@@ -1,3 +1,10 @@
+/**
+ * Hook de áreas bloqueadas para labels 3D.
+ *
+ * Responsabilidade: medir painéis e cards sobrepostos ao canvas para que labels
+ * da cena evitem colisões com a interface.
+ */
+
 import { useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import type { NoGoRect } from '../Overlays/SceneLabels';

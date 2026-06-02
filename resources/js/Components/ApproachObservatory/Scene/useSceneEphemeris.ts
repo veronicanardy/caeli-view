@@ -1,3 +1,10 @@
+/**
+ * Hook de efeméride local da cena.
+ *
+ * Responsabilidade: manter a efeméride visual atualizada em intervalo curto sem
+ * misturar busca externa, ranking ou fallback científico de alto nível.
+ */
+
 import { useEffect, useState } from 'react';
 import { computeSceneEphemeris } from '@/lib/sceneEphemeris';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';

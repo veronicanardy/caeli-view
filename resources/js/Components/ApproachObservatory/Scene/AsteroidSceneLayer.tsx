@@ -1,3 +1,11 @@
+/**
+ * Camada de asteroides da cena radar.
+ *
+ * Responsabilidade: preparar posições atuais e estados derivados de trajetória
+ * para os marcadores visuais, mantendo os corpos de `Bodies/Asteroid` focados
+ * apenas em renderização, hover, seleção e rótulos.
+ */
+
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, UnifiedApproach } from '@/types';
