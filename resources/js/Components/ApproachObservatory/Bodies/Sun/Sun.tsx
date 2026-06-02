@@ -1,3 +1,15 @@
+/**
+ * Sol visual do Approach Observatory.
+ *
+ * Responsabilidade: renderizar a superfície texturizada, corona, prominências,
+ * luz opcional, hitbox e rótulo do Sol. O componente recebe posição e escala
+ * prontas da cena; não calcula efeméride, foco global ou modo de câmera.
+ *
+ * Padrão importante: o material nasce como fallback enquanto a textura carrega
+ * e é recriado quando `sun-8k.jpg` fica disponível. Isso evita que o Three.js
+ * mantenha um shader sem `map` depois que a textura chega de forma assíncrona.
+ */
+
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
@@ -16,16 +28,6 @@ interface SunProps {
     showLabel?: boolean;
 }
 
-/**
- * O Sol visual. Componente unificado usado por:
- *  - a cena de radar (passa a posição projetada em SUN_DISPLAY_DL e ativa a luz
- *    direcional + ponto quente na direção real do Sol);
- *  - a cena heliocêntrica (passa a origem [0, 0, 0] sem iluminação — a cena
- *    heliocêntrica fornece sua própria iluminação na posição do Sol).
- *
- * Anteriormente havia dois componentes quase idênticos (Sun e SunAtOrigin).
- * Unificá-los removeu cerca de 50 linhas de duplicação.
- */
 export function Sun({
     position,
     radius,
@@ -38,6 +40,27 @@ export function Sun({
     const en = locale === 'en';
     const surfaceMesh = useRef<THREE.Mesh>(null);
     const sunTexture = useBodyTexture('/images/sun/sun-8k.jpg', 'srgb');
+
+    const surfaceMaterial = useMemo(() => {
+        if (!sunTexture) {
+            return new THREE.MeshStandardMaterial({
+                color: '#ffb347',
+                emissive: new THREE.Color(1.0, 0.42, 0.08),
+                emissiveIntensity: 1.35,
+                roughness: 1,
+                metalness: 0,
+            });
+        }
+
+        return new THREE.MeshStandardMaterial({
+            map: sunTexture,
+            emissiveMap: sunTexture,
+            emissive: new THREE.Color(1.0, 0.7, 0.3),
+            emissiveIntensity: 1.2,
+            roughness: 1,
+            metalness: 0,
+        });
+    }, [sunTexture]);
 
     // Brilho da corona como uma única casca fresnel: uma esfera de faces voltadas para
     // dentro cuja opacidade cai suavemente em direção à borda. Isso produz um halo suave
@@ -57,6 +80,7 @@ export function Sun({
     );
 
     useEffect(() => () => glowMaterial.dispose(), [glowMaterial]);
+    useEffect(() => () => surfaceMaterial.dispose(), [surfaceMaterial]);
 
     useFrame((_state: unknown, delta: number) => {
         if (surfaceMesh.current) surfaceMesh.current.rotation.y += delta * 0.004;
@@ -71,14 +95,7 @@ export function Sun({
             <group position={position}>
                 <mesh ref={surfaceMesh}>
                     <sphereGeometry args={[radius, 64, 64]} />
-                    <meshStandardMaterial
-                        map={sunTexture}
-                        emissiveMap={sunTexture}
-                        emissive={new THREE.Color(1.0, 0.7, 0.3)}
-                        emissiveIntensity={1.2}
-                        roughness={1}
-                        metalness={0}
-                    />
+                    <primitive object={surfaceMaterial} attach="material" />
                 </mesh>
                 {/* Corona: BackSide esfera grande — o shader faz todo o fade internamente */}
                 <mesh scale={2.2}>
