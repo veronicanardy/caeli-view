@@ -2,18 +2,42 @@ import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
 import { mulberry32 } from '@/lib/observatory/moonTextures';
 
-/**
- * Categorias visuais usadas pela geração procedural de asteroides.
- */
 export type GenericAsteroidVariant = 'tiny' | 'small' | 'medium' | 'large' | 'unknown';
 
-/**
- * Converte coordenadas esféricas em um vetor unitário.
- *
- * Convenção:
- * - `theta`: ângulo polar a partir de +Z;
- * - `phi`: ângulo azimutal no plano XY.
- */
+type AsteroidCrater = {
+    dir: THREE.Vector3;
+    radius: number;
+    depth: number;
+    rim: number;
+};
+
+type FracturePlane = {
+    normal: THREE.Vector3;
+    threshold: number;
+    strength: number;
+};
+
+type AsteroidProfile = {
+    detail: number;
+    axes: [number, number, number];
+    macroAmplitude: number;
+    blockAmplitude: number;
+    gritAmplitude: number;
+    craterCount: number;
+    craterRadius: [number, number];
+    craterDepth: [number, number];
+    bumpScale: number;
+    roughness: number;
+    mineralVariation: number;
+};
+
+type TextureSample = {
+    macro: number;
+    medium: number;
+    fine: number;
+    pores: number;
+};
+
 export function sphericalDirection(theta: number, phi: number): THREE.Vector3 {
     return new THREE.Vector3(
         Math.sin(theta) * Math.cos(phi),
@@ -22,9 +46,6 @@ export function sphericalDirection(theta: number, phi: number): THREE.Vector3 {
     );
 }
 
-/**
- * Escolhe uma variante procedural com base no tamanho estimado do asteroide.
- */
 export function genericAsteroidVariantFor(object: ClosestNowObject): GenericAsteroidVariant {
     const diameter = asteroidDiameterMeters(object);
 
@@ -36,9 +57,6 @@ export function genericAsteroidVariantFor(object: ClosestNowObject): GenericAste
     return 'large';
 }
 
-/**
- * Retorna a melhor estimativa de diâmetro disponível em metros.
- */
 function asteroidDiameterMeters(object: ClosestNowObject): number | null {
     const direct = object.approach.diameterMeters;
 
@@ -64,132 +82,83 @@ function asteroidDiameterMeters(object: ClosestNowObject): number | null {
 }
 
 /**
- * Constrói uma geometria procedural de asteroide a partir de uma semente.
+ * Constroi uma malha de asteroide com ruido 3D em camadas.
  *
- * A forma é estável para a mesma seed e varia entre as variantes visuais.
+ * A mudanca estrutural aqui e que a forma nao vem mais de senos alinhados aos
+ * eixos. Usamos FBM deterministico, lobos locais, crateras e planos de fratura
+ * suaves para criar uma silhueta organica sem voltar para low-poly bruto.
  */
 export function buildAsteroidGeometry(
     seed: string,
     variant: GenericAsteroidVariant = 'unknown',
 ): THREE.IcosahedronGeometry {
     const profile = genericAsteroidProfile(variant);
-    const geo = new THREE.IcosahedronGeometry(1, profile.detail);
-    const rng = mulberry32(hashString(seed));
+    const seedHash = hashString(`${seed}:${variant}:shape`);
+    const rng = mulberry32(seedHash);
+    const geometry = new THREE.IcosahedronGeometry(1, profile.detail);
+    const position = geometry.attributes.position as THREE.BufferAttribute;
+    const axes = buildAxes(profile, rng);
+    const lobes = buildLobes(rng, variant === 'large' ? 9 : 7);
+    const craters = buildAsteroidCraters(profile, rng);
+    const fractures = buildFracturePlanes(rng, variant === 'tiny' ? 3 : 4);
+    const vertex = new THREE.Vector3();
+    const dir = new THREE.Vector3();
+    const displaced = new THREE.Vector3();
 
-    const axes = new THREE.Vector3(
-        profile.axes[0] * (0.92 + rng() * 0.16),
-        profile.axes[1] * (0.92 + rng() * 0.16),
-        profile.axes[2] * (0.92 + rng() * 0.16),
-    );
+    for (let i = 0; i < position.count; i += 1) {
+        vertex.fromBufferAttribute(position, i);
+        dir.copy(vertex).normalize();
 
-    const ph = Array.from({ length: 9 }, () => rng() * 6.28);
+        const macro = fbm3(dir.x * 1.65 + 17.3, dir.y * 1.65 - 4.7, dir.z * 1.65 + 9.1, seedHash, 4);
+        const block = ridgedFbm3(dir.x * 3.15 - 2.2, dir.y * 3.15 + 8.4, dir.z * 3.15 - 6.8, seedHash ^ 0x7feb352d, 3);
+        const grit = fbm3(dir.x * 8.8 + 1.1, dir.y * 8.8 - 5.3, dir.z * 8.8 + 2.9, seedHash ^ 0x846ca68b, 2);
 
-    const craters = Array.from({ length: profile.craterCount + Math.floor(rng() * 3) }, () => {
-        const u = rng();
-        const w = rng();
-        const theta = Math.acos(2 * u - 1);
-        const phi = 2 * Math.PI * w;
+        let radius =
+            1 +
+            macro * profile.macroAmplitude +
+            block * profile.blockAmplitude +
+            grit * profile.gritAmplitude;
 
-        return {
-            dir: sphericalDirection(theta, phi),
-            radius: profile.craterRadius[0] + rng() * (profile.craterRadius[1] - profile.craterRadius[0]),
-            depth: profile.craterDepth[0] + rng() * (profile.craterDepth[1] - profile.craterDepth[0]),
-        };
-    });
-
-    const pos = geo.attributes.position as THREE.BufferAttribute;
-    const v = new THREE.Vector3();
-
-    for (let i = 0; i < pos.count; i += 1) {
-        v.fromBufferAttribute(pos, i);
-        const dir = v.clone().normalize();
-
-        const broad =
-            profile.roughness * Math.sin(dir.x * 1.7 + ph[0]) +
-            profile.roughness * 0.9 * Math.sin(dir.y * 2.1 + ph[1]) +
-            profile.roughness * 0.8 * Math.sin(dir.z * 1.9 + ph[2]);
-
-        const medium =
-            profile.roughness * 0.45 * Math.sin(dir.x * 4.3 + ph[3]) +
-            profile.roughness * 0.4 * Math.sin(dir.y * 5.1 + ph[4]) +
-            profile.roughness * 0.35 * Math.sin(dir.z * 4.7 + ph[5]);
-
-        const fine =
-            profile.roughness * 0.18 * Math.sin(dir.x * 9.7 + ph[6]) +
-            profile.roughness * 0.15 * Math.sin(dir.y * 11.3 + ph[7]) +
-            profile.roughness * 0.14 * Math.sin(dir.z * 10.1 + ph[8]);
-
-        let radius = 1 + broad + medium + fine;
-
-        for (const crater of craters) {
-            const distance = dir.angleTo(crater.dir);
-
-            if (distance < crater.radius) {
-                const t = 1 - distance / crater.radius;
-                radius -= crater.depth * t * t * (3 - 2 * t);
+        for (const lobe of lobes) {
+            const angle = dir.angleTo(lobe.dir);
+            if (angle < lobe.radius) {
+                const mask = smooth01(1 - angle / lobe.radius);
+                radius += lobe.strength * mask;
             }
         }
 
-        v.copy(dir).multiplyScalar(Math.max(0.55, radius)).multiply(axes);
-        pos.setXYZ(i, v.x, v.y, v.z);
+        for (const crater of craters) {
+            radius += sampleCraterOffset(dir, crater);
+        }
+
+        for (const fracture of fractures) {
+            const cut = (dir.dot(fracture.normal) - fracture.threshold) / 0.16;
+            if (cut > 0) {
+                radius -= fracture.strength * smooth01(THREE.MathUtils.clamp(cut, 0, 1));
+            }
+        }
+
+        radius = THREE.MathUtils.clamp(radius, 0.68, 1.34);
+        displaced.set(dir.x * axes.x, dir.y * axes.y, dir.z * axes.z).multiplyScalar(radius);
+        position.setXYZ(i, displaced.x, displaced.y, displaced.z);
     }
 
-    geo.computeVertexNormals();
-    addAsteroidVertexColors(geo, seed, variant);
+    geometry.computeVertexNormals();
+    addAsteroidVertexColors(geometry, seedHash, profile);
 
-    return geo;
+    return geometry;
 }
 
-/**
- * Adiciona cores por vértice para dar à rocha um aspecto mineral/rochoso.
- */
-function addAsteroidVertexColors(
-    geo: THREE.BufferGeometry,
-    seed: string,
-    variant: GenericAsteroidVariant,
-): void {
-    const pos = geo.attributes.position as THREE.BufferAttribute;
-    const colors: number[] = [];
-    const rng = mulberry32(hashString(`${seed}:${variant}:color`));
-    const baseHue = 0.095 + rng() * 0.02;
-    const sat = 0.02 + rng() * 0.035;
-    const baseLight = variant === 'tiny' ? 0.66 : variant === 'large' ? 0.6 : 0.63;
-    const v = new THREE.Vector3();
-    const c = new THREE.Color();
-
-    for (let i = 0; i < pos.count; i += 1) {
-        v.fromBufferAttribute(pos, i).normalize();
-
-        const grain =
-            Math.sin(v.x * 8.7 + rng() * 6.28) * 0.025 +
-            Math.cos(v.y * 10.3 + rng() * 6.28) * 0.018 +
-            Math.sin(v.z * 13.1 + rng() * 6.28) * 0.014;
-
-        const latitudeShade = v.y * 0.018;
-
-        c.setHSL(
-            baseHue + grain * 0.035,
-            sat,
-            THREE.MathUtils.clamp(baseLight + grain * 0.28 + latitudeShade, 0.54, 0.78),
-        );
-
-        colors.push(c.r, c.g, c.b);
-    }
-
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-}
-
-/**
- * Gera texturas procedurais de mapa, bump e roughness para a superfície.
- */
 export function buildAsteroidSurfaceTextures(
     seed: string,
     variant: GenericAsteroidVariant,
     size: number,
 ): { map: THREE.CanvasTexture; bump: THREE.CanvasTexture; roughness: THREE.CanvasTexture } {
+    const profile = genericAsteroidProfile(variant);
+    const seedHash = hashString(`${seed}:${variant}:surface`);
+    const rng = mulberry32(seedHash);
     const width = size;
-    const height = size / 2;
-
+    const height = Math.max(64, Math.floor(size / 2));
     const colorCanvas = document.createElement('canvas');
     const bumpCanvas = document.createElement('canvas');
     const roughCanvas = document.createElement('canvas');
@@ -197,19 +166,22 @@ export function buildAsteroidSurfaceTextures(
     colorCanvas.width = bumpCanvas.width = roughCanvas.width = width;
     colorCanvas.height = bumpCanvas.height = roughCanvas.height = height;
 
-    const colorCtx = colorCanvas.getContext('2d')!;
-    const bumpCtx = bumpCanvas.getContext('2d')!;
-    const roughCtx = roughCanvas.getContext('2d')!;
+    const colorCtx = colorCanvas.getContext('2d');
+    const bumpCtx = bumpCanvas.getContext('2d');
+    const roughCtx = roughCanvas.getContext('2d');
 
-    const rng = mulberry32(hashString(`${seed}:${variant}:surface`));
-    const baseHue = 38 + rng() * 8;
-    const baseSat = 3 + rng() * 5;
-    const baseLight = variant === 'tiny' ? 68 : variant === 'large' ? 64 : 66;
+    if (!colorCtx || !bumpCtx || !roughCtx) {
+        throw new Error('Canvas 2D indisponivel para texturas procedurais.');
+    }
 
     const image = colorCtx.createImageData(width, height);
     const bump = bumpCtx.createImageData(width, height);
     const rough = roughCtx.createImageData(width, height);
-    const phase = Array.from({ length: 8 }, () => rng() * Math.PI * 2);
+    const base = new THREE.Color('#3b3d40');
+    const graphite = new THREE.Color('#26282c');
+    const coolBrown = new THREE.Color('#55483d');
+    const mineral = new THREE.Color('#767168');
+    const color = new THREE.Color();
 
     for (let y = 0; y < height; y += 1) {
         const v = y / height;
@@ -217,33 +189,31 @@ export function buildAsteroidSurfaceTextures(
         for (let x = 0; x < width; x += 1) {
             const u = x / width;
             const idx = (y * width + x) * 4;
+            const sample = sampleTexture(u, v, seedHash);
+            const mineralSpeck = valueNoise2(u * 95, v * 70, seedHash ^ 0x9e3779b9);
+            const poreMask = Math.max(0, sample.pores - 0.58);
 
-            const large =
-                Math.sin(u * Math.PI * 5.0 + phase[0]) * 0.5 +
-                Math.cos(v * Math.PI * 7.0 + phase[1]) * 0.35 +
-                Math.sin((u + v) * Math.PI * 9.0 + phase[2]) * 0.25;
+            color.copy(base);
+            color.lerp(graphite, THREE.MathUtils.clamp(0.24 + sample.medium * 0.18, 0.08, 0.5));
+            color.lerp(coolBrown, THREE.MathUtils.clamp(0.1 + sample.macro * 0.14, 0.02, 0.24));
+            color.lerp(mineral, THREE.MathUtils.clamp((mineralSpeck - 0.64) * profile.mineralVariation, 0, 0.16));
+            color.multiplyScalar(THREE.MathUtils.clamp(0.95 + sample.macro * 0.1 - poreMask * 0.18, 0.78, 1.08));
 
-            const fine =
-                Math.sin(u * Math.PI * 47.0 + phase[3]) * 0.12 +
-                Math.cos(v * Math.PI * 53.0 + phase[4]) * 0.1 +
-                Math.sin((u - v) * Math.PI * 71.0 + phase[5]) * 0.08;
-
-            const grain = large + fine + (rng() - 0.5) * 0.22;
-            const light = THREE.MathUtils.clamp(baseLight + grain * 4.2, 58, 80);
-            const sat = THREE.MathUtils.clamp(baseSat + fine * 6, 1, 10);
-            const color = new THREE.Color(`hsl(${baseHue + grain * 3}, ${sat}%, ${light}%)`);
-
-            image.data[idx] = Math.round(color.r * 255);
-            image.data[idx + 1] = Math.round(color.g * 255);
-            image.data[idx + 2] = Math.round(color.b * 255);
+            image.data[idx] = Math.round(THREE.MathUtils.clamp(color.r, 0, 1) * 255);
+            image.data[idx + 1] = Math.round(THREE.MathUtils.clamp(color.g, 0, 1) * 255);
+            image.data[idx + 2] = Math.round(THREE.MathUtils.clamp(color.b, 0, 1) * 255);
             image.data[idx + 3] = 255;
 
-            const bumpValue = THREE.MathUtils.clamp(132 + grain * 42 + fine * 70, 42, 220);
-            bump.data[idx] = bump.data[idx + 1] = bump.data[idx + 2] = bumpValue;
+            const relief = THREE.MathUtils.clamp(
+                126 + sample.macro * 22 + sample.medium * 38 + sample.fine * 28 - poreMask * 72,
+                54,
+                218,
+            );
+            bump.data[idx] = bump.data[idx + 1] = bump.data[idx + 2] = Math.round(relief);
             bump.data[idx + 3] = 255;
 
-            const roughValue = THREE.MathUtils.clamp(218 + Math.abs(fine) * 80 - large * 10, 170, 255);
-            rough.data[idx] = rough.data[idx + 1] = rough.data[idx + 2] = roughValue;
+            const roughValue = THREE.MathUtils.clamp(226 + sample.fine * 18 + poreMask * 38, 188, 255);
+            rough.data[idx] = rough.data[idx + 1] = rough.data[idx + 2] = Math.round(roughValue);
             rough.data[idx + 3] = 255;
         }
     }
@@ -252,35 +222,8 @@ export function buildAsteroidSurfaceTextures(
     bumpCtx.putImageData(bump, 0, 0);
     roughCtx.putImageData(rough, 0, 0);
 
-    const craterCount = genericAsteroidProfile(variant).craterCount + 8;
-
-    for (let i = 0; i < craterCount; i += 1) {
-        const x = rng() * width;
-        const y = rng() * height;
-        const radius = (6 + rng() * 28) * (variant === 'tiny' ? 0.65 : variant === 'large' ? 1.25 : 1);
-
-        const colorGrad = colorCtx.createRadialGradient(x, y, radius * 0.08, x, y, radius);
-        colorGrad.addColorStop(0, 'rgba(128, 120, 110, 0.08)');
-        colorGrad.addColorStop(0.58, 'rgba(162, 154, 142, 0.06)');
-        colorGrad.addColorStop(0.78, 'rgba(242, 236, 225, 0.1)');
-        colorGrad.addColorStop(1, 'rgba(128,128,128,0)');
-
-        colorCtx.fillStyle = colorGrad;
-        colorCtx.beginPath();
-        colorCtx.arc(x, y, radius, 0, Math.PI * 2);
-        colorCtx.fill();
-
-        const bumpGrad = bumpCtx.createRadialGradient(x, y, radius * 0.04, x, y, radius);
-        bumpGrad.addColorStop(0, 'rgba(24,24,24,0.55)');
-        bumpGrad.addColorStop(0.66, 'rgba(70,70,70,0.26)');
-        bumpGrad.addColorStop(0.82, 'rgba(235,235,235,0.24)');
-        bumpGrad.addColorStop(1, 'rgba(128,128,128,0)');
-
-        bumpCtx.fillStyle = bumpGrad;
-        bumpCtx.beginPath();
-        bumpCtx.arc(x, y, radius, 0, Math.PI * 2);
-        bumpCtx.fill();
-    }
+    paintTextureCraters(colorCtx, bumpCtx, roughCtx, profile, width, height, rng);
+    paintTextureCracks(colorCtx, bumpCtx, profile, width, height, rng);
 
     const map = new THREE.CanvasTexture(colorCanvas);
     const bumpMap = new THREE.CanvasTexture(bumpCanvas);
@@ -298,81 +241,431 @@ export function buildAsteroidSurfaceTextures(
     return { map, bump: bumpMap, roughness };
 }
 
-/**
- * Retorna parâmetros de geração procedural para cada categoria de asteroide.
- */
-function genericAsteroidProfile(variant: GenericAsteroidVariant): {
-    detail: number;
-    axes: [number, number, number];
+export function asteroidMaterialProfile(variant: GenericAsteroidVariant): {
+    bumpScale: number;
     roughness: number;
-    craterCount: number;
-    craterRadius: [number, number];
-    craterDepth: [number, number];
+    colorVariation: number;
 } {
+    const profile = genericAsteroidProfile(variant);
+
+    return {
+        bumpScale: profile.bumpScale,
+        roughness: profile.roughness,
+        colorVariation: profile.mineralVariation,
+    };
+}
+
+function buildAxes(profile: AsteroidProfile, rng: () => number): THREE.Vector3 {
+    return new THREE.Vector3(
+        profile.axes[0] * (0.92 + rng() * 0.18),
+        profile.axes[1] * (0.9 + rng() * 0.18),
+        profile.axes[2] * (0.88 + rng() * 0.18),
+    );
+}
+
+function buildLobes(rng: () => number, count: number): Array<{ dir: THREE.Vector3; radius: number; strength: number }> {
+    return Array.from({ length: count }, () => ({
+        dir: randomDirection(rng),
+        radius: 0.28 + rng() * 0.52,
+        strength: (rng() - 0.42) * 0.16,
+    }));
+}
+
+function buildFracturePlanes(rng: () => number, count: number): FracturePlane[] {
+    return Array.from({ length: count }, () => ({
+        normal: randomDirection(rng),
+        threshold: 0.62 + rng() * 0.22,
+        strength: 0.025 + rng() * 0.04,
+    }));
+}
+
+function buildAsteroidCraters(profile: AsteroidProfile, rng: () => number): AsteroidCrater[] {
+    return Array.from({ length: profile.craterCount + Math.floor(rng() * 3) }, () => ({
+        dir: randomDirection(rng),
+        radius: THREE.MathUtils.lerp(profile.craterRadius[0], profile.craterRadius[1], rng()),
+        depth: THREE.MathUtils.lerp(profile.craterDepth[0], profile.craterDepth[1], rng()),
+        rim: 0.08 + rng() * 0.16,
+    }));
+}
+
+function randomDirection(rng: () => number): THREE.Vector3 {
+    return sphericalDirection(Math.acos(1 - 2 * rng()), rng() * Math.PI * 2);
+}
+
+function sampleCraterOffset(dir: THREE.Vector3, crater: AsteroidCrater): number {
+    const distance = dir.angleTo(crater.dir);
+    const outerRadius = crater.radius * (1 + crater.rim);
+
+    if (distance >= outerRadius) return 0;
+
+    const innerMask = smooth01(THREE.MathUtils.clamp(1 - distance / crater.radius, 0, 1));
+    const rimMask = smooth01(THREE.MathUtils.clamp(1 - Math.abs(distance - crater.radius) / (crater.radius * crater.rim), 0, 1));
+
+    return -crater.depth * innerMask + crater.depth * 0.28 * rimMask;
+}
+
+function addAsteroidVertexColors(
+    geometry: THREE.BufferGeometry,
+    seedHash: number,
+    profile: AsteroidProfile,
+): void {
+    const position = geometry.attributes.position as THREE.BufferAttribute;
+    const colors = new Float32Array(position.count * 3);
+    const vertex = new THREE.Vector3();
+    const dir = new THREE.Vector3();
+    const base = new THREE.Color('#3a3c40');
+    const dark = new THREE.Color('#25262a');
+    const brown = new THREE.Color('#50463d');
+    const mineral = new THREE.Color('#706b63');
+    const color = new THREE.Color();
+
+    for (let i = 0; i < position.count; i += 1) {
+        vertex.fromBufferAttribute(position, i);
+        dir.copy(vertex).normalize();
+
+        const macro = fbm3(dir.x * 1.8, dir.y * 1.8, dir.z * 1.8, seedHash ^ 0x51ed270b, 3);
+        const patches = fbm3(dir.x * 5.4 + 2, dir.y * 5.4 - 3, dir.z * 5.4 + 7, seedHash ^ 0x94d049bb, 3);
+
+        color.copy(base);
+        color.lerp(dark, THREE.MathUtils.clamp(0.2 + patches * 0.22, 0.06, 0.42));
+        color.lerp(brown, THREE.MathUtils.clamp(0.08 + macro * 0.12, 0.02, 0.2));
+        color.lerp(mineral, THREE.MathUtils.clamp((patches - 0.25) * profile.mineralVariation, 0.02, 0.14));
+        color.multiplyScalar(THREE.MathUtils.clamp(0.92 + vertex.y * 0.055 + macro * 0.045, 0.82, 1.06));
+
+        colors[i * 3] = color.r;
+        colors[i * 3 + 1] = color.g;
+        colors[i * 3 + 2] = color.b;
+    }
+
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}
+
+function sampleTexture(u: number, v: number, seedHash: number): TextureSample {
+    const warpX = fbm2(u * 2.4 + 11, v * 2.4 - 7, seedHash ^ 0x632be59b, 3) * 0.08;
+    const warpY = fbm2(u * 2.1 - 5, v * 2.1 + 13, seedHash ^ 0x85157af5, 3) * 0.08;
+    const x = u + warpX;
+    const y = v + warpY;
+
+    return {
+        macro: fbm2(x * 3.2, y * 3.2, seedHash, 4),
+        medium: ridgedFbm2(x * 9.5, y * 8.0, seedHash ^ 0x243f6a88, 3),
+        fine: fbm2(x * 34, y * 28, seedHash ^ 0xb7e15162, 3),
+        pores: valueNoise2(x * 68, y * 52, seedHash ^ 0x8aed2a6b),
+    };
+}
+
+function paintTextureCraters(
+    colorCtx: CanvasRenderingContext2D,
+    bumpCtx: CanvasRenderingContext2D,
+    roughCtx: CanvasRenderingContext2D,
+    profile: AsteroidProfile,
+    width: number,
+    height: number,
+    rng: () => number,
+): void {
+    const craterCount = profile.craterCount * 3 + 10;
+
+    for (let i = 0; i < craterCount; i += 1) {
+        const x = rng() * width;
+        const y = rng() * height;
+        const radius = THREE.MathUtils.lerp(5, 24, rng()) * (profile.detail >= 8 ? 1.08 : 0.95);
+
+        const colorGradient = colorCtx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
+        colorGradient.addColorStop(0, 'rgba(10, 11, 13, 0.22)');
+        colorGradient.addColorStop(0.58, 'rgba(44, 40, 36, 0.10)');
+        colorGradient.addColorStop(0.8, 'rgba(135, 127, 115, 0.08)');
+        colorGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        colorCtx.fillStyle = colorGradient;
+        colorCtx.beginPath();
+        colorCtx.arc(x, y, radius, 0, Math.PI * 2);
+        colorCtx.fill();
+
+        const bumpGradient = bumpCtx.createRadialGradient(x, y, radius * 0.08, x, y, radius);
+        bumpGradient.addColorStop(0, 'rgba(24, 24, 24, 0.55)');
+        bumpGradient.addColorStop(0.62, 'rgba(76, 76, 76, 0.22)');
+        bumpGradient.addColorStop(0.82, 'rgba(220, 220, 220, 0.18)');
+        bumpGradient.addColorStop(1, 'rgba(128, 128, 128, 0)');
+        bumpCtx.fillStyle = bumpGradient;
+        bumpCtx.beginPath();
+        bumpCtx.arc(x, y, radius, 0, Math.PI * 2);
+        bumpCtx.fill();
+
+        const roughGradient = roughCtx.createRadialGradient(x, y, radius * 0.12, x, y, radius);
+        roughGradient.addColorStop(0, 'rgba(255, 255, 255, 0.20)');
+        roughGradient.addColorStop(0.82, 'rgba(230, 230, 230, 0.08)');
+        roughGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        roughCtx.fillStyle = roughGradient;
+        roughCtx.beginPath();
+        roughCtx.arc(x, y, radius, 0, Math.PI * 2);
+        roughCtx.fill();
+    }
+}
+
+function paintTextureCracks(
+    colorCtx: CanvasRenderingContext2D,
+    bumpCtx: CanvasRenderingContext2D,
+    profile: AsteroidProfile,
+    width: number,
+    height: number,
+    rng: () => number,
+): void {
+    const crackCount = Math.max(6, profile.craterCount + 4);
+
+    colorCtx.save();
+    bumpCtx.save();
+    colorCtx.lineCap = 'round';
+    colorCtx.lineJoin = 'round';
+    bumpCtx.lineCap = 'round';
+    bumpCtx.lineJoin = 'round';
+
+    for (let i = 0; i < crackCount; i += 1) {
+        const points = buildCrackPoints(width, height, rng);
+
+        colorCtx.beginPath();
+        bumpCtx.beginPath();
+        colorCtx.moveTo(points[0].x, points[0].y);
+        bumpCtx.moveTo(points[0].x, points[0].y);
+
+        for (let pointIndex = 1; pointIndex < points.length; pointIndex += 1) {
+            colorCtx.lineTo(points[pointIndex].x, points[pointIndex].y);
+            bumpCtx.lineTo(points[pointIndex].x, points[pointIndex].y);
+        }
+
+        colorCtx.strokeStyle = `rgba(14, 15, 17, ${0.07 + rng() * 0.08})`;
+        colorCtx.lineWidth = 0.65 + rng() * 1.25;
+        colorCtx.stroke();
+
+        bumpCtx.strokeStyle = `rgba(38, 38, 38, ${0.12 + rng() * 0.16})`;
+        bumpCtx.lineWidth = 0.8 + rng() * 1.5;
+        bumpCtx.stroke();
+    }
+
+    colorCtx.restore();
+    bumpCtx.restore();
+}
+
+function buildCrackPoints(
+    width: number,
+    height: number,
+    rng: () => number,
+): Array<{ x: number; y: number }> {
+    const pointCount = 3 + Math.floor(rng() * 4);
+    const startX = rng() * width;
+    const startY = rng() * height;
+    const angle = rng() * Math.PI * 2;
+    const step = 10 + rng() * 20;
+    const points: Array<{ x: number; y: number }> = [];
+
+    for (let i = 0; i < pointCount; i += 1) {
+        points.push({
+            x: THREE.MathUtils.euclideanModulo(startX + Math.cos(angle) * step * i + (rng() - 0.5) * 18, width),
+            y: THREE.MathUtils.clamp(startY + Math.sin(angle) * step * i + (rng() - 0.5) * 14, 0, height),
+        });
+    }
+
+    return points;
+}
+
+function genericAsteroidProfile(variant: GenericAsteroidVariant): AsteroidProfile {
     switch (variant) {
         case 'tiny':
             return {
-                detail: 6,
-                axes: [1.16, 0.92, 0.82],
-                roughness: 0.24,
-                craterCount: 3,
-                craterRadius: [0.16, 0.28],
-                craterDepth: [0.025, 0.06],
+                detail: 7,
+                axes: [1.28, 0.86, 0.72],
+                macroAmplitude: 0.13,
+                blockAmplitude: 0.07,
+                gritAmplitude: 0.018,
+                craterCount: 5,
+                craterRadius: [0.14, 0.28],
+                craterDepth: [0.014, 0.038],
+                bumpScale: 0.016,
+                roughness: 0.965,
+                mineralVariation: 0.42,
             };
 
         case 'small':
             return {
-                detail: 6,
-                axes: [1.12, 0.94, 0.86],
-                roughness: 0.22,
-                craterCount: 4,
-                craterRadius: [0.18, 0.34],
-                craterDepth: [0.03, 0.075],
+                detail: 7,
+                axes: [1.22, 0.88, 0.76],
+                macroAmplitude: 0.12,
+                blockAmplitude: 0.066,
+                gritAmplitude: 0.016,
+                craterCount: 6,
+                craterRadius: [0.13, 0.28],
+                craterDepth: [0.014, 0.036],
+                bumpScale: 0.015,
+                roughness: 0.96,
+                mineralVariation: 0.38,
             };
 
         case 'medium':
             return {
-                detail: 7,
-                axes: [1.08, 0.96, 0.84],
-                roughness: 0.18,
-                craterCount: 5,
-                craterRadius: [0.18, 0.36],
-                craterDepth: [0.035, 0.085],
+                detail: 8,
+                axes: [1.16, 0.9, 0.78],
+                macroAmplitude: 0.108,
+                blockAmplitude: 0.058,
+                gritAmplitude: 0.014,
+                craterCount: 7,
+                craterRadius: [0.12, 0.26],
+                craterDepth: [0.012, 0.032],
+                bumpScale: 0.013,
+                roughness: 0.955,
+                mineralVariation: 0.34,
             };
 
         case 'large':
             return {
-                detail: 7,
-                axes: [1.18, 0.96, 0.88],
-                roughness: 0.17,
-                craterCount: 6,
-                craterRadius: [0.2, 0.4],
-                craterDepth: [0.03, 0.08],
+                detail: 8,
+                axes: [1.24, 0.94, 0.82],
+                macroAmplitude: 0.112,
+                blockAmplitude: 0.056,
+                gritAmplitude: 0.014,
+                craterCount: 8,
+                craterRadius: [0.12, 0.25],
+                craterDepth: [0.012, 0.03],
+                bumpScale: 0.012,
+                roughness: 0.95,
+                mineralVariation: 0.3,
             };
 
         case 'unknown':
         default:
             return {
-                detail: 6,
-                axes: [1.1, 0.94, 0.86],
-                roughness: 0.2,
-                craterCount: 4,
-                craterRadius: [0.18, 0.34],
-                craterDepth: [0.03, 0.075],
+                detail: 7,
+                axes: [1.2, 0.9, 0.78],
+                macroAmplitude: 0.114,
+                blockAmplitude: 0.06,
+                gritAmplitude: 0.015,
+                craterCount: 6,
+                craterRadius: [0.13, 0.27],
+                craterDepth: [0.013, 0.034],
+                bumpScale: 0.014,
+                roughness: 0.958,
+                mineralVariation: 0.36,
             };
     }
 }
 
-/**
- * Gera um hash inteiro de 32 bits a partir de uma string.
- */
-function hashString(s: string): number {
-    let h = 0x811c9dc5;
+function fbm3(x: number, y: number, z: number, seed: number, octaves: number): number {
+    let value = 0;
+    let amplitude = 0.5;
+    let frequency = 1;
+    let total = 0;
 
-    for (let i = 0; i < s.length; i += 1) {
-        h ^= s.charCodeAt(i);
-        h = Math.imul(h, 0x01000193);
+    for (let i = 0; i < octaves; i += 1) {
+        value += valueNoise3(x * frequency, y * frequency, z * frequency, seed + i * 1013) * amplitude;
+        total += amplitude;
+        amplitude *= 0.5;
+        frequency *= 2.03;
     }
 
-    return h >>> 0;
+    return value / total - 0.5;
+}
+
+function ridgedFbm3(x: number, y: number, z: number, seed: number, octaves: number): number {
+    let value = 0;
+    let amplitude = 0.5;
+    let frequency = 1;
+    let total = 0;
+
+    for (let i = 0; i < octaves; i += 1) {
+        value += (1 - Math.abs(valueNoise3(x * frequency, y * frequency, z * frequency, seed + i * 1747) * 2 - 1)) * amplitude;
+        total += amplitude;
+        amplitude *= 0.52;
+        frequency *= 2.1;
+    }
+
+    return value / total - 0.5;
+}
+
+function fbm2(x: number, y: number, seed: number, octaves: number): number {
+    let value = 0;
+    let amplitude = 0.5;
+    let frequency = 1;
+    let total = 0;
+
+    for (let i = 0; i < octaves; i += 1) {
+        value += valueNoise2(x * frequency, y * frequency, seed + i * 733) * amplitude;
+        total += amplitude;
+        amplitude *= 0.5;
+        frequency *= 2.03;
+    }
+
+    return value / total - 0.5;
+}
+
+function ridgedFbm2(x: number, y: number, seed: number, octaves: number): number {
+    let value = 0;
+    let amplitude = 0.5;
+    let frequency = 1;
+    let total = 0;
+
+    for (let i = 0; i < octaves; i += 1) {
+        value += (1 - Math.abs(valueNoise2(x * frequency, y * frequency, seed + i * 9151) * 2 - 1)) * amplitude;
+        total += amplitude;
+        amplitude *= 0.52;
+        frequency *= 2.08;
+    }
+
+    return value / total - 0.5;
+}
+
+function valueNoise3(x: number, y: number, z: number, seed: number): number {
+    const xi = Math.floor(x);
+    const yi = Math.floor(y);
+    const zi = Math.floor(z);
+    const xf = smooth01(x - xi);
+    const yf = smooth01(y - yi);
+    const zf = smooth01(z - zi);
+
+    const x00 = lerp(hash3(xi, yi, zi, seed), hash3(xi + 1, yi, zi, seed), xf);
+    const x10 = lerp(hash3(xi, yi + 1, zi, seed), hash3(xi + 1, yi + 1, zi, seed), xf);
+    const x01 = lerp(hash3(xi, yi, zi + 1, seed), hash3(xi + 1, yi, zi + 1, seed), xf);
+    const x11 = lerp(hash3(xi, yi + 1, zi + 1, seed), hash3(xi + 1, yi + 1, zi + 1, seed), xf);
+
+    return lerp(lerp(x00, x10, yf), lerp(x01, x11, yf), zf);
+}
+
+function valueNoise2(x: number, y: number, seed: number): number {
+    const xi = Math.floor(x);
+    const yi = Math.floor(y);
+    const xf = smooth01(x - xi);
+    const yf = smooth01(y - yi);
+
+    return lerp(
+        lerp(hash2(xi, yi, seed), hash2(xi + 1, yi, seed), xf),
+        lerp(hash2(xi, yi + 1, seed), hash2(xi + 1, yi + 1, seed), xf),
+        yf,
+    );
+}
+
+function smooth01(value: number): number {
+    return value * value * (3 - 2 * value);
+}
+
+function lerp(a: number, b: number, t: number): number {
+    return a + (b - a) * t;
+}
+
+function hash2(x: number, y: number, seed: number): number {
+    let h = seed ^ Math.imul(x, 374761393) ^ Math.imul(y, 668265263);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+
+function hash3(x: number, y: number, z: number, seed: number): number {
+    let h = seed ^ Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(z, 2246822519);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+
+function hashString(value: string): number {
+    let hash = 0x811c9dc5;
+
+    for (let i = 0; i < value.length; i += 1) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+    }
+
+    return hash >>> 0;
 }

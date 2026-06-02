@@ -5,7 +5,7 @@ import { collectTimeTicks, findClosestApproachPoint, toVec3 } from '@/lib/observ
 import { DirectionCone } from './DirectionCone';
 import { GradientTrajectoryLine } from './GradientTrajectoryLine';
 import {
-    getConeDirection,
+    getMovementDirection,
     getTrajectoryOpacities,
     isPointOnDrawnPath,
 } from './nowTrajectoryPresentation';
@@ -44,13 +44,13 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
         [closestApproach, fullPast],
     );
 
-    const endArrow = useMemo(() => {
+    const directionMarker = useMemo(() => {
         if (!currentVec) return null;
 
-        const direction = getConeDirection(trajectory.currentPoint, fullPast);
-        if (!direction) return null;
+        const movementDirection = getMovementDirection(trajectory.currentPoint, fullPast);
+        if (!movementDirection) return null;
 
-        return { tip: currentVec.clone(), direction };
+        return { tip: currentVec.clone(), movementDirection };
     }, [currentVec, trajectory.currentPoint, fullPast]);
 
     const timeTicks = useMemo(() => {
@@ -75,10 +75,10 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
                 />
             ) : null}
 
-            {endArrow ? (
+            {directionMarker ? (
                 <DirectionCone
-                    tip={endArrow.tip}
-                    direction={endArrow.direction}
+                    tip={directionMarker.tip}
+                    direction={directionMarker.movementDirection}
                     color={palette.future}
                     opacity={coneOpacity}
                 />

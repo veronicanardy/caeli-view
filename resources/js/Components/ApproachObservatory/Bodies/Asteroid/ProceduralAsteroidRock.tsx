@@ -1,7 +1,11 @@
-import { useMemo, useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { GenericAsteroidVariant } from './asteroidProcedural';
-import { buildAsteroidGeometry, buildAsteroidSurfaceTextures } from './asteroidProcedural';
+import {
+    asteroidMaterialProfile,
+    buildAsteroidGeometry,
+    buildAsteroidSurfaceTextures,
+} from './asteroidProcedural';
 
 /**
  * Props do componente de rocha procedural que renderiza asteroides genéricos.
@@ -15,8 +19,8 @@ interface ProceduralAsteroidRockProps {
 /**
  * Renderiza uma rocha procedural determinística para asteroides sem modelo real.
  *
- * A geometria e as texturas são geradas a partir de uma semente estável, então
- * o mesmo objeto tende a manter a mesma aparência entre renderizações.
+ * A geometria, as texturas e o material são memoizados por seed/variante para
+ * evitar recriação a cada render e manter custo previsível no navegador.
  */
 export default function ProceduralAsteroidRock({
     seed,
@@ -24,6 +28,7 @@ export default function ProceduralAsteroidRock({
     opacity,
 }: ProceduralAsteroidRockProps) {
     const rockGeometry = useMemo(() => buildAsteroidGeometry(seed, variant), [seed, variant]);
+    const surfaceProfile = useMemo(() => asteroidMaterialProfile(variant), [variant]);
 
     useEffect(() => {
         return () => {
@@ -33,7 +38,7 @@ export default function ProceduralAsteroidRock({
 
     const surface = useMemo(() => {
         try {
-            return buildAsteroidSurfaceTextures(seed, variant, 512);
+            return buildAsteroidSurfaceTextures(seed, variant, 768);
         } catch {
             return null;
         }
@@ -47,23 +52,42 @@ export default function ProceduralAsteroidRock({
         };
     }, [surface]);
 
+    const material = useMemo(() => {
+        const nextMaterial = new THREE.MeshStandardMaterial({
+            color: '#2f3136',
+            vertexColors: true,
+            map: surface?.map,
+            bumpMap: surface?.bump,
+            bumpScale: surfaceProfile.bumpScale,
+            roughnessMap: surface?.roughness,
+            emissive: '#17191d',
+            emissiveIntensity: 0.028,
+            roughness: surfaceProfile.roughness,
+            metalness: 0,
+            flatShading: false,
+            dithering: true,
+            transparent: true,
+            opacity: 1,
+        });
+
+        nextMaterial.toneMapped = true;
+        nextMaterial.normalScale.set(0.82, 0.82);
+
+        return nextMaterial;
+    }, [surface, surfaceProfile.bumpScale, surfaceProfile.roughness]);
+
+    useEffect(() => {
+        material.opacity = opacity;
+        material.needsUpdate = true;
+    }, [material, opacity]);
+
+    useEffect(() => {
+        return () => {
+            material.dispose();
+        };
+    }, [material]);
+
     return (
-        <mesh geometry={rockGeometry}>
-            <meshStandardMaterial
-                color="#a59b8b"
-                vertexColors
-                map={surface?.map ?? undefined}
-                bumpMap={surface?.bump ?? undefined}
-                bumpScale={0.012}
-                roughnessMap={surface?.roughness ?? undefined}
-                emissive="#4c4339"
-                emissiveIntensity={0.09}
-                roughness={0.88}
-                metalness={0.0}
-                flatShading={false}
-                transparent
-                opacity={opacity}
-            />
-        </mesh>
+        <mesh geometry={rockGeometry} material={material} />
     );
 }
