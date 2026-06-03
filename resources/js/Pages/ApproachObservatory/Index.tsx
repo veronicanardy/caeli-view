@@ -1,23 +1,15 @@
 import { Head } from '@inertiajs/react';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/Components/AppLayout';
-import { ApproachTimeline } from '@/Components/ApproachObservatory/Charts/ApproachTimeline';
 import { CompactConsoleBar } from '@/Components/ApproachObservatory/Controls/CompactConsoleBar';
-import { CuratedHighlights } from '@/Components/ApproachObservatory/Lists/CuratedHighlights';
-import { DailyProximityList } from '@/Components/ApproachObservatory/Lists/DailyProximityList';
 import { RadarDataQualityCard } from '@/Components/ApproachObservatory/Panels/RadarDataQualityCard';
-import { RangeInsightsCards } from '@/Components/ApproachObservatory/Lists/RangeInsightsCards';
-import { TechnicalDataPanel } from '@/Components/ApproachObservatory/Panels/TechnicalDataPanel';
 import { ErrorMessage } from '@/Components/ErrorMessage';
-import { bestDistanceKm, buildRadarObjects } from '@/lib/radarData';
+import { buildRadarObjects } from '@/lib/radarData';
 import { useTranslation } from '@/i18n';
-import { buildCuratedHighlights, buildRangeInsights } from '@/lib/approachInterpretation';
 import { useClosestNow } from '@/hooks/useClosestNow';
 import { useRadarControls } from '@/hooks/useRadarControls';
 import {
-    ApproachObservatoryCharts,
     ApproachObservatoryFilters,
-    ApproachObservatorySummary,
     AsteroidTrajectory,
     HorizonsPositionResult,
     LunarReference,
@@ -29,17 +21,10 @@ import {
 const DailyOrbitalRadar3D = lazy(() =>
     import('@/Components/ApproachObservatory/DailyOrbitalRadar3D').then((module) => ({ default: module.DailyOrbitalRadar3D })),
 );
-const UnifiedApproachTable = lazy(() =>
-    import('@/Components/ApproachObservatory/Lists/UnifiedApproachTable').then((module) => ({ default: module.UnifiedApproachTable })),
-);
 
 type ObservatoryData = {
-    approaches: UnifiedApproach[];
-    summary: ApproachObservatorySummary;
-    charts: ApproachObservatoryCharts;
     errorsBySource: Record<string, string>;
     lunarReference: LunarReference;
-    visualNote: string;
 };
 
 type Props = PageProps<{
@@ -49,7 +34,6 @@ type Props = PageProps<{
 
 export default function ApproachObservatoryIndex({ filters, initialSunDirection, errors = {} }: Props) {
     const [radarFullscreen, setRadarFullscreen] = useState(false);
-    const [sortKey, setSortKey] = useState(filters.sort === '-v-rel' ? 'relativeVelocityKph' : 'nominalDistanceKm');
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<ObservatoryData | null>(null);
     const [fetchError, setFetchError] = useState<string | null>(null);
@@ -58,9 +42,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     const [trajectoryLoadingKey, setTrajectoryLoadingKey] = useState<string | null>(null);
     const { locale, t } = useTranslation();
     const en = locale === 'en';
-    const selectedDate = filters.date_min;
-
-    const positionsById = useMemo<Record<string, HorizonsPositionResult>>(() => ({}), []);
 
     const { objectLimit, selectionMode, setObjectLimit, setSelectionMode } = useRadarControls();
     const [refreshNonce, setRefreshNonce] = useState(0);
@@ -72,7 +53,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     const dataWindow = useMemo(() => ({ date_min: filters.date_min, date_max: filters.date_max }), [filters.date_min, filters.date_max]);
 
     useEffect(() => {
-
         const controller = new AbortController();
         setLoading(true);
         setFetchError(null);
@@ -121,7 +101,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
         refreshNonce,
     );
 
-
     const closestNowApproaches = useMemo<UnifiedApproach[]>(() => {
         if (!closestNowData) return [];
         return closestNowData.objects.map((object) => object.approach);
@@ -167,40 +146,18 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
         return map;
     }, [closestNowData]);
 
-    const approaches = data?.approaches ?? [];
-    const summary = data?.summary;
-    const charts = data?.charts;
     const lunarReference = data?.lunarReference ?? closestNowData?.lunarReference;
     const errorsBySource = data?.errorsBySource ?? {};
 
-    const filtered = useMemo(() => {
-        return [...approaches].sort((left, right) => compareApproaches(left, right, sortKey, positionsById));
-    }, [approaches, positionsById, sortKey]);
-
-    const radarApproaches = closestNowApproaches;
-    const radarPositionsById = closestNowPositionsById;
-
-    const radarObjects = useMemo(() => buildRadarObjects(radarApproaches, radarPositionsById), [radarApproaches, radarPositionsById]);
+    const radarObjects = useMemo(
+        () => buildRadarObjects(closestNowApproaches, closestNowPositionsById),
+        [closestNowApproaches, closestNowPositionsById],
+    );
 
     const focusApproach = useMemo(() => {
         if (!selectedFocusId) return null;
-        // Search the list that's actually being shown on the radar — that includes the
-        // closest-5-now objects (which never reach `filtered` because they bypass /data).
-        const inRadar = radarApproaches.find((approach) => approach.id === selectedFocusId);
-        if (inRadar) return inRadar;
-        return filtered.find((approach) => approach.id === selectedFocusId) ?? null;
-    }, [radarApproaches, filtered, selectedFocusId]);
-
-    const curatedHighlights = useMemo(() => {
-        const all = buildCuratedHighlights(filtered, locale);
-        if (!focusApproach) return all;
-        return all.filter((highlight) => highlight.approach.id !== focusApproach.id);
-    }, [filtered, locale, focusApproach]);
-
-    const rangeInsights = useMemo(() => {
-        if (!summary || !charts) return [];
-        return buildRangeInsights(summary, charts, filtered, locale);
-    }, [summary, charts, filtered, locale]);
+        return closestNowApproaches.find((approach) => approach.id === selectedFocusId) ?? null;
+    }, [closestNowApproaches, selectedFocusId]);
 
     const trajectoryKey = focusApproach ? `${focusApproach.id}:${focusApproach.approachDate ?? ''}` : null;
 
@@ -299,12 +256,8 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                                     radarLoading={closestNowLoading}
                                     onRefresh={() => setRefreshNonce((n) => n + 1)}
                                     onFullscreenChange={setRadarFullscreen}
-                                    onSelect={(approach) => {
-                                        setSelectedFocusId(approach.id);
-                                    }}
-                                    onClearSelection={() => {
-                                        setSelectedFocusId(null);
-                                    }}
+                                    onSelect={(approach) => setSelectedFocusId(approach.id)}
+                                    onClearSelection={() => setSelectedFocusId(null)}
                                     onOpenFocus={(approach) => {
                                         window.location.href = approach.detailRoute;
                                     }}
@@ -324,56 +277,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                                 t={t}
                             />
                         ) : null}
-
-                        {filtered.length ? (
-                            <section className="section-slide space-y-3">
-                                <SectionHeading title={t('observatory.dailyWhy.title')} description={t('observatory.dailyWhy.description')} />
-                                <DailyProximityList
-                                    approaches={filtered}
-                                    positionsById={positionsById}
-                                    focusId={focusApproach?.id ?? null}
-                                    selectedDate={selectedDate}
-                                    locale={locale}
-                                    trajectoryByKey={trajectoryByKey}
-                                    trajectoryLoadingKey={trajectoryLoadingKey}
-                                />
-                            </section>
-                        ) : null}
-
-                        {filtered.length ? (
-                            <section className="section-slide space-y-3">
-                                <SectionHeading title={t('observatory.timeline.title')} description={t('observatory.timeline.description')} />
-                                <ApproachTimeline approaches={filtered} locale={locale} t={t} />
-                            </section>
-                        ) : null}
-
-                        {filtered.length && curatedHighlights.length ? (
-                            <section className="section-slide space-y-3">
-                                <SectionHeading title={t('observatory.highlights.title')} description={t('observatory.highlights.description')} />
-                                <CuratedHighlights highlights={curatedHighlights} t={t} />
-                            </section>
-                        ) : null}
-
-                        {filtered.length ? (
-                            <section className="section-slide space-y-3">
-                            <SectionHeading title={t('observatory.insights.title')} description={t('observatory.insights.description')} />
-                            <RangeInsightsCards insights={rangeInsights} />
-                            </section>
-                        ) : null}
-
-                        {filtered.length ? (
-                            <TechnicalDataPanel
-                            title={t('observatory.technical.title')}
-                            description={t('observatory.technical.description')}
-                            openLabel={t('observatory.technical.open')}
-                            closeLabel={t('observatory.technical.close')}
-                            count={filtered.length}
-                        >
-                            <Suspense fallback={<ObservatorySkeleton label={t('observatory.loading.table')} rows={6} />}>
-                                <UnifiedApproachTable approaches={filtered} sortKey={sortKey} onSort={setSortKey} />
-                            </Suspense>
-                            </TechnicalDataPanel>
-                        ) : null}
                     </>
                 )}
             </section>
@@ -381,19 +284,10 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     );
 }
 
-function SectionHeading({ title, description, muted = false }: { title: string; description: string; muted?: boolean }) {
+function ObservatorySkeleton({ label, rows }: { label: string; rows: number }) {
     return (
-        <div>
-            <h2 className={`font-semibold text-white ${muted ? 'text-base' : 'text-lg'}`}>{title}</h2>
-            <p className="mt-1 max-w-3xl text-sm text-white/55">{description}</p>
-        </div>
-    );
-}
-
-function ObservatorySkeleton({ label, rows, compact = false }: { label: string; rows: number; compact?: boolean }) {
-    return (
-        <div className={`rounded-lg border border-white/10 bg-white/[0.035] p-4 ${compact ? 'grid gap-3 md:grid-cols-3' : 'space-y-3'}`}>
-            <div className="col-span-full flex items-center gap-3 text-sm text-white/55">
+        <div className="rounded-lg border border-white/10 bg-white/[0.035] p-4 space-y-3">
+            <div className="flex items-center gap-3 text-sm text-white/55">
                 <span className="size-2.5 animate-pulse rounded-full bg-signal-cyan" />
                 {label}
             </div>
@@ -402,26 +296,4 @@ function ObservatorySkeleton({ label, rows, compact = false }: { label: string; 
             ))}
         </div>
     );
-}
-
-
-function compareApproaches(
-    left: UnifiedApproach,
-    right: UnifiedApproach,
-    key: string,
-    positionsById: Record<string, HorizonsPositionResult>,
-): number {
-    if (key === 'nominalDistanceKm') {
-        return (bestDistanceKm(left, positionsById[left.id]) ?? Number.POSITIVE_INFINITY)
-            - (bestDistanceKm(right, positionsById[right.id]) ?? Number.POSITIVE_INFINITY);
-    }
-
-    const leftValue = left[key as keyof UnifiedApproach];
-    const rightValue = right[key as keyof UnifiedApproach];
-
-    if (typeof leftValue === 'number' || typeof rightValue === 'number') {
-        return (leftValue as number | null ?? Number.POSITIVE_INFINITY) - (rightValue as number | null ?? Number.POSITIVE_INFINITY);
-    }
-
-    return String(leftValue ?? '').localeCompare(String(rightValue ?? ''));
 }

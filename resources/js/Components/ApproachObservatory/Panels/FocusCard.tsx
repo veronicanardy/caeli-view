@@ -13,6 +13,7 @@ import { compactKm } from '@/lib/format';
 import { formatDistanceAU, formatTimestamp } from '@/lib/observatory/format';
 import { humanSummary, motionLabel, riskAssessment, sizeComparison, trajectoryStatusBadge } from './focusCardPresentation';
 import { PanelShell } from './PanelShell';
+import { AsteroidModelPreview } from './AsteroidModelPreview';
 
 type FocusTab = 'summary' | 'physical' | 'approach';
 type FocusMobileSection = FocusTab | 'actions';
@@ -93,6 +94,7 @@ export function FocusCard({
             mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
         >
+            <AsteroidModelPreview object={object} locale={locale} />
 
             {/* Badge de risco com leitura visual baseada no flag NASA/JPL. */}
             {mobileSection === null ? (
@@ -218,7 +220,6 @@ export function FocusCard({
                             {a.nominalDistanceKm != null ? compactKm(a.nominalDistanceKm) : '—'}
                             {a.lunarDistance != null ? <span className="text-white/60"> · {a.lunarDistance.toFixed(2)} DL</span> : null}
                         </Row>
-                        <Row label={en ? 'Source' : 'Fonte'}>JPL/Horizons</Row>
                     </dl>
                 ) : null}
 
