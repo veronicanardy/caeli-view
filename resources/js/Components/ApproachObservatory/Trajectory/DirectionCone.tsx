@@ -31,36 +31,47 @@ export function DirectionCone({
     const camera = useThree((state) => state.camera);
     const worldPositionRef = useRef(new THREE.Vector3());
 
-    const { quaternion, position, ribbonGeometry, linePositions } = useMemo(() => {
+    const { quaternion, position, shaftLine, headMesh } = useMemo(() => {
         const movementDirection = direction.clone().normalize();
         const quaternionValue = new THREE.Quaternion().setFromUnitVectors(
             new THREE.Vector3(0, 1, 0),
             movementDirection,
         );
         const positionValue = tip.clone().add(movementDirection.multiplyScalar(DIRECTION_CONE_GEOMETRY.airGap));
-        const ribbon = buildVectorRibbonGeometry();
-        const lines = new Float32Array([
-            0, 0, 0.001,
-            0, DIRECTION_CONE_GEOMETRY.length, 0.001,
 
-            -DIRECTION_CONE_GEOMETRY.headWidth * 0.5, DIRECTION_CONE_GEOMETRY.length - DIRECTION_CONE_GEOMETRY.headLength, 0.001,
-            0, DIRECTION_CONE_GEOMETRY.length, 0.001,
+        const shaftLength = DIRECTION_CONE_GEOMETRY.length - DIRECTION_CONE_GEOMETRY.headLength;
+        const segments = 24;
+        const base = new THREE.Color(color);
 
-            DIRECTION_CONE_GEOMETRY.headWidth * 0.5, DIRECTION_CONE_GEOMETRY.length - DIRECTION_CONE_GEOMETRY.headLength, 0.001,
-            0, DIRECTION_CONE_GEOMETRY.length, 0.001,
-        ]);
+        const posArr = new Float32Array((segments + 1) * 3);
+        const colArr = new Float32Array((segments + 1) * 4);
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            posArr[i * 3 + 1] = t * shaftLength;
+            colArr[i * 4] = base.r;
+            colArr[i * 4 + 1] = base.g;
+            colArr[i * 4 + 2] = base.b;
+            colArr[i * 4 + 3] = t * t * opacity * 0.85;
+        }
 
-        return {
-            quaternion: quaternionValue,
-            position: positionValue,
-            ribbonGeometry: ribbon,
-            linePositions: lines,
-        };
-    }, [direction, tip]);
+        const shaftGeo = new THREE.BufferGeometry();
+        shaftGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+        shaftGeo.setAttribute('color', new THREE.BufferAttribute(colArr, 4));
+        const shaftMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false });
+        const line = new THREE.Line(shaftGeo, shaftMat);
+        line.renderOrder = 2;
+
+        const headGeo = new THREE.CylinderGeometry(0, DIRECTION_CONE_GEOMETRY.headWidth * 0.42, DIRECTION_CONE_GEOMETRY.headLength, 10, 1);
+        headGeo.translate(0, shaftLength + DIRECTION_CONE_GEOMETRY.headLength * 0.5, 0);
+        const headMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: opacity * 0.88, depthWrite: false });
+        const cone = new THREE.Mesh(headGeo, headMat);
+        cone.renderOrder = 2;
+
+        return { quaternion: quaternionValue, position: positionValue, shaftLine: line, headMesh: cone };
+    }, [direction, tip, color, opacity]);
 
     useFrame(() => {
         if (!markerRef.current) return;
-
         const worldPosition = markerRef.current.getWorldPosition(worldPositionRef.current);
         const cameraDistance = camera.position.distanceTo(worldPosition);
         const dynamicScale = THREE.MathUtils.clamp(
@@ -68,63 +79,22 @@ export function DirectionCone({
             DIRECTION_CONE_SCALE.min,
             DIRECTION_CONE_SCALE.max,
         );
-
         markerRef.current.scale.setScalar(dynamicScale);
     });
 
     useEffect(() => {
         return () => {
-            ribbonGeometry.dispose();
+            (shaftLine.geometry as THREE.BufferGeometry).dispose();
+            (shaftLine.material as THREE.Material).dispose();
+            (headMesh.geometry as THREE.BufferGeometry).dispose();
+            (headMesh.material as THREE.Material).dispose();
         };
-    }, [ribbonGeometry]);
+    }, [shaftLine, headMesh]);
 
     return (
         <group ref={markerRef} position={position} quaternion={quaternion}>
-            <mesh geometry={ribbonGeometry}>
-                <meshBasicMaterial
-                    color={color}
-                    transparent
-                    opacity={opacity * 0.22}
-                    depthWrite={false}
-                    side={THREE.DoubleSide}
-                />
-            </mesh>
-
-            <lineSegments>
-                <bufferGeometry attach="geometry">
-                    <bufferAttribute attach="attributes-position" args={[linePositions, 3]} />
-                </bufferGeometry>
-                <lineBasicMaterial color={color} transparent opacity={opacity * 0.78} depthWrite={false} />
-            </lineSegments>
+            <primitive object={shaftLine} />
+            <primitive object={headMesh} />
         </group>
     );
-}
-
-function buildVectorRibbonGeometry(): THREE.BufferGeometry {
-    const shaftEnd = DIRECTION_CONE_GEOMETRY.length - DIRECTION_CONE_GEOMETRY.headLength * 0.72;
-    const halfWidth = DIRECTION_CONE_GEOMETRY.width * 0.5;
-    const headY = DIRECTION_CONE_GEOMETRY.length - DIRECTION_CONE_GEOMETRY.headLength;
-    const positions = new Float32Array([
-        -halfWidth, 0, 0,
-        halfWidth, 0, 0,
-        -halfWidth * 0.75, shaftEnd, 0,
-
-        halfWidth, 0, 0,
-        halfWidth * 0.75, shaftEnd, 0,
-        -halfWidth * 0.75, shaftEnd, 0,
-
-        -DIRECTION_CONE_GEOMETRY.headWidth * 0.5, headY, 0,
-        0, DIRECTION_CONE_GEOMETRY.length, 0,
-        -halfWidth * 0.35, shaftEnd, 0,
-
-        DIRECTION_CONE_GEOMETRY.headWidth * 0.5, headY, 0,
-        halfWidth * 0.35, shaftEnd, 0,
-        0, DIRECTION_CONE_GEOMETRY.length, 0,
-    ]);
-    const geometry = new THREE.BufferGeometry();
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.computeVertexNormals();
-
-    return geometry;
 }

@@ -13,7 +13,6 @@ export type MobilePanelSection = 'menu' | 'filters' | 'reference' | 'objects';
 
 export function listTitle(count: number, mode: SelectionMode, en: boolean): string {
     if (mode === 'upcoming') return en ? `${count} upcoming passes` : `${count} próximas aproximações`;
-    if (mode === 'attention') return en ? `${count} watch-list objects` : `${count} objetos em maior atenção`;
     return en ? `${count} closest objects now` : `${count} objetos mais próximos agora`;
 }
 
@@ -75,10 +74,6 @@ export function MobilePanelSectionHeader({
 const EMPTY_MODE_MESSAGES: Record<SelectionMode, { pt: string; en: string }> = {
     nearest: { pt: 'Nenhum objeto próximo encontrado agora.', en: 'No nearby objects found right now.' },
     upcoming: { pt: 'Nenhuma aproximação prevista para os próximos dias.', en: 'No close approaches scheduled for the next few days.' },
-    attention: {
-        pt: 'Nenhum objeto monitorado pela NASA/JPL com posição disponível no radar agora.',
-        en: 'No NASA/JPL-monitored objects with a position available in the radar right now.',
-    },
 };
 
 export function EmptyModeMessage({ selectionMode, locale }: { selectionMode: SelectionMode; locale: 'pt-BR' | 'en' }) {

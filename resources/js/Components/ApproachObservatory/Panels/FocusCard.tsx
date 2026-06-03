@@ -225,28 +225,14 @@ export function FocusCard({
                 {showMobileActions ? (
                     <div className="space-y-2">
                         {hasOrbit ? (
-                            <button
-                                type="button"
-                                onClick={orbitMode ? onShowCloseUp : onShowOrbit}
-                                disabled={!orbitMode && !canShowOrbitPosition}
-                                title={!orbitMode && !canShowOrbitPosition
-                                    ? (en
-                                        ? 'Heliocentric orbit elements incomplete for this object (missing perihelion epoch).'
-                                        : 'Elementos da órbita heliocêntrica incompletos para este objeto (sem época de periélio).')
-                                    : undefined}
-                                className={[
-                                    'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                                    !orbitMode && !canShowOrbitPosition
-                                        ? 'cursor-not-allowed border border-white/10 bg-white/5 text-white/40'
-                                        : orbitMode
-                                            ? 'border border-white/15 bg-white/5 text-white/85 hover:bg-white/10'
-                                            : 'bg-signal-cyan text-space-950 shadow-[0_0_18px_rgba(34,211,238,0.35)] hover:bg-signal-cyan/90',
-                                ].join(' ')}
-                            >
-                                {orbitMode
-                                    ? (en ? '↩ Back to the asteroid' : '↩ Voltar ao asteroide')
-                                    : (en ? '🛰 See its orbit around the Sun' : '🛰 Ver a órbita ao redor do Sol')}
-                            </button>
+                            <OrbitToggleButton
+                                orbitMode={orbitMode}
+                                canShowOrbitPosition={canShowOrbitPosition}
+                                onShowOrbit={onShowOrbit}
+                                onShowCloseUp={onShowCloseUp}
+                                en={en}
+                                desktop={false}
+                            />
                         ) : null}
                         {onOpenFocus ? (
                             <button
@@ -264,28 +250,14 @@ export function FocusCard({
             {/* Acoes: alternancia orbital como CTA principal; dossie como secundario. */}
             <div className="hidden space-y-0.5 border-t border-white/10 px-2.5 py-1.5 lg:block lg:space-y-1.5 lg:px-3 lg:py-2.5">
                 {hasOrbit ? (
-                    <button
-                        type="button"
-                        onClick={orbitMode ? onShowCloseUp : onShowOrbit}
-                        disabled={!orbitMode && !canShowOrbitPosition}
-                        title={!orbitMode && !canShowOrbitPosition
-                            ? (en
-                                ? 'Heliocentric orbit elements incomplete for this object (missing perihelion epoch).'
-                                : 'Elementos da órbita heliocêntrica incompletos para este objeto (sem época de periélio).')
-                            : undefined}
-                        className={[
-                            'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan lg:gap-1.5 lg:py-2.5 lg:text-[13px]',
-                            !orbitMode && !canShowOrbitPosition
-                                ? 'cursor-not-allowed border border-white/10 bg-white/5 text-white/40'
-                                : orbitMode
-                                    ? 'border border-white/15 bg-white/5 text-white/85 hover:bg-white/10'
-                                    : 'border border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan shadow-[0_0_18px_rgba(34,211,238,0.18)] hover:border-signal-cyan/55 hover:bg-signal-cyan/10',
-                        ].join(' ')}
-                    >
-                        {orbitMode
-                            ? (en ? '↩ Back to the asteroid' : '↩ Voltar ao asteroide')
-                            : (en ? '🛰 See its orbit around the Sun' : '🛰 Ver a órbita ao redor do Sol')}
-                    </button>
+                    <OrbitToggleButton
+                        orbitMode={orbitMode}
+                        canShowOrbitPosition={canShowOrbitPosition}
+                        onShowOrbit={onShowOrbit}
+                        onShowCloseUp={onShowCloseUp}
+                        en={en}
+                        desktop
+                    />
                 ) : null}
                 {onOpenFocus ? (
                     <button
@@ -299,6 +271,42 @@ export function FocusCard({
             </div>
             </div>
         </PanelShell>
+    );
+}
+
+function OrbitToggleButton({ orbitMode, canShowOrbitPosition, onShowOrbit, onShowCloseUp, en, desktop }: {
+    orbitMode: boolean;
+    canShowOrbitPosition: boolean;
+    onShowOrbit: () => void;
+    onShowCloseUp: () => void;
+    en: boolean;
+    desktop: boolean;
+}) {
+    const disabled = !orbitMode && !canShowOrbitPosition;
+    const disabledTitle = en
+        ? 'Heliocentric orbit elements incomplete for this object (missing perihelion epoch).'
+        : 'Elementos da órbita heliocêntrica incompletos para este objeto (sem época de periélio).';
+    const baseClass = 'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan';
+    const desktopClass = desktop ? ' lg:gap-1.5 lg:py-2.5 lg:text-[13px]' : '';
+    const stateClass = disabled
+        ? 'cursor-not-allowed border border-white/10 bg-white/5 text-white/40'
+        : orbitMode
+            ? 'border border-white/15 bg-white/5 text-white/85 hover:bg-white/10'
+            : desktop
+                ? 'border border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan shadow-[0_0_18px_rgba(34,211,238,0.18)] hover:border-signal-cyan/55 hover:bg-signal-cyan/10'
+                : 'bg-signal-cyan text-space-950 shadow-[0_0_18px_rgba(34,211,238,0.35)] hover:bg-signal-cyan/90';
+    return (
+        <button
+            type="button"
+            onClick={orbitMode ? onShowCloseUp : onShowOrbit}
+            disabled={disabled}
+            title={disabled ? disabledTitle : undefined}
+            className={baseClass + desktopClass + ' ' + stateClass}
+        >
+            {orbitMode
+                ? (en ? '↩ Back to the asteroid' : '↩ Voltar ao asteroide')
+                : (en ? '🛰 See its orbit around the Sun' : '🛰 Ver a órbita ao redor do Sol')}
+        </button>
     );
 }
 

@@ -5,7 +5,7 @@ const STORAGE_KEY_LIMIT = 'radar:objectLimit';
 const STORAGE_KEY_MODE  = 'radar:selectionMode';
 
 const VALID_LIMITS: ObjectLimit[]     = [5, 15, 30];
-const VALID_MODES:  SelectionMode[]   = ['nearest', 'upcoming', 'attention'];
+const VALID_MODES:  SelectionMode[]   = ['nearest', 'upcoming'];
 
 function readLimit(): ObjectLimit {
     try {

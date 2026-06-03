@@ -202,7 +202,7 @@ export type ClosestNowObject = {
 };
 
 export type ObjectLimit = 5 | 15 | 30;
-export type SelectionMode = 'nearest' | 'upcoming' | 'attention';
+export type SelectionMode = 'nearest' | 'upcoming';
 
 export type ClosestNowResponse = {
     mode: 'closest_now';

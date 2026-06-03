@@ -124,8 +124,8 @@ function applyMaterialDefaults(obj: THREE.Object3D, opacity: number): void {
             mat.roughness = 0.96;
             mat.metalness = 0.0;
             mat.envMapIntensity = 0;
-            mat.emissive.set(0, 0, 0);
-            mat.emissiveIntensity = 0;
+            mat.emissive.set(0.12, 0.10, 0.09);
+            mat.emissiveIntensity = 0.05;
 
             if (mat.map) {
                 // Preserva a textura do GLB; o tint escurece levemente sem apagar detalhes

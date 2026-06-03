@@ -31,11 +31,9 @@ export function CompactConsoleBar({
     const currentModeLabel = (() => {
         if (locale === 'en') {
             if (selectionMode === 'upcoming') return 'Upcoming passes';
-            if (selectionMode === 'attention') return 'Watch list';
             return 'Closest now';
         }
         if (selectionMode === 'upcoming') return 'Próximas aproximações';
-        if (selectionMode === 'attention') return 'Maior atenção';
         return 'Mais próximos agora';
     })();
 
@@ -53,7 +51,7 @@ export function CompactConsoleBar({
     return (
         <section
             aria-label={locale === 'en' ? 'Radar filters' : 'Filtros do radar'}
-            className="relative z-30 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 backdrop-blur md:inline-block md:max-w-full md:px-4"
+            className="relative z-50 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 backdrop-blur md:inline-block md:max-w-full md:px-4"
         >
             <div className="hidden md:block">{filtersContent}</div>
 

@@ -1,4 +1,3 @@
-import { ChevronDown } from 'lucide-react';
 import type { ObjectLimit, SelectionMode } from '@/types';
 
 type Props = {
@@ -16,7 +15,6 @@ const LIMITS: ObjectLimit[] = [5, 15, 30];
 const MODE_OPTIONS: Array<{ value: SelectionMode; labelPt: string; labelEn: string }> = [
     { value: 'nearest', labelPt: 'Mais próximos agora', labelEn: 'Closest now' },
     { value: 'upcoming', labelPt: 'Próximas aproximações', labelEn: 'Upcoming passes' },
-    { value: 'attention', labelPt: 'Maior atenção', labelEn: 'Watch list' },
 ];
 
 /**
@@ -35,35 +33,48 @@ export function RadarObjectControls({
     criterionLocked = false,
 }: Props) {
     const en = locale === 'en';
-    const modeDescriptions = {
-        nearest: en ? 'Shows the bodies closest to Earth right now.' : 'Mostra os corpos mais próximos da Terra agora.',
-        upcoming: en ? 'Prioritizes the next close approaches in time order.' : 'Prioriza as próximas aproximações em ordem temporal.',
-        attention: en ? 'Highlights objects that deserve extra attention now.' : 'Destaca objetos que merecem atenção extra agora.',
-    } satisfies Record<SelectionMode, string>;
+    const modeDescriptions: Record<SelectionMode, string> = {
+        nearest: en
+            ? 'Shows asteroids and comets that are closest to Earth right now — like a live distance ranking.'
+            : 'Mostra os asteroides e cometas mais perto da Terra neste momento — como um ranking de distância ao vivo.',
+        upcoming: en
+            ? 'Shows objects that will pass closest to Earth in the coming days, sorted by when they arrive.'
+            : 'Mostra os objetos que vão passar mais perto da Terra nos próximos dias, em ordem de chegada.',
+    };
 
     return (
         <div className="grid gap-2.5 md:inline-flex md:flex-wrap md:items-end md:gap-3">
-            <label className="flex min-w-0 flex-col gap-1 md:w-[18rem] lg:w-[19.5rem]">
+            <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85">
                     {en ? 'Criterion' : 'Critério'}
                 </span>
-                <div className="relative">
-                    <select
-                        value={selectionMode}
-                        onChange={(event) => onModeChange(event.target.value as SelectionMode)}
-                        disabled={loading || criterionLocked}
-                        aria-label={en ? 'Selection criterion' : 'Critério de seleção'}
-                        className="h-10 w-full appearance-none rounded-xl border border-white/10 bg-space-950/70 px-3 pr-9 text-[13px] text-white outline-none transition focus:border-signal-cyan disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        {MODE_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
+                <div className="flex h-10 items-center gap-1 rounded-xl border border-white/10 bg-space-950/70 px-1.5" role="group" aria-label={en ? 'Selection criterion' : 'Critério de seleção'}>
+                    {MODE_OPTIONS.map((option) => (
+                        <span key={option.value} className="group relative inline-flex overflow-visible">
+                            <button
+                                type="button"
+                                disabled={loading || criterionLocked}
+                                onClick={() => onModeChange(option.value)}
+                                aria-pressed={selectionMode === option.value}
+                                aria-label={`${en ? option.labelEn : option.labelPt} — ${modeDescriptions[option.value]}`}
+                                className={[
+                                    'rounded-lg px-3 py-1.5 text-[13px] font-medium transition outline-none whitespace-nowrap',
+                                    'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-not-allowed disabled:opacity-50',
+                                    selectionMode === option.value
+                                        ? 'bg-signal-cyan/20 text-signal-cyan ring-1 ring-signal-cyan/40'
+                                        : 'text-white/65 hover:bg-white/[0.05] hover:text-white',
+                                ].join(' ')}
+                            >
                                 {en ? option.labelEn : option.labelPt}
-                            </option>
-                        ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-white/45" aria-hidden="true" />
+                            </button>
+                            <span className="pointer-events-none absolute top-full left-1/2 z-[120] mt-2.5 hidden w-56 -translate-x-1/2 rounded-md border border-signal-cyan/35 bg-[#07111f] px-2.5 py-2 text-[12px] leading-relaxed text-white/80 opacity-0 shadow-[0_8px_28px_rgba(0,0,0,0.55),0_0_18px_rgba(34,211,238,0.14)] transition group-hover:translate-y-[1px] group-hover:opacity-100 group-focus-within:translate-y-[1px] group-focus-within:opacity-100 sm:block">
+                                <span className="absolute top-0 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-l border-t border-signal-cyan/35 bg-[#07111f]" aria-hidden />
+                                {modeDescriptions[option.value]}
+                            </span>
+                        </span>
+                    ))}
                 </div>
-            </label>
+            </div>
 
             <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85">
