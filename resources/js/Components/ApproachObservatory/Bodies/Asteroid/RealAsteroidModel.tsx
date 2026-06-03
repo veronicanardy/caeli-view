@@ -7,6 +7,7 @@ interface RealAsteroidModelProps {
     asset: AsteroidModelAsset;
     opacity: number;
     seed?: string | number;
+    selected?: boolean;
 }
 
 function hashSeed(seed: string | number): number {
@@ -102,7 +103,14 @@ const ROCK_TINT = new THREE.Color('#4e5258');
 // Fallback quando o GLB não tem textura alguma
 const ROCK_FALLBACK_COLOR = new THREE.Color('#34383e');
 
-function applyMaterialDefaults(obj: THREE.Object3D, opacity: number): void {
+/* Emissive base — sombras profundas com mínimo de auto-iluminação. */
+const EMISSIVE_BASE = new THREE.Color(0.06, 0.05, 0.04);
+const EMISSIVE_BASE_INTENSITY = 0.08;
+/* Emissive selecionado — brilho interno ciano-frio que separa o asteroide do fundo. */
+const EMISSIVE_SELECTED = new THREE.Color(0.10, 0.22, 0.28);
+const EMISSIVE_SELECTED_INTENSITY = 0.55;
+
+function applyMaterialDefaults(obj: THREE.Object3D, opacity: number, selected: boolean): void {
     obj.traverse((child) => {
         const mesh = child as THREE.Mesh;
         if (!mesh.isMesh) return;
@@ -124,9 +132,16 @@ function applyMaterialDefaults(obj: THREE.Object3D, opacity: number): void {
             mat.roughness = 0.94;
             mat.metalness = 0.0;
             mat.envMapIntensity = 1;
-            /* Emissive mais baixo = sombras mais profundas = mais contraste percebido. */
-            mat.emissive.set(0.06, 0.05, 0.04);
-            mat.emissiveIntensity = 0.08;
+
+            if (selected) {
+                /* Asteroide selecionado: emissive ciano-frio sutil ilumina as bordas
+                   e ranhuras do modelo real, sem depender da esfera de halo. */
+                mat.emissive.copy(EMISSIVE_SELECTED);
+                mat.emissiveIntensity = EMISSIVE_SELECTED_INTENSITY;
+            } else {
+                mat.emissive.copy(EMISSIVE_BASE);
+                mat.emissiveIntensity = EMISSIVE_BASE_INTENSITY;
+            }
 
             if (mat.map) {
                 mat.color.copy(ROCK_TINT);
@@ -134,7 +149,6 @@ function applyMaterialDefaults(obj: THREE.Object3D, opacity: number): void {
                 mat.color.copy(ROCK_FALLBACK_COLOR);
             }
 
-            /* Normal scale maior = ranhuras e volumes mais definidos. */
             if (mat.normalMap) {
                 mat.normalScale.set(0.75, 0.75);
             }
@@ -142,8 +156,6 @@ function applyMaterialDefaults(obj: THREE.Object3D, opacity: number): void {
             mat.transparent = false;
             mat.opacity = opacity;
             mat.depthWrite = true;
-            // Usa cor escurecida pra simular dimming sem virar transparente,
-            // o que quebraria a ordem de depth com as linhas de trajetória
             if (opacity < 1) {
                 mat.color.multiplyScalar(opacity);
             }
@@ -163,7 +175,7 @@ function applyMaterialDefaults(obj: THREE.Object3D, opacity: number): void {
  * Suporta packs de múltiplos asteroides no mesmo arquivo: coleta todos os
  * grupos-raiz com mesh, seleciona um pelo hash do seed, centraliza e normaliza.
  */
-export default function RealAsteroidModel({ asset, opacity, seed }: RealAsteroidModelProps) {
+export default function RealAsteroidModel({ asset, opacity, seed, selected = false }: RealAsteroidModelProps) {
     const gltf = useGLTF(asset.url) as { scene: THREE.Group };
 
     const { model, scale } = useMemo(() => {
@@ -207,8 +219,8 @@ export default function RealAsteroidModel({ asset, opacity, seed }: RealAsteroid
     }, [gltf.scene, asset.url, seed]);
 
     useEffect(() => {
-        applyMaterialDefaults(model, opacity);
-    }, [model, opacity]);
+        applyMaterialDefaults(model, opacity, selected);
+    }, [model, opacity, selected]);
 
     useEffect(() => {
         return () => {

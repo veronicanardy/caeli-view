@@ -71,7 +71,7 @@ export function AsteroidMarker({
     return (
         <group position={position}>
             <group scale={rockScale} renderOrder={1}>
-                <RealAsteroidModel asset={renderModel.asset} opacity={opacity} seed={object.approach.id} />
+                <RealAsteroidModel asset={renderModel.asset} opacity={opacity} seed={object.approach.id} selected={isSelected} />
             </group>
 
             {isSelected ? (
