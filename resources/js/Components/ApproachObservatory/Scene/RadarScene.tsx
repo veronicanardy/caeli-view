@@ -90,7 +90,7 @@ function StarField() {
             const phi = Math.acos(2 * rng() - 1);
             /* 70% das estrelas ficam mais longe (fundo difuso), 30% mais perto (primeiro plano). */
             const near = rng() > 0.7;
-            const r = near ? 200 + rng() * 60 : 300 + rng() * 100;
+            const r = near ? 350 + rng() * 100 : 500 + rng() * 200;
             positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
             positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
             positions[i * 3 + 2] = r * Math.cos(phi);

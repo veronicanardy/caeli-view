@@ -12,15 +12,12 @@ const FULL_OPACITY = 1;
 const HITBOX_RADIUS = 0.14;
 const HITBOX_SEGMENTS = 16;
 const LABEL_POSITION: [number, number, number] = [0, 0.16, 0];
-/* Halo interno — preenchimento muito suave, apenas dá volume sem parecer um círculo. */
-const SELECTED_HALO_OPACITY = 0.045;
-const SELECTED_HALO_COLOR = '#6ecfdc';
-/* Anel de foco — aura técnica sutil, não deve dominar visualmente. */
-const FOCUS_RING_OPACITY = 0.13;
-const FOCUS_RING_COLOR = '#22d3ee';
-/* Rim light — envelope tênue que separa o asteroide do fundo sem formar mira. */
-const RIM_LIGHT_OPACITY = 0.06;
-const RIM_LIGHT_COLOR = '#38bdf8';
+/* Aura interna — volume suave que dá respiro atmosférico sem virar disco. */
+const INNER_AURA_OPACITY = 0.045;
+const INNER_AURA_COLOR = '#5dc8d8';
+/* Rim light aderente — borda luminosa próxima à silhueta do asteroide. */
+const RIM_LIGHT_OPACITY = 0.10;
+const RIM_LIGHT_COLOR = '#7ee8fa';
 
 /**
  * Propriedades usadas para renderizar um marcador de asteroide no radar 3D.
@@ -63,10 +60,9 @@ export function AsteroidMarker({
 }: AsteroidMarkerProps) {
     const [hovered, setHovered] = useState(false);
     const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
-    /* Geometrias de halo: camadas compactas para aura técnica discreta, não mira de jogo. */
-    const haloGeometry = useMemo(() => new THREE.SphereGeometry(ASTEROID_ROCK_SCALE * 1.38, 32, 16), []);
-    const ringGeometry = useMemo(() => new THREE.SphereGeometry(ASTEROID_ROCK_SCALE * 1.72, 32, 16), []);
-    const rimGeometry = useMemo(() => new THREE.SphereGeometry(ASTEROID_ROCK_SCALE * 2.25, 32, 16), []);
+    /* Geometrias de halo: aura interna próxima + rim light aderente, sem discos grandes. */
+    const innerAuraGeometry = useMemo(() => new THREE.SphereGeometry(ASTEROID_ROCK_SCALE * 1.28, 32, 16), []);
+    const rimGeometry = useMemo(() => new THREE.SphereGeometry(ASTEROID_ROCK_SCALE * 1.55, 32, 16), []);
 
     const rockScale = ASTEROID_ROCK_SCALE;
     const opacity = dimmed ? DIMMED_OPACITY : FULL_OPACITY;
@@ -80,7 +76,7 @@ export function AsteroidMarker({
 
             {isSelected ? (
                 <>
-                    {/* Rim light externo: separa o asteroide do fundo escuro sem exagerar. */}
+                    {/* Rim light aderente: borda luminosa próxima à silhueta, separa do fundo. */}
                     <mesh geometry={rimGeometry}>
                         <meshBasicMaterial
                             color={RIM_LIGHT_COLOR}
@@ -90,22 +86,12 @@ export function AsteroidMarker({
                             side={THREE.BackSide}
                         />
                     </mesh>
-                    {/* Anel de foco: define silhueta com brilho ciano contido. */}
-                    <mesh geometry={ringGeometry}>
+                    {/* Aura interna: névoa de foco suave, sem formar disco visível. */}
+                    <mesh geometry={innerAuraGeometry}>
                         <meshBasicMaterial
-                            color={FOCUS_RING_COLOR}
+                            color={INNER_AURA_COLOR}
                             transparent
-                            opacity={FOCUS_RING_OPACITY}
-                            depthWrite={false}
-                            side={THREE.BackSide}
-                        />
-                    </mesh>
-                    {/* Halo interno: preenchimento suave que dá volume. */}
-                    <mesh geometry={haloGeometry}>
-                        <meshBasicMaterial
-                            color={SELECTED_HALO_COLOR}
-                            transparent
-                            opacity={SELECTED_HALO_OPACITY}
+                            opacity={INNER_AURA_OPACITY}
                             depthWrite={false}
                             side={THREE.BackSide}
                         />

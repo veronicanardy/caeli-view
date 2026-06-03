@@ -32,8 +32,8 @@ export function TimeTick({
                 <sphereGeometry args={[0.012, 12, 12]} />
                 <meshBasicMaterial color={color} transparent opacity={0.85} />
             </mesh>
-            <FocusProtectedHtml position={[0, 0.055, 0]} center distanceFactor={7} zIndexRange={[6, 0]}>
-                <span className="pointer-events-none select-none whitespace-nowrap rounded-full bg-space-950/70 px-1.5 py-0.5 text-[10px] font-medium text-white/75 backdrop-blur">
+            <FocusProtectedHtml position={[0, 0.05, 0]} center distanceFactor={7} zIndexRange={[6, 0]}>
+                <span className="pointer-events-none select-none whitespace-nowrap rounded-full bg-space-950/50 px-1.5 py-0.5 text-[9px] font-normal text-white/45 backdrop-blur">
                     {label}
                 </span>
             </FocusProtectedHtml>

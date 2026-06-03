@@ -15,7 +15,7 @@ export const BODY_ORBIT_SEGMENTS = 128;
 export const BODY_ORBIT_MIN_RADIUS = 1e-6;
 
 export const BODY_ORBIT_OPACITY = {
-    moon: 0.3,
+    moon: 0.16,
 } as const;
 
 /** Segmentos padrão das esferas usadas pelos planetas ambiente. */

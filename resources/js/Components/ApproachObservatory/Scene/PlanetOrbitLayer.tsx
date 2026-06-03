@@ -20,14 +20,14 @@ type PlanetOrbitConfig = {
 };
 
 const PLANET_ORBIT_CONFIGS: PlanetOrbitConfig[] = [
-    { semiMajorAU: 0.387, eccentricity: 0.2056, lonPerihelionKey: 'mercuryLonPerihelionDeg', color: '#9aa0aa', opacity: 0.14 },
-    { semiMajorAU: 0.723, eccentricity: 0.0068, lonPerihelionKey: 'venusLonPerihelionDeg', color: '#c8b870', opacity: 0.14 },
-    { semiMajorAU: 1.000, eccentricity: 0.0167, lonPerihelionKey: 'earthLonPerihelionDeg', color: '#5b9bd5', opacity: 0.30 },
-    { semiMajorAU: 1.524, eccentricity: 0.0934, lonPerihelionKey: 'marsLonPerihelionDeg', color: '#c0501a', opacity: 0.13 },
-    { semiMajorAU: 5.203, eccentricity: 0.0489, lonPerihelionKey: 'jupiterLonPerihelionDeg', color: '#c8a060', opacity: 0.11 },
-    { semiMajorAU: 9.537, eccentricity: 0.0565, lonPerihelionKey: 'saturnLonPerihelionDeg', color: '#c8a840', opacity: 0.09 },
-    { semiMajorAU: 19.19, eccentricity: 0.0472, lonPerihelionKey: 'uranusLonPerihelionDeg', color: '#4ab8c8', opacity: 0.07 },
-    { semiMajorAU: 30.07, eccentricity: 0.0086, lonPerihelionKey: 'neptuneLonPerihelionDeg', color: '#2878d8', opacity: 0.06 },
+    { semiMajorAU: 0.387, eccentricity: 0.2056, lonPerihelionKey: 'mercuryLonPerihelionDeg', color: '#9aa0aa', opacity: 0.08 },
+    { semiMajorAU: 0.723, eccentricity: 0.0068, lonPerihelionKey: 'venusLonPerihelionDeg', color: '#c8b870', opacity: 0.08 },
+    { semiMajorAU: 1.000, eccentricity: 0.0167, lonPerihelionKey: 'earthLonPerihelionDeg', color: '#5b9bd5', opacity: 0.18 },
+    { semiMajorAU: 1.524, eccentricity: 0.0934, lonPerihelionKey: 'marsLonPerihelionDeg', color: '#c0501a', opacity: 0.08 },
+    { semiMajorAU: 5.203, eccentricity: 0.0489, lonPerihelionKey: 'jupiterLonPerihelionDeg', color: '#c8a060', opacity: 0.07 },
+    { semiMajorAU: 9.537, eccentricity: 0.0565, lonPerihelionKey: 'saturnLonPerihelionDeg', color: '#c8a840', opacity: 0.06 },
+    { semiMajorAU: 19.19, eccentricity: 0.0472, lonPerihelionKey: 'uranusLonPerihelionDeg', color: '#4ab8c8', opacity: 0.05 },
+    { semiMajorAU: 30.07, eccentricity: 0.0086, lonPerihelionKey: 'neptuneLonPerihelionDeg', color: '#2878d8', opacity: 0.04 },
 ];
 
 /**
