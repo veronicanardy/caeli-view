@@ -9,13 +9,13 @@ const BODY_IMAGE: Record<BodyId, { src: string; credit: string }> = {
     sun:     { src: 'https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002069/GSFC_20171208_Archive_e002069~orig.jpg', credit: 'NASA/SDO' },
     earth:   { src: 'https://images-assets.nasa.gov/image/PIA00076/PIA00076~orig.jpg',                                          credit: 'NASA/JPL · Galileo' },
     moon:    { src: 'https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001989/GSFC_20171208_Archive_e001989~orig.jpg', credit: 'NASA/GSFC · LRO' },
-    mercury: { src: 'https://images-assets.nasa.gov/image/PIA12397/PIA12397~orig.jpg',                                          credit: 'NASA/MESSENGER' },
-    venus:   { src: 'https://images-assets.nasa.gov/image/PIA00072/PIA00072~orig.jpg',                                          credit: 'NASA/JPL · Galileo' },
-    mars:    { src: 'https://images-assets.nasa.gov/image/PIA02981/PIA02981~orig.jpg',                                          credit: 'NASA/JPL · Mariner 7' },
-    jupiter: { src: 'https://images-assets.nasa.gov/image/PIA01509/PIA01509~orig.jpg',                                          credit: 'NASA/JPL · Voyager 1' },
-    saturn:  { src: 'https://images-assets.nasa.gov/image/PIA02225/PIA02225~orig.jpg',                                          credit: 'NASA/JPL · Voyager' },
+    mercury: { src: 'https://images-assets.nasa.gov/image/PIA00437/PIA00437~orig.jpg',                                          credit: 'NASA/JPL · Mariner 10' },
+    venus:   { src: 'https://images-assets.nasa.gov/image/PIA23791/PIA23791~orig.jpg',                                          credit: 'NASA/JPL · Mariner 10' },
+    mars:    { src: 'https://images-assets.nasa.gov/image/PIA03154/PIA03154~orig.jpg',                                          credit: 'NASA/ESA · Hubble' },
+    jupiter: { src: 'https://images-assets.nasa.gov/image/PIA22946/PIA22946~orig.jpg',                                          credit: 'NASA/JPL-Caltech · Juno' },
+    saturn:  { src: 'https://images-assets.nasa.gov/image/PIA14934/PIA14934~orig.jpg',                                          credit: 'NASA/JPL-Caltech · Cassini' },
     uranus:  { src: 'https://images-assets.nasa.gov/image/PIA18182/PIA18182~orig.jpg',                                          credit: 'NASA/JPL · Voyager 2' },
-    neptune: { src: 'https://images-assets.nasa.gov/image/ARC-1989-AC89-7001/ARC-1989-AC89-7001~orig.jpg',                      credit: 'NASA/JPL · Voyager 2' },
+    neptune: { src: 'https://images-assets.nasa.gov/image/PIA01492/PIA01492~orig.jpg',                                          credit: 'NASA/JPL · Voyager 2' },
 };
 
 export function BodyImagePreview({ body }: { body: BodyId }) {

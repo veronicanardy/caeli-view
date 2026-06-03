@@ -12,11 +12,13 @@ type PanelShellProps = {
     onClose: () => void;
     closeLabel: string;
     showCloseButton?: boolean;
-    /** Conteúdo da linha de subtítulo acima do título principal. */
-    eyebrow?: ReactNode;
+    /** Texto do eyebrow acima do título. Estilizado automaticamente com cor do dot. */
+    eyebrow?: string;
+    /** Nó extra renderizado à esquerda do eyebrow (ex: botão "Lista" mobile). */
+    eyebrowPrefix?: ReactNode;
     title: ReactNode;
     subtitle?: ReactNode;
-    /** Cor do dot decorativo (hex). Quando ausente, o dot não é exibido. */
+    /** Cor do dot decorativo e do eyebrow (hex). Quando ausente, usa signal-cyan/60. */
     dotColor?: string;
     /** Borda colorida do container - padrão: branca/15. */
     borderClass?: string;
@@ -33,6 +35,7 @@ export function PanelShell({
     closeLabel,
     showCloseButton = true,
     eyebrow,
+    eyebrowPrefix,
     title,
     subtitle,
     dotColor,
@@ -63,14 +66,17 @@ export function PanelShell({
             <div className="flex items-start justify-between gap-2 px-3 pt-3 lg:px-4 lg:pt-4">
                 <div className="min-w-0">
                     {eyebrow ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                            {eyebrowPrefix ?? null}
                             {dotColor ? (
                                 <span
-                                    className="inline-block size-2 shrink-0 rounded-full shadow-[0_0_6px_currentColor]"
-                                    style={{ backgroundColor: dotColor }}
+                                    className="inline-block size-2 shrink-0 rounded-full"
+                                    style={{ backgroundColor: dotColor, boxShadow: `0 0 6px ${dotColor}` }}
                                 />
                             ) : null}
-                            <div className="text-[10px] font-semibold uppercase tracking-widest text-signal-cyan/60 lg:text-[11px]">{eyebrow}</div>
+                            <div className="text-[10px] font-semibold uppercase tracking-widest text-signal-cyan/60 lg:text-[11px]">
+                                {eyebrow}
+                            </div>
                         </div>
                     ) : null}
                     <div className="mt-1 truncate text-[16px] font-bold tracking-tight text-white lg:text-[18px]">{title}</div>

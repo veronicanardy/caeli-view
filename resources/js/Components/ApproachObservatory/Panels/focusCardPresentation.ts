@@ -5,7 +5,23 @@
  * já recebidos. Não chama APIs, não calcula órbita e não decide ranking.
  */
 
-import type { AsteroidTrajectory, ClosestNowObject, HorizonsFailureKind, UnifiedApproach } from '@/types';
+import type { AsteroidTrajectory, ClosestNowObject, HorizonsFailureKind, SmallBodyObjectType, UnifiedApproach } from '@/types';
+
+export function objectTypeEyebrow(
+    objectType: SmallBodyObjectType,
+    en: boolean,
+): { label: string; dotColor: string } {
+    if (objectType === 'comet') {
+        return {
+            label: en ? 'Comet · Near-Earth Object' : 'Cometa · Objeto Próximo da Terra',
+            dotColor: '#f8c76b',
+        };
+    }
+    return {
+        label: en ? 'Asteroid · Near-Earth Object' : 'Asteroide · Objeto Próximo da Terra',
+        dotColor: '#54d6d6',
+    };
+}
 
 export function riskAssessment(a: UnifiedApproach, en: boolean): { icon: string; title: string; subtitle: string; className: string } {
     if (a.hazardFlag) {

@@ -10,7 +10,7 @@ import { ChevronDown } from 'lucide-react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { formatDistanceAU, formatTimestamp } from '@/lib/observatory/format';
-import { humanSummary, motionLabel, riskAssessment, sizeComparison, trajectoryStatusBadge } from './focusCardPresentation';
+import { humanSummary, motionLabel, objectTypeEyebrow, riskAssessment, sizeComparison, trajectoryStatusBadge } from './focusCardPresentation';
 import { BODIES, type BodyId } from './bodyInfoContent';
 import { BODY_HISTORY } from './bodyHistory';
 import { PanelShell } from './PanelShell';
@@ -152,24 +152,23 @@ function AsteroidCard({
     const showMobileActions = mobileSection === 'actions';
     const showSectionContent = mobileSection !== 'actions';
 
+    const typeInfo = objectTypeEyebrow(a.objectType, en);
     const eyebrowText = orbitMode
         ? (en ? 'On its orbit around the Sun' : 'Em sua órbita ao redor do Sol')
-        : (en ? 'Object in focus' : 'Objeto em Foco');
+        : typeInfo.label;
+    const dotColor = orbitMode ? undefined : typeInfo.dotColor;
 
-    const eyebrow = onShowPanel ? (
-        <div className="flex items-center gap-2">
-            <button
-                type="button"
-                onClick={onShowPanel}
-                className="lg:hidden flex items-center gap-1 text-[11px] text-white/50 transition hover:text-white/80"
-                aria-label={en ? 'Back to list' : 'Voltar à lista'}
-            >
-                <ChevronDown className="-rotate-90 size-3" />
-                {en ? 'List' : 'Lista'}
-            </button>
-            <span className="text-[11px] uppercase tracking-wide text-white/45">{eyebrowText}</span>
-        </div>
-    ) : eyebrowText;
+    const eyebrowPrefix = onShowPanel ? (
+        <button
+            type="button"
+            onClick={onShowPanel}
+            className="lg:hidden flex items-center gap-1 text-[11px] text-white/50 transition hover:text-white/80 mr-1"
+            aria-label={en ? 'Back to list' : 'Voltar à lista'}
+        >
+            <ChevronDown className="-rotate-90 size-3" />
+            {en ? 'List' : 'Lista'}
+        </button>
+    ) : undefined;
 
     const tabs: Tab[] = ['summary', 'physical', 'approach'];
     const tabLabels: Record<Tab, string> = {
@@ -184,9 +183,11 @@ function AsteroidCard({
             onClose={onClose}
             closeLabel={en ? 'Close focus card' : 'Fechar painel'}
             showCloseButton={!orbitMode}
-            eyebrow={eyebrow}
+            eyebrow={eyebrowText}
+            eyebrowPrefix={eyebrowPrefix}
             title={a.displayName ?? a.name}
             subtitle={a.subtitle ?? undefined}
+            dotColor={dotColor}
             borderClass="border-signal-cyan/30"
             className="flex max-h-[34vh] lg:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] lg:w-[min(25rem,48%)] flex-col lg:top-[30%]"
             style={enterStyle}

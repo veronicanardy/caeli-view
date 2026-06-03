@@ -24,11 +24,13 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 
 ## Estrutura
 
-- `BodyInfoCard.tsx`: renderiza o card informativo de Sol, Terra, Lua e planetas.
-- `bodyInfoContent.ts`: textos e fatos estáticos exibidos pelo `BodyInfoCard`.
-- `FocusCard.tsx`: card compacto do objeto em foco no radar 3D.
-- `FocusObject.tsx`: conteúdo principal do objeto selecionado.
-- `focusCardPresentation.ts`: textos, badges e status de apresentação do `FocusCard`.
+- `UnifiedFocusCard.tsx`: card de foco unificado — renderiza asteroides (`kind: 'asteroid'`) e corpos celestes (`kind: 'body'`) com o mesmo shell visual, abas e layout mobile/desktop.
+- `BodyImagePreview.tsx`: preview de imagem real estática para corpos celestes; ocupa o mesmo espaço visual do `AsteroidModelPreview`.
+- `AsteroidModelPreview.tsx`: preview 3D do asteroide em foco.
+- `bodyInfoContent.ts`: textos, fatos e metadados estáticos dos corpos celestes exibidos pelo `UnifiedFocusCard`.
+- `bodyHistory.ts`: textos de história/missões dos corpos celestes, exibidos na aba História.
+- `FocusObject.tsx`: conteúdo principal do objeto selecionado (usado fora do card unificado).
+- `focusCardPresentation.ts`: textos, badges e status de apresentação usados pelo `UnifiedFocusCard`.
 - `MobilePanelControls.tsx`: controles de navegação mobile.
 - `RadarDataQualityCard.tsx`: resumo visual de qualidade dos dados.
 - `RadarFloatingOverlays.tsx`: overlays flutuantes da cena 3D.
@@ -42,13 +44,13 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 - `TechnicalDataPanel.tsx`: painel técnico expansível.
 - `panelFormatters.ts`: formatadores locais de datas e unidades exibidas nos painéis.
 
-## Remoção Do Caminho 2D
+## Remoção Do Caminho 2D E Consolidação De Cards
 
-Os painéis `ObservatoryFocusPanel.tsx`, `ObservatoryDetailOverlay.tsx` e o card legado `MercuryCard.tsx` foram removidos junto com caminhos duplicados de UI. O foco visual agora passa pelo `FocusCard`, `FocusObject`, `BodyInfoCard`, `RadarFloatingOverlays` e pela navegação do radar 3D.
+Os painéis `ObservatoryFocusPanel.tsx`, `ObservatoryDetailOverlay.tsx` e o card legado `MercuryCard.tsx` foram removidos junto com caminhos duplicados de UI. Os cards `BodyInfoCard.tsx` e `FocusCard.tsx` foram consolidados em `UnifiedFocusCard.tsx`, que usa `kind: 'asteroid'` ou `kind: 'body'` para alternar o conteúdo com o mesmo shell visual.
 
-## Cards De Foco
+## Card Unificado
 
-`FocusCard.tsx` e `FocusObject.tsx` recebem dados já resolvidos e apenas montam a leitura visual: nome, distância, velocidade, tamanho, risco de monitoramento e ações disponíveis.
+`UnifiedFocusCard.tsx` recebe dados já resolvidos e monta a leitura visual: nome, distância, velocidade, tamanho, risco de monitoramento, ações disponíveis e, para corpos celestes, imagem real, fatos físicos e história. O preview visual é delegado para `AsteroidModelPreview` (asteroides) ou `BodyImagePreview` (corpos celestes).
 
 Helpers de texto e status devem ficar em arquivos locais de apresentação quando crescerem, sem calcular órbita, ranking ou fallback.
 
@@ -63,7 +65,7 @@ Filtros, referências, abertura de planetas, seleção de objetos, modo orbital 
 - Todo arquivo de `Panels` deve iniciar com documentação em português explicando responsabilidade e fronteiras.
 - Componentes de painel devem receber dados e callbacks por props; não devem acessar seleção global, câmera ou APIs diretamente.
 - `radarNavigationTypes.ts` deve evitar contratos largos demais para subcomponentes. Conteúdos mobile/desktop devem receber apenas as props que realmente renderizam.
-- Cards de corpos celestes devem passar por `BodyInfoCard.tsx` e `bodyInfoContent.ts`, evitando cards específicos duplicados por planeta.
+- Cards de corpos celestes devem passar por `UnifiedFocusCard.tsx` com `kind: 'body'`, usando `bodyInfoContent.ts` e `bodyHistory.ts` para os dados estáticos; evitar cards específicos por planeta.
 - Helpers de texto, badges e formatação devem ficar em arquivos locais de apresentação, como `focusCardPresentation.ts` e `panelFormatters.ts`.
 
 ## Regra Para IA
