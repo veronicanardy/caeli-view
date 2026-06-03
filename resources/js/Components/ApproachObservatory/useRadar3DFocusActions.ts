@@ -139,7 +139,6 @@ export function useRadar3DFocusActions({
         withOrbitExit(() => {
             setDismissedFocusObjectId(null);
             setBodyCardOpen(id);
-            setPlanetsOpen(false);
             setSunFocusTarget(null);
             collapseNavigationForMobile();
             if (pos) {
@@ -148,7 +147,7 @@ export function useRadar3DFocusActions({
                 setPlanetFocusTargets({});
             }
         });
-    }, [collapseNavigationForMobile, ephemeris, onClearSelection, setPlanetsOpen, withOrbitExit]);
+    }, [collapseNavigationForMobile, ephemeris, onClearSelection, withOrbitExit]);
 
     const focusSun = useCallback(() => {
         onClearSelection?.();

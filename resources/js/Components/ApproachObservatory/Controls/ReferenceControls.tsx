@@ -29,7 +29,7 @@ export function ReferenceSection({
     return (
         <div className={compact ? '' : 'border-b border-white/[0.04] px-2 pb-1.5 pt-2'}>
             {!compact ? (
-                <div className="px-1 pb-1 text-[9px] font-semibold uppercase tracking-widest text-white/25">
+                <div className="px-1 pb-1 text-[9px] font-semibold uppercase tracking-widest text-white/50">
                     {en ? 'References' : 'Referências'}
                 </div>
             ) : null}
@@ -74,7 +74,7 @@ function ReferenceIconButton({
                     'inline-flex size-7 items-center justify-center rounded-lg border transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                     active
                         ? 'border-signal-cyan/25 bg-signal-cyan/8 text-signal-cyan/70'
-                        : 'border-white/[0.06] bg-white/[0.02] text-white/40 hover:border-white/15 hover:bg-white/[0.05] hover:text-white/65',
+                        : 'border-white/[0.06] bg-white/[0.02] text-white/60 hover:border-white/15 hover:bg-white/[0.05] hover:text-white/75',
                 ].join(' ')}
             >
                 {icon}
@@ -126,7 +126,7 @@ export function PlanetFlyout({ en, focusedId, onFocus }: { en: boolean; focusedI
                         'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                         p.id === focusedId
                             ? 'bg-white/[0.04] text-white/85'
-                            : 'text-white/45 hover:bg-white/[0.04] hover:text-white/70',
+                            : 'text-white/60 hover:bg-white/[0.04] hover:text-white/75',
                     ].join(' ')}
                 >
                     <span

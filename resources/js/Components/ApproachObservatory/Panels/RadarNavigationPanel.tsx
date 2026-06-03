@@ -6,7 +6,7 @@
  * legibilidade sem mover seleção, ranking ou regras orbitais para `Panels`.
  */
 
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { PlanetFlyout } from '../Controls/ReferenceControls';
 import type { PlanetId } from '../Scene/planetConfig';
 import { RadarNavigationDesktopContent } from './RadarNavigationDesktopContent';
@@ -133,8 +133,18 @@ export function RadarNavigationPanel({
                                    h-[min(13rem,33vh)] w-[min(15rem,calc(100vw-5rem))]
                                    lg:h-[min(20rem,40vh)] lg:w-[min(14rem,40vw)]"
                     >
-                        <div className="px-3 pt-2.5 pb-1.5 text-[9.5px] font-medium uppercase tracking-widest text-white/35 border-b border-white/[0.07]">
-                            {en ? 'Planets' : 'Planetas'}
+                        <div className="flex items-center justify-between px-3 pt-2 pb-1.5 border-b border-white/[0.07]">
+                            <span className="text-[9.5px] font-medium uppercase tracking-widest text-white/50">
+                                {en ? 'Planets' : 'Planetas'}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => onPlanetsOpenChange(false)}
+                                className="-mr-1 rounded-full p-1 text-white/40 transition outline-none hover:bg-white/8 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                                aria-label={en ? 'Close planets' : 'Fechar planetas'}
+                            >
+                                <X className="size-3.5" aria-hidden />
+                            </button>
                         </div>
                         <PlanetFlyout
                             en={en}

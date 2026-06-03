@@ -55,6 +55,7 @@ export const BODIES: Record<BodyId, BodyConfig> = {
             { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '365,25 dias / 365.25 days' },
             { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '24 horas / 24 hours' },
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '1 Lua / Moon' },
+            { labelPt: 'Temperatura média',   labelEn: 'Temperature (avg.)',   value: '~15 °C' },
         ],
     },
     moon: {
@@ -71,6 +72,7 @@ export const BODIES: Record<BodyId, BodyConfig> = {
             { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '27,3 dias / 27.3 days' },
             { labelPt: 'Rotação',             labelEn: 'Rotation',             value: 'Síncrona (face travada / tidally locked)' },
             { labelPt: 'Fases',               labelEn: 'Phases',               value: 'Ciclo de 29,5 dias / 29.5-day cycle' },
+            { labelPt: 'Temperatura média',   labelEn: 'Temperature (avg.)',   value: '−53 °C (−63 °F a +107 °C) / −63 °F (+107 °C face, −173 °C dark)' },
         ],
     },
     mercury: {
@@ -87,6 +89,7 @@ export const BODIES: Record<BodyId, BodyConfig> = {
             { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '88 dias / 88 days' },
             { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '58,6 dias / 58.6 days' },
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Nenhum / None' },
+            { labelPt: 'Temperatura média',   labelEn: 'Temperature (avg.)',   value: '+167 °C (dia) / −183 °C (noite) / +167 °C (day) / −183 °C (night)' },
         ],
     },
     venus: {
@@ -103,6 +106,7 @@ export const BODIES: Record<BodyId, BodyConfig> = {
             { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '224,7 dias / 224.7 days' },
             { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '243 dias (retrógrado) / 243 days (retrograde)' },
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Nenhum / None' },
+            { labelPt: 'Temperatura média',   labelEn: 'Temperature (avg.)',   value: '~465 °C (superfície) / ~465 °C (surface)' },
         ],
     },
     mars: {
@@ -119,6 +123,7 @@ export const BODIES: Record<BodyId, BodyConfig> = {
             { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '687 dias / 687 days' },
             { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '24,6 horas / 24.6 hours' },
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: 'Dois / Two' },
+            { labelPt: 'Temperatura média',   labelEn: 'Temperature (avg.)',   value: '−60 °C' },
         ],
     },
     jupiter: {
@@ -135,6 +140,7 @@ export const BODIES: Record<BodyId, BodyConfig> = {
             { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '11,86 anos / 11.86 years' },
             { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '9h 55min (mais rápido do SS)' },
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '95 (Io, Europa, Ganimedes, Calisto…)' },
+            { labelPt: 'Temperatura média',   labelEn: 'Temperature (avg.)',   value: '−108 °C (topo das nuvens) / −108 °C (cloud tops)' },
         ],
     },
     saturn: {
@@ -151,6 +157,7 @@ export const BODIES: Record<BodyId, BodyConfig> = {
             { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '29,46 anos / 29.46 years' },
             { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '10h 39min' },
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '146 (Titã, Encélado, Réia…)' },
+            { labelPt: 'Temperatura média',   labelEn: 'Temperature (avg.)',   value: '−139 °C (topo das nuvens) / −139 °C (cloud tops)' },
         ],
     },
     uranus: {
@@ -167,6 +174,7 @@ export const BODIES: Record<BodyId, BodyConfig> = {
             { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '84 anos / 84 years' },
             { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '17h 14min (retrógrado)' },
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '28 (Titânia, Oberon, Ariel…)' },
+            { labelPt: 'Temperatura média',   labelEn: 'Temperature (avg.)',   value: '−195 °C (topo das nuvens) / −195 °C (cloud tops)' },
         ],
     },
     neptune: {
@@ -183,6 +191,7 @@ export const BODIES: Record<BodyId, BodyConfig> = {
             { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '165 anos / 165 years' },
             { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '16h 6min' },
             { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '16 (Tritão, Nereida…)' },
+            { labelPt: 'Temperatura média',   labelEn: 'Temperature (avg.)',   value: '−201 °C (topo das nuvens) / −201 °C (cloud tops)' },
         ],
     },
 };

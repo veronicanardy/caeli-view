@@ -38,7 +38,7 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                           /* Selecionado: fundo suave ciano, sem glow forte — indica escolha sem gritar. */
                           ? 'bg-signal-cyan/[0.05] text-white/90 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.16)]'
                           /* Não-selecionado: apagado mas legível — lista é seletor secundário. */
-                          : 'text-white/45 hover:bg-white/[0.04] hover:text-white/65',
+                          : 'text-white/60 hover:bg-white/[0.04] hover:text-white/75',
                     !orbitBlocked && !hasScenePosition ? 'opacity-30' : '',
                 ].join(' ')}
             >
@@ -68,7 +68,7 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                         {en ? 'no pos.' : 'sem pos.'}
                     </span>
                 ) : null}
-                <span className={`col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap text-right tabular-nums text-[11.5px] ${isSelected ? 'text-signal-cyan/55' : 'text-white/35'}`}>
+                <span className={`col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap text-right tabular-nums text-[11.5px] ${isSelected ? 'text-signal-cyan/55' : 'text-white/55'}`}>
                     {trailingLabel}
                 </span>
             </button>

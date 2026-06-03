@@ -10,8 +10,7 @@ import type { ClosestNowObject, LunarReference, UnifiedApproach } from '@/types'
 import type { SceneMode } from '../Controls/Manual/manualTypes';
 import { OrbitWelcomeToast, RadarWelcomeToast } from '../Controls/WelcomeToast';
 import type { PlanetId } from '../Scene/planetConfig';
-import { BodyInfoCard } from './BodyInfoCard';
-import { FocusCard } from './FocusCard';
+import { UnifiedFocusCard } from './UnifiedFocusCard';
 import { SceneLegend } from './SceneLegend';
 
 type Props = {
@@ -99,7 +98,8 @@ export function RadarFloatingOverlays({
     return (
         <>
             {visibleFocusedObject ? (
-                <FocusCard
+                <UnifiedFocusCard
+                    kind="asteroid"
                     object={visibleFocusedObject}
                     onOpenFocus={onOpenFocus}
                     onClose={onCloseFocusedObject}
@@ -114,7 +114,8 @@ export function RadarFloatingOverlays({
                     panelRef={focusCardRef}
                 />
             ) : bodyCardOpen ? (
-                <BodyInfoCard
+                <UnifiedFocusCard
+                    kind="body"
                     body={bodyCardOpen}
                     onClose={() => onBodyCardOpenChange(null)}
                     locale={locale}
