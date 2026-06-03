@@ -48,10 +48,7 @@ type Props = {
     onModeChange: (mode: SelectionMode) => void;
     radarLoading?: boolean;
     onRefresh?: () => void;
-    /**
-     * Direção do Sol (eclíptica geocêntrica) para o instante atual, calculada no servidor.
-     * Serve como fallback síncrono até o astronomy-engine resolver seu import lazy.
-     */
+    onFullscreenChange?: (fullscreen: boolean) => void;
     initialSunDirection: SunDirection;
 };
 
@@ -69,6 +66,7 @@ export function DailyOrbitalRadar3D({
     onModeChange,
     radarLoading = false,
     onRefresh,
+    onFullscreenChange,
     initialSunDirection,
 }: Props) {
     const en = locale === 'en';
@@ -99,7 +97,8 @@ export function DailyOrbitalRadar3D({
     const { sceneTransitioning, triggerTransition } = useRadar3DTransition();
 
     const [manualOpen, setManualOpen] = useState(false);
-    const [fullscreen, setFullscreen] = useState(false);
+    const [fullscreen, setFullscreenState] = useState(false);
+    const setFullscreen = (value: boolean) => { setFullscreenState(value); onFullscreenChange?.(value); };
     const [showLabels, setShowLabels] = useState(true);
     const [planetsOpen, setPlanetsOpen] = useState(false);
     // Em mobile o painel começa colapsado para não cobrir o canvas.
@@ -242,7 +241,7 @@ export function DailyOrbitalRadar3D({
                     showLabels={showLabels}
                     onShowLabelsChange={setShowLabels}
                     fullscreen={fullscreen}
-                    onFullscreenChange={setFullscreen}
+                    onFullscreenChange={(v) => setFullscreen(typeof v === 'function' ? v(fullscreen) : v)}
                     onPickView={pickView}
                     onResetView={resetView}
                 />

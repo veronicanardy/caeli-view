@@ -12,7 +12,7 @@ const navItems = [
     { href: '/sobre', labelKey: 'nav.about', icon: Info },
 ] as const;
 
-export function AppLayout({ children }: PropsWithChildren) {
+export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ hideHeader?: boolean }>) {
     const { url, props } = usePage<PageProps>();
     const { locale, setLocale, t } = useTranslation();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -64,7 +64,7 @@ export function AppLayout({ children }: PropsWithChildren) {
 
     return (
         <div className="flex min-h-screen flex-col">
-            <header className="sticky top-0 z-40 border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl">
+            <header className={`sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${hideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
                 <div ref={menuRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between lg:h-auto lg:py-4">
                         <Link href="/" prefetch className="flex items-center gap-3">

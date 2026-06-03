@@ -48,6 +48,7 @@ type Props = PageProps<{
 }>;
 
 export default function ApproachObservatoryIndex({ filters, initialSunDirection, errors = {} }: Props) {
+    const [radarFullscreen, setRadarFullscreen] = useState(false);
     const [sortKey, setSortKey] = useState(filters.sort === '-v-rel' ? 'relativeVelocityKph' : 'nominalDistanceKm');
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<ObservatoryData | null>(null);
@@ -265,7 +266,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     }, [focusApproach, trajectoryKey, trajectoryByKey, closestNowTrajectoriesByObjectId]);
 
     return (
-        <AppLayout>
+        <AppLayout hideHeader={radarFullscreen}>
             <Head title={t('observatory.title')} />
 
             <section className="mx-auto max-w-[1800px] space-y-4 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
@@ -297,6 +298,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
                                     onModeChange={setSelectionMode}
                                     radarLoading={closestNowLoading}
                                     onRefresh={() => setRefreshNonce((n) => n + 1)}
+                                    onFullscreenChange={setRadarFullscreen}
                                     onSelect={(approach) => {
                                         setSelectedFocusId(approach.id);
                                     }}
