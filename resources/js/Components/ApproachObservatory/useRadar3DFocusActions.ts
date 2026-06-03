@@ -110,8 +110,7 @@ export function useRadar3DFocusActions({
         if (focusedObject) setDismissedFocusObjectId(focusedObject.approach.id);
         setBodyCardOpen(null);
         clearPlanetTargets();
-        setPlanetsOpen(false);
-    }, [clearPlanetTargets, focusedObject, setPlanetsOpen]);
+    }, [clearPlanetTargets, focusedObject]);
 
     const withOrbitExit = useCallback((doFocus: () => void) => {
         if (orbitMode) {
