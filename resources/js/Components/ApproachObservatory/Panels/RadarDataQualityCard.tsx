@@ -29,12 +29,14 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
 
     return (
         <section
-            className="grid gap-px rounded-2xl border border-white/6 bg-white/[0.018] overflow-hidden sm:grid-cols-[1fr_1px_1fr_1px_1fr]"
+            className="grid gap-px rounded-2xl border border-white/8 bg-white/[0.025] overflow-hidden sm:grid-cols-[1fr_1px_1fr_1px_1fr]"
             aria-label={t('observatory.radar.quality.aria')}
         >
-            {/* Bloco 1 — Objeto do momento: destaque principal com nome e distância. */}
-            <div className="px-5 py-4 sm:px-6 sm:py-5">
-                <div className="mb-3 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-widest text-signal-cyan/50">
+            {/* Bloco 1 — Objeto do momento: protagonista da faixa, destaque máximo. */}
+            <div className="relative px-5 py-5 sm:px-6 sm:py-6">
+                {/* Acento ciano sutil no topo do bloco principal. */}
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-signal-cyan/30 to-transparent" aria-hidden />
+                <div className="mb-3 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-signal-cyan/70">
                     <Radio className="size-3" aria-hidden="true" />
                     {t('observatory.radar.quality.closestTitle')}
                 </div>
@@ -47,9 +49,9 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
 
             <div className="hidden sm:block bg-white/6" aria-hidden />
 
-            {/* Bloco 2 — Escala da vizinhança: interpretação contextualizada da distância lunar. */}
-            <div className="px-5 py-4 sm:px-6 sm:py-5">
-                <div className="mb-3 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-widest text-white/25">
+            {/* Bloco 2 — Quão perto isso está? Interpretação contextualizada. */}
+            <div className="px-5 py-5 sm:px-6 sm:py-6">
+                <div className="mb-3 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-white/35">
                     <Telescope className="size-3" aria-hidden="true" />
                     {t('observatory.radar.quality.withinLunarTitle')}
                 </div>
@@ -58,9 +60,9 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
 
             <div className="hidden sm:block bg-white/6" aria-hidden />
 
-            {/* Bloco 3 — Cobertura do radar: linguagem mais natural sobre posição Horizons vs. simbólica. */}
-            <div className="px-5 py-4 sm:px-6 sm:py-5">
-                <div className="mb-3 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-widest text-white/25">
+            {/* Bloco 3 — Cobertura do radar: posição Horizons vs. simbólica. */}
+            <div className="px-5 py-5 sm:px-6 sm:py-6">
+                <div className="mb-3 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-white/35">
                     <SatelliteDish className="size-3" aria-hidden="true" />
                     {t('observatory.radar.quality.sourceTitle')}
                 </div>
@@ -77,20 +79,20 @@ function ClosestObject({ closest, locale, en, t }: { closest: RadarObject; local
     const velocity = closest.relativeVelocityKph;
 
     return (
-        <div className="space-y-2.5">
-            <p className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">{identity.displayName}</p>
-            <div className="flex items-baseline gap-2.5">
-                <span className="text-[22px] font-light tabular-nums leading-none tracking-tight text-white/95">
+        <div className="space-y-3">
+            <p className="truncate text-[14px] font-bold leading-tight tracking-tight text-white">{identity.displayName}</p>
+            <div className="flex items-baseline gap-3">
+                <span className="text-[26px] font-extralight tabular-nums leading-none tracking-tight text-white">
                     {compactKm(closest.distanceKm)}
                 </span>
                 {lunar !== null ? (
-                    <span className="text-[13px] font-medium text-signal-cyan/65">{lunarDistanceLabel(lunar)}</span>
+                    <span className="text-[13px] font-semibold text-signal-cyan/80">{lunarDistanceLabel(lunar)}</span>
                 ) : null}
             </div>
-            <div className="space-y-0.5 text-[11px] text-white/30">
-                <p>{t('observatory.radar.quality.closestTimeLabel')}: {approachTime}</p>
+            <div className="space-y-1 text-[11px]">
+                <p className="text-white/45">{t('observatory.radar.quality.closestTimeLabel')}: <span className="text-white/65">{approachTime}</span></p>
                 {velocity !== null ? (
-                    <p>{en ? 'Velocity' : 'Velocidade'}: {formatNumber(velocity, 0)} km/h</p>
+                    <p className="text-white/45">{en ? 'Velocity' : 'Velocidade'}: <span className="text-white/65">{formatNumber(velocity, 0)} km/h</span></p>
                 ) : null}
             </div>
         </div>
@@ -109,19 +111,18 @@ function LunarNeighborhoodBlock({
     t: Translator;
 }) {
     if (withinLunar.length === 0) {
-        // Sem objetos dentro da órbita lunar: mostrar múltiplo interpretativo em vez de "0".
         const closestLd = closest?.distanceLD ?? null;
         const multipleText = closestLd != null && isFinite(closestLd)
             ? en
-                ? `The nearest is ${closestLd.toFixed(1)}× the Moon's distance.`
-                : `O mais próximo está a ${closestLd.toFixed(1)}× a distância da Lua.`
+                ? `The nearest is ${closestLd.toFixed(1)}× the Moon's distance from Earth.`
+                : `O mais próximo está a ${closestLd.toFixed(1)}× a distância média Terra–Lua.`
             : null;
 
         return (
-            <div className="space-y-1.5">
-                <p className="text-[13px] font-medium text-white/55">{t('observatory.radar.quality.withinLunarEmpty')}</p>
+            <div className="space-y-2">
+                <p className="text-[12.5px] font-medium leading-snug text-white/60">{t('observatory.radar.quality.withinLunarEmpty')}</p>
                 {multipleText ? (
-                    <p className="text-[11.5px] leading-relaxed text-white/30">{multipleText}</p>
+                    <p className="text-[11px] leading-relaxed text-white/35">{multipleText}</p>
                 ) : null}
             </div>
         );
@@ -131,14 +132,14 @@ function LunarNeighborhoodBlock({
     return (
         <div className="space-y-2">
             <div className="flex items-baseline gap-2">
-                <span className="text-[28px] font-extralight tabular-nums leading-none tracking-tight text-white/90">{withinLunar.length}</span>
-                <span className="text-[12px] text-white/40">
+                <span className="text-[32px] font-extralight tabular-nums leading-none tracking-tight text-white">{withinLunar.length}</span>
+                <span className="text-[12px] font-medium text-signal-cyan/60">
                     {en
-                        ? withinLunar.length === 1 ? 'object' : 'objects'
-                        : withinLunar.length === 1 ? 'objeto' : 'objetos'}
+                        ? withinLunar.length === 1 ? 'inside lunar orbit' : 'inside lunar orbit'
+                        : withinLunar.length === 1 ? 'dentro da órbita lunar' : 'dentro da órbita lunar'}
                 </span>
             </div>
-            <ul className="space-y-1 text-[11.5px] text-white/45">
+            <ul className="space-y-1 text-[11px] text-white/40">
                 {withinLunar.slice(0, 3).map((o) => {
                     const identity = resolveApproachIdentity(o.approach);
                     const ld = o.distanceLD;
@@ -184,9 +185,9 @@ function RadarCoverageBlock({
                     <span className="text-white/40">{en ? 'Horizons coverage' : 'Cobertura Horizons'}</span>
                     <span className="tabular-nums font-semibold text-white/70">{horizonsPercent}%</span>
                 </div>
-                <div className="h-1 w-full overflow-hidden rounded-full bg-white/8">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
                     <div
-                        className="h-full rounded-full bg-signal-cyan/40 transition-all duration-500"
+                        className="h-full rounded-full bg-signal-cyan/55 transition-all duration-500"
                         style={{ width: `${horizonsPercent}%` }}
                         aria-hidden="true"
                     />

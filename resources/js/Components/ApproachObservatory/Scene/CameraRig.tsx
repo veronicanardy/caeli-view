@@ -85,18 +85,15 @@ export function CameraRig({
     useEffect(() => {
         if (!mounted.current) { mounted.current = true; return; }
         tweening.current = true;
-        /* Resolve o desired no momento da mudança, com a posição real da câmera. */
+        /* Resolve o desired no momento da mudança, preservando o ângulo atual da câmera
+           sem forçar virada — o usuário chega ao asteroide pelo heading que já tem. */
         if (focusTarget?.transition === 'preserve_heading' && controls?.target) {
             const currentOffset = camera.position.clone().sub(controls.target);
             if (currentOffset.lengthSq() > 1e-8) {
                 const desiredDistance = focusTarget.position.distanceTo(focusTarget.target);
                 const offsetDir = currentOffset.normalize();
-                /* Vira a câmera se o offset apontar contra o Sol (câmera do lado escuro).
-                   Posição normal: offsetDir alinhado com sunDir (câmera do lado do Sol). */
-                const sun = new THREE.Vector3(...sunDirRef.current);
-                const finalDir = offsetDir.dot(sun) < 0 ? offsetDir.negate() : offsetDir;
                 effectiveDesired.current = {
-                    position: focusTarget.target.clone().add(finalDir.multiplyScalar(desiredDistance)),
+                    position: focusTarget.target.clone().add(offsetDir.multiplyScalar(desiredDistance)),
                     target: focusTarget.target.clone(),
                 };
                 return;
@@ -129,9 +126,11 @@ export function CameraRig({
         if (!tweening.current) return;
 
         const ed = effectiveDesired.current;
-        fc.position.lerp(ed.position, 0.1);
+        /* Lerp com ease-out suave: fator baixo para movimento fluido, desacelera naturalmente
+           à medida que a distância ao destino diminui. */
+        fc.position.lerp(ed.position, 0.055);
         if (controls?.target) {
-            controls.target.lerp(ed.target, 0.1);
+            controls.target.lerp(ed.target, 0.055);
             controls.update();
         } else {
             fc.lookAt(ed.target);

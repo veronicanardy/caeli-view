@@ -120,7 +120,7 @@ const en = {
     'observatory.radar.quality.closestEmpty': 'No object with a known distance in this window.',
     'observatory.radar.quality.closestTimeLabel': 'Closest approach',
     'observatory.radar.quality.withinLunarTitle': "Earth's neighborhood",
-    'observatory.radar.quality.withinLunarEmpty': 'No object has crossed the lunar orbit in this window.',
+    'observatory.radar.quality.withinLunarEmpty': 'No objects inside the lunar orbit right now.',
     'observatory.radar.quality.sourceTitle': 'Radar coverage',
     'observatory.radar.quality.withHorizons': 'Horizons position',
     'observatory.radar.quality.symbolic': 'Symbolic position',

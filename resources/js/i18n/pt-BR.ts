@@ -120,7 +120,7 @@ const ptBR = {
     'observatory.radar.quality.closestEmpty': 'Nenhum objeto com distância conhecida neste recorte.',
     'observatory.radar.quality.closestTimeLabel': 'Máxima aproximação',
     'observatory.radar.quality.withinLunarTitle': 'Vizinhança da Terra',
-    'observatory.radar.quality.withinLunarEmpty': 'Nenhum objeto cruzou a órbita lunar neste recorte.',
+    'observatory.radar.quality.withinLunarEmpty': 'Nenhum objeto dentro da órbita lunar agora.',
     'observatory.radar.quality.sourceTitle': 'Cobertura do radar',
     'observatory.radar.quality.withHorizons': 'Posição Horizons',
     'observatory.radar.quality.symbolic': 'Posição simbólica',

@@ -30,26 +30,27 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                 onClick={() => onSelect(o.approach)}
                 title={title}
                 className={[
-                    'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-xl text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                    'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-xl text-left text-[13.5px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                     compact ? 'px-2 py-1.5' : 'px-2.5 py-2',
                     orbitBlocked
-                        ? 'cursor-not-allowed opacity-30'
+                        ? 'cursor-not-allowed opacity-20'
                         : isSelected
-                          /* Selecionado: fundo e borda discretos — destaque sem competir com o card. */
-                          ? 'bg-signal-cyan/[0.06] text-white shadow-[inset_0_0_0_1px_rgba(34,211,238,0.22)]'
-                          /* Não-selecionado: apagado para reforçar papel de navegação. */
-                          : 'text-white/38 hover:bg-white/[0.04] hover:text-white/65',
-                    !orbitBlocked && !hasScenePosition ? 'opacity-45' : '',
+                          /* Selecionado: fundo suave ciano, sem glow forte — indica escolha sem gritar. */
+                          ? 'bg-signal-cyan/[0.05] text-white/90 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.16)]'
+                          /* Não-selecionado: apagado mas legível — lista é seletor secundário. */
+                          : 'text-white/45 hover:bg-white/[0.04] hover:text-white/65',
+                    !orbitBlocked && !hasScenePosition ? 'opacity-30' : '',
                 ].join(' ')}
             >
                 <span
                     className="col-start-1 row-start-1 self-center rounded-full"
                     style={{
-                        width: isSelected ? '8px' : '7px',
-                        height: isSelected ? '8px' : '7px',
+                        width: isSelected ? '7px' : '5px',
+                        height: isSelected ? '7px' : '5px',
                         backgroundColor: palette.future,
-                        boxShadow: isSelected ? `0 0 5px 1px ${palette.future}55` : undefined,
-                        transition: 'width 0.15s, height 0.15s, box-shadow 0.15s',
+                        opacity: isSelected ? 0.7 : 0.35,
+                        boxShadow: isSelected ? `0 0 4px 0px ${palette.future}66` : undefined,
+                        transition: 'width 0.15s, height 0.15s, opacity 0.15s, box-shadow 0.15s',
                     }}
                 />
                 <span className="col-start-2 row-start-1 flex min-w-0 items-center gap-1 font-medium">
@@ -67,7 +68,7 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                         {en ? 'no pos.' : 'sem pos.'}
                     </span>
                 ) : null}
-                <span className={`col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap text-right tabular-nums text-[12px] ${isSelected ? 'text-signal-cyan/60' : 'text-white/40'}`}>
+                <span className={`col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap text-right tabular-nums text-[11.5px] ${isSelected ? 'text-signal-cyan/55' : 'text-white/35'}`}>
                     {trailingLabel}
                 </span>
             </button>

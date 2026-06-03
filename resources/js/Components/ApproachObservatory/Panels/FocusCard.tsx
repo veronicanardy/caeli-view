@@ -116,8 +116,8 @@ export function FocusCard({
             eyebrow={eyebrow}
             title={a.displayName ?? a.name}
             subtitle={a.subtitle ?? undefined}
-            borderClass="border-signal-cyan/20"
-            className="flex max-h-[34vh] lg:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] lg:w-[min(25rem,48%)] flex-col"
+            borderClass="border-signal-cyan/30"
+            className="flex max-h-[34vh] lg:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] lg:w-[min(25rem,48%)] flex-col lg:top-[30%]"
             style={enterStyle}
             mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
@@ -173,9 +173,8 @@ export function FocusCard({
                 </div>
             ) : null}
 
-            {/* Status da trajetória: área com altura mínima reservada para não saltar quando aparece/some. */}
             {showSectionContent ? (
-                <div className="mt-1.5 min-h-[1.75rem] px-3 lg:mt-2 lg:min-h-[2rem] lg:px-4">
+                <div className="mt-1 min-h-[1.75rem] px-3 lg:mt-1.5 lg:min-h-[2rem] lg:px-4">
                     {trajectoryStatus ? (
                         <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] ${trajectoryStatus.className}`}>
                             <span aria-hidden="true">{trajectoryStatus.icon}</span>
@@ -185,8 +184,7 @@ export function FocusCard({
                 </div>
             ) : null}
 
-            {/* Abas — com mais respiro e separação sutil usando borda bem fraca. */}
-            <div className="mt-3 hidden gap-0 border-b border-white/6 px-3 lg:flex lg:mt-4 lg:px-5">
+            <div className="mt-1 hidden gap-0 border-b border-white/10 px-3 lg:flex lg:mt-1 lg:px-5">
                 <FocusTabButton active={tab === 'summary'} onClick={() => setTab('summary')}>{en ? 'Summary' : 'Resumo'}</FocusTabButton>
                 <FocusTabButton active={tab === 'physical'} onClick={() => setTab('physical')}>{en ? 'Physical' : 'Físico'}</FocusTabButton>
                 <FocusTabButton active={tab === 'approach'} onClick={() => setTab('approach')}>{en ? 'Approach' : 'Aproximação'}</FocusTabButton>
@@ -197,8 +195,8 @@ export function FocusCard({
                 className="flex-1 overflow-y-auto px-3 py-3 lg:px-5 lg:py-4"
                 style={{ transition: 'opacity 0.12s ease', opacity: contentVisible ? 1 : 0 }}
             >
-                {/* min-h garante altura consistente entre abas no desktop. */}
-                <div className="lg:min-h-[7.5rem]">
+                {/* min-h garante que o card não salte ao trocar de aba. */}
+                <div className="lg:min-h-[9rem]">
                 {showSectionContent && activeSection === 'summary' ? (
                     <div className="space-y-3">
                         <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">{summary}</p>
@@ -286,8 +284,8 @@ export function FocusCard({
                 ) : null}
             </div>
 
-            {/* Ações: CTA principal (órbita) vs. ação secundária (dossiê) com hierarquia visual clara. */}
-            <div className="hidden border-t border-white/6 px-3 py-3.5 lg:block lg:px-5 lg:py-4">
+            {/* Ações: rodapé nobre do dossiê — separador mais visível que o painel lateral. */}
+            <div className="hidden border-t border-white/12 px-3 py-3.5 lg:block lg:px-5 lg:py-4">
                 <div className="space-y-2">
                     {hasOrbit ? (
                         <OrbitToggleButton
@@ -375,8 +373,8 @@ function FocusTabButton({ active, onClick, children }: { active: boolean; onClic
                 /* Mais respiro horizontal e vertical — aba ativa com glow ciano mais suave. */
                 '-mb-px border-b-2 px-3.5 py-2.5 text-[12.5px] font-medium tracking-wide transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                 active
-                    ? 'border-signal-cyan/80 text-white drop-shadow-[0_1px_8px_rgba(34,211,238,0.4)]'
-                    : 'border-transparent text-white/35 hover:text-white/65',
+                    ? 'border-signal-cyan text-white drop-shadow-[0_1px_12px_rgba(34,211,238,0.55)]'
+                    : 'border-transparent text-white/28 hover:text-white/60',
             ].join(' ')}
         >
             {children}
@@ -387,8 +385,8 @@ function FocusTabButton({ active, onClick, children }: { active: boolean; onClic
 function Row({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="flex items-baseline justify-between gap-4">
-            <dt className="shrink-0 text-[11.5px] uppercase tracking-wide text-white/30">{label}</dt>
-            <dd className="text-right text-[13px] font-semibold text-white/85">{children}</dd>
+            <dt className="shrink-0 text-[11px] uppercase tracking-wide text-white/40">{label}</dt>
+            <dd className="text-right text-[13px] font-semibold text-white">{children}</dd>
         </div>
     );
 }

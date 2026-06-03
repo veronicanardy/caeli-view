@@ -48,17 +48,17 @@ export function PanelShell({
             ref={panelRef}
             style={style}
             className={[
-                /* Camada de vidro: fundo escuro profundo com blur generoso e sombra de brilho ciano. */
+                /* Card dossiê: presença visual claramente maior que o painel de navegação lateral. */
                 'pointer-events-auto absolute left-1/2 z-20 -translate-x-1/2 overflow-hidden rounded-2xl border',
-                'bg-space-950/92 shadow-[0_0_32px_rgba(34,211,238,0.07),0_8px_32px_rgba(0,0,0,0.55)] backdrop-blur-2xl',
+                'bg-space-950/96 shadow-[0_0_48px_rgba(34,211,238,0.12),0_12px_40px_rgba(0,0,0,0.7)] backdrop-blur-2xl',
                 mobileTopAlign ? 'top-3' : 'bottom-10',
-                'lg:left-3 lg:top-[40%] lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2',
+                'lg:left-3 lg:top-[30%] lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2',
                 borderClass,
                 className,
             ].join(' ')}
         >
-            {/* Linha de acento ciano no topo — assinatura visual do observatório. */}
-            <div className="h-px w-full bg-gradient-to-r from-transparent via-signal-cyan/40 to-transparent" aria-hidden />
+            {/* Linha de acento ciano no topo — assinatura do dossiê; mais intensa que o painel lateral. */}
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-signal-cyan/70 to-transparent" aria-hidden />
 
             <div className="flex items-start justify-between gap-2 px-3 pt-3 lg:px-4 lg:pt-4">
                 <div className="min-w-0">
@@ -70,10 +70,10 @@ export function PanelShell({
                                     style={{ backgroundColor: dotColor }}
                                 />
                             ) : null}
-                            <div className="text-[10px] font-medium uppercase tracking-widest text-white/35 lg:text-[11px]">{eyebrow}</div>
+                            <div className="text-[10px] font-semibold uppercase tracking-widest text-signal-cyan/60 lg:text-[11px]">{eyebrow}</div>
                         </div>
                     ) : null}
-                    <div className="mt-1 truncate text-[15px] font-semibold tracking-tight text-white lg:text-[17px]">{title}</div>
+                    <div className="mt-1 truncate text-[16px] font-bold tracking-tight text-white lg:text-[18px]">{title}</div>
                     {/* min-h reserva espaço mesmo sem subtítulo — evita salto de layout ao trocar objeto. */}
                     <div className="mt-0.5 min-h-[1rem] truncate text-[11px] text-white/50 lg:text-[12px]">
                         {subtitle ?? null}

@@ -62,9 +62,9 @@ export function RadarNavigationPanel({
                 <div
                     ref={sidePanelRef}
                         className={[
-                            /* Painel lateral: arredondamento maior, borda mais suave, sombra de observatório. */
-                            'flex flex-col overflow-visible rounded-2xl border border-white/8 bg-space-950/92 backdrop-blur-2xl',
-                            'shadow-[0_0_28px_rgba(34,211,238,0.05),0_6px_24px_rgba(0,0,0,0.5)]',
+                            /* Painel lateral: navegação secundária — mais discreto que o card dossiê. */
+                            'flex flex-col overflow-visible rounded-2xl border border-white/[0.08] bg-space-950/88 backdrop-blur-xl',
+                            'shadow-[0_2px_16px_rgba(0,0,0,0.4)]',
                         orbitMode
                             ? 'lg:flex lg:h-[min(16rem,40vh)] lg:w-[min(18rem,48vw)]'
                             : 'lg:flex lg:h-[min(20rem,40vh)] lg:w-[min(18rem,48vw)]',
@@ -128,12 +128,12 @@ export function RadarNavigationPanel({
                 {planetsOpen && !orbitMode ? (
                     <div
                         ref={planetFlyoutRef}
-                        className="flex flex-col overflow-y-auto rounded-2xl border border-white/8 bg-space-950/92 backdrop-blur-2xl
-                                   shadow-[0_0_28px_rgba(34,211,238,0.05),0_6px_24px_rgba(0,0,0,0.5)]
-                                   h-[min(13rem,34vh)] w-[min(15rem,calc(100vw-5rem))]
-                                   lg:h-[min(26rem,70vh)] lg:w-[min(14rem,40vw)]"
+                        className="flex flex-col overflow-y-auto rounded-2xl border border-white/[0.08] bg-space-950/88 backdrop-blur-xl
+                                   shadow-[0_2px_16px_rgba(0,0,0,0.4)]
+                                   h-[min(13rem,33vh)] w-[min(15rem,calc(100vw-5rem))]
+                                   lg:h-[min(20rem,40vh)] lg:w-[min(14rem,40vw)]"
                     >
-                        <div className="px-3 pt-2.5 pb-1.5 text-[10px] font-medium uppercase tracking-widest text-white/35 border-b border-white/8">
+                        <div className="px-3 pt-2.5 pb-1.5 text-[9.5px] font-medium uppercase tracking-widest text-white/35 border-b border-white/[0.07]">
                             {en ? 'Planets' : 'Planetas'}
                         </div>
                         <PlanetFlyout

@@ -82,13 +82,13 @@ export function SceneLabel({
     const cls =
         tier === 'primary'
             ? [
-                  'select-none whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-semibold backdrop-blur',
-                  highlighted ? 'bg-space-950/90 text-white' : 'bg-space-950/75 text-white/90',
+                  'select-none whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium backdrop-blur',
+                  highlighted ? 'bg-space-950/85 text-white/95' : 'bg-space-950/65 text-white/70',
                   onClick ? 'pointer-events-auto cursor-pointer transition hover:bg-space-950 hover:text-white' : 'pointer-events-none',
               ].join(' ')
             : [
-                  'select-none whitespace-nowrap rounded-full bg-space-950/60 px-1.5 py-0.5 text-[12px] font-medium text-white/75 backdrop-blur',
-                  onClick ? 'pointer-events-auto cursor-pointer transition hover:bg-space-950/85 hover:text-white' : 'pointer-events-none',
+                  'select-none whitespace-nowrap rounded-full bg-space-950/50 px-1.5 py-0.5 text-[11px] font-medium text-white/55 backdrop-blur',
+                  onClick ? 'pointer-events-auto cursor-pointer transition hover:bg-space-950/80 hover:text-white' : 'pointer-events-none',
               ].join(' ');
 
     return (
@@ -166,10 +166,12 @@ export function ScreenLabel({
                         ref={buttonRef}
                         style={hiddenByObjects ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
                         className={[
-                            /* Menos offset vertical: label fica mais próximo do asteroide. */
-                            '-translate-y-[60%] whitespace-nowrap rounded-md border bg-space-950/88 px-2.5 py-1.5 text-[13px] leading-snug text-white/85 shadow-glow backdrop-blur',
-                            emphasized ? 'border-signal-cyan/38' : 'border-white/10',
-                            onClick ? 'pointer-events-auto cursor-pointer text-left transition hover:border-signal-cyan/35 hover:bg-space-950' : 'pointer-events-none',
+                            /* Label do objeto selecionado: próximo ao asteroide, presença clara. */
+                            '-translate-y-[55%] whitespace-nowrap rounded-lg border px-3 py-1.5 text-[13px] font-semibold leading-snug backdrop-blur',
+                            emphasized
+                                ? 'border-signal-cyan/55 bg-space-950/95 text-white shadow-[0_0_16px_rgba(34,211,238,0.18)]'
+                                : 'border-white/10 bg-space-950/85 text-white/80',
+                            onClick ? 'pointer-events-auto cursor-pointer text-left transition hover:border-signal-cyan/50 hover:bg-space-950' : 'pointer-events-none',
                         ].join(' ')}
                     >
                         {children}
