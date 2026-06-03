@@ -25,7 +25,7 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 ## Estrutura
 
 - `UnifiedFocusCard.tsx`: card de foco unificado — renderiza asteroides (`kind: 'asteroid'`) e corpos celestes (`kind: 'body'`) com o mesmo shell visual, abas e layout mobile/desktop.
-- `BodyImagePreview.tsx`: preview de imagem real estática para corpos celestes; ocupa o mesmo espaço visual do `AsteroidModelPreview`.
+- `BodyImagePreview.tsx`: preview de imagem real estática para corpos celestes; ocupa o mesmo espaço visual do `AsteroidModelPreview`. As imagens são servidas localmente (`/images/bodies/`), com `fit` (cover/contain) e `scale` calibrados por hierarquia de tamanho real — não buscam URLs externas.
 - `AsteroidModelPreview.tsx`: preview 3D do asteroide em foco.
 - `bodyInfoContent.ts`: textos, fatos e metadados estáticos dos corpos celestes exibidos pelo `UnifiedFocusCard`.
 - `bodyHistory.ts`: textos de história/missões dos corpos celestes, exibidos na aba História.

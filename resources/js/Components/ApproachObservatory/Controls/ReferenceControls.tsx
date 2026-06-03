@@ -1,6 +1,9 @@
-import { type ReactNode, useEffect, useState } from 'react';
-import { Globe, Moon, Orbit, Sun } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import type { PlanetId } from '../Scene/planetConfig';
+
+// Símbolos astronômicos Unicode oficiais
+// ☉ Sol  ♁ Terra  ☽ Lua  ✦ Planetas
 
 /**
  * Atalhos de foco para corpos de referência da cena.
@@ -29,61 +32,79 @@ export function ReferenceSection({
     return (
         <div className={compact ? '' : 'border-b border-white/[0.04] px-2 pb-1.5 pt-2'}>
             {!compact ? (
-                <div className="px-1 pb-1 text-[9px] font-semibold uppercase tracking-widest text-white/50">
+                <div className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-widest text-white/50">
                     {en ? 'References' : 'Referências'}
                 </div>
             ) : null}
-            <div className="flex flex-wrap items-center gap-1.5 overflow-visible">
-                <ReferenceIconButton label={en ? 'Sun' : 'Sol'} icon={<Sun className="size-3.5" />} onClick={onFocusSun} />
-                <ReferenceIconButton label={en ? 'Earth' : 'Terra'} icon={<Globe className="size-3.5" />} onClick={onFocusEarth} />
-                <ReferenceIconButton label={en ? 'Moon' : 'Lua'} icon={<Moon className="size-3.5" />} onClick={onFocusMoon} />
+            <div className="flex items-center gap-px rounded-lg border border-white/[0.07] bg-white/[0.02] p-0.5">
+                <AstroButton symbol="☉" label={en ? 'Sun' : 'Sol'}   onClick={onFocusSun} />
+                <Divider />
+                <AstroButton symbol="♁" label={en ? 'Earth' : 'Terra'} onClick={onFocusEarth} />
+                <Divider />
+                <AstroButton symbol="☽" label={en ? 'Moon' : 'Lua'}  onClick={onFocusMoon} />
                 {!orbitMode ? (
-                    <ReferenceIconButton
-                        label={en ? 'Planets' : 'Planetas'}
-                        icon={<Orbit className="size-3.5" />}
-                        onClick={() => onPlanetsOpenChange(!planetsOpen)}
-                        active={planetsOpen}
-                        className="sm:ml-auto"
-                    />
+                    <>
+                        <Divider />
+                        <AstroButton
+                            symbol="✦"
+                            label={en ? 'Planets' : 'Planetas'}
+                            onClick={() => onPlanetsOpenChange(!planetsOpen)}
+                            active={planetsOpen}
+                            chevron
+                            chevronOpen={planetsOpen}
+                        />
+                    </>
                 ) : null}
             </div>
         </div>
     );
 }
 
-function ReferenceIconButton({
+function Divider() {
+    return <span className="h-4 w-px shrink-0 bg-white/[0.07]" aria-hidden />;
+}
+
+function AstroButton({
+    symbol,
     label,
-    icon,
     onClick,
     active = false,
-    className = '',
+    chevron = false,
+    chevronOpen = false,
 }: {
+    symbol: string;
     label: string;
-    icon: ReactNode;
     onClick: () => void;
     active?: boolean;
-    className?: string;
+    chevron?: boolean;
+    chevronOpen?: boolean;
 }) {
     return (
-        <span className={['group relative inline-flex overflow-visible', className].join(' ')}>
-            <button
-                type="button"
-                onClick={onClick}
-                aria-label={label}
-                className={[
-                    'inline-flex size-7 items-center justify-center rounded-lg border transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                    active
-                        ? 'border-signal-cyan/25 bg-signal-cyan/8 text-signal-cyan/70'
-                        : 'border-white/[0.06] bg-white/[0.02] text-white/60 hover:border-white/15 hover:bg-white/[0.05] hover:text-white/75',
-                ].join(' ')}
-            >
-                {icon}
-            </button>
-            <span className="pointer-events-none absolute left-1/2 top-full z-[120] mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-signal-cyan/35 bg-[#07111f] px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-[0_8px_28px_rgba(0,0,0,0.55),0_0_18px_rgba(34,211,238,0.14)] transition group-hover:translate-y-[1px] group-hover:opacity-100 group-focus-within:translate-y-[1px] group-focus-within:opacity-100 sm:block">
-                {label}
-                <span className="absolute left-1/2 top-0 size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-l border-t border-signal-cyan/35 bg-[#07111f]" aria-hidden />
+        <button
+            type="button"
+            onClick={onClick}
+            aria-label={label}
+            className={[
+                'group flex flex-1 items-center justify-center gap-1 rounded-md px-1 py-1.5 text-[11px] transition-all outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                active
+                    ? 'bg-signal-cyan/10 text-signal-cyan shadow-[inset_0_1px_0_rgba(34,211,238,0.1)]'
+                    : 'text-white/40 hover:bg-white/[0.04] hover:text-white/70',
+            ].join(' ')}
+        >
+            <span className="font-light leading-none" style={{ fontSize: '14px', fontFamily: 'serif' }}>
+                {symbol}
             </span>
-        </span>
+            <span className="hidden font-medium tracking-wide sm:inline" style={{ fontSize: '11px' }}>
+                {label}
+            </span>
+            {chevron ? (
+                <ChevronDown
+                    className="hidden size-2.5 shrink-0 opacity-50 transition-transform sm:block"
+                    style={{ transform: chevronOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    aria-hidden
+                />
+            ) : null}
+        </button>
     );
 }
 

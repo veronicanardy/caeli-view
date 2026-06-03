@@ -5,7 +5,6 @@ Esta pasta concentra os componentes de controle e UX do `ApproachObservatory`.
 O objetivo aqui é organizar a interface que permite ao usuário:
 
 - ajustar filtros e datas;
-- alternar vistas e modos de cena;
 - abrir ajuda contextual;
 - acionar focos e referências visuais;
 - navegar pelo manual do mapa.
@@ -48,9 +47,9 @@ Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógi
 
 ### Controles Principais Da Cena
 
-- `SceneToolbar.tsx`: toolbar de vistas, labels e fullscreen.
-- `ReferenceControls.tsx`: atalhos de foco para Sol, Terra, Lua e planetas.
-- `ViewButtons.tsx`: botões base usados pela toolbar.
+- `SceneToolbar.tsx`: toolbar com Reset de vista, toggle de labels e fullscreen. Usa `Tooltip` para os três botões.
+- `ReferenceControls.tsx`: atalhos de foco para Sol, Terra, Lua e planetas, exibidos com símbolos astronômicos Unicode (☉ ♁ ☽ ✦).
+- `Tooltip.tsx`: tooltip customizado do observatório — aparece imediatamente no hover e some após 2 s. Suporta `side` (bottom/top), `align` (center/left/right) e `hideDelay`.
 
 ### Filtros E Formulários
 

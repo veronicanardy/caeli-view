@@ -238,13 +238,10 @@ export function DailyOrbitalRadar3D({
                 <SceneToolbar
                     en={en}
                     activeMode={activeMode}
-                    view={view}
-                    hasVisibleFocusedObject={Boolean(visibleFocusedObject)}
                     showLabels={showLabels}
                     onShowLabelsChange={setShowLabels}
                     fullscreen={fullscreen}
                     onFullscreenChange={(v) => setFullscreen(typeof v === 'function' ? v(fullscreen) : v)}
-                    onPickView={pickView}
                     onResetView={resetView}
                 />
                 <RadarFloatingOverlays

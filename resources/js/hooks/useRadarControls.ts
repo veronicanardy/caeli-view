@@ -4,27 +4,6 @@ import type { ObjectLimit, SelectionMode } from '@/types';
 const STORAGE_KEY_LIMIT = 'radar:objectLimit';
 const STORAGE_KEY_MODE  = 'radar:selectionMode';
 
-const VALID_LIMITS: ObjectLimit[]     = [5, 15, 30];
-const VALID_MODES:  SelectionMode[]   = ['nearest', 'upcoming'];
-
-function readLimit(): ObjectLimit {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY_LIMIT);
-        const parsed = Number(raw) as ObjectLimit;
-        return VALID_LIMITS.includes(parsed) ? parsed : 5;
-    } catch {
-        return 5;
-    }
-}
-
-function readMode(): SelectionMode {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY_MODE) as SelectionMode | null;
-        return raw && VALID_MODES.includes(raw) ? raw : 'nearest';
-    } catch {
-        return 'nearest';
-    }
-}
 
 export interface RadarControls {
     objectLimit:      ObjectLimit;
@@ -37,12 +16,12 @@ export interface RadarControls {
 /**
  * Estado central dos controles do radar (quantidade de objetos + critério de seleção).
  *
- * Persiste as escolhas do usuário em localStorage para restaurar na próxima visita.
- * Default: 5 objetos, modo 'nearest'.
+ * Sempre inicia com os defaults (5 objetos, 'nearest') — independente do que ficou salvo.
+ * As escolhas são persistidas durante a sessão mas não restauradas na próxima visita.
  */
 export function useRadarControls(): RadarControls {
-    const [objectLimit, setObjectLimitState]     = useState<ObjectLimit>(readLimit);
-    const [selectionMode, setSelectionModeState] = useState<SelectionMode>(readMode);
+    const [objectLimit, setObjectLimitState]     = useState<ObjectLimit>(5);
+    const [selectionMode, setSelectionModeState] = useState<SelectionMode>('nearest');
 
     const setObjectLimit = (limit: ObjectLimit) => {
         setObjectLimitState(limit);

@@ -1,4 +1,5 @@
 import type { ObjectLimit, SelectionMode } from '@/types';
+import { Tooltip } from './Tooltip';
 
 type Props = {
     objectLimit: ObjectLimit;
@@ -50,7 +51,11 @@ export function RadarObjectControls({
                 </span>
                 <div className="flex h-10 items-center gap-1 rounded-xl border border-white/10 bg-space-950/70 px-1.5" role="group" aria-label={en ? 'Selection criterion' : 'Critério de seleção'}>
                     {MODE_OPTIONS.map((option) => (
-                        <span key={option.value} className="group relative inline-flex overflow-visible">
+                        <Tooltip
+                            key={option.value}
+                            content={<span className="block w-52 leading-relaxed">{modeDescriptions[option.value]}</span>}
+                            wrap
+                        >
                             <button
                                 type="button"
                                 disabled={loading || criterionLocked}
@@ -67,11 +72,7 @@ export function RadarObjectControls({
                             >
                                 {en ? option.labelEn : option.labelPt}
                             </button>
-                            <span className="pointer-events-none absolute top-full left-1/2 z-[120] mt-2.5 hidden w-56 -translate-x-1/2 rounded-md border border-signal-cyan/35 bg-[#07111f] px-2.5 py-2 text-[12px] leading-relaxed text-white/80 opacity-0 shadow-[0_8px_28px_rgba(0,0,0,0.55),0_0_18px_rgba(34,211,238,0.14)] transition group-hover:translate-y-[1px] group-hover:opacity-100 group-focus-within:translate-y-[1px] group-focus-within:opacity-100 sm:block">
-                                <span className="absolute top-0 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-l border-t border-signal-cyan/35 bg-[#07111f]" aria-hidden />
-                                {modeDescriptions[option.value]}
-                            </span>
-                        </span>
+                        </Tooltip>
                     ))}
                 </div>
             </div>
