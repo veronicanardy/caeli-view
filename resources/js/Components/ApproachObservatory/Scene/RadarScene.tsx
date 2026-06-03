@@ -27,6 +27,7 @@ import { MAX_CAMERA_DISTANCE } from './cameraConstants';
 import type { FocusFraming } from './cameraFraming';
 import type { CameraIntent } from './cameraIntent';
 import { InertialZoom } from './InertialZoom';
+import { KeyboardPan } from './KeyboardPan';
 import { PlanetLayer } from './PlanetLayer';
 import { PlanetOrbitLayer } from './PlanetOrbitLayer';
 import { computeLabelOccluder, focusedObjectScenePosition, shouldShowLabelForObject, shouldUseHelioScene } from './sceneFocus';
@@ -322,6 +323,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
             />
 
             <InertialZoom minDistance={EARTH_RADIUS_DL * 2.2} maxDistance={MAX_CAMERA_DISTANCE} />
+            <KeyboardPan />
 
                 <CameraRig
                     view={cameraIntent.view}

@@ -38,6 +38,7 @@
 - `PlanetOrbitLayer.tsx`: renderização declarativa das elipses orbitais planetárias a partir de uma lista local de configuração.
 - `AsteroidSceneLayer.tsx`: renderização de asteroides e trajetórias atuais.
 - `HeliocentricScene.tsx`: cena heliocêntrica do objeto selecionado em modo órbita.
+- `KeyboardPan.tsx`: pan da câmera por WASD e setas do teclado, com velocidade proporcional à distância.
 - `useBodyFocus.ts`, `useSceneEphemeris.ts`, `useSelectionFocusFraming.ts`, `useLabelNoGoRects.ts`: hooks de apoio da cena.
 
 ## Câmera e enquadramento
