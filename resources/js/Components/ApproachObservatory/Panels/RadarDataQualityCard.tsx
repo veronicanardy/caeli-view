@@ -1,11 +1,12 @@
 /**
- * Card de qualidade dos dados do radar.
+ * Faixa de insights do radar.
  *
- * Responsabilidade: resumir cobertura Horizons, objetos simbólicos e aproximações
- * próximas a partir de objetos já calculados por camadas superiores.
+ * Transforma dados de qualidade em leitura interpretativa: objeto do momento,
+ * escala de vizinhança da Terra e cobertura do radar. Não altera cálculos ou
+ * fontes de dados — apenas reapresenta o que já existe de forma mais narrativa.
  */
 
-import { AlertTriangle, Clock, Database, Eye, Moon, SatelliteDish, Target } from 'lucide-react';
+import { Radio, SatelliteDish, Telescope } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Translator } from '@/i18n';
 import { compactKm, formatNumber, lunarDistanceLabel } from '@/lib/format';
@@ -22,23 +23,19 @@ type Props = {
 export function RadarDataQualityCard({ objects, locale, t }: Props) {
     const en = locale === 'en';
     const closest = pickClosest(objects);
-    const withinLunar = objects.filter((object) => object.classification === 'within-lunar');
-    const withHorizons = objects.filter((object) => object.hasHorizonsPosition).length;
-    const symbolic = objects.filter((object) => object.isSymbolicFallback).length;
-    const transient = objects.filter((o) => o.horizonsFailureKind === 'horizons_transient').length;
-    const noEphemeris = objects.filter((o) => o.horizonsFailureKind === 'no_ephemeris').length;
-    const noOrbitalData = objects.filter((o) => o.horizonsFailureKind === 'no_orbital_data').length;
+    const withinLunar = objects.filter((o) => o.classification === 'within-lunar');
+    const withHorizons = objects.filter((o) => o.hasHorizonsPosition).length;
+    const symbolic = objects.filter((o) => o.isSymbolicFallback).length;
 
     return (
-        /* Container: grade assimétrica — bloco principal maior, secundários discretos. */
         <section
             className="grid gap-px rounded-2xl border border-white/6 bg-white/[0.018] overflow-hidden sm:grid-cols-[1fr_1px_1fr_1px_1fr]"
             aria-label={t('observatory.radar.quality.aria')}
         >
-            {/* Bloco 1 — principal: Mais próximo do dia. Ocupa destaque visual. */}
+            {/* Bloco 1 — Objeto do momento: destaque principal com nome e distância. */}
             <div className="px-5 py-4 sm:px-6 sm:py-5">
                 <div className="mb-3 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-widest text-signal-cyan/50">
-                    <Target className="size-3" aria-hidden="true" />
+                    <Radio className="size-3" aria-hidden="true" />
                     {t('observatory.radar.quality.closestTitle')}
                 </div>
                 {closest ? (
@@ -48,72 +45,28 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
                 )}
             </div>
 
-            {/* Divisor vertical — apenas em sm+. */}
             <div className="hidden sm:block bg-white/6" aria-hidden />
 
-            {/* Bloco 2 — secundário: Dentro da órbita lunar. */}
+            {/* Bloco 2 — Escala da vizinhança: interpretação contextualizada da distância lunar. */}
             <div className="px-5 py-4 sm:px-6 sm:py-5">
                 <div className="mb-3 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-widest text-white/25">
-                    <Moon className="size-3" aria-hidden="true" />
+                    <Telescope className="size-3" aria-hidden="true" />
                     {t('observatory.radar.quality.withinLunarTitle')}
                 </div>
-                <p className="text-[32px] font-extralight tabular-nums leading-none tracking-tight text-white/90">{withinLunar.length}</p>
-                {withinLunar.length > 0 ? (
-                    <ul className="mt-2.5 space-y-1 text-[11.5px] text-white/45">
-                        {withinLunar.slice(0, 3).map((object) => {
-                            const identity = resolveApproachIdentity(object.approach);
-                            return (
-                                <li key={object.approach.id} className="truncate">{identity.displayName}</li>
-                            );
-                        })}
-                        {withinLunar.length > 3 ? (
-                            <li className="text-white/25">
-                                {en ? `and ${withinLunar.length - 3} more` : `e mais ${withinLunar.length - 3}`}
-                            </li>
-                        ) : null}
-                    </ul>
-                ) : (
-                    <p className="mt-2 text-[12px] text-white/30">{t('observatory.radar.quality.withinLunarEmpty')}</p>
-                )}
+                <LunarNeighborhoodBlock withinLunar={withinLunar} closest={closest} en={en} t={t} />
             </div>
 
-            {/* Divisor vertical — apenas em sm+. */}
             <div className="hidden sm:block bg-white/6" aria-hidden />
 
-            {/* Bloco 3 — terciário: Qualidade dos dados. Menos visual weight. */}
+            {/* Bloco 3 — Cobertura do radar: linguagem mais natural sobre posição Horizons vs. simbólica. */}
             <div className="px-5 py-4 sm:px-6 sm:py-5">
                 <div className="mb-3 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-widest text-white/25">
-                    <Database className="size-3" aria-hidden="true" />
+                    <SatelliteDish className="size-3" aria-hidden="true" />
                     {t('observatory.radar.quality.sourceTitle')}
                 </div>
-                <dl className="space-y-2 text-[11.5px] text-white/40">
-                    <Row icon={<SatelliteDish className="size-3" aria-hidden="true" />} label={t('observatory.radar.quality.withHorizons')} value={withHorizons} />
-                    <Row icon={<Eye className="size-3" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic')} value={symbolic} />
-                    {transient > 0 ? (
-                        <Row icon={<AlertTriangle className="size-3 text-amber-400/60" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.horizons_transient')} value={transient} />
-                    ) : null}
-                    {noEphemeris > 0 ? (
-                        <Row icon={<Clock className="size-3 text-sky-400/60" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_ephemeris')} value={noEphemeris} />
-                    ) : null}
-                    {noOrbitalData > 0 ? (
-                        <Row icon={<Eye className="size-3 text-white/25" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_orbital_data')} value={noOrbitalData} />
-                    ) : null}
-                </dl>
-                <p className="mt-3 text-[10.5px] leading-relaxed text-white/25">{t('observatory.radar.quality.sourceFooter')}</p>
+                <RadarCoverageBlock withHorizons={withHorizons} symbolic={symbolic} total={objects.length} en={en} t={t} />
             </div>
         </section>
-    );
-}
-
-function Row({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
-    return (
-        <div className="flex items-center justify-between gap-2">
-            <dt className="flex items-center gap-1.5 text-white/50">
-                {icon}
-                {label}
-            </dt>
-            <dd className="font-semibold tabular-nums text-white/85">{value}</dd>
-        </div>
     );
 }
 
@@ -125,9 +78,7 @@ function ClosestObject({ closest, locale, en, t }: { closest: RadarObject; local
 
     return (
         <div className="space-y-2.5">
-            {/* Nome: insight principal — maior peso, destaque total. */}
-            <p className="truncate text-[16px] font-semibold leading-tight tracking-tight text-white">{identity.displayName}</p>
-            {/* Distância: dado mais importante depois do nome. */}
+            <p className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">{identity.displayName}</p>
             <div className="flex items-baseline gap-2.5">
                 <span className="text-[22px] font-light tabular-nums leading-none tracking-tight text-white/95">
                     {compactKm(closest.distanceKm)}
@@ -146,11 +97,137 @@ function ClosestObject({ closest, locale, en, t }: { closest: RadarObject; local
     );
 }
 
+function LunarNeighborhoodBlock({
+    withinLunar,
+    closest,
+    en,
+    t,
+}: {
+    withinLunar: RadarObject[];
+    closest: RadarObject | null;
+    en: boolean;
+    t: Translator;
+}) {
+    if (withinLunar.length === 0) {
+        // Sem objetos dentro da órbita lunar: mostrar múltiplo interpretativo em vez de "0".
+        const closestLd = closest?.distanceLD ?? null;
+        const multipleText = closestLd != null && isFinite(closestLd)
+            ? en
+                ? `The nearest is ${closestLd.toFixed(1)}× the Moon's distance.`
+                : `O mais próximo está a ${closestLd.toFixed(1)}× a distância da Lua.`
+            : null;
+
+        return (
+            <div className="space-y-1.5">
+                <p className="text-[13px] font-medium text-white/55">{t('observatory.radar.quality.withinLunarEmpty')}</p>
+                {multipleText ? (
+                    <p className="text-[11.5px] leading-relaxed text-white/30">{multipleText}</p>
+                ) : null}
+            </div>
+        );
+    }
+
+    // Com objetos dentro da órbita lunar: lista com leitura interessante.
+    return (
+        <div className="space-y-2">
+            <div className="flex items-baseline gap-2">
+                <span className="text-[28px] font-extralight tabular-nums leading-none tracking-tight text-white/90">{withinLunar.length}</span>
+                <span className="text-[12px] text-white/40">
+                    {en
+                        ? withinLunar.length === 1 ? 'object' : 'objects'
+                        : withinLunar.length === 1 ? 'objeto' : 'objetos'}
+                </span>
+            </div>
+            <ul className="space-y-1 text-[11.5px] text-white/45">
+                {withinLunar.slice(0, 3).map((o) => {
+                    const identity = resolveApproachIdentity(o.approach);
+                    const ld = o.distanceLD;
+                    return (
+                        <li key={o.approach.id} className="flex items-baseline justify-between gap-2 truncate">
+                            <span className="truncate">{identity.displayName}</span>
+                            {ld !== null ? (
+                                <span className="shrink-0 tabular-nums text-signal-cyan/50">{ld.toFixed(2)} DL</span>
+                            ) : null}
+                        </li>
+                    );
+                })}
+                {withinLunar.length > 3 ? (
+                    <li className="text-white/25">
+                        {en ? `and ${withinLunar.length - 3} more` : `e mais ${withinLunar.length - 3}`}
+                    </li>
+                ) : null}
+            </ul>
+        </div>
+    );
+}
+
+function RadarCoverageBlock({
+    withHorizons,
+    symbolic,
+    total,
+    en,
+    t,
+}: {
+    withHorizons: number;
+    symbolic: number;
+    total: number;
+    en: boolean;
+    t: Translator;
+}) {
+    const horizonsPercent = total > 0 ? Math.round((withHorizons / total) * 100) : 0;
+
+    return (
+        <div className="space-y-3">
+            {/* Barra de progresso visual da cobertura Horizons. */}
+            <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11.5px]">
+                    <span className="text-white/40">{en ? 'Horizons coverage' : 'Cobertura Horizons'}</span>
+                    <span className="tabular-nums font-semibold text-white/70">{horizonsPercent}%</span>
+                </div>
+                <div className="h-1 w-full overflow-hidden rounded-full bg-white/8">
+                    <div
+                        className="h-full rounded-full bg-signal-cyan/40 transition-all duration-500"
+                        style={{ width: `${horizonsPercent}%` }}
+                        aria-hidden="true"
+                    />
+                </div>
+            </div>
+
+            {/* Contadores individuais. */}
+            <dl className="space-y-1.5 text-[11.5px]">
+                <CoverageRow
+                    label={t('observatory.radar.quality.withHorizons')}
+                    value={withHorizons}
+                    highlight
+                />
+                <CoverageRow
+                    label={t('observatory.radar.quality.symbolic')}
+                    value={symbolic}
+                />
+            </dl>
+
+            {/* Nota interpretativa sobre simbólicos. */}
+            {symbolic > 0 ? (
+                <p className="text-[10.5px] leading-relaxed text-white/22">{t('observatory.radar.quality.sourceFooter')}</p>
+            ) : null}
+        </div>
+    );
+}
+
+function CoverageRow({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
+    return (
+        <div className="flex items-center justify-between gap-2">
+            <dt className={`text-white/${highlight ? '45' : '30'}`}>{label}</dt>
+            <dd className={`tabular-nums font-semibold ${highlight ? 'text-white/75' : 'text-white/45'}`}>{value}</dd>
+        </div>
+    );
+}
+
 function pickClosest(objects: RadarObject[]): RadarObject | null {
     let best: RadarObject | null = null;
-    for (const object of objects) {
-        if (object.distanceKm === null) continue;
-        if (!best || (best.distanceKm ?? Infinity) > object.distanceKm) best = object;
+    for (const o of objects) {
+        if (o.distanceKm === null) continue;
+        if (!best || (best.distanceKm ?? Infinity) > o.distanceKm) best = o;
     }
     return best;
 }

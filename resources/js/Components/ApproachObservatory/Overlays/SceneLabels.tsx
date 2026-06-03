@@ -166,9 +166,10 @@ export function ScreenLabel({
                         ref={buttonRef}
                         style={hiddenByObjects ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
                         className={[
-                            '-translate-y-1/2 whitespace-nowrap rounded-md border bg-space-950/90 px-3 py-2 text-[14px] leading-snug text-white/90 shadow-glow backdrop-blur',
-                            emphasized ? 'border-signal-cyan/50' : 'border-white/10',
-                            onClick ? 'pointer-events-auto cursor-pointer text-left transition hover:border-signal-cyan/40 hover:bg-space-950' : 'pointer-events-none',
+                            /* Menos offset vertical: label fica mais próximo do asteroide. */
+                            '-translate-y-[60%] whitespace-nowrap rounded-md border bg-space-950/88 px-2.5 py-1.5 text-[13px] leading-snug text-white/85 shadow-glow backdrop-blur',
+                            emphasized ? 'border-signal-cyan/38' : 'border-white/10',
+                            onClick ? 'pointer-events-auto cursor-pointer text-left transition hover:border-signal-cyan/35 hover:bg-space-950' : 'pointer-events-none',
                         ].join(' ')}
                     >
                         {children}

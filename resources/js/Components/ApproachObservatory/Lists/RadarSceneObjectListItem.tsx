@@ -35,19 +35,20 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                     orbitBlocked
                         ? 'cursor-not-allowed opacity-30'
                         : isSelected
-                          /* Item selecionado: fundo levemente mais saturado e borda ciano bem definida. */
-                          ? 'bg-signal-cyan/[0.10] text-white shadow-[inset_0_0_0_1px_rgba(34,211,238,0.45),0_2px_12px_rgba(34,211,238,0.08)]'
-                          : 'text-white/55 hover:bg-white/[0.05] hover:text-white/85',
+                          /* Selecionado: fundo e borda discretos — destaque sem competir com o card. */
+                          ? 'bg-signal-cyan/[0.06] text-white shadow-[inset_0_0_0_1px_rgba(34,211,238,0.22)]'
+                          /* Não-selecionado: apagado para reforçar papel de navegação. */
+                          : 'text-white/38 hover:bg-white/[0.04] hover:text-white/65',
                     !orbitBlocked && !hasScenePosition ? 'opacity-45' : '',
                 ].join(' ')}
             >
                 <span
                     className="col-start-1 row-start-1 self-center rounded-full"
                     style={{
-                        width: isSelected ? '9px' : '7px',
-                        height: isSelected ? '9px' : '7px',
+                        width: isSelected ? '8px' : '7px',
+                        height: isSelected ? '8px' : '7px',
                         backgroundColor: palette.future,
-                        boxShadow: isSelected ? `0 0 8px 2px ${palette.future}88` : undefined,
+                        boxShadow: isSelected ? `0 0 5px 1px ${palette.future}55` : undefined,
                         transition: 'width 0.15s, height 0.15s, box-shadow 0.15s',
                     }}
                 />
@@ -66,7 +67,7 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                         {en ? 'no pos.' : 'sem pos.'}
                     </span>
                 ) : null}
-                <span className={`col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap text-right tabular-nums text-[12px] ${isSelected ? 'text-signal-cyan/80' : 'text-white/45'}`}>
+                <span className={`col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap text-right tabular-nums text-[12px] ${isSelected ? 'text-signal-cyan/60' : 'text-white/40'}`}>
                     {trailingLabel}
                 </span>
             </button>

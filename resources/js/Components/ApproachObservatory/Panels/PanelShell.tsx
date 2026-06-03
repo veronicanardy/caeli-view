@@ -5,7 +5,7 @@
  * de fechamento usados por cards como `FocusCard` e `BodyInfoCard`.
  */
 
-import type { ReactNode, Ref } from 'react';
+import type { CSSProperties, ReactNode, Ref } from 'react';
 import { X } from 'lucide-react';
 
 type PanelShellProps = {
@@ -22,6 +22,7 @@ type PanelShellProps = {
     borderClass?: string;
     children: ReactNode;
     className?: string;
+    style?: CSSProperties;
     /** Em mobile, alinha ao topo (substitui o painel lateral) em vez de bottom. */
     mobileTopAlign?: boolean;
     panelRef?: Ref<HTMLDivElement>;
@@ -38,18 +39,20 @@ export function PanelShell({
     borderClass = 'border-white/12',
     children,
     className = '',
+    style,
     mobileTopAlign = false,
     panelRef,
 }: PanelShellProps) {
     return (
         <div
             ref={panelRef}
+            style={style}
             className={[
                 /* Camada de vidro: fundo escuro profundo com blur generoso e sombra de brilho ciano. */
                 'pointer-events-auto absolute left-1/2 z-20 -translate-x-1/2 overflow-hidden rounded-2xl border',
                 'bg-space-950/92 shadow-[0_0_32px_rgba(34,211,238,0.07),0_8px_32px_rgba(0,0,0,0.55)] backdrop-blur-2xl',
                 mobileTopAlign ? 'top-3' : 'bottom-10',
-                'lg:left-3 lg:top-[62%] lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2',
+                'lg:left-3 lg:top-[40%] lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2',
                 borderClass,
                 className,
             ].join(' ')}
@@ -71,9 +74,10 @@ export function PanelShell({
                         </div>
                     ) : null}
                     <div className="mt-1 truncate text-[15px] font-semibold tracking-tight text-white lg:text-[17px]">{title}</div>
-                    {subtitle ? (
-                        <div className="mt-0.5 truncate text-[11px] text-white/50 lg:text-[12px]">{subtitle}</div>
-                    ) : null}
+                    {/* min-h reserva espaço mesmo sem subtítulo — evita salto de layout ao trocar objeto. */}
+                    <div className="mt-0.5 min-h-[1rem] truncate text-[11px] text-white/50 lg:text-[12px]">
+                        {subtitle ?? null}
+                    </div>
                 </div>
                 {showCloseButton ? (
                     <button

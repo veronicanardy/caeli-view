@@ -6,7 +6,7 @@
  * ranking, seleção global, cálculo orbital ou fallback científico.
  */
 
-import { useState, type ReactNode, type Ref } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
@@ -52,6 +52,26 @@ export function FocusCard({
     const a = object.approach;
     const [tab, setTab] = useState<FocusTab>('summary');
     const [mobileSection, setMobileSection] = useState<FocusMobileSection | null>(null);
+
+    // Slide+fade de entrada ao montar o card (novo objeto selecionado).
+    const [mounted, setMounted] = useState(false);
+    useLayoutEffect(() => { setMounted(false); }, []);
+    useEffect(() => {
+        const t = requestAnimationFrame(() => setMounted(true));
+        return () => cancelAnimationFrame(t);
+    }, []);
+
+    // Fade sutil do conteúdo ao trocar de objeto sem desmontar o card.
+    const [contentVisible, setContentVisible] = useState(true);
+    const prevObjectId = useRef(a.id);
+    useEffect(() => {
+        if (prevObjectId.current === a.id) return;
+        prevObjectId.current = a.id;
+        setContentVisible(false);
+        const timer = setTimeout(() => setContentVisible(true), 80);
+        return () => clearTimeout(timer);
+    }, [a.id]);
+
     const ldText = object.currentDistanceLD !== null ? `${object.currentDistanceLD.toFixed(2)} DL` : '—';
     const auText = formatDistanceAU(object.currentDistanceKm, locale);
     const motion = motionLabel(object.trajectory?.motionState, en);
@@ -81,6 +101,13 @@ export function FocusCard({
         </div>
     ) : eyebrowText;
 
+    // Slide+fade de entrada: começa deslocado 10px para baixo e invisível, anima para posição final.
+    const enterStyle = {
+        transition: 'opacity 0.18s ease, transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94)',
+        opacity: mounted ? 1 : 0,
+        transform: mounted ? 'translateY(0)' : 'translateY(10px)',
+    };
+
     return (
         <PanelShell
             onClose={onClose}
@@ -91,6 +118,7 @@ export function FocusCard({
             subtitle={a.subtitle ?? undefined}
             borderClass="border-signal-cyan/20"
             className="flex max-h-[34vh] lg:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] lg:w-[min(25rem,48%)] flex-col"
+            style={enterStyle}
             mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
         >
@@ -145,13 +173,15 @@ export function FocusCard({
                 </div>
             ) : null}
 
-            {/* Status da trajetoria: exibido apenas quando os dados Horizons nao estao disponiveis. */}
-            {showSectionContent && trajectoryStatus ? (
-                <div className="mt-1.5 px-3 lg:mt-2 lg:px-4">
-                    <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] ${trajectoryStatus.className}`}>
-                        <span aria-hidden="true">{trajectoryStatus.icon}</span>
-                        {trajectoryStatus.text}
-                    </div>
+            {/* Status da trajetória: área com altura mínima reservada para não saltar quando aparece/some. */}
+            {showSectionContent ? (
+                <div className="mt-1.5 min-h-[1.75rem] px-3 lg:mt-2 lg:min-h-[2rem] lg:px-4">
+                    {trajectoryStatus ? (
+                        <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] ${trajectoryStatus.className}`}>
+                            <span aria-hidden="true">{trajectoryStatus.icon}</span>
+                            {trajectoryStatus.text}
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
 
@@ -162,11 +192,16 @@ export function FocusCard({
                 <FocusTabButton active={tab === 'approach'} onClick={() => setTab('approach')}>{en ? 'Approach' : 'Aproximação'}</FocusTabButton>
             </div>
 
-            {/* Conteudo da aba com rolagem quando necessario. */}
-            <div className="flex-1 overflow-y-auto px-3 py-3 lg:px-5 lg:py-4">
+            {/* Conteúdo das abas: min-height garante que o card não salte ao trocar aba. */}
+            <div
+                className="flex-1 overflow-y-auto px-3 py-3 lg:px-5 lg:py-4"
+                style={{ transition: 'opacity 0.12s ease', opacity: contentVisible ? 1 : 0 }}
+            >
+                {/* min-h garante altura consistente entre abas no desktop. */}
+                <div className="lg:min-h-[7.5rem]">
                 {showSectionContent && activeSection === 'summary' ? (
                     <div className="space-y-3">
-                        <p className="text-[13px] leading-loose text-white/60 lg:text-[13.5px]">{summary}</p>
+                        <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">{summary}</p>
                         <dl className="space-y-2.5 text-[13px]">
                             <Row label={en ? 'Distance from Earth' : 'Distância da Terra'}>
                                 <span className="font-semibold text-white">{compactKm(object.currentDistanceKm)}</span>
@@ -224,6 +259,7 @@ export function FocusCard({
                         </Row>
                     </dl>
                 ) : null}
+                </div>
 
                 {showMobileActions ? (
                     <div className="space-y-2">
@@ -250,27 +286,30 @@ export function FocusCard({
                 ) : null}
             </div>
 
-            {/* Ações: separação sutil, mais espaço de respiro. */}
-            <div className="hidden space-y-2 border-t border-white/6 px-3 py-4 lg:block lg:px-5 lg:py-4">
-                {hasOrbit ? (
-                    <OrbitToggleButton
-                        orbitMode={orbitMode}
-                        canShowOrbitPosition={canShowOrbitPosition}
-                        onShowOrbit={onShowOrbit}
-                        onShowCloseUp={onShowCloseUp}
-                        en={en}
-                        desktop
-                    />
-                ) : null}
-                {onOpenFocus ? (
-                    <button
-                        type="button"
-                        onClick={() => onOpenFocus(a)}
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/4 px-3 py-2 text-[12px] font-medium text-white/60 transition outline-none hover:border-white/20 hover:bg-white/8 hover:text-white/90 focus-visible:ring-2 focus-visible:ring-signal-cyan"
-                    >
-                        {en ? 'Open full dossier' : 'Abrir dossiê completo'}
-                    </button>
-                ) : null}
+            {/* Ações: CTA principal (órbita) vs. ação secundária (dossiê) com hierarquia visual clara. */}
+            <div className="hidden border-t border-white/6 px-3 py-3.5 lg:block lg:px-5 lg:py-4">
+                <div className="space-y-2">
+                    {hasOrbit ? (
+                        <OrbitToggleButton
+                            orbitMode={orbitMode}
+                            canShowOrbitPosition={canShowOrbitPosition}
+                            onShowOrbit={onShowOrbit}
+                            onShowCloseUp={onShowCloseUp}
+                            en={en}
+                            desktop
+                        />
+                    ) : null}
+                    {onOpenFocus ? (
+                        /* Ação secundária: sem border, texto menor, sem glow — subordinada ao CTA. */
+                        <button
+                            type="button"
+                            onClick={() => onOpenFocus(a)}
+                            className="inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium text-white/38 transition outline-none hover:text-white/70 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                        >
+                            {en ? 'Open full dossier →' : 'Abrir dossiê completo →'}
+                        </button>
+                    ) : null}
+                </div>
             </div>
             </div>
         </PanelShell>

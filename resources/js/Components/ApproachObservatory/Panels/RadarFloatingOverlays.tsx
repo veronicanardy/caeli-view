@@ -5,7 +5,7 @@
  * o canvas, mantendo o componente principal livre de UI sobreposta.
  */
 
-import type { RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ClosestNowObject, LunarReference, UnifiedApproach } from '@/types';
 import type { SceneMode } from '../Controls/Manual/manualTypes';
 import { OrbitWelcomeToast, RadarWelcomeToast } from '../Controls/WelcomeToast';
@@ -37,6 +37,33 @@ type Props = {
     lunarReference: LunarReference;
 };
 
+/** Formata o tempo decorrido desde `since` em texto curto (ex: "há 2 min", "just now"). */
+function useElapsedLabel(since: Date | null, en: boolean): string {
+    const [label, setLabel] = useState('');
+
+    useEffect(() => {
+        if (!since) { setLabel(''); return; }
+
+        const update = () => {
+            const sec = Math.floor((Date.now() - since.getTime()) / 1000);
+            if (sec < 15) {
+                setLabel(en ? 'just now' : 'agora mesmo');
+            } else if (sec < 60) {
+                setLabel(en ? `${sec}s ago` : `${sec}s atrás`);
+            } else {
+                const min = Math.floor(sec / 60);
+                setLabel(en ? `${min} min ago` : `há ${min} min`);
+            }
+        };
+
+        update();
+        const id = setInterval(update, 15_000);
+        return () => clearInterval(id);
+    }, [since, en]);
+
+    return label;
+}
+
 export function RadarFloatingOverlays({
     en,
     locale,
@@ -59,6 +86,16 @@ export function RadarFloatingOverlays({
     onManualOpenChange,
     lunarReference,
 }: Props) {
+    // Registra quando o radar terminou de carregar pela última vez.
+    const prevLoading = useRef(radarLoading);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(() => radarLoading ? null : new Date());
+    useEffect(() => {
+        if (prevLoading.current && !radarLoading) setLastUpdated(new Date());
+        prevLoading.current = radarLoading;
+    }, [radarLoading]);
+
+    const elapsedLabel = useElapsedLabel(lastUpdated, en);
+
     return (
         <>
             {visibleFocusedObject ? (
@@ -90,9 +127,18 @@ export function RadarFloatingOverlays({
                 <h2 className="text-[11px] font-medium text-white/40">
                     {en ? 'Orbital radar · 3D' : 'Radar orbital · 3D'}
                 </h2>
-                <span className="inline-flex items-center gap-1 rounded-full border border-signal-cyan/30 bg-signal-cyan/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-signal-cyan/70">
-                    {en ? 'Live' : 'Ao vivo'}
-                </span>
+                {/* Pill dinâmico: pulsa enquanto carrega, mostra tempo decorrido quando estável. */}
+                {radarLoading ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-signal-cyan/30 bg-signal-cyan/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-signal-cyan/70">
+                        <span className="size-1.5 animate-pulse rounded-full bg-signal-cyan/70" aria-hidden />
+                        {en ? 'Updating…' : 'Atualizando…'}
+                    </span>
+                ) : elapsedLabel ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-signal-cyan/25 bg-signal-cyan/8 px-1.5 py-0.5 text-[9px] font-medium text-signal-cyan/60">
+                        <span className="size-1.5 rounded-full bg-signal-cyan/50" aria-hidden />
+                        {elapsedLabel}
+                    </span>
+                ) : null}
             </div>
 
             {(sceneTransitioning || radarLoading) ? (

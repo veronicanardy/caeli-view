@@ -29,11 +29,12 @@ export function TimeTick({
     return (
         <group position={vec}>
             <mesh>
-                <sphereGeometry args={[0.012, 12, 12]} />
-                <meshBasicMaterial color={color} transparent opacity={0.85} />
+                <sphereGeometry args={[0.010, 12, 12]} />
+                <meshBasicMaterial color={color} transparent opacity={0.55} />
             </mesh>
             <FocusProtectedHtml position={[0, 0.05, 0]} center distanceFactor={7} zIndexRange={[6, 0]}>
-                <span className="pointer-events-none select-none whitespace-nowrap rounded-full bg-space-950/50 px-1.5 py-0.5 text-[9px] font-normal text-white/45 backdrop-blur">
+                {/* Marcador temporal: leitura secundária da trajetória — peso reduzido. */}
+                <span className="pointer-events-none select-none whitespace-nowrap rounded-full bg-space-950/35 px-1.5 py-0.5 text-[8px] font-normal text-white/30 backdrop-blur">
                     {label}
                 </span>
             </FocusProtectedHtml>
