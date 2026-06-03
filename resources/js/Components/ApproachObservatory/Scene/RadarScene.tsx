@@ -78,23 +78,27 @@ type RadarSceneProps = {
  */
 function StarField() {
     const geo = useMemo(() => {
-        const count = 1400;
+        /* Duas camadas: fundo distante (tênue) e primeiro plano (ligeiramente maior).
+           Resultado: campo estelar com mais profundidade percebida sem aumentar o ruído. */
+        const count = 1800;
         const positions = new Float32Array(count * 3);
         const colors = new Float32Array(count * 3);
+        const sizes = new Float32Array(count);
         const rng = (() => { let s = 42; return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; }; })();
         for (let i = 0; i < count; i++) {
-            /* Distribuição esférica uniforme. */
             const theta = rng() * Math.PI * 2;
             const phi = Math.acos(2 * rng() - 1);
-            const r = 280 + rng() * 120;
+            /* 70% das estrelas ficam mais longe (fundo difuso), 30% mais perto (primeiro plano). */
+            const near = rng() > 0.7;
+            const r = near ? 200 + rng() * 60 : 300 + rng() * 100;
             positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
             positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
             positions[i * 3 + 2] = r * Math.cos(phi);
-            /* Matiz ligeiramente quente ou frio — estrelas raramente são branco puro. */
             const warm = rng();
-            colors[i * 3]     = 0.85 + warm * 0.15;
-            colors[i * 3 + 1] = 0.88 + rng() * 0.08;
-            colors[i * 3 + 2] = 0.85 + (1 - warm) * 0.15;
+            colors[i * 3]     = 0.82 + warm * 0.18;
+            colors[i * 3 + 1] = 0.86 + rng() * 0.1;
+            colors[i * 3 + 2] = 0.82 + (1 - warm) * 0.18;
+            sizes[i] = near ? 0.26 + rng() * 0.14 : 0.14 + rng() * 0.1;
         }
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -106,10 +110,10 @@ function StarField() {
         <points geometry={geo} renderOrder={-1}>
             <pointsMaterial
                 vertexColors
-                size={0.28}
+                size={0.20}
                 sizeAttenuation
                 transparent
-                opacity={0.38}
+                opacity={0.32}
                 depthWrite={false}
             />
         </points>

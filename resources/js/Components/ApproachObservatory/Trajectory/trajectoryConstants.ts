@@ -15,17 +15,19 @@ export const ORBIT_LINE_SEGMENTS = 192;
 export const DEFAULT_ORBIT_LINE_OPACITY = 0.85;
 
 export const DIRECTION_CONE_GEOMETRY = {
-    length: 0.086,
-    width: 0.0042,
-    headLength: 0.026,
-    headWidth: 0.018,
+    /* Haste mais longa e proporção delicada — lembra um vetor de instrumento astronômico. */
+    length: 0.11,
+    width: 0.0028,
+    headLength: 0.018,
+    /* Ponta extra-fina: discreto, não gamer. */
+    headWidth: 0.009,
     airGap: ASTEROID_MARKER_RADIUS,
 } as const;
 
 export const DIRECTION_CONE_SCALE = {
-    min: 0.94,
-    max: 1.28,
-    distanceFactor: 0.028,
+    min: 0.90,
+    max: 1.20,
+    distanceFactor: 0.022,
 } as const;
 
 export const TRAJECTORY_MARKER_THRESHOLDS = {

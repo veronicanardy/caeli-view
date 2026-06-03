@@ -35,17 +35,20 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                     orbitBlocked
                         ? 'cursor-not-allowed opacity-30'
                         : isSelected
-                          /* Item selecionado: fundo ciano mais vis\u00EDvel com sombra interna sutil. */
-                          ? 'bg-signal-cyan/12 text-white shadow-[inset_0_0_0_1px_rgba(34,211,238,0.35)]'
-                          : 'text-white/65 hover:bg-white/[0.06] hover:text-white/90',
+                          /* Item selecionado: fundo levemente mais saturado e borda ciano bem definida. */
+                          ? 'bg-signal-cyan/[0.10] text-white shadow-[inset_0_0_0_1px_rgba(34,211,238,0.45),0_2px_12px_rgba(34,211,238,0.08)]'
+                          : 'text-white/55 hover:bg-white/[0.05] hover:text-white/85',
                     !orbitBlocked && !hasScenePosition ? 'opacity-45' : '',
                 ].join(' ')}
             >
                 <span
-                    className="col-start-1 row-start-1 size-2 self-center rounded-full"
+                    className="col-start-1 row-start-1 self-center rounded-full"
                     style={{
+                        width: isSelected ? '9px' : '7px',
+                        height: isSelected ? '9px' : '7px',
                         backgroundColor: palette.future,
-                        boxShadow: isSelected ? `0 0 6px ${palette.future}` : undefined,
+                        boxShadow: isSelected ? `0 0 8px 2px ${palette.future}88` : undefined,
+                        transition: 'width 0.15s, height 0.15s, box-shadow 0.15s',
                     }}
                 />
                 <span className="col-start-2 row-start-1 flex min-w-0 items-center gap-1 font-medium">

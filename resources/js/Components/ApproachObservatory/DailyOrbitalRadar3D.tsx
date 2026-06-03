@@ -180,9 +180,11 @@ export function DailyOrbitalRadar3D({
             )}
             <div
                 ref={canvasContainerRef}
+                /* Gradiente radial: ponto focal levemente acima do centro cria profundidade
+                   atmosférica sem competir com os objetos científicos da cena. */
                 className={fullscreen
-                    ? 'fixed inset-0 z-50 bg-[#03060d]'
-                    : 'relative h-[calc(100vh-8rem)] min-h-[400px] lg:min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d]'}
+                    ? 'fixed inset-0 z-50 bg-[#03060d] [background-image:radial-gradient(ellipse_70%_55%_at_50%_40%,#071420_0%,#03060d_70%)]'
+                    : 'relative h-[calc(100vh-8rem)] min-h-[400px] lg:min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d] [background-image:radial-gradient(ellipse_70%_55%_at_50%_40%,#071420_0%,#03060d_70%)]'}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 <RadarSceneCanvas

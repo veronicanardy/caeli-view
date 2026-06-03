@@ -90,7 +90,7 @@ export function FocusCard({
             title={a.displayName ?? a.name}
             subtitle={a.subtitle ?? undefined}
             borderClass="border-signal-cyan/20"
-            className="flex max-h-[34vh] lg:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] lg:w-[min(24rem,48%)] flex-col"
+            className="flex max-h-[34vh] lg:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] lg:w-[min(25rem,48%)] flex-col"
             mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
         >
@@ -134,12 +134,12 @@ export function FocusCard({
 
             {/* Badge de risco: design mais limpo, sem borda pesada, com ícone integrado. */}
             {showSectionContent ? (
-                <div className="mt-2 px-3 lg:mt-3 lg:px-4">
-                    <div className={`flex items-center gap-2 rounded-xl px-3 py-2 lg:gap-2.5 lg:px-3.5 lg:py-2.5 ${risk.className}`}>
-                        <span className="text-base shrink-0 lg:text-lg">{risk.icon}</span>
+                <div className="mt-3 px-3 lg:mt-4 lg:px-5">
+                    <div className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 lg:gap-3 lg:px-4 lg:py-3 ${risk.className}`}>
+                        <span className="text-base shrink-0 lg:text-xl">{risk.icon}</span>
                         <div className="min-w-0">
-                            <div className="text-[12px] font-semibold tracking-tight lg:text-[13px]">{risk.title}</div>
-                            <div className="hidden text-[10px] leading-snug opacity-75 lg:block lg:text-[11px]">{risk.subtitle}</div>
+                            <div className="text-[12px] font-semibold tracking-tight lg:text-[13.5px]">{risk.title}</div>
+                            <div className="hidden text-[10px] leading-snug opacity-70 lg:block lg:text-[11.5px]">{risk.subtitle}</div>
                         </div>
                     </div>
                 </div>
@@ -155,19 +155,19 @@ export function FocusCard({
                 </div>
             ) : null}
 
-            {/* Abas — sublinhado ciano como indicador ativo, sem borda pesada entre abas. */}
-            <div className="mt-2.5 hidden gap-0.5 border-b border-white/8 px-3 lg:flex lg:mt-3 lg:px-4">
+            {/* Abas — com mais respiro e separação sutil usando borda bem fraca. */}
+            <div className="mt-3 hidden gap-0 border-b border-white/6 px-3 lg:flex lg:mt-4 lg:px-5">
                 <FocusTabButton active={tab === 'summary'} onClick={() => setTab('summary')}>{en ? 'Summary' : 'Resumo'}</FocusTabButton>
                 <FocusTabButton active={tab === 'physical'} onClick={() => setTab('physical')}>{en ? 'Physical' : 'Físico'}</FocusTabButton>
                 <FocusTabButton active={tab === 'approach'} onClick={() => setTab('approach')}>{en ? 'Approach' : 'Aproximação'}</FocusTabButton>
             </div>
 
             {/* Conteudo da aba com rolagem quando necessario. */}
-            <div className="flex-1 overflow-y-auto px-3 py-2.5 lg:px-4 lg:py-3">
+            <div className="flex-1 overflow-y-auto px-3 py-3 lg:px-5 lg:py-4">
                 {showSectionContent && activeSection === 'summary' ? (
-                    <div className="space-y-2.5">
-                        <p className="text-[13px] leading-relaxed text-white/70 lg:text-[13.5px]">{summary}</p>
-                        <dl className="space-y-2 text-[13px]">
+                    <div className="space-y-3">
+                        <p className="text-[13px] leading-loose text-white/60 lg:text-[13.5px]">{summary}</p>
+                        <dl className="space-y-2.5 text-[13px]">
                             <Row label={en ? 'Distance from Earth' : 'Distância da Terra'}>
                                 <span className="font-semibold text-white">{compactKm(object.currentDistanceKm)}</span>
                                 <span className="text-white/50"> · {ldText} · {auText}</span>
@@ -182,7 +182,7 @@ export function FocusCard({
                 ) : null}
 
                 {showSectionContent && activeSection === 'physical' ? (
-                    <dl className="space-y-2 text-[13px]">
+                    <dl className="space-y-2.5 text-[13px]">
                         <Row label={en ? 'Diameter' : 'Diâmetro'}>
                             {a.diameterMeters != null
                                 ? `${Math.round(a.diameterMeters)} m`
@@ -203,7 +203,7 @@ export function FocusCard({
                 ) : null}
 
                 {showSectionContent && activeSection === 'approach' ? (
-                    <dl className="space-y-2 text-[13px]">
+                    <dl className="space-y-2.5 text-[13px]">
                         {(() => {
                             const v = a.relativeVelocityKph ?? object.trajectory?.currentVelocityKph ?? null;
                             return v != null ? (
@@ -250,8 +250,8 @@ export function FocusCard({
                 ) : null}
             </div>
 
-            {/* Ações: separação sutil com gradiente em vez de linha pesada. */}
-            <div className="hidden space-y-1.5 border-t border-white/8 px-3 py-3 lg:block lg:px-4 lg:py-3.5">
+            {/* Ações: separação sutil, mais espaço de respiro. */}
+            <div className="hidden space-y-2 border-t border-white/6 px-3 py-4 lg:block lg:px-5 lg:py-4">
                 {hasOrbit ? (
                     <OrbitToggleButton
                         orbitMode={orbitMode}
@@ -333,11 +333,11 @@ function FocusTabButton({ active, onClick, children }: { active: boolean; onClic
             type="button"
             onClick={onClick}
             className={[
-                /* Sublinhado deslizante — aba ativa tem glow ciano sutil. */
-                '-mb-px border-b-2 px-2.5 py-2 text-[13px] font-medium tracking-tight transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                /* Mais respiro horizontal e vertical — aba ativa com glow ciano mais suave. */
+                '-mb-px border-b-2 px-3.5 py-2.5 text-[12.5px] font-medium tracking-wide transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                 active
-                    ? 'border-signal-cyan text-white drop-shadow-[0_1px_6px_rgba(34,211,238,0.5)]'
-                    : 'border-transparent text-white/45 hover:text-white/75',
+                    ? 'border-signal-cyan/80 text-white drop-shadow-[0_1px_8px_rgba(34,211,238,0.4)]'
+                    : 'border-transparent text-white/35 hover:text-white/65',
             ].join(' ')}
         >
             {children}
@@ -347,9 +347,9 @@ function FocusTabButton({ active, onClick, children }: { active: boolean; onClic
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
     return (
-        <div className="flex items-baseline justify-between gap-3">
-            <dt className="shrink-0 text-[12px] text-white/40">{label}</dt>
-            <dd className="text-right text-[13px] font-medium text-white/90">{children}</dd>
+        <div className="flex items-baseline justify-between gap-4">
+            <dt className="shrink-0 text-[11.5px] uppercase tracking-wide text-white/30">{label}</dt>
+            <dd className="text-right text-[13px] font-semibold text-white/85">{children}</dd>
         </div>
     );
 }

@@ -30,30 +30,36 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
     const noOrbitalData = objects.filter((o) => o.horizonsFailureKind === 'no_orbital_data').length;
 
     return (
-        /* Container principal: bordas menores, fundo mais leve, sem box pesada. */
+        /* Container: grade assimétrica — bloco principal maior, secundários discretos. */
         <section
-            className="grid gap-2 rounded-2xl border border-white/8 bg-white/[0.025] px-4 py-4 sm:grid-cols-3 sm:gap-3"
+            className="grid gap-px rounded-2xl border border-white/6 bg-white/[0.018] overflow-hidden sm:grid-cols-[1fr_1px_1fr_1px_1fr]"
             aria-label={t('observatory.radar.quality.aria')}
         >
-            <Block
-                icon={<Target className="size-3.5" aria-hidden="true" />}
-                title={t('observatory.radar.quality.closestTitle')}
-            >
+            {/* Bloco 1 — principal: Mais próximo do dia. Ocupa destaque visual. */}
+            <div className="px-5 py-4 sm:px-6 sm:py-5">
+                <div className="mb-3 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-widest text-signal-cyan/50">
+                    <Target className="size-3" aria-hidden="true" />
+                    {t('observatory.radar.quality.closestTitle')}
+                </div>
                 {closest ? (
                     <ClosestObject closest={closest} locale={locale} en={en} t={t} />
                 ) : (
-                    <p className="text-xs text-white/45">{t('observatory.radar.quality.closestEmpty')}</p>
+                    <p className="text-xs text-white/35">{t('observatory.radar.quality.closestEmpty')}</p>
                 )}
-            </Block>
+            </div>
 
-            <Block
-                icon={<Moon className="size-3.5" aria-hidden="true" />}
-                title={t('observatory.radar.quality.withinLunarTitle')}
-            >
-                {/* Número grande em destaque — é o insight principal deste bloco. */}
-                <p className="text-[28px] font-light tabular-nums leading-none tracking-tight text-white">{withinLunar.length}</p>
+            {/* Divisor vertical — apenas em sm+. */}
+            <div className="hidden sm:block bg-white/6" aria-hidden />
+
+            {/* Bloco 2 — secundário: Dentro da órbita lunar. */}
+            <div className="px-5 py-4 sm:px-6 sm:py-5">
+                <div className="mb-3 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-widest text-white/25">
+                    <Moon className="size-3" aria-hidden="true" />
+                    {t('observatory.radar.quality.withinLunarTitle')}
+                </div>
+                <p className="text-[32px] font-extralight tabular-nums leading-none tracking-tight text-white/90">{withinLunar.length}</p>
                 {withinLunar.length > 0 ? (
-                    <ul className="mt-2 space-y-1 text-[12px] text-white/55">
+                    <ul className="mt-2.5 space-y-1 text-[11.5px] text-white/45">
                         {withinLunar.slice(0, 3).map((object) => {
                             const identity = resolveApproachIdentity(object.approach);
                             return (
@@ -61,49 +67,41 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
                             );
                         })}
                         {withinLunar.length > 3 ? (
-                            <li className="text-white/35">
+                            <li className="text-white/25">
                                 {en ? `and ${withinLunar.length - 3} more` : `e mais ${withinLunar.length - 3}`}
                             </li>
                         ) : null}
                     </ul>
                 ) : (
-                    <p className="mt-1.5 text-[12px] text-white/40">{t('observatory.radar.quality.withinLunarEmpty')}</p>
+                    <p className="mt-2 text-[12px] text-white/30">{t('observatory.radar.quality.withinLunarEmpty')}</p>
                 )}
-            </Block>
+            </div>
 
-            <Block
-                icon={<Database className="size-3.5" aria-hidden="true" />}
-                title={t('observatory.radar.quality.sourceTitle')}
-            >
-                <dl className="space-y-1.5 text-[12px] text-white/55">
+            {/* Divisor vertical — apenas em sm+. */}
+            <div className="hidden sm:block bg-white/6" aria-hidden />
+
+            {/* Bloco 3 — terciário: Qualidade dos dados. Menos visual weight. */}
+            <div className="px-5 py-4 sm:px-6 sm:py-5">
+                <div className="mb-3 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-widest text-white/25">
+                    <Database className="size-3" aria-hidden="true" />
+                    {t('observatory.radar.quality.sourceTitle')}
+                </div>
+                <dl className="space-y-2 text-[11.5px] text-white/40">
                     <Row icon={<SatelliteDish className="size-3" aria-hidden="true" />} label={t('observatory.radar.quality.withHorizons')} value={withHorizons} />
                     <Row icon={<Eye className="size-3" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic')} value={symbolic} />
                     {transient > 0 ? (
-                        <Row icon={<AlertTriangle className="size-3 text-amber-400/70" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.horizons_transient')} value={transient} />
+                        <Row icon={<AlertTriangle className="size-3 text-amber-400/60" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.horizons_transient')} value={transient} />
                     ) : null}
                     {noEphemeris > 0 ? (
-                        <Row icon={<Clock className="size-3 text-sky-400/70" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_ephemeris')} value={noEphemeris} />
+                        <Row icon={<Clock className="size-3 text-sky-400/60" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_ephemeris')} value={noEphemeris} />
                     ) : null}
                     {noOrbitalData > 0 ? (
-                        <Row icon={<Eye className="size-3 text-white/35" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_orbital_data')} value={noOrbitalData} />
+                        <Row icon={<Eye className="size-3 text-white/25" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_orbital_data')} value={noOrbitalData} />
                     ) : null}
                 </dl>
-                <p className="mt-3 text-[11px] leading-relaxed text-white/35">{t('observatory.radar.quality.sourceFooter')}</p>
-            </Block>
-        </section>
-    );
-}
-
-function Block({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
-    return (
-        /* Bloco interno sem borda pesada — usa divisor sutil para separar o label do conteúdo. */
-        <div className="space-y-2.5">
-            <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-white/30">
-                {icon}
-                {title}
+                <p className="mt-3 text-[10.5px] leading-relaxed text-white/25">{t('observatory.radar.quality.sourceFooter')}</p>
             </div>
-            <div>{children}</div>
-        </div>
+        </section>
     );
 }
 
@@ -126,15 +124,19 @@ function ClosestObject({ closest, locale, en, t }: { closest: RadarObject; local
     const velocity = closest.relativeVelocityKph;
 
     return (
-        <div className="space-y-2">
-            {/* Nome em destaque: fonte semibold, tamanho legível. */}
-            <p className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">{identity.displayName}</p>
-            {/* Distância: dado principal — maior e mais presente. */}
-            <p className="text-[13px] font-medium text-white/90">
-                {compactKm(closest.distanceKm)}
-                {lunar !== null ? <span className="ml-1.5 text-[12px] text-signal-cyan/70">{lunarDistanceLabel(lunar)}</span> : null}
-            </p>
-            <div className="space-y-0.5 text-[11px] text-white/40">
+        <div className="space-y-2.5">
+            {/* Nome: insight principal — maior peso, destaque total. */}
+            <p className="truncate text-[16px] font-semibold leading-tight tracking-tight text-white">{identity.displayName}</p>
+            {/* Distância: dado mais importante depois do nome. */}
+            <div className="flex items-baseline gap-2.5">
+                <span className="text-[22px] font-light tabular-nums leading-none tracking-tight text-white/95">
+                    {compactKm(closest.distanceKm)}
+                </span>
+                {lunar !== null ? (
+                    <span className="text-[13px] font-medium text-signal-cyan/65">{lunarDistanceLabel(lunar)}</span>
+                ) : null}
+            </div>
+            <div className="space-y-0.5 text-[11px] text-white/30">
                 <p>{t('observatory.radar.quality.closestTimeLabel')}: {approachTime}</p>
                 {velocity !== null ? (
                     <p>{en ? 'Velocity' : 'Velocidade'}: {formatNumber(velocity, 0)} km/h</p>

@@ -49,7 +49,7 @@ export function PanelShell({
                 'pointer-events-auto absolute left-1/2 z-20 -translate-x-1/2 overflow-hidden rounded-2xl border',
                 'bg-space-950/92 shadow-[0_0_32px_rgba(34,211,238,0.07),0_8px_32px_rgba(0,0,0,0.55)] backdrop-blur-2xl',
                 mobileTopAlign ? 'top-3' : 'bottom-10',
-                'lg:left-3 lg:top-[54%] lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2',
+                'lg:left-3 lg:top-[62%] lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2',
                 borderClass,
                 className,
             ].join(' ')}

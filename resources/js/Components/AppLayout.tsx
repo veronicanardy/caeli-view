@@ -183,30 +183,31 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                 </div>
             ) : null}
             <main className="page-slide flex-1">{children}</main>
-            <footer className="relative border-t border-white/10 bg-[linear-gradient(180deg,rgba(6,10,18,0),rgba(6,10,18,0.86)_18%,rgba(6,10,18,0.96))]">
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-signal-cyan/50 to-transparent" />
-                <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-                    <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
-                        <div className="space-y-3">
-                            <span className="inline-flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-signal-cyan/85">
-                                <Info className="size-3.5" aria-hidden="true" />
+            {/* Rodapé de transparência: peso visual reduzido para não quebrar a atmosfera da página. */}
+            <footer className="relative border-t border-white/[0.06] bg-[linear-gradient(180deg,rgba(3,6,13,0),rgba(3,6,13,0.72)_25%,rgba(3,6,13,0.88))]">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-signal-cyan/20 to-transparent" />
+                <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+                    <div className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8">
+                        <div className="space-y-2">
+                            <span className="inline-flex items-center gap-1.5 text-[0.62rem] font-medium uppercase tracking-[0.24em] text-signal-cyan/45">
+                                <Info className="size-3" aria-hidden="true" />
                                 {footerCopy.label}
                             </span>
-                            <div className="space-y-2">
-                                <h2 className="max-w-xs text-sm font-semibold tracking-[0.01em] text-white/88">
+                            <div className="space-y-1.5">
+                                <h2 className="max-w-xs text-[13px] font-medium tracking-tight text-white/55">
                                     {footerCopy.title}
                                 </h2>
-                                <p className="max-w-xs text-sm leading-6 text-white/40">
+                                <p className="max-w-xs text-[12px] leading-relaxed text-white/28">
                                     {footerCopy.subtitle}
                                 </p>
                             </div>
                         </div>
-                        <div className="grid gap-4 border-l-0 border-white/10 lg:border-l lg:pl-8">
+                        <div className="grid gap-3 border-l-0 border-white/[0.06] lg:border-l lg:pl-8">
                             {footerCopy.paragraphs.map((paragraph, index) => (
                                 <p
                                     key={paragraph}
-                                    className={`max-w-4xl text-sm leading-7 text-white/58 ${
-                                        index > 0 ? 'border-t border-white/8 pt-4' : ''
+                                    className={`max-w-4xl text-[12px] leading-6 text-white/32 ${
+                                        index > 0 ? 'border-t border-white/[0.05] pt-3' : ''
                                     }`}
                                 >
                                     {paragraph}
