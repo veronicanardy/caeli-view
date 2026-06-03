@@ -40,7 +40,8 @@ export function DirectionCone({
         const positionValue = tip.clone().add(movementDirection.multiplyScalar(DIRECTION_CONE_GEOMETRY.airGap));
 
         const shaftLength = DIRECTION_CONE_GEOMETRY.length - DIRECTION_CONE_GEOMETRY.headLength;
-        const segments = 24;
+        /* Segmentos aumentados para suavidade de gradiente mais cinematográfica. */
+        const segments = 40;
         const base = new THREE.Color(color);
 
         const posArr = new Float32Array((segments + 1) * 3);
@@ -48,10 +49,12 @@ export function DirectionCone({
         for (let i = 0; i <= segments; i++) {
             const t = i / segments;
             posArr[i * 3 + 1] = t * shaftLength;
+            /* Curva de easing cúbica: começa quase invisível, termina com presença. */
+            const alpha = t * t * t * opacity * 0.9;
             colArr[i * 4] = base.r;
             colArr[i * 4 + 1] = base.g;
             colArr[i * 4 + 2] = base.b;
-            colArr[i * 4 + 3] = t * t * opacity * 0.85;
+            colArr[i * 4 + 3] = alpha;
         }
 
         const shaftGeo = new THREE.BufferGeometry();
@@ -61,9 +64,10 @@ export function DirectionCone({
         const line = new THREE.Line(shaftGeo, shaftMat);
         line.renderOrder = 2;
 
-        const headGeo = new THREE.CylinderGeometry(0, DIRECTION_CONE_GEOMETRY.headWidth * 0.42, DIRECTION_CONE_GEOMETRY.headLength, 10, 1);
-        headGeo.translate(0, shaftLength + DIRECTION_CONE_GEOMETRY.headLength * 0.5, 0);
-        const headMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: opacity * 0.88, depthWrite: false });
+        /* Cabeça mais fina e alongada — lembra um indicador de instrumento astronômico. */
+        const headGeo = new THREE.CylinderGeometry(0, DIRECTION_CONE_GEOMETRY.headWidth * 0.32, DIRECTION_CONE_GEOMETRY.headLength * 1.1, 8, 1);
+        headGeo.translate(0, shaftLength + DIRECTION_CONE_GEOMETRY.headLength * 0.55, 0);
+        const headMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: opacity * 0.82, depthWrite: false });
         const cone = new THREE.Mesh(headGeo, headMat);
         cone.renderOrder = 2;
 

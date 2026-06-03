@@ -30,25 +30,30 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
     const noOrbitalData = objects.filter((o) => o.horizonsFailureKind === 'no_orbital_data').length;
 
     return (
-        <section className="grid gap-3 rounded-lg border border-white/10 bg-white/[0.035] p-4 sm:grid-cols-3" aria-label={t('observatory.radar.quality.aria')}>
+        /* Container principal: bordas menores, fundo mais leve, sem box pesada. */
+        <section
+            className="grid gap-2 rounded-2xl border border-white/8 bg-white/[0.025] px-4 py-4 sm:grid-cols-3 sm:gap-3"
+            aria-label={t('observatory.radar.quality.aria')}
+        >
             <Block
-                icon={<Target className="size-4" aria-hidden="true" />}
+                icon={<Target className="size-3.5" aria-hidden="true" />}
                 title={t('observatory.radar.quality.closestTitle')}
             >
                 {closest ? (
                     <ClosestObject closest={closest} locale={locale} en={en} t={t} />
                 ) : (
-                    <p className="text-xs text-white/60">{t('observatory.radar.quality.closestEmpty')}</p>
+                    <p className="text-xs text-white/45">{t('observatory.radar.quality.closestEmpty')}</p>
                 )}
             </Block>
 
             <Block
-                icon={<Moon className="size-4" aria-hidden="true" />}
+                icon={<Moon className="size-3.5" aria-hidden="true" />}
                 title={t('observatory.radar.quality.withinLunarTitle')}
             >
-                <p className="text-2xl font-semibold text-white">{withinLunar.length}</p>
+                {/* Número grande em destaque — é o insight principal deste bloco. */}
+                <p className="text-[28px] font-light tabular-nums leading-none tracking-tight text-white">{withinLunar.length}</p>
                 {withinLunar.length > 0 ? (
-                    <ul className="mt-1.5 space-y-0.5 text-xs text-white/60">
+                    <ul className="mt-2 space-y-1 text-[12px] text-white/55">
                         {withinLunar.slice(0, 3).map((object) => {
                             const identity = resolveApproachIdentity(object.approach);
                             return (
@@ -56,34 +61,34 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
                             );
                         })}
                         {withinLunar.length > 3 ? (
-                            <li className="text-white/40">
+                            <li className="text-white/35">
                                 {en ? `and ${withinLunar.length - 3} more` : `e mais ${withinLunar.length - 3}`}
                             </li>
                         ) : null}
                     </ul>
                 ) : (
-                    <p className="mt-1 text-xs text-white/50">{t('observatory.radar.quality.withinLunarEmpty')}</p>
+                    <p className="mt-1.5 text-[12px] text-white/40">{t('observatory.radar.quality.withinLunarEmpty')}</p>
                 )}
             </Block>
 
             <Block
-                icon={<Database className="size-4" aria-hidden="true" />}
+                icon={<Database className="size-3.5" aria-hidden="true" />}
                 title={t('observatory.radar.quality.sourceTitle')}
             >
-                <dl className="space-y-1 text-xs text-white/65">
+                <dl className="space-y-1.5 text-[12px] text-white/55">
                     <Row icon={<SatelliteDish className="size-3" aria-hidden="true" />} label={t('observatory.radar.quality.withHorizons')} value={withHorizons} />
                     <Row icon={<Eye className="size-3" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic')} value={symbolic} />
                     {transient > 0 ? (
-                        <Row icon={<AlertTriangle className="size-3 text-amber-400/80" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.horizons_transient')} value={transient} />
+                        <Row icon={<AlertTriangle className="size-3 text-amber-400/70" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.horizons_transient')} value={transient} />
                     ) : null}
                     {noEphemeris > 0 ? (
-                        <Row icon={<Clock className="size-3 text-sky-400/80" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_ephemeris')} value={noEphemeris} />
+                        <Row icon={<Clock className="size-3 text-sky-400/70" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_ephemeris')} value={noEphemeris} />
                     ) : null}
                     {noOrbitalData > 0 ? (
-                        <Row icon={<Eye className="size-3 text-white/40" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_orbital_data')} value={noOrbitalData} />
+                        <Row icon={<Eye className="size-3 text-white/35" aria-hidden="true" />} label={t('observatory.radar.quality.symbolic.no_orbital_data')} value={noOrbitalData} />
                     ) : null}
                 </dl>
-                <p className="mt-2 text-[11px] leading-4 text-white/45">{t('observatory.radar.quality.sourceFooter')}</p>
+                <p className="mt-3 text-[11px] leading-relaxed text-white/35">{t('observatory.radar.quality.sourceFooter')}</p>
             </Block>
         </section>
     );
@@ -91,12 +96,13 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
 
 function Block({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
     return (
-        <div className="rounded border border-white/10 bg-space-950/45 p-3">
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-white/45">
+        /* Bloco interno sem borda pesada — usa divisor sutil para separar o label do conteúdo. */
+        <div className="space-y-2.5">
+            <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-white/30">
                 {icon}
                 {title}
             </div>
-            <div className="mt-1.5">{children}</div>
+            <div>{children}</div>
         </div>
     );
 }
@@ -104,11 +110,11 @@ function Block({ icon, title, children }: { icon: ReactNode; title: string; chil
 function Row({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
     return (
         <div className="flex items-center justify-between gap-2">
-            <dt className="flex items-center gap-1.5 text-white/60">
+            <dt className="flex items-center gap-1.5 text-white/50">
                 {icon}
                 {label}
             </dt>
-            <dd className="font-medium text-white">{value}</dd>
+            <dd className="font-semibold tabular-nums text-white/85">{value}</dd>
         </div>
     );
 }
@@ -120,18 +126,20 @@ function ClosestObject({ closest, locale, en, t }: { closest: RadarObject; local
     const velocity = closest.relativeVelocityKph;
 
     return (
-        <div className="space-y-1.5">
-            <p className="truncate text-base font-semibold text-white">{identity.displayName}</p>
-            <p className="text-sm text-white/75">
+        <div className="space-y-2">
+            {/* Nome em destaque: fonte semibold, tamanho legível. */}
+            <p className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">{identity.displayName}</p>
+            {/* Distância: dado principal — maior e mais presente. */}
+            <p className="text-[13px] font-medium text-white/90">
                 {compactKm(closest.distanceKm)}
-                {lunar !== null ? <span className="text-white/60"> Â· {lunarDistanceLabel(lunar)}</span> : null}
+                {lunar !== null ? <span className="ml-1.5 text-[12px] text-signal-cyan/70">{lunarDistanceLabel(lunar)}</span> : null}
             </p>
-            <p className="text-xs text-white/60">{t('observatory.radar.quality.closestTimeLabel')}: {approachTime}</p>
-            {velocity !== null ? (
-                <p className="text-xs text-white/60">
-                    {en ? 'Velocity' : 'Velocidade'}: {formatNumber(velocity, 0)} km/h
-                </p>
-            ) : null}
+            <div className="space-y-0.5 text-[11px] text-white/40">
+                <p>{t('observatory.radar.quality.closestTimeLabel')}: {approachTime}</p>
+                {velocity !== null ? (
+                    <p>{en ? 'Velocity' : 'Velocidade'}: {formatNumber(velocity, 0)} km/h</p>
+                ) : null}
+            </div>
         </div>
     );
 }

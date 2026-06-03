@@ -16,30 +16,6 @@ export function listTitle(count: number, mode: SelectionMode, en: boolean): stri
     return en ? `${count} closest objects now` : `${count} objetos mais próximos agora`;
 }
 
-export function MobilePanelMenuButton({
-    label,
-    subtitle,
-    onClick,
-}: {
-    label: string;
-    subtitle: string;
-    onClick: () => void;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-signal-cyan"
-        >
-            <div className="min-w-0">
-                <div className="text-[12px] font-medium text-white/85">{label}</div>
-                <div className="truncate text-[10px] uppercase tracking-wide text-white/40">{subtitle}</div>
-            </div>
-            <ChevronDown className="-rotate-90 size-3.5 shrink-0 text-white/35" aria-hidden />
-        </button>
-    );
-}
-
 export function MobilePanelSectionHeader({
     title,
     backLabel,

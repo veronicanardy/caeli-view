@@ -62,7 +62,9 @@ export function RadarNavigationPanel({
                 <div
                     ref={sidePanelRef}
                         className={[
-                            'flex flex-col overflow-visible rounded-xl border border-white/10 bg-space-950/90 backdrop-blur-xl',
+                            /* Painel lateral: arredondamento maior, borda mais suave, sombra de observatório. */
+                            'flex flex-col overflow-visible rounded-2xl border border-white/8 bg-space-950/92 backdrop-blur-2xl',
+                            'shadow-[0_0_28px_rgba(34,211,238,0.05),0_6px_24px_rgba(0,0,0,0.5)]',
                         orbitMode
                             ? 'lg:flex lg:h-[min(16rem,40vh)] lg:w-[min(18rem,48vw)]'
                             : 'lg:flex lg:h-[min(20rem,40vh)] lg:w-[min(18rem,48vw)]',
@@ -126,11 +128,12 @@ export function RadarNavigationPanel({
                 {planetsOpen && !orbitMode ? (
                     <div
                         ref={planetFlyoutRef}
-                        className="flex flex-col overflow-y-auto rounded-xl border border-white/10 bg-space-950/90 backdrop-blur-xl
+                        className="flex flex-col overflow-y-auto rounded-2xl border border-white/8 bg-space-950/92 backdrop-blur-2xl
+                                   shadow-[0_0_28px_rgba(34,211,238,0.05),0_6px_24px_rgba(0,0,0,0.5)]
                                    h-[min(13rem,34vh)] w-[min(15rem,calc(100vw-5rem))]
                                    lg:h-[min(26rem,70vh)] lg:w-[min(14rem,40vw)]"
                     >
-                        <div className="px-2 pt-2 pb-1 text-[11px] uppercase tracking-wide text-white/45 border-b border-white/10">
+                        <div className="px-3 pt-2.5 pb-1.5 text-[10px] font-medium uppercase tracking-widest text-white/35 border-b border-white/8">
                             {en ? 'Planets' : 'Planetas'}
                         </div>
                         <PlanetFlyout

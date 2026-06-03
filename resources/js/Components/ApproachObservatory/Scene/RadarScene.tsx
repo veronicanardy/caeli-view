@@ -9,6 +9,7 @@
 import { OrbitControls } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
+import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import { OBJECT_PALETTE } from '@/lib/observatory/palette';
@@ -69,6 +70,51 @@ type RadarSceneProps = {
     /** Chamado uma única vez após o primeiro frame da cena ser renderizado na GPU. */
     onFirstFrame?: () => void;
 };
+
+/**
+ * Campo estelar procedural: ~1400 partículas estáticas em esfera grande.
+ * Puramente decorativo — não afeta cálculos orbitais. Opacidade baixa
+ * para manter leitura científica sem virar efeito de jogo.
+ */
+function StarField() {
+    const geo = useMemo(() => {
+        const count = 1400;
+        const positions = new Float32Array(count * 3);
+        const colors = new Float32Array(count * 3);
+        const rng = (() => { let s = 42; return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; }; })();
+        for (let i = 0; i < count; i++) {
+            /* Distribuição esférica uniforme. */
+            const theta = rng() * Math.PI * 2;
+            const phi = Math.acos(2 * rng() - 1);
+            const r = 280 + rng() * 120;
+            positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            positions[i * 3 + 2] = r * Math.cos(phi);
+            /* Matiz ligeiramente quente ou frio — estrelas raramente são branco puro. */
+            const warm = rng();
+            colors[i * 3]     = 0.85 + warm * 0.15;
+            colors[i * 3 + 1] = 0.88 + rng() * 0.08;
+            colors[i * 3 + 2] = 0.85 + (1 - warm) * 0.15;
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        g.setAttribute('color',    new THREE.BufferAttribute(colors,    3));
+        return g;
+    }, []);
+
+    return (
+        <points geometry={geo} renderOrder={-1}>
+            <pointsMaterial
+                vertexColors
+                size={0.28}
+                sizeAttenuation
+                transparent
+                opacity={0.38}
+                depthWrite={false}
+            />
+        </points>
+    );
+}
 
 function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
     const fired = useRef(false);
@@ -167,6 +213,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         <SceneObjectOccludersContext.Provider value={sceneObjectOccluders}>
             <LabelOccluderContext.Provider value={labelOccluder}>
                 <color attach="background" args={['#03060d']} />
+                {/* Campo estelar estático — contexto visual de profundidade espacial. */}
+                <StarField />
                 {/* Iluminação global compartilhada por todos os asteroides da cena.
                     Intensidades somadas a partir do rig anterior por marcador (ambient 0.28 + hemi 0.12)
                     mais a base de cena (0.16), centralizadas aqui para evitar N luzes duplicadas. */}

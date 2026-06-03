@@ -30,33 +30,40 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                 onClick={() => onSelect(o.approach)}
                 title={title}
                 className={[
-                    'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-lg text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                    compact ? 'px-2 py-1' : 'px-2 py-2',
+                    'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-xl text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                    compact ? 'px-2 py-1.5' : 'px-2.5 py-2',
                     orbitBlocked
-                        ? 'cursor-not-allowed opacity-35'
+                        ? 'cursor-not-allowed opacity-30'
                         : isSelected
-                          ? 'bg-signal-cyan/15 text-white ring-1 ring-signal-cyan/40'
-                          : 'text-white/75 hover:bg-white/[0.08] hover:text-white',
-                    !orbitBlocked && !hasScenePosition ? 'opacity-50' : '',
+                          /* Item selecionado: fundo ciano mais vis\u00EDvel com sombra interna sutil. */
+                          ? 'bg-signal-cyan/12 text-white shadow-[inset_0_0_0_1px_rgba(34,211,238,0.35)]'
+                          : 'text-white/65 hover:bg-white/[0.06] hover:text-white/90',
+                    !orbitBlocked && !hasScenePosition ? 'opacity-45' : '',
                 ].join(' ')}
             >
-                <span className="col-start-1 row-start-1 h-2 w-2 self-center rounded-full ring-1 ring-white/10" style={{ backgroundColor: palette.future }} />
+                <span
+                    className="col-start-1 row-start-1 size-2 self-center rounded-full"
+                    style={{
+                        backgroundColor: palette.future,
+                        boxShadow: isSelected ? `0 0 6px ${palette.future}` : undefined,
+                    }}
+                />
                 <span className="col-start-2 row-start-1 flex min-w-0 items-center gap-1 font-medium">
-                    <span className="min-w-0 truncate">{o.approach.displayName ?? o.approach.name}</span>
+                    <span className={`min-w-0 truncate ${isSelected ? 'text-white' : ''}`}>{o.approach.displayName ?? o.approach.name}</span>
                     {hazard ? (
                         <span className="shrink-0 text-[11px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>{'\u26A0\uFE0F'}</span>
                     ) : null}
                 </span>
                 {orbitBlocked ? (
-                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 truncate text-[10px] text-white/30" aria-hidden>
+                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 truncate text-[10px] text-white/25" aria-hidden>
                         {en ? 'no orbit' : 'sem \u00F3rbita'}
                     </span>
                 ) : !hasScenePosition ? (
-                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 truncate text-[10px] text-amber-200/60" aria-hidden>
+                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 truncate text-[10px] text-amber-200/50" aria-hidden>
                         {en ? 'no pos.' : 'sem pos.'}
                     </span>
                 ) : null}
-                <span className="col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap text-right tabular-nums text-[12px] text-white/60">
+                <span className={`col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap text-right tabular-nums text-[12px] ${isSelected ? 'text-signal-cyan/80' : 'text-white/45'}`}>
                     {trailingLabel}
                 </span>
             </button>

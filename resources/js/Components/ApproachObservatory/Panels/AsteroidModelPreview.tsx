@@ -46,8 +46,10 @@ export function AsteroidModelPreview({ object, locale }: { object: ClosestNowObj
         : (en ? 'Illustrative model' : 'Modelo ilustrativo');
 
     return (
-        <div className="mx-2.5 mt-2 lg:mx-3">
-            <div className="h-24 overflow-hidden rounded-lg border border-white/8 bg-black/30 lg:h-28">
+        <div className="mx-3 mt-2.5 lg:mx-4">
+            {/* Canvas do modelo: borda quase invisível, fundo com gradiente radial escuro para presença. */}
+            <div className="relative h-28 overflow-hidden rounded-xl border border-white/6 lg:h-32"
+                style={{ background: 'radial-gradient(ellipse at center, rgba(34,211,238,0.04) 0%, rgba(3,6,13,0.95) 70%)' }}>
                 <Canvas
                     camera={{ position: [0, 0, 3.2], fov: 32 }}
                     gl={{ antialias: true, alpha: true }}
@@ -61,8 +63,9 @@ export function AsteroidModelPreview({ object, locale }: { object: ClosestNowObj
                         <SpinningAsteroid object={object} />
                     </Suspense>
                 </Canvas>
+                {/* Caption integrado ao canto inferior do canvas, não flutuando abaixo. */}
+                <p className="absolute bottom-1.5 right-2 text-[9px] text-white/25 tracking-wide">{caption}</p>
             </div>
-            <p className="mt-1 text-center text-[10px] text-white/35">{caption}</p>
         </div>
     );
 }

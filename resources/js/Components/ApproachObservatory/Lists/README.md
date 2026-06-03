@@ -36,10 +36,8 @@ Se a logica passar a decidir comportamento cientifico, recalcular dados de domin
 
 ## Componentes atuais
 
-- `CuratedHighlights.tsx`
 - `DailyProximityList.tsx`
 - `RadarSceneObjectListItem.tsx`
-- `RangeInsightsCards.tsx`
 - `UnifiedApproachTable.tsx`
 
 ## Regra explicita para IA

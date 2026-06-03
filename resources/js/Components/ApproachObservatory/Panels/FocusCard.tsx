@@ -89,7 +89,7 @@ export function FocusCard({
             eyebrow={eyebrow}
             title={a.displayName ?? a.name}
             subtitle={a.subtitle ?? undefined}
-            borderClass="border-signal-cyan/25"
+            borderClass="border-signal-cyan/20"
             className="flex max-h-[34vh] lg:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] lg:w-[min(24rem,48%)] flex-col"
             mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
@@ -132,13 +132,14 @@ export function FocusCard({
                 </div>
             ) : null}
 
+            {/* Badge de risco: design mais limpo, sem borda pesada, com ícone integrado. */}
             {showSectionContent ? (
-                <div className="mt-1.5 px-2.5 lg:mt-2 lg:px-3">
-                    <div className={`flex items-start gap-1.5 rounded-lg border px-2 py-1 lg:items-center lg:gap-2 lg:px-2.5 lg:py-1.5 ${risk.className}`}>
-                        <span className="text-sm lg:text-base">{risk.icon}</span>
+                <div className="mt-2 px-3 lg:mt-3 lg:px-4">
+                    <div className={`flex items-center gap-2 rounded-xl px-3 py-2 lg:gap-2.5 lg:px-3.5 lg:py-2.5 ${risk.className}`}>
+                        <span className="text-base shrink-0 lg:text-lg">{risk.icon}</span>
                         <div className="min-w-0">
-                            <div className="text-[12px] font-semibold leading-tight lg:text-[13px]">{risk.title}</div>
-                            <div className="hidden text-[11px] leading-tight opacity-80 lg:block">{risk.subtitle}</div>
+                            <div className="text-[12px] font-semibold tracking-tight lg:text-[13px]">{risk.title}</div>
+                            <div className="hidden text-[10px] leading-snug opacity-75 lg:block lg:text-[11px]">{risk.subtitle}</div>
                         </div>
                     </div>
                 </div>
@@ -146,33 +147,34 @@ export function FocusCard({
 
             {/* Status da trajetoria: exibido apenas quando os dados Horizons nao estao disponiveis. */}
             {showSectionContent && trajectoryStatus ? (
-                <div className="mt-1 px-2.5 lg:mt-1.5 lg:px-3">
-                    <div className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] ${trajectoryStatus.className}`}>
+                <div className="mt-1.5 px-3 lg:mt-2 lg:px-4">
+                    <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] ${trajectoryStatus.className}`}>
                         <span aria-hidden="true">{trajectoryStatus.icon}</span>
                         {trajectoryStatus.text}
                     </div>
                 </div>
             ) : null}
 
-            {/* Abas */}
-            <div className="mt-2 hidden gap-1 border-b border-white/10 px-2.5 lg:flex lg:mt-2.5 lg:px-3">
+            {/* Abas — sublinhado ciano como indicador ativo, sem borda pesada entre abas. */}
+            <div className="mt-2.5 hidden gap-0.5 border-b border-white/8 px-3 lg:flex lg:mt-3 lg:px-4">
                 <FocusTabButton active={tab === 'summary'} onClick={() => setTab('summary')}>{en ? 'Summary' : 'Resumo'}</FocusTabButton>
                 <FocusTabButton active={tab === 'physical'} onClick={() => setTab('physical')}>{en ? 'Physical' : 'Físico'}</FocusTabButton>
                 <FocusTabButton active={tab === 'approach'} onClick={() => setTab('approach')}>{en ? 'Approach' : 'Aproximação'}</FocusTabButton>
             </div>
 
             {/* Conteudo da aba com rolagem quando necessario. */}
-            <div className="flex-1 overflow-y-auto px-2.5 py-2 lg:px-3 lg:py-2.5">
+            <div className="flex-1 overflow-y-auto px-3 py-2.5 lg:px-4 lg:py-3">
                 {showSectionContent && activeSection === 'summary' ? (
-                    <div className="space-y-2">
-                        <p className="text-[13px] leading-relaxed text-white/80">{summary}</p>
-                        <dl className="space-y-1.5 text-[13px]">
+                    <div className="space-y-2.5">
+                        <p className="text-[13px] leading-relaxed text-white/70 lg:text-[13.5px]">{summary}</p>
+                        <dl className="space-y-2 text-[13px]">
                             <Row label={en ? 'Distance from Earth' : 'Distância da Terra'}>
-                                {compactKm(object.currentDistanceKm)} <span className="text-white/60">· {ldText} · {auText}</span>
+                                <span className="font-semibold text-white">{compactKm(object.currentDistanceKm)}</span>
+                                <span className="text-white/50"> · {ldText} · {auText}</span>
                             </Row>
                             {motion ? (
                                 <Row label={en ? 'Status' : 'Status'}>
-                                    <span className={motion.className}>{motion.text}</span>
+                                    <span className={`font-medium ${motion.className}`}>{motion.text}</span>
                                 </Row>
                             ) : null}
                         </dl>
@@ -180,7 +182,7 @@ export function FocusCard({
                 ) : null}
 
                 {showSectionContent && activeSection === 'physical' ? (
-                    <dl className="space-y-1.5 text-[13px]">
+                    <dl className="space-y-2 text-[13px]">
                         <Row label={en ? 'Diameter' : 'Diâmetro'}>
                             {a.diameterMeters != null
                                 ? `${Math.round(a.diameterMeters)} m`
@@ -201,7 +203,7 @@ export function FocusCard({
                 ) : null}
 
                 {showSectionContent && activeSection === 'approach' ? (
-                    <dl className="space-y-1.5 text-[13px]">
+                    <dl className="space-y-2 text-[13px]">
                         {(() => {
                             const v = a.relativeVelocityKph ?? object.trajectory?.currentVelocityKph ?? null;
                             return v != null ? (
@@ -218,7 +220,7 @@ export function FocusCard({
                         ) : null}
                         <Row label={en ? 'Min. distance' : 'Distância mínima'}>
                             {a.nominalDistanceKm != null ? compactKm(a.nominalDistanceKm) : '—'}
-                            {a.lunarDistance != null ? <span className="text-white/60"> · {a.lunarDistance.toFixed(2)} DL</span> : null}
+                            {a.lunarDistance != null ? <span className="text-white/50"> · {a.lunarDistance.toFixed(2)} DL</span> : null}
                         </Row>
                     </dl>
                 ) : null}
@@ -248,8 +250,8 @@ export function FocusCard({
                 ) : null}
             </div>
 
-            {/* Acoes: alternancia orbital como CTA principal; dossie como secundario. */}
-            <div className="hidden space-y-0.5 border-t border-white/10 px-2.5 py-1.5 lg:block lg:space-y-1.5 lg:px-3 lg:py-2.5">
+            {/* Ações: separação sutil com gradiente em vez de linha pesada. */}
+            <div className="hidden space-y-1.5 border-t border-white/8 px-3 py-3 lg:block lg:px-4 lg:py-3.5">
                 {hasOrbit ? (
                     <OrbitToggleButton
                         orbitMode={orbitMode}
@@ -264,7 +266,7 @@ export function FocusCard({
                     <button
                         type="button"
                         onClick={() => onOpenFocus(a)}
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-white/75 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan lg:py-2 lg:text-[12px]"
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/4 px-3 py-2 text-[12px] font-medium text-white/60 transition outline-none hover:border-white/20 hover:bg-white/8 hover:text-white/90 focus-visible:ring-2 focus-visible:ring-signal-cyan"
                     >
                         {en ? 'Open full dossier' : 'Abrir dossiê completo'}
                     </button>
@@ -287,15 +289,16 @@ function OrbitToggleButton({ orbitMode, canShowOrbitPosition, onShowOrbit, onSho
     const disabledTitle = en
         ? 'Heliocentric orbit elements incomplete for this object (missing perihelion epoch).'
         : 'Elementos da órbita heliocêntrica incompletos para este objeto (sem época de periélio).';
-    const baseClass = 'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan';
+    const baseClass = 'inline-flex w-full items-center justify-center gap-1 rounded-full px-3 py-2 text-[12px] font-semibold tracking-tight transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan';
     const desktopClass = desktop ? ' lg:gap-1.5 lg:py-2.5 lg:text-[13px]' : '';
     const stateClass = disabled
-        ? 'cursor-not-allowed border border-white/10 bg-white/5 text-white/40'
+        ? 'cursor-not-allowed border border-white/8 bg-white/4 text-white/30'
         : orbitMode
-            ? 'border border-white/15 bg-white/5 text-white/85 hover:bg-white/10'
+            ? 'border border-white/12 bg-white/5 text-white/75 hover:bg-white/8 hover:text-white/90'
             : desktop
-                ? 'border border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan shadow-[0_0_18px_rgba(34,211,238,0.18)] hover:border-signal-cyan/55 hover:bg-signal-cyan/10'
-                : 'bg-signal-cyan text-space-950 shadow-[0_0_18px_rgba(34,211,238,0.35)] hover:bg-signal-cyan/90';
+                /* CTA principal no desktop: brilho ciano contido, sem exagero. */
+                ? 'border border-signal-cyan/35 bg-signal-cyan/8 text-signal-cyan shadow-[0_0_20px_rgba(34,211,238,0.14)] hover:border-signal-cyan/50 hover:bg-signal-cyan/12 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]'
+                : 'bg-signal-cyan text-space-950 shadow-[0_0_20px_rgba(34,211,238,0.35)] hover:bg-signal-cyan/90';
     return (
         <button
             type="button"
@@ -316,10 +319,10 @@ function MobileFocusMenuButton({ label, onClick }: { label: string; onClick: () 
         <button
             type="button"
             onClick={onClick}
-            className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-left text-[12px] font-medium text-white/85 transition outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+            className="flex w-full items-center justify-between rounded-xl border border-white/8 bg-white/4 px-3 py-2 text-left text-[13px] font-medium text-white/80 transition outline-none hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
         >
             <span>{label}</span>
-            <ChevronDown className="-rotate-90 size-3.5 text-white/35" aria-hidden />
+            <ChevronDown className="-rotate-90 size-3.5 text-white/30" aria-hidden />
         </button>
     );
 }
@@ -330,8 +333,11 @@ function FocusTabButton({ active, onClick, children }: { active: boolean; onClic
             type="button"
             onClick={onClick}
             className={[
-                '-mb-px border-b-2 px-2 py-1.5 text-[13px] font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                active ? 'border-signal-cyan text-white' : 'border-transparent text-white/60 hover:text-white/80',
+                /* Sublinhado deslizante — aba ativa tem glow ciano sutil. */
+                '-mb-px border-b-2 px-2.5 py-2 text-[13px] font-medium tracking-tight transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                active
+                    ? 'border-signal-cyan text-white drop-shadow-[0_1px_6px_rgba(34,211,238,0.5)]'
+                    : 'border-transparent text-white/45 hover:text-white/75',
             ].join(' ')}
         >
             {children}
@@ -342,8 +348,8 @@ function FocusTabButton({ active, onClick, children }: { active: boolean; onClic
 function Row({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-white/45">{label}</dt>
-            <dd className="text-right font-medium text-white/85">{children}</dd>
+            <dt className="shrink-0 text-[12px] text-white/40">{label}</dt>
+            <dd className="text-right text-[13px] font-medium text-white/90">{children}</dd>
         </div>
     );
 }

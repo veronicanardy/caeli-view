@@ -6,6 +6,7 @@
  */
 
 import type { ReactNode, Ref } from 'react';
+import { X } from 'lucide-react';
 
 type PanelShellProps = {
     onClose: () => void;
@@ -34,7 +35,7 @@ export function PanelShell({
     title,
     subtitle,
     dotColor,
-    borderClass = 'border-white/15',
+    borderClass = 'border-white/12',
     children,
     className = '',
     mobileTopAlign = false,
@@ -44,39 +45,44 @@ export function PanelShell({
         <div
             ref={panelRef}
             className={[
-                'pointer-events-auto absolute left-1/2 z-20 -translate-x-1/2 overflow-hidden rounded-xl border bg-space-950/90 shadow-glow backdrop-blur-xl',
+                /* Camada de vidro: fundo escuro profundo com blur generoso e sombra de brilho ciano. */
+                'pointer-events-auto absolute left-1/2 z-20 -translate-x-1/2 overflow-hidden rounded-2xl border',
+                'bg-space-950/92 shadow-[0_0_32px_rgba(34,211,238,0.07),0_8px_32px_rgba(0,0,0,0.55)] backdrop-blur-2xl',
                 mobileTopAlign ? 'top-3' : 'bottom-10',
                 'lg:left-3 lg:top-[54%] lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2',
                 borderClass,
                 className,
             ].join(' ')}
         >
-            <div className="flex items-start justify-between gap-2 px-2.5 pt-2.5 lg:px-3 lg:pt-3">
+            {/* Linha de acento ciano no topo — assinatura visual do observatório. */}
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-signal-cyan/40 to-transparent" aria-hidden />
+
+            <div className="flex items-start justify-between gap-2 px-3 pt-3 lg:px-4 lg:pt-4">
                 <div className="min-w-0">
                     {eyebrow ? (
                         <div className="flex items-center gap-2">
                             {dotColor ? (
                                 <span
-                                    className="inline-block size-2.5 shrink-0 rounded-full ring-1 ring-white/20"
+                                    className="inline-block size-2 shrink-0 rounded-full shadow-[0_0_6px_currentColor]"
                                     style={{ backgroundColor: dotColor }}
                                 />
                             ) : null}
-                            <div className="text-[10px] uppercase tracking-wide text-white/45 lg:text-[11px]">{eyebrow}</div>
+                            <div className="text-[10px] font-medium uppercase tracking-widest text-white/35 lg:text-[11px]">{eyebrow}</div>
                         </div>
                     ) : null}
-                    <div className="mt-0.5 truncate text-sm font-semibold text-white lg:text-base">{title}</div>
+                    <div className="mt-1 truncate text-[15px] font-semibold tracking-tight text-white lg:text-[17px]">{title}</div>
                     {subtitle ? (
-                        <div className="truncate text-[11px] text-white/60 lg:text-[12px]">{subtitle}</div>
+                        <div className="mt-0.5 truncate text-[11px] text-white/50 lg:text-[12px]">{subtitle}</div>
                     ) : null}
                 </div>
                 {showCloseButton ? (
                     <button
                         type="button"
                         onClick={onClose}
-                        className="-mr-1 -mt-1 shrink-0 rounded-full border border-white/10 bg-white/5 p-1.5 text-white/70 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                        className="-mr-0.5 -mt-0.5 shrink-0 rounded-full p-1.5 text-white/40 transition outline-none hover:bg-white/8 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-signal-cyan"
                         aria-label={closeLabel}
                     >
-                        x
+                        <X className="size-3.5" aria-hidden />
                     </button>
                 ) : null}
             </div>
