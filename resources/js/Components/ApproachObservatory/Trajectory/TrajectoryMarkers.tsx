@@ -46,7 +46,7 @@ function TimeTick({
             {visible ? (
                 <Html position={[0, 0.038, 0]} center zIndexRange={[zTop, 0]}>
                     <span
-                        className="pointer-events-none select-none -translate-y-1/2 whitespace-nowrap rounded border border-white/10 bg-space-950/85 px-2 py-0.5 text-[13px] font-medium backdrop-blur"
+                        className="pointer-events-none select-none -translate-y-1/2 whitespace-nowrap rounded border border-white/10 bg-space-950/85 px-2 py-0.5 text-sm font-medium backdrop-blur"
                         style={{
                             color: `rgba(190, 210, 220, ${zOrder === 0 ? 0.65 : zOrder === 1 ? 0.45 : 0.32})`,
                             opacity: zOrder === 0 ? 1 : zOrder === 1 ? 0.85 : 0.7,

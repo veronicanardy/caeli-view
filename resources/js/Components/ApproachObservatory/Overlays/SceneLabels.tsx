@@ -167,7 +167,7 @@ export function ScreenLabel({
                         style={hiddenByObjects ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
                         className={[
                             /* Label do objeto selecionado: próximo ao asteroide, presença clara. */
-                            '-translate-y-[55%] whitespace-nowrap rounded-lg border px-3 py-1.5 text-[13px] font-semibold leading-snug backdrop-blur',
+                            '-translate-y-[55%] whitespace-nowrap rounded-lg border px-3 py-1.5 text-[15px] font-semibold leading-snug backdrop-blur',
                             emphasized
                                 ? 'border-signal-cyan/55 bg-space-950/95 text-white shadow-[0_0_16px_rgba(34,211,238,0.18)]'
                                 : 'border-white/10 bg-space-950/85 text-white/80',
