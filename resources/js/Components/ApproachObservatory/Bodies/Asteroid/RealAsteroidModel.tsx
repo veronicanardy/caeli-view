@@ -7,6 +7,9 @@ interface RealAsteroidModelProps {
     asset: AsteroidModelAsset;
     opacity: number;
     seed?: string | number;
+    selected?: boolean;
+    outlineColor?: string;
+    showOutline?: boolean;
 }
 
 function hashSeed(seed: string | number): number {
@@ -97,6 +100,34 @@ function collectVariantRoots(scene: THREE.Group): THREE.Object3D[] {
     return candidates.length > 0 ? candidates : [scene];
 }
 
+/* Outline back-face via normal expansion — segue a silhueta real do mesh sem post-processing. */
+const OUTLINE_VERTEX = `
+    void main() {
+        vec3 n = normalize(normalMatrix * normal);
+        vec4 pos = modelViewMatrix * vec4(position, 1.0);
+        pos.xyz += n * 0.0009;
+        gl_Position = projectionMatrix * pos;
+    }
+`;
+const OUTLINE_FRAGMENT = `
+    uniform vec3 uColor;
+    void main() {
+        gl_FragColor = vec4(uColor, 0.58);
+        #include <colorspace_fragment>
+    }
+`;
+
+function createOutlineMaterial(color: string) {
+    return new THREE.ShaderMaterial({
+        vertexShader: OUTLINE_VERTEX,
+        fragmentShader: OUTLINE_FRAGMENT,
+        uniforms: { uColor: { value: new THREE.Color(color) } },
+        side: THREE.BackSide,
+        transparent: true,
+        depthWrite: false,
+    });
+}
+
 // Tint sutil grafite-frio — mistura com a textura original sem substituí-la
 const ROCK_TINT = new THREE.Color('#4e5258');
 // Fallback quando o GLB não tem textura alguma
@@ -163,7 +194,7 @@ function applyMaterialDefaults(obj: THREE.Object3D, opacity: number): void {
  * Suporta packs de múltiplos asteroides no mesmo arquivo: coleta todos os
  * grupos-raiz com mesh, seleciona um pelo hash do seed, centraliza e normaliza.
  */
-export default function RealAsteroidModel({ asset, opacity, seed }: RealAsteroidModelProps) {
+export default function RealAsteroidModel({ asset, opacity, seed, selected = false, outlineColor = '#7ee8fa', showOutline = true }: RealAsteroidModelProps) {
     const gltf = useGLTF(asset.url) as { scene: THREE.Group };
 
     const { model, scale } = useMemo(() => {
@@ -206,6 +237,21 @@ export default function RealAsteroidModel({ asset, opacity, seed }: RealAsteroid
         };
     }, [gltf.scene, asset.url, seed]);
 
+    /* Clone do model já selecionado com material de outline — mesma variante, mesma geometria. */
+    const outlineModel = useMemo(() => {
+        if (!selected || !showOutline) return null;
+        const mat = createOutlineMaterial(outlineColor);
+        const clone = model.clone(true);
+        clone.traverse((child) => {
+            const mesh = child as THREE.Mesh;
+            if (!mesh.isMesh) return;
+            mesh.material = mat;
+            mesh.frustumCulled = false;
+            mesh.renderOrder = 0;
+        });
+        return clone;
+    }, [model, selected, outlineColor, showOutline]);
+
     useEffect(() => {
         applyMaterialDefaults(model, opacity);
     }, [model, opacity]);
@@ -223,6 +269,7 @@ export default function RealAsteroidModel({ asset, opacity, seed }: RealAsteroid
 
     return (
         <group rotation={asset.rotation} scale={scale}>
+            {outlineModel ? <primitive object={outlineModel} /> : null}
             <primitive object={model} />
         </group>
     );

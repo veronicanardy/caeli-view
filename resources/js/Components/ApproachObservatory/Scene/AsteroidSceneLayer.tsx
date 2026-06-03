@@ -68,7 +68,7 @@ export function AsteroidSceneLayer({
 
     return (
         <group position={earthPos}>
-            {renderableAsteroids.map(({ object, position, nearbyClosestApproach }) => (
+            {renderableAsteroids.map(({ object, position, nearbyClosestApproach }, index) => (
                 <AsteroidMarker
                     key={object.approach.id}
                     object={object}
@@ -80,6 +80,8 @@ export function AsteroidSceneLayer({
                     showLabel={showLabelForObject(object.approach.id)}
                     protectLabelFromFocus={object.approach.id !== selectedId}
                     locale={locale}
+                    paletteColor={OBJECT_PALETTE[index % OBJECT_PALETTE.length].future}
+                    showLabels={showLabels}
                 />
             ))}
 

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
@@ -12,12 +11,6 @@ const FULL_OPACITY = 1;
 const HITBOX_RADIUS = 0.14;
 const HITBOX_SEGMENTS = 16;
 const LABEL_POSITION: [number, number, number] = [0, 0.16, 0];
-/* Aura interna — volume suave que dá respiro atmosférico sem virar disco. */
-const INNER_AURA_OPACITY = 0.045;
-const INNER_AURA_COLOR = '#5dc8d8';
-/* Rim light aderente — borda luminosa próxima à silhueta do asteroide. */
-const RIM_LIGHT_OPACITY = 0.10;
-const RIM_LIGHT_COLOR = '#7ee8fa';
 
 /**
  * Propriedades usadas para renderizar um marcador de asteroide no radar 3D.
@@ -32,6 +25,8 @@ type AsteroidMarkerProps = {
     showLabel: boolean;
     protectLabelFromFocus: boolean;
     locale: 'pt-BR' | 'en';
+    paletteColor: string;
+    showLabels: boolean;
 };
 
 /**
@@ -57,12 +52,11 @@ export function AsteroidMarker({
     showLabel,
     protectLabelFromFocus,
     locale,
+    paletteColor,
+    showLabels,
 }: AsteroidMarkerProps) {
     const [hovered, setHovered] = useState(false);
     const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
-    /* Geometrias de halo: aura interna próxima + rim light aderente, sem discos grandes. */
-    const innerAuraGeometry = useMemo(() => new THREE.SphereGeometry(ASTEROID_ROCK_SCALE * 1.28, 32, 16), []);
-    const rimGeometry = useMemo(() => new THREE.SphereGeometry(ASTEROID_ROCK_SCALE * 1.55, 32, 16), []);
 
     const rockScale = ASTEROID_ROCK_SCALE;
     const opacity = dimmed ? DIMMED_OPACITY : FULL_OPACITY;
@@ -71,33 +65,8 @@ export function AsteroidMarker({
     return (
         <group position={position}>
             <group scale={rockScale} renderOrder={1}>
-                <RealAsteroidModel asset={renderModel.asset} opacity={opacity} seed={object.approach.id} />
+                <RealAsteroidModel asset={renderModel.asset} opacity={opacity} seed={object.approach.id} selected={isSelected} outlineColor={paletteColor} showOutline={showLabels} />
             </group>
-
-            {isSelected ? (
-                <>
-                    {/* Rim light aderente: borda luminosa próxima à silhueta, separa do fundo. */}
-                    <mesh geometry={rimGeometry}>
-                        <meshBasicMaterial
-                            color={RIM_LIGHT_COLOR}
-                            transparent
-                            opacity={RIM_LIGHT_OPACITY}
-                            depthWrite={false}
-                            side={THREE.BackSide}
-                        />
-                    </mesh>
-                    {/* Aura interna: névoa de foco suave, sem formar disco visível. */}
-                    <mesh geometry={innerAuraGeometry}>
-                        <meshBasicMaterial
-                            color={INNER_AURA_COLOR}
-                            transparent
-                            opacity={INNER_AURA_OPACITY}
-                            depthWrite={false}
-                            side={THREE.BackSide}
-                        />
-                    </mesh>
-                </>
-            ) : null}
 
             {!isSelected ? (
                 <BodyHitbox
