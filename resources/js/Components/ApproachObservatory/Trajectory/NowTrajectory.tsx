@@ -9,7 +9,7 @@ import type { AsteroidTrajectory } from '@/types';
 import type { Palette } from '@/lib/observatory/palette';
 import { DirectionCone } from './DirectionCone';
 import { GradientTrajectoryLine } from './GradientTrajectoryLine';
-import { ClosestApproachMarker, TimeTick } from './TrajectoryMarkers';
+import { ClosestApproachMarker, TimeTickGroup } from './TrajectoryMarkers';
 import { useNowTrajectoryPresentation } from './useNowTrajectoryPresentation';
 import { ASTEROID_TRAIL_END_RADIUS } from './trajectoryConstants';
 
@@ -56,11 +56,9 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
                 />
             ) : null}
 
-            {!coneOnly && emphasized
-                ? timeTicks.map((tick) => (
-                      <TimeTick key={tick.label} vec={tick.vec} label={tick.label} color={palette.future} />
-                  ))
-                : null}
+            {!coneOnly && emphasized && timeTicks.length > 0 ? (
+                <TimeTickGroup ticks={timeTicks} color={palette.future} />
+            ) : null}
 
             {!coneOnly && closestApproach && closestApproachOnPath ? (
                 <ClosestApproachMarker

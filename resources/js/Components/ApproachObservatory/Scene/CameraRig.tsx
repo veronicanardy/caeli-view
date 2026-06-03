@@ -13,7 +13,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { CAMERA_VIEWS } from './cameraConstants';
+import { CAMERA_FOV_DEG, CAMERA_VIEWS } from './cameraConstants';
 import type { CameraViewKey } from './cameraConstants';
 import type { FocusFraming } from './cameraFraming';
 
@@ -35,6 +35,7 @@ export function CameraRig({
     focusNonce,
     earthPos,
     sunDir,
+    panelBiasX = 0,
 }: {
     view: CameraViewKey;
     viewNonce: number;
@@ -43,6 +44,8 @@ export function CameraRig({
     earthPos: [number, number, number];
     /** Vetor unitário Terra→Sol. Usado para manter a view inicial de costas para o Sol. */
     sunDir: [number, number, number];
+    /** Fração [0..1] da largura do canvas coberta pelo painel lateral. Desloca o foco para o centro da área útil. */
+    panelBiasX?: number;
 }) {
     const camera = useThree((s) => s.camera);
     const controls = useThree((s) => s.controls) as unknown as Controls | null;
@@ -126,18 +129,34 @@ export function CameraRig({
         if (!tweening.current) return;
 
         const ed = effectiveDesired.current;
+
+        // Quando há painel lateral, desloca o target para a esquerda em world-space para que
+        // o objeto fique centrado na área útil (à direita do painel), não na tela inteira.
+        // biasNDC = fração do canvas coberta pelo painel → o centro útil está deslocado para
+        // a direita em biasNDC/2 da tela. Compensamos movendo o target na direção -right da câmera.
+        let desiredTarget = ed.target;
+        if (panelBiasX > 0.01 && focusTarget) {
+            const distance = fc.position.distanceTo(ed.target);
+            const halfFovRad = THREE.MathUtils.degToRad(CAMERA_FOV_DEG / 2);
+            const right = new THREE.Vector3().setFromMatrixColumn(fc.matrixWorld, 0).normalize();
+            // panelBiasX é a fração coberta pelo painel; o centro útil está deslocado para a direita
+            // em panelBiasX/2 do total — então compensamos movendo o target para a esquerda.
+            const worldOffset = Math.tan(halfFovRad) * distance * panelBiasX * 0.5;
+            desiredTarget = ed.target.clone().addScaledVector(right, -worldOffset);
+        }
+
         /* Lerp com ease-out suave: fator baixo para movimento fluido, desacelera naturalmente
            à medida que a distância ao destino diminui. */
         fc.position.lerp(ed.position, 0.055);
         if (controls?.target) {
-            controls.target.lerp(ed.target, 0.055);
+            controls.target.lerp(desiredTarget, 0.055);
             controls.update();
         } else {
-            fc.lookAt(ed.target);
+            fc.lookAt(desiredTarget);
         }
 
         const posClose = fc.position.distanceToSquared(ed.position) < 1e-4;
-        const tgtClose = !controls?.target || controls.target.distanceToSquared(ed.target) < 1e-4;
+        const tgtClose = !controls?.target || controls.target.distanceToSquared(desiredTarget) < 1e-4;
         if (posClose && tgtClose) tweening.current = false;
     });
 

@@ -10,7 +10,7 @@ const DIMMED_OPACITY = 0.4;
 const FULL_OPACITY = 1;
 const HITBOX_RADIUS = 0.14;
 const HITBOX_SEGMENTS = 16;
-const LABEL_POSITION: [number, number, number] = [0, 0.16, 0];
+const LABEL_POSITION: [number, number, number] = [0, 0.09, 0];
 
 /**
  * Propriedades usadas para renderizar um marcador de asteroide no radar 3D.

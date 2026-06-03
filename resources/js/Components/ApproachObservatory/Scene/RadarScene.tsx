@@ -43,6 +43,7 @@ type RadarSceneProps = {
     onSelect: (approach: UnifiedApproach) => void;
     cameraIntent: CameraIntent;
     focusTarget: FocusFraming | null;
+    panelBiasX?: number;
     ephemeris: SceneEphemeris | null;
     /** Direção Terra→Sol semeada pelo servidor até a efeméride resolver. Nunca é vetor arbitrário. */
     fallbackSunDirection: [number, number, number];
@@ -130,7 +131,7 @@ function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
     return null;
 }
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, onFirstFrame }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, onFirstFrame }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -329,6 +330,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     focusNonce={focusNonce}
                     earthPos={earthPos}
                     sunDir={sunDir}
+                    panelBiasX={panelBiasX}
                 />
             </LabelOccluderContext.Provider>
         </SceneObjectOccludersContext.Provider>

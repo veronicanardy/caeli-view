@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
 import { sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
 import type { SceneMode } from './Controls/Manual/manualTypes';
@@ -166,6 +166,29 @@ export function DailyOrbitalRadar3D({
         panelCollapsed,
         mobilePanelSection,
     });
+
+    // Fração [0..1] da largura do canvas ocupada pelo painel lateral (lado esquerdo, desktop only).
+    // Usado pelo CameraRig para deslocar o foco para o centro da área útil ao selecionar um objeto.
+    const [panelBiasX, setPanelBiasX] = useState(0);
+    const updatePanelBiasX = useCallback(() => {
+        const canvas = canvasContainerRef.current;
+        const panel = sidePanelRef.current;
+        if (!canvas || !panel || panelCollapsed) { setPanelBiasX(0); return; }
+        const canvasRect = canvas.getBoundingClientRect();
+        const panelRect = panel.getBoundingClientRect();
+        // Painel fica à esquerda do canvas — calcula quanto da largura ele cobre.
+        const overlap = Math.max(0, panelRect.right - canvasRect.left);
+        setPanelBiasX(canvasRect.width > 0 ? overlap / canvasRect.width : 0);
+    }, [panelCollapsed]);
+    useEffect(() => {
+        updatePanelBiasX();
+        const observer = new ResizeObserver(updatePanelBiasX);
+        if (sidePanelRef.current) observer.observe(sidePanelRef.current);
+        if (canvasContainerRef.current) observer.observe(canvasContainerRef.current);
+        window.addEventListener('resize', updatePanelBiasX);
+        return () => { observer.disconnect(); window.removeEventListener('resize', updatePanelBiasX); };
+    }, [updatePanelBiasX]);
+
     useEffect(() => {
         if (!fullscreen) return;
         const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false); };
@@ -189,6 +212,7 @@ export function DailyOrbitalRadar3D({
             >
                 <RadarSceneCanvas
                     noGoRects={noGoRects}
+                    panelBiasX={panelBiasX}
                     closestNowObjects={sceneObjects}
                     selectedId={selectedId}
                     orbitMode={orbitMode}

@@ -68,7 +68,7 @@ export function DirectionCone({
         line.renderOrder = 2;
 
         /* Ponta de agulha: cilindro cônico ultra-fino, lembra vetor de instrumento científico. */
-        const headGeo = new THREE.CylinderGeometry(0, DIRECTION_CONE_GEOMETRY.headWidth, DIRECTION_CONE_GEOMETRY.headLength, 6, 1);
+        const headGeo = new THREE.CylinderGeometry(0, DIRECTION_CONE_GEOMETRY.headWidth, DIRECTION_CONE_GEOMETRY.headLength, 32, 1);
         headGeo.translate(0, shaftLength + DIRECTION_CONE_GEOMETRY.headLength * 0.5, 0);
         const headMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: opacity * 0.58, depthWrite: false });
         const cone = new THREE.Mesh(headGeo, headMat);

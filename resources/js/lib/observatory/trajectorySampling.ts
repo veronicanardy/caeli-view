@@ -114,7 +114,7 @@ export function closestApproachNearPosition(
  * o instante ao qual o Horizons ancorou a trajetória. Só emitimos marcadores quando existe uma
  * amostra real dentro de ~6h do instante alvo.
  */
-export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: THREE.Vector3; label: string }> {
+export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: THREE.Vector3; label: string; zOrder: number }> {
     const now = trajectory.currentPoint?.timestamp ? new Date(trajectory.currentPoint.timestamp).getTime() : NaN;
     if (Number.isNaN(now)) return [];
 
@@ -126,16 +126,16 @@ export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: T
     if (all.length === 0) return [];
 
     const HOUR = 3_600_000;
-    const targets: Array<{ deltaH: number; label: string }> = [
-        { deltaH: -24, label: '-24h' },
-        { deltaH: -48, label: '-48h' },
-        { deltaH: -72, label: '-72h' },
-        { deltaH: -168, label: '-7d' },
-        { deltaH: -720, label: '-30d' },
+    const targets: Array<{ deltaH: number; label: string; zOrder: number }> = [
+        { deltaH: -24, label: '-24h', zOrder: 0 },
+        { deltaH: -48, label: '-48h', zOrder: 1 },
+        { deltaH: -72, label: '-72h', zOrder: 2 },
+        { deltaH: -168, label: '-7d', zOrder: 3 },
+        { deltaH: -720, label: '-30d', zOrder: 4 },
     ];
 
-    const ticks: Array<{ vec: THREE.Vector3; label: string }> = [];
-    for (const { deltaH, label } of targets) {
+    const ticks: Array<{ vec: THREE.Vector3; label: string; zOrder: number }> = [];
+    for (const { deltaH, label, zOrder } of targets) {
         const targetTime = now + deltaH * HOUR;
         let best: TrajectoryPoint | null = null;
         let bestDelta = Number.POSITIVE_INFINITY;
@@ -147,7 +147,7 @@ export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: T
         }
         // Só mostra o marcador quando realmente existe uma amostra dentro de 6h do alvo.
         if (best && bestDelta <= 6 * HOUR) {
-            ticks.push({ vec: toVec3(best), label });
+            ticks.push({ vec: toVec3(best), label, zOrder });
         }
     }
     return ticks;
