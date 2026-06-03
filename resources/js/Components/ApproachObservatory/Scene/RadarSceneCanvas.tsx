@@ -11,7 +11,7 @@ import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import { LabelNoGoContext } from '../Overlays/SceneLabels';
 import type { NoGoRect } from '../Overlays/SceneLabels';
-import { CAMERA_FOV_DEG, MAX_CAMERA_DISTANCE } from './cameraConstants';
+import { CAMERA_FOV_DEG, CAMERA_VIEWS, MAX_CAMERA_DISTANCE } from './cameraConstants';
 import type { FocusFraming } from './cameraFraming';
 import type { PlanetId } from './planetConfig';
 import type { CameraIntent } from './cameraIntent';
@@ -80,7 +80,7 @@ export function RadarSceneCanvas({
                 </div>
             )}
             <Canvas
-                camera={{ position: [0, 4.5, 9], fov: CAMERA_FOV_DEG, near: 0.01, far: MAX_CAMERA_DISTANCE * 3 }}
+                camera={{ position: CAMERA_VIEWS.perspective.toArray(), fov: CAMERA_FOV_DEG, near: 0.01, far: MAX_CAMERA_DISTANCE * 3 }}
                 dpr={[1, 1.6]}
                 gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
             >

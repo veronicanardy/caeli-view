@@ -121,22 +121,22 @@ function applyMaterialDefaults(obj: THREE.Object3D, opacity: number): void {
 
             if (!existing) src?.dispose?.();
 
-            mat.roughness = 0.96;
+            mat.roughness = 0.94;
             mat.metalness = 0.0;
-            mat.envMapIntensity = 0;
-            mat.emissive.set(0.12, 0.10, 0.09);
-            mat.emissiveIntensity = 0.05;
+            mat.envMapIntensity = 1;
+            /* Emissive mais baixo = sombras mais profundas = mais contraste percebido. */
+            mat.emissive.set(0.06, 0.05, 0.04);
+            mat.emissiveIntensity = 0.08;
 
             if (mat.map) {
-                // Preserva a textura do GLB; o tint escurece levemente sem apagar detalhes
                 mat.color.copy(ROCK_TINT);
             } else {
                 mat.color.copy(ROCK_FALLBACK_COLOR);
             }
 
-            // Suaviza o normal map para reduzir o exagero de ranhuras
+            /* Normal scale maior = ranhuras e volumes mais definidos. */
             if (mat.normalMap) {
-                mat.normalScale.set(0.45, 0.45);
+                mat.normalScale.set(0.75, 0.75);
             }
 
             mat.transparent = false;

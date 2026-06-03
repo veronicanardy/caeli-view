@@ -24,50 +24,53 @@ type Controls = {
     removeEventListener: (t: string, fn: () => void) => void;
 };
 
+/* Distância radial e elevação usadas pela view "perspective" em coordenadas solares. */
+const PERSPECTIVE_DISTANCE = 15.0;
+const PERSPECTIVE_ELEVATION = 5.5;
+
 export function CameraRig({
     view,
     viewNonce,
     focusTarget,
     focusNonce,
     earthPos,
+    sunDir,
 }: {
     view: CameraViewKey;
     viewNonce: number;
     focusTarget: FocusFraming | null;
     focusNonce: number;
     earthPos: [number, number, number];
+    /** Vetor unitário Terra→Sol. Usado para manter a view inicial de costas para o Sol. */
+    sunDir: [number, number, number];
 }) {
     const camera = useThree((s) => s.camera);
     const controls = useThree((s) => s.controls) as unknown as Controls | null;
 
-    // earthPos é lido via ref para não disparar tween a cada atualização de efeméride (10s).
+    // earthPos e sunDir são lidos via ref para não disparar tween a cada atualização de efeméride (10s).
     const earthPosRef = useRef(earthPos);
     useEffect(() => { earthPosRef.current = earthPos; }, [earthPos]);
+    const sunDirRef = useRef(sunDir);
+    useEffect(() => { sunDirRef.current = sunDir; }, [sunDir]);
+
+    /* Calcula o offset da view perspective em coordenadas solares:
+       câmera fica na direção oposta ao Sol (Sol→Terra), com elevação fixa no Y. */
+    const perspectiveOffset = () => {
+        /* Câmera fica do lado do Sol em relação à Terra — olha para a Terra com o espaço escuro atrás. */
+        const towardsSun = new THREE.Vector3(sunDirRef.current[0], 0, sunDirRef.current[2]).normalize();
+        return towardsSun.multiplyScalar(PERSPECTIVE_DISTANCE).setY(PERSPECTIVE_ELEVATION);
+    };
 
     // Views predefinidas são offsets relativos à Terra: somamos earthPos para que
     // Reset/Superior/Lateral continuem centrados na Terra em qualquer posição orbital.
     const desired = useMemo(() => {
         if (focusTarget) return { position: focusTarget.position.clone(), target: focusTarget.target.clone() };
         const earth = new THREE.Vector3(...earthPosRef.current);
-        return { position: earth.clone().add(CAMERA_VIEWS[view]), target: earth };
-        // earthPos é lido via ref: intencionalmente fora das dependências para não reiniciar tweens.
+        const offset = view === 'perspective' ? perspectiveOffset() : CAMERA_VIEWS[view].clone();
+        return { position: earth.clone().add(offset), target: earth };
+        // earthPos e sunDir são lidos via ref: intencionalmente fora das dependências para não reiniciar tweens.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view, viewNonce, focusTarget, focusNonce]);
-
-    const effectiveDesired = useMemo(() => {
-        if (!focusTarget || focusTarget.transition !== 'preserve_heading') {
-            return desired;
-        }
-        const currentTarget = controls?.target?.clone() ?? new THREE.Vector3(0, 0, 0);
-        const currentOffset = camera.position.clone().sub(currentTarget);
-        if (currentOffset.lengthSq() < 1e-8) return desired;
-        const desiredDistance = focusTarget.position.distanceTo(focusTarget.target);
-        const preservedOffset = currentOffset.normalize().multiplyScalar(desiredDistance);
-        return {
-            position: focusTarget.target.clone().add(preservedOffset),
-            target: focusTarget.target.clone(),
-        };
-    }, [camera.position, controls, desired, focusTarget]);
 
     // No primeiro frame os OrbitControls já existem: posiciona câmera e target
     // diretamente, sem tween, para que a cena apareça centrada na Terra desde o início.
@@ -75,11 +78,32 @@ export function CameraRig({
 
     // Tweens explícitos só disparam após o mount — mudanças de view, foco de objeto etc.
     const tweening = useRef(false);
+    /* effectiveDesired é resolvido no momento em que o tween começa (no useFrame),
+       quando camera.position já tem o valor real atual — não num useMemo obsoleto. */
+    const effectiveDesired = useRef(desired);
     const mounted = useRef(false);
     useEffect(() => {
         if (!mounted.current) { mounted.current = true; return; }
         tweening.current = true;
-    }, [effectiveDesired]);
+        /* Resolve o desired no momento da mudança, com a posição real da câmera. */
+        if (focusTarget?.transition === 'preserve_heading' && controls?.target) {
+            const currentOffset = camera.position.clone().sub(controls.target);
+            if (currentOffset.lengthSq() > 1e-8) {
+                const desiredDistance = focusTarget.position.distanceTo(focusTarget.target);
+                const offsetDir = currentOffset.normalize();
+                /* Vira a câmera se o offset apontar contra o Sol (câmera do lado escuro).
+                   Posição normal: offsetDir alinhado com sunDir (câmera do lado do Sol). */
+                const sun = new THREE.Vector3(...sunDirRef.current);
+                const finalDir = offsetDir.dot(sun) < 0 ? offsetDir.negate() : offsetDir;
+                effectiveDesired.current = {
+                    position: focusTarget.target.clone().add(finalDir.multiplyScalar(desiredDistance)),
+                    target: focusTarget.target.clone(),
+                };
+                return;
+            }
+        }
+        effectiveDesired.current = desired;
+    }, [desired]);
 
     // Interação do usuário cancela o tween imediatamente.
     useEffect(() => {
@@ -95,7 +119,8 @@ export function CameraRig({
             if (!controls?.target) return;
             initialised.current = true;
             const earth = new THREE.Vector3(...earthPosRef.current);
-            fc.position.copy(earth).add(CAMERA_VIEWS[view]);
+            const initOffset = view === 'perspective' ? perspectiveOffset() : CAMERA_VIEWS[view].clone();
+            fc.position.copy(earth).add(initOffset);
             controls.target.copy(earth);
             controls.update();
             return;
@@ -103,16 +128,17 @@ export function CameraRig({
 
         if (!tweening.current) return;
 
-        fc.position.lerp(effectiveDesired.position, 0.1);
+        const ed = effectiveDesired.current;
+        fc.position.lerp(ed.position, 0.1);
         if (controls?.target) {
-            controls.target.lerp(effectiveDesired.target, 0.1);
+            controls.target.lerp(ed.target, 0.1);
             controls.update();
         } else {
-            fc.lookAt(effectiveDesired.target);
+            fc.lookAt(ed.target);
         }
 
-        const posClose = fc.position.distanceToSquared(effectiveDesired.position) < 1e-4;
-        const tgtClose = !controls?.target || controls.target.distanceToSquared(effectiveDesired.target) < 1e-4;
+        const posClose = fc.position.distanceToSquared(ed.position) < 1e-4;
+        const tgtClose = !controls?.target || controls.target.distanceToSquared(ed.target) < 1e-4;
         if (posClose && tgtClose) tweening.current = false;
     });
 

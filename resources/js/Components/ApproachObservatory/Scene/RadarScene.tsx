@@ -222,9 +222,10 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                 {/* Iluminação global compartilhada por todos os asteroides da cena.
                     Intensidades somadas a partir do rig anterior por marcador (ambient 0.28 + hemi 0.12)
                     mais a base de cena (0.16), centralizadas aqui para evitar N luzes duplicadas. */}
-                <ambientLight intensity={0.44} />
-                <hemisphereLight intensity={0.12} color="#6a7e92" groundColor="#1e1a16" />
-                <directionalLight position={[1.7, 0.5, 2.3]} intensity={0.22} color="#e8dcc8" />
+                {/* Ambient mais baixo = sombras mais profundas; direcional mais alto = mais contraste. */}
+                <ambientLight intensity={0.28} />
+                <hemisphereLight intensity={0.10} color="#6a7e92" groundColor="#1e1a16" />
+                <directionalLight position={[1.7, 0.5, 2.3]} intensity={0.52} color="#e8dcc8" />
                 <pointLight position={[-1.6, -0.3, -1.2]} intensity={0.1} distance={3.1} color="#5a6a7a" />
                 <pointLight position={[-1.4, 0.9, 1.6]} intensity={0.18} distance={3.2} color="#8aa0b4" />
 
@@ -327,6 +328,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     focusTarget={activeFocus}
                     focusNonce={focusNonce}
                     earthPos={earthPos}
+                    sunDir={sunDir}
                 />
             </LabelOccluderContext.Provider>
         </SceneObjectOccludersContext.Provider>
