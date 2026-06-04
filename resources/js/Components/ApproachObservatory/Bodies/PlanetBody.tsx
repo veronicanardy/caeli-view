@@ -192,7 +192,6 @@ export function PlanetBody({
                     transparent
                     opacity={config.rim.opacity}
                     side={THREE.BackSide}
-                    depthWrite={false}
                 />
             </mesh>
 

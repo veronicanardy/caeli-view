@@ -103,13 +103,13 @@ export type SceneEphemeris = {
      * Mercury's heliocentric position in scene units (Sol at origin, 1 AU = ORBIT_AU_SCALE).
      * Null until the async ephemeris resolves.
      */
-    mercuryScenePosition: [number, number, number]; mercuryLonPerihelionDeg: number;
-    venusScenePosition:   [number, number, number]; venusLonPerihelionDeg:   number;
-    marsScenePosition:    [number, number, number]; marsLonPerihelionDeg:    number;
-    jupiterScenePosition: [number, number, number]; jupiterLonPerihelionDeg: number;
-    saturnScenePosition:  [number, number, number]; saturnLonPerihelionDeg:  number;
-    uranusScenePosition:  [number, number, number]; uranusLonPerihelionDeg:  number;
-    neptuneScenePosition: [number, number, number]; neptuneLonPerihelionDeg: number;
+    mercuryScenePosition: [number, number, number]; mercuryLonPerihelionDeg: number; mercurySemiMajorAU: number; mercuryEccentricity: number;
+    venusScenePosition:   [number, number, number]; venusLonPerihelionDeg:   number; venusSemiMajorAU:   number; venusEccentricity:   number;
+    marsScenePosition:    [number, number, number]; marsLonPerihelionDeg:    number; marsSemiMajorAU:    number; marsEccentricity:    number;
+    jupiterScenePosition: [number, number, number]; jupiterLonPerihelionDeg: number; jupiterSemiMajorAU: number; jupiterEccentricity: number;
+    saturnScenePosition:  [number, number, number]; saturnLonPerihelionDeg:  number; saturnSemiMajorAU:  number; saturnEccentricity:  number;
+    uranusScenePosition:  [number, number, number]; uranusLonPerihelionDeg:  number; uranusSemiMajorAU:  number; uranusEccentricity:  number;
+    neptuneScenePosition: [number, number, number]; neptuneLonPerihelionDeg: number; neptuneSemiMajorAU: number; neptuneEccentricity: number;
 };
 
 let modulePromise: Promise<typeof Astronomy> | null = null;
@@ -244,46 +244,53 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         // Nesse caso a distância real oscila só ±0.3% em torno de 'a', então definir
         // lonPerihelion = atan2(ecl.y, ecl.x) (ν=0) coloca o planeta exatamente no periélio
         // da elipse, que tem raio 'a*(1-e) ≈ a'. O desvio visual é < 1px em qualquer zoom.
-        function planetData(body: Astronomy.Body, semiMajorAU: number, eccentricity: number): {
+        function planetData(body: Astronomy.Body): {
             scenePosition: [number, number, number];
             lonPerihelionDeg: number;
+            semiMajorAU: number;
+            eccentricity: number;
         } {
             const state = A.HelioState(body, date);
             const eclMatrix = eqjToEclMatrix(A);
             const eclPos = A.RotateVector(eclMatrix, new A.Vector(state.x, state.y, state.z, state.t));
             const eclVel = A.RotateVector(eclMatrix, new A.Vector(state.vx, state.vy, state.vz, state.t));
-            // Ângulo no plano eclíptico — idêntico ao usado por buildEllipsePoints
-            const planeAngleRad = Math.atan2(eclPos.y, eclPos.x);
 
-            // Usa r3d (distância real) para calcular ν — a órbita kepleriana usa r3d, não rProj.
-            // Depois reposiciona o planeta na cena ao longo do ângulo planar mas com o raio da
-            // elipse r(ν), garantindo que o ponto desenhado caia exatamente sobre a elipse.
-            // Planetas com ecl.z≈0 (Júpiter) não são afetados pois r3d≈rProj.
+            // Elementos osculadores — todos no plano eclíptico (x,y), consistente com a elipse desenhada.
+            const GM = 2.959122082855911e-4;
             const r3d = Math.hypot(eclPos.x, eclPos.y, eclPos.z);
-            const p = semiMajorAU * (1 - eccentricity * eccentricity);
-            const cosNu = Math.max(-1, Math.min(1, (p / r3d - 1) / eccentricity));
-            const crossZ = eclPos.x * eclVel.y - eclPos.y * eclVel.x;
-            const trueAnomalyRad = Math.acos(cosNu) * (crossZ >= 0 ? 1 : -1);
-            const lonPerihelionDeg = (planeAngleRad - trueAnomalyRad) * 180 / Math.PI;
+            const v2 = eclVel.x ** 2 + eclVel.y ** 2 + eclVel.z ** 2;
+            const semiMajorAU = 1 / (2 / r3d - v2 / GM);
+            const rdotv = eclPos.x * eclVel.x + eclPos.y * eclVel.y + eclPos.z * eclVel.z;
+            // Vetor de excentricidade projetado no plano — define ângulo e magnitude do periélio visual.
+            const ex = (v2 / GM - 1 / r3d) * eclPos.x - (rdotv / GM) * eclVel.x;
+            const ey = (v2 / GM - 1 / r3d) * eclPos.y - (rdotv / GM) * eclVel.y;
+            const eccentricity = Math.hypot(ex, ey);
 
-            // Raio da elipse nesse ângulo — projeta o planeta sobre a elipse desenhada
-            const rEllipse = p / (1 + eccentricity * cosNu);
-            const projectedPosition: [number, number, number] = [
+            // lonPerihelionDeg: ângulo do periélio no plano — direto do vetor de excentricidade.
+            const perihelionRad = Math.atan2(ey, ex);
+            const lonPerihelionDeg = perihelionRad * 180 / Math.PI;
+
+            // Posição do planeta: ângulo planar real + raio da elipse r(ν) — alinha planeta e elipse.
+            const planeAngleRad = Math.atan2(eclPos.y, eclPos.x);
+            const nuRad = planeAngleRad - perihelionRad;
+            const p = semiMajorAU * (1 - eccentricity * eccentricity);
+            const rEllipse = p / (1 + eccentricity * Math.cos(nuRad));
+            const scenePosition: [number, number, number] = [
                 Math.cos(planeAngleRad) * rEllipse * ORBIT_AU_SCALE,
                 0,
                 -Math.sin(planeAngleRad) * rEllipse * ORBIT_AU_SCALE,
             ];
 
-            return { scenePosition: projectedPosition, lonPerihelionDeg };
+            return { scenePosition, lonPerihelionDeg, semiMajorAU, eccentricity };
         }
 
-        const mercury = planetData(A.Body.Mercury, 0.387, 0.2056);
-        const venus    = planetData(A.Body.Venus,   0.723, 0.0068);
-        const mars     = planetData(A.Body.Mars,    1.524, 0.0934);
-        const jupiter  = planetData(A.Body.Jupiter, 5.203, 0.0489);
-        const saturn   = planetData(A.Body.Saturn,  9.537, 0.0565);
-        const uranus   = planetData(A.Body.Uranus,  19.19, 0.0472);
-        const neptune  = planetData(A.Body.Neptune, 30.07, 0.0086);
+        const mercury = planetData(A.Body.Mercury);
+        const venus    = planetData(A.Body.Venus);
+        const mars     = planetData(A.Body.Mars);
+        const jupiter  = planetData(A.Body.Jupiter);
+        const saturn   = planetData(A.Body.Saturn);
+        const uranus   = planetData(A.Body.Uranus);
+        const neptune  = planetData(A.Body.Neptune);
 
         const mercuryScenePosition = mercury.scenePosition;
         const venusScenePosition   = venus.scenePosition;
@@ -305,13 +312,13 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             earthHelioPositionAU,
             earthScenePosition,
             earthLonPerihelionDeg,
-            mercuryScenePosition, mercuryLonPerihelionDeg: mercury.lonPerihelionDeg,
-            venusScenePosition,   venusLonPerihelionDeg:   venus.lonPerihelionDeg,
-            marsScenePosition,    marsLonPerihelionDeg:    mars.lonPerihelionDeg,
-            jupiterScenePosition, jupiterLonPerihelionDeg: jupiter.lonPerihelionDeg,
-            saturnScenePosition,  saturnLonPerihelionDeg:  saturn.lonPerihelionDeg,
-            uranusScenePosition,  uranusLonPerihelionDeg:  uranus.lonPerihelionDeg,
-            neptuneScenePosition, neptuneLonPerihelionDeg: neptune.lonPerihelionDeg,
+            mercuryScenePosition, mercuryLonPerihelionDeg: mercury.lonPerihelionDeg, mercurySemiMajorAU: mercury.semiMajorAU, mercuryEccentricity: mercury.eccentricity,
+            venusScenePosition,   venusLonPerihelionDeg:   venus.lonPerihelionDeg,   venusSemiMajorAU:   venus.semiMajorAU,   venusEccentricity:   venus.eccentricity,
+            marsScenePosition,    marsLonPerihelionDeg:    mars.lonPerihelionDeg,    marsSemiMajorAU:    mars.semiMajorAU,    marsEccentricity:    mars.eccentricity,
+            jupiterScenePosition, jupiterLonPerihelionDeg: jupiter.lonPerihelionDeg, jupiterSemiMajorAU: jupiter.semiMajorAU, jupiterEccentricity: jupiter.eccentricity,
+            saturnScenePosition,  saturnLonPerihelionDeg:  saturn.lonPerihelionDeg,  saturnSemiMajorAU:  saturn.semiMajorAU,  saturnEccentricity:  saturn.eccentricity,
+            uranusScenePosition,  uranusLonPerihelionDeg:  uranus.lonPerihelionDeg,  uranusSemiMajorAU:  uranus.semiMajorAU,  uranusEccentricity:  uranus.eccentricity,
+            neptuneScenePosition, neptuneLonPerihelionDeg: neptune.lonPerihelionDeg, neptuneSemiMajorAU: neptune.semiMajorAU, neptuneEccentricity: neptune.eccentricity,
         };
     } catch {
         return null;
