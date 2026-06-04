@@ -29,11 +29,11 @@ function createOrbitLine(points: Float32Array, color: string, opacity: number) {
         color,
         transparent: true,
         opacity,
-        depthWrite: false,
     });
 
     const line = new THREE.Line(geometry, material);
     line.frustumCulled = false;
+    line.renderOrder = -1;
 
     return line;
 }

@@ -252,21 +252,29 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             const eclMatrix = eqjToEclMatrix(A);
             const eclPos = A.RotateVector(eclMatrix, new A.Vector(state.x, state.y, state.z, state.t));
             const eclVel = A.RotateVector(eclMatrix, new A.Vector(state.vx, state.vy, state.vz, state.t));
-            const scenePosition = helioToScene(eclPos);
-
             // Ângulo no plano eclíptico — idêntico ao usado por buildEllipsePoints
             const planeAngleRad = Math.atan2(eclPos.y, eclPos.x);
 
-            // Distância projetada no plano eclíptico (corrige inclinação orbital como Mercúrio 7°)
-            const rProj = Math.hypot(eclPos.x, eclPos.y);
+            // Usa r3d (distância real) para calcular ν — a órbita kepleriana usa r3d, não rProj.
+            // Depois reposiciona o planeta na cena ao longo do ângulo planar mas com o raio da
+            // elipse r(ν), garantindo que o ponto desenhado caia exatamente sobre a elipse.
+            // Planetas com ecl.z≈0 (Júpiter) não são afetados pois r3d≈rProj.
+            const r3d = Math.hypot(eclPos.x, eclPos.y, eclPos.z);
             const p = semiMajorAU * (1 - eccentricity * eccentricity);
-            const cosNu = Math.max(-1, Math.min(1, (p / rProj - 1) / eccentricity));
-
-            // Sinal de ν: produto cruzado r×v no plano eclíptico
+            const cosNu = Math.max(-1, Math.min(1, (p / r3d - 1) / eccentricity));
             const crossZ = eclPos.x * eclVel.y - eclPos.y * eclVel.x;
             const trueAnomalyRad = Math.acos(cosNu) * (crossZ >= 0 ? 1 : -1);
+            const lonPerihelionDeg = (planeAngleRad - trueAnomalyRad) * 180 / Math.PI;
 
-            return { scenePosition, lonPerihelionDeg: (planeAngleRad - trueAnomalyRad) * 180 / Math.PI };
+            // Raio da elipse nesse ângulo — projeta o planeta sobre a elipse desenhada
+            const rEllipse = p / (1 + eccentricity * cosNu);
+            const projectedPosition: [number, number, number] = [
+                Math.cos(planeAngleRad) * rEllipse * ORBIT_AU_SCALE,
+                0,
+                -Math.sin(planeAngleRad) * rEllipse * ORBIT_AU_SCALE,
+            ];
+
+            return { scenePosition: projectedPosition, lonPerihelionDeg };
         }
 
         const mercury = planetData(A.Body.Mercury, 0.387, 0.2056);
