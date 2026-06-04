@@ -412,7 +412,7 @@ function BodyCard({
             title={en ? cfg.nameEn : cfg.namePt}
             dotColor={cfg.dotColor}
             borderClass="border-signal-cyan/30"
-            className="flex max-h-[34vh] lg:max-h-[76%] w-[min(17.5rem,calc(100vw-6rem))] lg:w-[min(25rem,48%)] flex-col lg:top-[30%]"
+            className="flex h-[42vh] lg:h-[30rem] w-[min(17.5rem,calc(100vw-6rem))] lg:w-[min(25rem,48%)] flex-col lg:top-[30%]"
             style={enterStyle}
             mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
@@ -447,41 +447,39 @@ function BodyCard({
                 </div>
 
                 <div
-                    className="flex-1 overflow-y-auto px-3 py-3 lg:px-5 lg:py-4"
+                    className="min-h-0 flex-1 overflow-y-auto px-3 py-3 lg:px-5 lg:py-4"
                     style={{ transition: 'opacity 0.12s ease', opacity: contentVisible ? 1 : 0 }}
                 >
-                    <div className="lg:min-h-[9rem]">
-                        {showSectionContent && activeSection === 'summary' ? (
-                            <div className="space-y-3">
-                                <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">
-                                    {en ? cfg.contextEn : cfg.contextPt}
-                                </p>
-                                <dl className="space-y-2.5 text-[13px]">
-                                    {cfg.facts.slice(0, 2).map((fact) => (
-                                        <Row key={fact.labelEn} label={en ? fact.labelEn : fact.labelPt}>
-                                            <span className="font-semibold text-white">{val(fact.value)}</span>
-                                        </Row>
-                                    ))}
-                                </dl>
-                            </div>
-                        ) : null}
-
-                        {showSectionContent && activeSection === 'physical' ? (
+                    {showSectionContent && activeSection === 'summary' ? (
+                        <div className="space-y-3">
+                            <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">
+                                {en ? cfg.contextEn : cfg.contextPt}
+                            </p>
                             <dl className="space-y-2.5 text-[13px]">
-                                {physicalFacts.map((fact) => (
+                                {cfg.facts.slice(0, 2).map((fact) => (
                                     <Row key={fact.labelEn} label={en ? fact.labelEn : fact.labelPt}>
                                         <span className="font-semibold text-white">{val(fact.value)}</span>
                                     </Row>
                                 ))}
                             </dl>
-                        ) : null}
+                        </div>
+                    ) : null}
 
-                        {showSectionContent && activeSection === 'history' ? (
-                            <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">
-                                {en ? history.historyEn : history.historyPt}
-                            </p>
-                        ) : null}
-                    </div>
+                    {showSectionContent && activeSection === 'physical' ? (
+                        <dl className="space-y-2.5 text-[13px]">
+                            {physicalFacts.map((fact) => (
+                                <Row key={fact.labelEn} label={en ? fact.labelEn : fact.labelPt}>
+                                    <span className="font-semibold text-white">{val(fact.value)}</span>
+                                </Row>
+                            ))}
+                        </dl>
+                    ) : null}
+
+                    {showSectionContent && activeSection === 'history' ? (
+                        <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">
+                            {en ? history.historyEn : history.historyPt}
+                        </p>
+                    ) : null}
                 </div>
             </div>
         </PanelShell>
