@@ -1,4 +1,4 @@
-# SmallBodies
+# Dossie
 
 Componentes de interface para listagens, dossiês e visualizações de pequenos corpos do Sistema Solar.
 
