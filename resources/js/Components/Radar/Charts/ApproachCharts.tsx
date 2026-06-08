@@ -1,3 +1,10 @@
+/**
+ * Gráficos de aproximações para a página do observatório.
+ *
+ * Responsabilidade: renderizar visualizações de barras e pizza com dados já
+ * recebidos por props. Não busca dados, não calcula ranking nem filtra objetos.
+ */
+
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ReactNode } from 'react';
 import { ApproachObservatoryCharts } from '@/types';

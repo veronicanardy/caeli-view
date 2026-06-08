@@ -1,3 +1,11 @@
+/**
+ * Barra de controles compacta do radar para mobile.
+ *
+ * Responsabilidade: agrupar os controles de limite e modo de seleção em um
+ * formato colapsável adaptado a telas pequenas. Não decide ranking nem acessa
+ * dados — apenas repassa callbacks para RadarObjectControls.
+ */
+
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { RadarObjectControls } from './RadarObjectControls';

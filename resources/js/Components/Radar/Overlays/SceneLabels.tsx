@@ -1,3 +1,11 @@
+/**
+ * Primitivas de labels HTML sobre a cena 3D.
+ *
+ * Responsabilidade: renderizar rótulos posicionados em coordenadas de mundo,
+ * aplicar oclusão visual por corpos e respeitar zonas proibidas de UI. Não
+ * decide o conteúdo dos labels nem controla câmera ou seleção.
+ */
+
 import { Html } from '@react-three/drei';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
 import { useFrame, useThree } from '@react-three/fiber';

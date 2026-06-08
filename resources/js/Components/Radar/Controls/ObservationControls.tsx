@@ -1,3 +1,11 @@
+/**
+ * Controles de observação do radar — filtro de data e tipo de objeto.
+ *
+ * Responsabilidade: renderizar o formulário de filtros e encaminhar mudanças
+ * para o componente pai via callback. Não aplica filtros diretamente nem acessa
+ * dados da API — apenas gerencia o estado local do formulário.
+ */
+
 import { CalendarDays, Search } from 'lucide-react';
 import { FormEvent } from 'react';
 import type { ReactNode } from 'react';

@@ -1,3 +1,11 @@
+/**
+ * Toast de boas-vindas contextual do radar.
+ *
+ * Responsabilidade: exibir uma dica de primeiro acesso para o modo radar ou
+ * orbital, persistindo a visita em localStorage para não repetir. Aparece uma
+ * única vez por modo e não interfere com a cena ou com dados de aproximação.
+ */
+
 import { useEffect, useState } from 'react';
 import { BookOpen, X } from 'lucide-react';
 

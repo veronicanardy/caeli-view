@@ -1,3 +1,11 @@
+/**
+ * Barra de ferramentas da cena 3D do radar.
+ *
+ * Responsabilidade: expor controles de labels, fullscreen e reset de câmera
+ * posicionados sobre o canvas. Não acessa estado da cena diretamente — apenas
+ * repassa intenções para o componente orquestrador via callbacks.
+ */
+
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { Eye, EyeOff, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import type { SceneMode } from './Manual/manualTypes';

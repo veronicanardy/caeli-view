@@ -1,20 +1,3 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { usePanelBias } from './Scene/usePanelBias';
-import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
-import { sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
-import type { SceneMode } from './Controls/Manual/manualTypes';
-import { SceneToolbar } from './Controls/SceneToolbar';
-import type { MobilePanelSection } from './Panels/MobilePanelControls';
-import { RadarFloatingOverlays } from './Panels/RadarFloatingOverlays';
-import { RadarNavigationPanel } from './Panels/RadarNavigationPanel';
-import { RadarSceneCanvas } from './Scene/RadarSceneCanvas';
-import { deriveActiveMode } from './Scene/sceneMode';
-import { useLabelNoGoRects } from './Scene/useLabelNoGoRects';
-import { useSceneEphemeris } from './Scene/useSceneEphemeris';
-import { useSelectionFocusFraming } from './Scene/useSelectionFocusFraming';
-import { useRadar3DFocusActions } from './useRadar3DFocusActions';
-import { useRadar3DTransition } from './useRadar3DTransition';
-
 /**
  * Centro de orquestração do radar orbital 3D.
  *
@@ -34,6 +17,23 @@ import { useRadar3DTransition } from './useRadar3DTransition';
  * A troca só ocorre quando um objeto selecionado tem elementos orbitais com época de
  * periélio válida (tpJd ≠ 0), sem isso a posição Kepleriana não é computável.
  */
+
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { usePanelBias } from './Scene/usePanelBias';
+import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
+import { sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
+import type { SceneMode } from './Controls/Manual/manualTypes';
+import { SceneToolbar } from './Controls/SceneToolbar';
+import type { MobilePanelSection } from './Panels/MobilePanelControls';
+import { RadarFloatingOverlays } from './Panels/RadarFloatingOverlays';
+import { RadarNavigationPanel } from './Panels/RadarNavigationPanel';
+import { RadarSceneCanvas } from './Scene/RadarSceneCanvas';
+import { deriveActiveMode } from './Scene/sceneMode';
+import { useLabelNoGoRects } from './Scene/useLabelNoGoRects';
+import { useSceneEphemeris } from './Scene/useSceneEphemeris';
+import { useSelectionFocusFraming } from './Scene/useSelectionFocusFraming';
+import { useRadar3DFocusActions } from './useRadar3DFocusActions';
+import { useRadar3DTransition } from './useRadar3DTransition';
 
 type Props = {
     closestNowObjects: ClosestNowObject[];

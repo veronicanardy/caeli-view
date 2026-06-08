@@ -1,3 +1,11 @@
+/**
+ * Guia orbital da Lua na cena 3D.
+ *
+ * Responsabilidade: desenhar a elipse do plano orbital lunar em coordenadas de
+ * mundo, inclinada pela normal real recebida da efeméride. Puramente visual —
+ * não calcula posição da Lua nem decide modo de câmera.
+ */
+
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import {

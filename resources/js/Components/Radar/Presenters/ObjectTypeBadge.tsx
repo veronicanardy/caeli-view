@@ -1,3 +1,10 @@
+/**
+ * Badge de tipo de objeto do radar (asteroide, cometa, outro).
+ *
+ * Responsabilidade: mapear o tipo canônico de SmallBodyObjectType para um
+ * rótulo e ícone visual padronizados. Componente atômico sem estado próprio.
+ */
+
 import { Orbit, Sparkles } from 'lucide-react';
 import type { SmallBodyObjectType } from '@/types';
 

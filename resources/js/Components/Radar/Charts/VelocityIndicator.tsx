@@ -1,3 +1,10 @@
+/**
+ * Indicador visual de velocidade relativa de aproximação.
+ *
+ * Responsabilidade: apresentar a velocidade atual como percentual de uma escala
+ * de referência, com barra de progresso e ícone. Não calcula velocidade real.
+ */
+
 import { Gauge } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 

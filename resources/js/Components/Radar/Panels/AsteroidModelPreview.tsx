@@ -1,3 +1,11 @@
+/**
+ * Preview 3D do asteroide selecionado no card de foco.
+ *
+ * Responsabilidade: exibir o modelo GLB real (ou genérico) do objeto focado em
+ * um Canvas isolado com rotação automática e iluminação própria. Não interfere
+ * com a cena principal nem com a seleção global.
+ */
+
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useRef, Suspense, useEffect } from 'react';
 import type * as THREE from 'three';

@@ -1,3 +1,11 @@
+/**
+ * Dados de curiosidades do manual do radar.
+ *
+ * Responsabilidade: centralizar perguntas e respostas exibidas na seção de
+ * curiosidades do FriendlyManual, em PT-BR e EN. Conteúdo estático — sem
+ * lógica, sem estado, sem dependência da cena.
+ */
+
 export type CuriosityItemData = {
     q: string;
     a: string;

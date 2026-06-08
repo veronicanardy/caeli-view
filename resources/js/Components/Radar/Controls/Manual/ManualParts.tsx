@@ -1,3 +1,11 @@
+/**
+ * Blocos de construção reutilizáveis do manual do radar.
+ *
+ * Responsabilidade: fornecer seções, callouts, fórmulas, réguas e hints de
+ * interação usados por FriendlyManual e TechnicalManual. Componentes puramente
+ * visuais — não acessam estado da cena nem callbacks externos.
+ */
+
 import { useState } from 'react';
 import { Orbit, Radar } from 'lucide-react';
 import type { SceneMode } from './manualTypes';

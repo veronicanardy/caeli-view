@@ -1,3 +1,11 @@
+/**
+ * Régua visual Terra–Lua para referência de escala.
+ *
+ * Responsabilidade: ilustrar graficamente a distância do objeto focado em
+ * relação à Terra e à Lua, com miniatura 3D da Lua e rótulos de distância.
+ * Puramente apresentacional — recebe valores já calculados.
+ */
+
 import { useId } from 'react';
 import { compactKm, formatNumber } from '@/lib/format';
 import { Moon3D } from '../Bodies/Moon/Moon3D';

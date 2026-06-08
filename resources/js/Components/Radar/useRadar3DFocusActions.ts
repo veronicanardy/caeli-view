@@ -1,3 +1,12 @@
+/**
+ * Hook de ações de seleção e foco da cena 3D do radar.
+ *
+ * Responsabilidade: agrupar todas as ações que alteram câmera, seleção de objeto
+ * e foco de corpo (Terra, Lua, Sol, planetas) em um único hook, mantendo o
+ * componente orquestrador livre de lógica de intenção de câmera. Não renderiza
+ * nada nem acessa a cena Three.js diretamente.
+ */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';

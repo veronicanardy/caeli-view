@@ -1,3 +1,10 @@
+/**
+ * Helpers de apresentação da lista de proximidades diárias.
+ *
+ * Responsabilidade: montar textos, labels de status e formatações exibidos pelo
+ * DailyProximityList. Funções puras — não acessam API, estado global nem cena.
+ */
+
 import { formatNumber } from '@/lib/format';
 import type { AsteroidTrajectory } from '@/types';
 

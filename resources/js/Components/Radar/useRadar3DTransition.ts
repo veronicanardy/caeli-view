@@ -1,3 +1,11 @@
+/**
+ * Hook de transição visual da cena 3D do radar.
+ *
+ * Responsabilidade: controlar o overlay curto que mascara reenquadramentos
+ * abruptos de câmera (radar ↔ orbital). Garante que a mudança de modo não
+ * seja percebida como salto visual pelo usuário.
+ */
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const SCENE_TRANSITION_MS = 420;

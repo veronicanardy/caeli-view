@@ -1,3 +1,10 @@
+/**
+ * Linha do tempo interativa de aproximações por dia.
+ *
+ * Responsabilidade: agrupar aproximações por data, permitir expansão de dias e
+ * destacar a próxima aproximação futura. Não calcula trajetória nem acessa API.
+ */
+
 import { Link } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Crown } from 'lucide-react';

@@ -1,3 +1,11 @@
+/**
+ * Hook de carregamento de textura para corpos celestes.
+ *
+ * Responsabilidade: carregar texturas de forma imperativa com fallback seguro,
+ * retornando null enquanto a textura ainda não está pronta. Não usa Suspense
+ * para permitir que os corpos renderizem um fallback visual imediatamente.
+ */
+
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { TextureLoader } from 'three';

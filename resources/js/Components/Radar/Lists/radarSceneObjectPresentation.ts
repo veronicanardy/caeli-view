@@ -1,3 +1,10 @@
+/**
+ * Helpers de apresentação do item de lista da cena do radar.
+ *
+ * Responsabilidade: formatar o label trailing (data ou distância) e o tooltip
+ * de indisponibilidade de cada item. Funções puras — não acessam cena nem API.
+ */
+
 import { compactKm } from '@/lib/format';
 import type { SelectionMode } from '@/types';
 

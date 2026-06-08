@@ -1,3 +1,11 @@
+/**
+ * Tabela unificada de aproximações do radar.
+ *
+ * Responsabilidade: apresentar a lista completa de objetos próximos em formato
+ * tabular com ordenação, badges de atenção e link para o dossiê individual.
+ * Não filtra nem calcula dados — recebe aproximações já processadas.
+ */
+
 import { Link } from '@inertiajs/react';
 import { ArrowUpDown, ExternalLink } from 'lucide-react';
 import { classifyApproachAttention } from '@/lib/approachAttention';

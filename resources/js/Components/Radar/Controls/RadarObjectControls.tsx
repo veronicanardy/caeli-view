@@ -1,3 +1,11 @@
+/**
+ * Controles de limite e modo de seleção do radar.
+ *
+ * Responsabilidade: renderizar os botões de quantidade de objetos e modo
+ * (closest/upcoming), repassando intenções via callbacks. Não decide ranking
+ * nem altera dados — apenas apresenta as opções disponíveis.
+ */
+
 import type { ObjectLimit, SelectionMode } from '@/types';
 import { Tooltip } from './Tooltip';
 

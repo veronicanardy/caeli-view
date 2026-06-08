@@ -1,3 +1,12 @@
+/**
+ * Modelo GLB real de asteroide com identidade conhecida.
+ *
+ * Responsabilidade: carregar e exibir o modelo 3D do asset recebido, aplicando
+ * opacidade, outline de seleção e variação procedural de seed para evitar que
+ * asteroides distintos pareçam idênticos. Não decide qual modelo usar — isso
+ * é responsabilidade de `asteroidModelRegistry`.
+ */
+
 import { useGLTF } from '@react-three/drei';
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';

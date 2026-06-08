@@ -1,3 +1,11 @@
+/**
+ * Lista de proximidades diárias do radar.
+ *
+ * Responsabilidade: apresentar objetos do dia selecionado com distância, status
+ * Horizons, direção de movimento e razão de listagem. Não filtra nem rankeia
+ * objetos — recebe a lista já processada e apenas a exibe.
+ */
+
 import { CalendarClock, LocateFixed, Moon, SatelliteDish } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { compactKm, formatNumber, lunarDistanceFromKm } from '@/lib/format';

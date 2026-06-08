@@ -1,3 +1,11 @@
+/**
+ * Manual amigável do radar orbital.
+ *
+ * Responsabilidade: apresentar explicações acessíveis sobre a cena 3D, escala
+ * de distâncias e modo orbital usando diagramas, curiosidades e linguagem não
+ * técnica. Conteúdo estático — não depende de dados da cena em tempo real.
+ */
+
 import type { SceneMode } from './manualTypes';
 import {
     Callout,

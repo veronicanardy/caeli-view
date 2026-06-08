@@ -1,3 +1,11 @@
+/**
+ * Item de lista de objetos da cena do radar.
+ *
+ * Responsabilidade: renderizar nome, cor de paleta, distância ou data de
+ * aproximação e estado de seleção para um único objeto próximo. Não decide
+ * ranking nem aplica filtros — recebe o objeto já resolvido.
+ */
+
 import type { ClosestNowObject, SelectionMode, UnifiedApproach } from '@/types';
 import { formatObjectListTrailingLabel, objectListItemTitle } from './radarSceneObjectPresentation';
 

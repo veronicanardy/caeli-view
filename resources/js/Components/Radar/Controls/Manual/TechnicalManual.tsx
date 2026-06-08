@@ -1,3 +1,11 @@
+/**
+ * Manual técnico do radar orbital.
+ *
+ * Responsabilidade: apresentar o pipeline completo de dados — desde a API JPL
+ * até a renderização 3D — com fórmulas, limiares e decisões de implementação.
+ * Destinado a usuários avançados e desenvolvedores. Conteúdo estático.
+ */
+
 import { KM_PER_AU } from '@/lib/sceneEphemeris';
 import { OrbitGuideDiagram, RadarGuideDiagram } from './ManualDiagrams';
 import {

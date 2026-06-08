@@ -1,3 +1,11 @@
+/**
+ * Marcador visual de asteroide na cena 3D.
+ *
+ * Responsabilidade: posicionar modelo GLB real ou genérico, hitbox de interação
+ * e rótulo de distância para um objeto próximo. Não decide ranking, seleção
+ * global nem cálculo orbital.
+ */
+
 import { useMemo, useState } from 'react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
