@@ -27,8 +27,7 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 - `UnifiedFocusCard.tsx`: card de foco unificado — renderiza asteroides (`kind: 'asteroid'`) e corpos celestes (`kind: 'body'`) com o mesmo shell visual, abas e layout mobile/desktop.
 - `BodyImagePreview.tsx`: preview de imagem real estática para corpos celestes; ocupa o mesmo espaço visual do `AsteroidModelPreview`. As imagens são servidas localmente (`/images/bodies/`), com `fit` (cover/contain) e `scale` calibrados por hierarquia de tamanho real — não buscam URLs externas.
 - `AsteroidModelPreview.tsx`: preview 3D do asteroide em foco.
-- `bodyInfoContent.ts`: textos, fatos e metadados estáticos dos corpos celestes exibidos pelo `UnifiedFocusCard`.
-- `bodyHistory.ts`: textos de história/missões dos corpos celestes, exibidos na aba História.
+- `bodyData.ts`: fatos científicos, textos de contexto e narrativas históricas dos corpos celestes — unificado a partir dos antigos `bodyInfoContent.ts` e `bodyHistory.ts`, que compartilhavam a mesma chave `BodyId` e eram sempre lidos juntos.
 - `FocusObject.tsx`: conteúdo principal do objeto selecionado (usado fora do card unificado).
 - `focusCardPresentation.ts`: textos, badges e status de apresentação usados pelo `UnifiedFocusCard`.
 - `MobilePanelControls.tsx`: controles de navegação mobile.
@@ -42,7 +41,7 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 - `PanelShell.tsx`: shell visual reutilizável para painéis.
 - `SceneLegend.tsx`: legenda da cena.
 - `TechnicalDataPanel.tsx`: painel técnico expansível.
-- `panelFormatters.ts`: formatadores locais de datas e unidades exibidas nos painéis.
+- `panelFormatters.ts`: formatadores locais de datas e unidades exibidas nos painéis. `formatApproachDateTime` formata dia+mês+hora; `formatApproachDate` formata apenas a data.
 
 ## Remoção Do Caminho 2D E Consolidação De Cards
 
@@ -65,7 +64,7 @@ Filtros, referências, abertura de planetas, seleção de objetos, modo orbital 
 - Todo arquivo de `Panels` deve iniciar com documentação em português explicando responsabilidade e fronteiras.
 - Componentes de painel devem receber dados e callbacks por props; não devem acessar seleção global, câmera ou APIs diretamente.
 - `radarNavigationTypes.ts` deve evitar contratos largos demais para subcomponentes. Conteúdos mobile/desktop devem receber apenas as props que realmente renderizam.
-- Cards de corpos celestes devem passar por `UnifiedFocusCard.tsx` com `kind: 'body'`, usando `bodyInfoContent.ts` e `bodyHistory.ts` para os dados estáticos; evitar cards específicos por planeta.
+- Cards de corpos celestes devem passar por `UnifiedFocusCard.tsx` com `kind: 'body'`, usando `bodyData.ts` para os dados estáticos; evitar cards específicos por planeta.
 - Helpers de texto, badges e formatação devem ficar em arquivos locais de apresentação, como `focusCardPresentation.ts` e `panelFormatters.ts`.
 
 ## Regra Para IA

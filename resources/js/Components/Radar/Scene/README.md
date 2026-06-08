@@ -28,7 +28,7 @@
 - `RadarScene.tsx`: compositor principal da cena.
 - `CameraRig.tsx`: transições explícitas de câmera.
 - `InertialZoom.tsx`: zoom inercial e extensão preservada de drift do alvo orbital.
-- `sceneBodyConstants.ts`: constantes visuais compartilhadas de corpos principais da cena.
+- `usePanelBias.ts`: hook que mede a fração do canvas coberta pelo painel lateral (biasX) e pelo bottom sheet mobile (biasY), devolvendo os valores para o `CameraRig` compensar o foco.
 - `sceneOcclusion.ts`: montagem dos oclusores geométricos usados por labels 3D.
 - `cameraConstants.ts`: FOV, distância máxima e visões predefinidas.
 - `cameraFraming.ts`: helpers de enquadramento de corpos e asteroides.

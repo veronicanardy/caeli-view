@@ -30,6 +30,7 @@ Overlays/
   README.md
   SceneLabels.tsx
   SceneRingsLayer.tsx
+  StarField.tsx
 ```
 
 ## Labels De Cena
@@ -39,6 +40,10 @@ Overlays/
 ## Guias 3D
 
 [`SceneRingsLayer.tsx`](./SceneRingsLayer.tsx) contém guias visuais 3D da cena `three.js`.
+
+## Campo Estelar
+
+[`StarField.tsx`](./StarField.tsx) gera ~1800 partículas procedurais que seguem a câmera, criando profundidade visual sem afetar cálculos orbitais. O RNG usa seed fixo (42) para resultado determinístico entre sessões.
 
 ## Regra Para IA
 
