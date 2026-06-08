@@ -52,9 +52,10 @@ export function RadarNavigationPanel({
                         type="button"
                         onClick={onShowNavigationPanel}
                         aria-label={en ? 'Show navigation panel' : 'Mostrar painel de navegação'}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-space-950/90 px-2.5 py-1.5 text-[11px] font-medium text-white/75 shadow-glow backdrop-blur transition hover:border-white/25 hover:text-white lg:hidden"
+                        /* py-2 e px-3.5 garantem área de toque mínima de 44px no mobile */
+                        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-space-950/92 px-3.5 py-2 text-[12px] font-medium text-white/80 shadow-glow backdrop-blur transition hover:border-white/30 hover:text-white lg:hidden"
                     >
-                        <ChevronDown className="size-3.5 -rotate-90" />
+                        <ChevronDown className="size-4 -rotate-90" />
                         <span>{en ? 'Objects' : 'Objetos'}</span>
                     </button>
                 ) : null}
@@ -71,8 +72,9 @@ export function RadarNavigationPanel({
                         panelCollapsed
                             ? 'hidden lg:flex'
                             : orbitMode
-                                ? 'flex h-[min(10.5rem,27vh)] w-[min(15rem,calc(100vw-5rem))]'
-                                : 'flex h-[min(13rem,33vh)] w-[min(15rem,calc(100vw-5rem))]',
+                                /* Altura mobile um pouco maior para conteúdo respirar */
+                                ? 'flex h-[min(12rem,30vh)] w-[min(17rem,calc(100vw-4rem))]'
+                                : 'flex h-[min(15rem,36vh)] w-[min(17rem,calc(100vw-4rem))]',
                     ].join(' ')}
                 >
                     <div className="border-b border-white/10 px-2 pt-1 pb-1.5 lg:hidden">
@@ -130,7 +132,7 @@ export function RadarNavigationPanel({
                         ref={planetFlyoutRef}
                         className="flex flex-col overflow-y-auto rounded-2xl border border-white/[0.08] bg-space-950/88 backdrop-blur-xl
                                    shadow-[0_2px_16px_rgba(0,0,0,0.4)]
-                                   h-[min(13rem,33vh)] w-[min(15rem,calc(100vw-5rem))]
+                                   h-[min(15rem,36vh)] w-[min(17rem,calc(100vw-4rem))]
                                    lg:h-[min(20rem,40vh)] lg:w-[min(14rem,40vw)]"
                     >
                         <div className="flex items-center justify-between px-3 pt-2 pb-1.5 border-b border-white/[0.07]">

@@ -163,6 +163,7 @@ export function RadarFloatingOverlays({
                 mode={activeMode}
                 manualOpen={manualOpen}
                 onManualOpenChange={onManualOpenChange}
+                cardOpen={Boolean(visibleFocusedObject) || Boolean(bodyCardOpen)}
             />
         </>
     );

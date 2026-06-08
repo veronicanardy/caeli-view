@@ -258,14 +258,35 @@ export default function RealAsteroidModel({ asset, opacity, seed, selected = fal
 
     useEffect(() => {
         return () => {
+            // Limpa geometrias e materiais criados localmente (clones do useMemo).
+            // NÃO chama geometry.dispose() em geometrias que possam vir direto do
+            // cache do useGLTF — apenas nas que foram explicitamente clonadas aqui.
             model.traverse((child) => {
                 const mesh = child as THREE.Mesh;
                 if (!mesh.isMesh) return;
+                // Geometria foi clonada no useMemo (mesh.geometry.clone()) — é local.
+                mesh.geometry?.dispose();
                 const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                // Materiais foram clonados em applyMaterialDefaults (existing.clone()) — são locais.
+                // Texturas dentro do material NÃO são descartadas: material.dispose() do Three.js
+                // não descarta texturas por padrão, então isso já é seguro.
                 materials.forEach((m) => m?.dispose());
             });
         };
     }, [model]);
+
+    useEffect(() => {
+        if (!outlineModel) return;
+        return () => {
+            // ShaderMaterial do outline é criado localmente em createOutlineMaterial — descarta ao sair.
+            outlineModel.traverse((child) => {
+                const mesh = child as THREE.Mesh;
+                if (!mesh.isMesh) return;
+                const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                mats.forEach((m) => m?.dispose());
+            });
+        };
+    }, [outlineModel]);
 
     return (
         <group rotation={asset.rotation} scale={scale}>

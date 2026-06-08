@@ -1,5 +1,5 @@
-import { Canvas, useFrame } from '@react-three/fiber';
-import { useRef, Suspense } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useRef, Suspense, useEffect } from 'react';
 import type * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
 import RealAsteroidModel from '../Bodies/Asteroid/RealAsteroidModel';
@@ -12,6 +12,13 @@ const REAL_ASSET_DISPLAY_NAMES: Record<string, { pt: string; en: string }> = {
     itokawa: { pt: 'Itokawa', en: 'Itokawa' },
     vesta:   { pt: 'Vesta',   en: 'Vesta' },
 };
+
+/** Descarta o renderer deste Canvas ao desmontar, evitando Context Lost no Canvas principal. */
+function RendererCleanup() {
+    const { gl } = useThree();
+    useEffect(() => () => { gl.dispose(); }, [gl]);
+    return null;
+}
 
 function SpinningAsteroid({ object }: { object: ClosestNowObject }) {
     const groupRef = useRef<THREE.Group>(null);
@@ -46,15 +53,16 @@ export function AsteroidModelPreview({ object, locale }: { object: ClosestNowObj
         : (en ? 'Illustrative model' : 'Modelo ilustrativo');
 
     return (
-        <div className="mx-3 mt-2.5 lg:mx-4">
+        <div className="mx-3 mt-1.5 lg:mx-4 lg:mt-2.5">
             {/* Canvas do modelo: borda quase invisível, fundo com gradiente radial escuro para presença. */}
-            <div className="relative h-28 overflow-hidden rounded-xl border border-white/6 lg:h-32"
+            <div className="relative h-14 overflow-hidden rounded-xl border border-white/6 lg:h-32"
                 style={{ background: 'radial-gradient(ellipse at center, rgba(34,211,238,0.04) 0%, rgba(3,6,13,0.95) 70%)' }}>
                 <Canvas
                     camera={{ position: [0, 0, 3.2], fov: 32 }}
-                    gl={{ antialias: true, alpha: true }}
+                    gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
                     style={{ width: '100%', height: '100%' }}
                 >
+                    <RendererCleanup />
                     <ambientLight intensity={1.6} />
                     <directionalLight position={[3, 4, 3]} intensity={3.2} />
                     <directionalLight position={[-2, -1, -2]} intensity={1.4} color="#c8eeff" />

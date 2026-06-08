@@ -19,18 +19,23 @@ export function SceneLegend({
     mode,
     manualOpen,
     onManualOpenChange,
+    cardOpen = false,
 }: {
     lunarReference: LunarReference;
     locale: 'pt-BR' | 'en';
     mode: SceneMode;
     manualOpen: boolean;
     onManualOpenChange: (open: boolean) => void;
+    /** No mobile, esconde a legenda quando o card de detalhe está aberto para não competir com o bottom sheet. */
+    cardOpen?: boolean;
 }) {
     const en = locale === 'en';
     const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
     return (
-        <div className="pointer-events-auto absolute bottom-3 right-3 z-10 w-auto lg:w-[min(22rem,46%)] overflow-hidden rounded-xl border border-white/20 bg-space-950/90 shadow-glow backdrop-blur-xl">
+        /* No mobile: botão compacto no canto inferior direito, oculto quando card de detalhe está aberto.
+           No desktop: card expandido com dados de referência de escala. */
+        <div className={`pointer-events-auto absolute bottom-3 right-3 z-10 overflow-hidden rounded-xl border border-white/20 bg-space-950/90 shadow-glow backdrop-blur-xl lg:w-[min(22rem,46%)] ${cardOpen ? 'hidden lg:block' : ''}`}>
             <div className="hidden space-y-2 px-3 pt-3 lg:block">
                 <div className="flex items-baseline justify-between gap-2 text-[13px]">
                     <span className="font-medium text-white/75">
@@ -49,6 +54,7 @@ export function SceneLegend({
             <button
                 type="button"
                 onClick={() => onManualOpenChange(true)}
+                /* py-2.5 no mobile garante área de toque adequada */
                 className="flex w-full items-center justify-between gap-2 border-white/10 px-3 py-2.5 text-left text-[13px] font-semibold text-signal-cyan transition outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-signal-cyan lg:mt-2 lg:border-t"
             >
                 <span className="inline-flex items-center gap-2">

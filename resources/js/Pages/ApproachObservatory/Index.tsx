@@ -226,7 +226,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
         <AppLayout hideHeader={radarFullscreen}>
             <Head title={t('observatory.title')} />
 
-            <section className="mx-auto max-w-[1800px] space-y-4 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
+            <section className="mx-auto max-w-[1800px] space-y-3 px-3 py-2 sm:px-6 sm:py-4 sm:space-y-4 lg:px-8">
                 {Object.values(errorsBySource).map((message) => <ErrorMessage key={message} message={message} />)}
                 <ErrorMessage message={fetchError} />
                 <ErrorMessage message={closestNowError} />

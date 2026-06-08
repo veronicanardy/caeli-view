@@ -33,7 +33,7 @@ export function CompactConsoleBar({
             if (selectionMode === 'upcoming') return 'Upcoming passes';
             return 'Closest now';
         }
-        if (selectionMode === 'upcoming') return 'Próximas aproximações';
+        if (selectionMode === 'upcoming') return 'Próximas passagens';
         return 'Mais próximos agora';
     })();
 
@@ -51,40 +51,37 @@ export function CompactConsoleBar({
     return (
         <section
             aria-label={locale === 'en' ? 'Radar filters' : 'Filtros do radar'}
-            className="relative z-50 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 backdrop-blur md:inline-block md:max-w-full md:px-4"
+            className="relative z-50 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur md:inline-block md:max-w-full md:px-4 md:py-2"
         >
             <div className="hidden md:block">{filtersContent}</div>
 
             <div className="md:hidden">
+                {/* Botão de toggle com py-3 para área de toque mínima de 44px */}
                 <button
                     type="button"
                     onClick={() => setMobileOpen((value) => !value)}
                     aria-expanded={mobileOpen}
-                    className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-space-950/45 px-3 py-2 text-left"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left"
                 >
-                    <div className="min-w-0">
-                        {!mobileOpen ? (
-                            <>
-                                <div className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85">
-                                    {locale === 'en' ? 'Radar filters' : 'Filtros do radar'}
-                                </div>
-                                <div className="truncate pt-1 text-xs text-white/65">
-                                    {currentModeLabel} • {objectLimit} {locale === 'en' ? 'objects' : 'objetos'}
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85">
-                                {locale === 'en' ? 'Hide filters' : 'Ocultar filtros'}
-                            </div>
-                        )}
-                    </div>
+                    {mobileOpen ? (
+                        <span className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85">
+                            {locale === 'en' ? 'Filters' : 'Filtros'}
+                        </span>
+                    ) : (
+                        <span className="truncate text-[12px] text-white/65">
+                            {currentModeLabel}
+                            <span className="text-white/35"> · {objectLimit} {locale === 'en' ? 'objects' : 'objetos'}</span>
+                        </span>
+                    )}
                     <ChevronDown
-                        className={`size-4 shrink-0 text-white/55 transition ${mobileOpen ? 'rotate-180 text-white' : ''}`}
+                        className={`size-3.5 shrink-0 text-white/40 transition ${mobileOpen ? 'rotate-180 text-white/70' : ''}`}
                         aria-hidden="true"
                     />
                 </button>
 
-                {mobileOpen ? <div className="pt-3">{filtersContent}</div> : null}
+                {mobileOpen ? (
+                    <div className="border-t border-white/10 px-4 pb-3 pt-3">{filtersContent}</div>
+                ) : null}
             </div>
         </section>
     );

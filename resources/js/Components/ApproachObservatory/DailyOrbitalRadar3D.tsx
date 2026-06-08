@@ -189,6 +189,34 @@ export function DailyOrbitalRadar3D({
         return () => { observer.disconnect(); window.removeEventListener('resize', updatePanelBiasX); };
     }, [updatePanelBiasX]);
 
+    // Fração [0..1] da altura do canvas coberta pelo bottom sheet (mobile only).
+    // Só compensa no mobile — no desktop o card fica ao lado, não embaixo.
+    const [panelBiasY, setPanelBiasY] = useState(0);
+    const activeCardRef = visibleFocusedObject ? focusCardRef : bodyCardOpen ? bodyCardRef : null;
+    const updatePanelBiasY = useCallback(() => {
+        const canvas = canvasContainerRef.current;
+        const card = activeCardRef?.current;
+        // No desktop (lg: 1024px+) o card fica ao lado — sem compensação vertical.
+        if (!canvas || !card || window.matchMedia('(min-width: 1024px)').matches) {
+            setPanelBiasY(0);
+            return;
+        }
+        const canvasRect = canvas.getBoundingClientRect();
+        const cardRect = card.getBoundingClientRect();
+        // Card fica ancorado na base do canvas — calcula quanto da altura ele cobre.
+        const overlap = Math.max(0, canvasRect.bottom - cardRect.top);
+        setPanelBiasY(canvasRect.height > 0 ? overlap / canvasRect.height : 0);
+    }, [activeCardRef]);
+    useEffect(() => {
+        updatePanelBiasY();
+        const observer = new ResizeObserver(updatePanelBiasY);
+        if (focusCardRef.current) observer.observe(focusCardRef.current);
+        if (bodyCardRef.current) observer.observe(bodyCardRef.current);
+        if (canvasContainerRef.current) observer.observe(canvasContainerRef.current);
+        window.addEventListener('resize', updatePanelBiasY);
+        return () => { observer.disconnect(); window.removeEventListener('resize', updatePanelBiasY); };
+    }, [updatePanelBiasY]);
+
     useEffect(() => {
         if (!fullscreen) return;
         const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false); };
@@ -199,20 +227,21 @@ export function DailyOrbitalRadar3D({
     return (
         <section>
             {fullscreen && (
-                <div className="h-[calc(100vh-8rem)] min-h-[400px] lg:min-h-[560px] rounded-lg border border-white/5 bg-white/[0.02]" aria-hidden />
+                <div className="h-[calc(100dvh-7rem)] min-h-[360px] sm:h-[calc(100vh-8rem)] sm:min-h-[400px] lg:min-h-[560px] rounded-lg border border-white/5 bg-white/[0.02]" aria-hidden />
             )}
             <div
                 ref={canvasContainerRef}
                 /* Gradiente radial: ponto focal levemente acima do centro cria profundidade
                    atmosférica sem competir com os objetos científicos da cena. */
                 className={fullscreen
-                    ? 'fixed inset-0 z-50 bg-[#03060d] [background-image:radial-gradient(ellipse_70%_55%_at_50%_40%,#071420_0%,#03060d_70%)]'
-                    : 'relative h-[calc(100vh-8rem)] min-h-[400px] lg:min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d] [background-image:radial-gradient(ellipse_70%_55%_at_50%_40%,#071420_0%,#03060d_70%)]'}
+                    ? 'fixed inset-0 z-50 bg-[#03060d] [background-image:radial-gradient(ellipse_70%_55%_at_50%_40%,#071420_0%,#03060d_70%)] lg:cursor-grab lg:active:cursor-grabbing'
+                    : 'relative h-[calc(100dvh-7rem)] min-h-[360px] sm:h-[calc(100vh-8rem)] sm:min-h-[400px] lg:min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d] [background-image:radial-gradient(ellipse_70%_55%_at_50%_40%,#071420_0%,#03060d_70%)] lg:cursor-grab lg:active:cursor-grabbing'}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 <RadarSceneCanvas
                     noGoRects={noGoRects}
                     panelBiasX={panelBiasX}
+                    panelBiasY={panelBiasY}
                     closestNowObjects={sceneObjects}
                     selectedId={selectedId}
                     orbitMode={orbitMode}

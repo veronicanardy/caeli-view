@@ -100,7 +100,7 @@ function AstroButton({
             {chevron ? (
                 <ChevronDown
                     className="hidden size-2.5 shrink-0 opacity-50 transition-transform sm:block"
-                    style={{ transform: chevronOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    style={{ transform: chevronOpen ? 'rotate(90deg)' : 'rotate(-90deg)' }}
                     aria-hidden
                 />
             ) : null}

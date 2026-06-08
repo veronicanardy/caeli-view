@@ -73,7 +73,8 @@ function IconButton({ onClick, children, 'aria-label': ariaLabel }: { onClick: (
             type="button"
             onClick={onClick}
             aria-label={ariaLabel}
-            className="flex items-center justify-center rounded-full border border-white/10 bg-space-950/80 p-1.5 text-white/50 backdrop-blur transition outline-none hover:border-white/20 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+            /* p-2.5 no mobile garante área de toque ~44px; p-1.5 mantém o visual compacto no desktop */
+            className="flex items-center justify-center rounded-full border border-white/10 bg-space-950/80 p-2.5 text-white/50 backdrop-blur transition outline-none hover:border-white/20 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-signal-cyan lg:p-1.5"
         >
             {children}
         </button>

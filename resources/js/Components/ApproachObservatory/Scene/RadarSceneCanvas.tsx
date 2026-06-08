@@ -20,6 +20,7 @@ import { RadarScene } from './RadarScene';
 type Props = {
     noGoRects: NoGoRect[];
     panelBiasX: number;
+    panelBiasY: number;
     closestNowObjects: ClosestNowObject[];
     selectedId: string | null;
     orbitMode: boolean;
@@ -49,6 +50,7 @@ type Props = {
 export function RadarSceneCanvas({
     noGoRects,
     panelBiasX,
+    panelBiasY,
     closestNowObjects,
     selectedId,
     orbitMode,
@@ -99,6 +101,7 @@ export function RadarSceneCanvas({
                         cameraIntent={cameraIntent}
                         focusTarget={activeFocusTarget}
                         panelBiasX={panelBiasX}
+                        panelBiasY={panelBiasY}
                         ephemeris={ephemeris}
                         fallbackSunDirection={fallbackSunDirection}
                         locale={locale}

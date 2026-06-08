@@ -36,9 +36,9 @@ export function BodyImagePreview({ body }: { body: BodyId }) {
     const { src, credit, fit = 'contain', position = 'center', scale } = BODY_IMAGE[body];
 
     return (
-        <div className="mx-3 mt-2.5 lg:mx-4">
+        <div className="mx-3 mt-1.5 lg:mx-4 lg:mt-2.5">
             <div
-                className="relative h-28 overflow-hidden rounded-xl border border-white/6 lg:h-32"
+                className="relative h-14 overflow-hidden rounded-xl border border-white/6 lg:h-32"
                 style={{ background: '#000' }}
             >
                 <img
