@@ -162,19 +162,24 @@ describe('collectTimeTicks', () => {
         expect(collectTimeTicks(makeTrajectory())).toEqual([]);
     });
 
-    it('retorna marcas para amostras dentro de 6h dos alvos −24h/+24h/+72h', () => {
+    it('retorna marcas para amostras dentro de 6h dos alvos -24h e -48h', () => {
         const HOUR = 3_600_000;
         const now = new Date('2026-05-28T12:00:00Z').getTime();
         const at = (offsetHours: number) => new Date(now + offsetHours * HOUR).toISOString();
 
+        // collectTimeTicks busca apenas no passado: -24h, -48h, -72h, -7d, -30d.
+        // Labels usam hífen normal (U+002D), não sinal de menos matemático.
         const trajectory = makeTrajectory({
             currentPoint: makePoint({ timestamp: at(0) }),
-            pastPoints: [makePoint({ timestamp: at(-24) })],
-            futurePoints: [makePoint({ timestamp: at(24) }), makePoint({ timestamp: at(72) })],
+            pastPoints: [
+                makePoint({ timestamp: at(-24) }),
+                makePoint({ timestamp: at(-48) }),
+            ],
+            futurePoints: [],
         });
 
         const ticks = collectTimeTicks(trajectory);
-        expect(ticks.map((t) => t.label)).toEqual(['−24h', '+24h', '+72h']);
+        expect(ticks.map((t) => t.label)).toEqual(['-24h', '-48h']);
     });
 
     it('ignora marcas quando nenhuma amostra está a até 6h do alvo', () => {
