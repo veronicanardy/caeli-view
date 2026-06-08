@@ -265,7 +265,7 @@ resources/js/
 ├── Components/
 │   ├── Home/              # CinematicEarthScene, LiveSkyDashboard
 │   ├── ApproachObservatory/ # DailyOrbitalRadar, DailyOrbitalRadar3D, panels
-│   ├── SmallBodies/       # Orbital elements, approach timelines
+│   ├── Dossie/            # Orbital elements, approach timelines
 │   ├── Nasa/              # EarthGlobe, reusable NASA components
 │   └── Charts/            # Recharts wrappers
 ├── hooks/                 # Custom React hooks

@@ -4,21 +4,21 @@ import { ComponentType, lazy, Suspense } from 'react';
 import { AppLayout } from '@/Components/AppLayout';
 import { EmptyState } from '@/Components/EmptyState';
 import { ErrorMessage } from '@/Components/ErrorMessage';
-import { AsteroidUsefulSummary } from '@/Components/SmallBodies/AsteroidUsefulSummary';
-import { EmptyScientificData } from '@/Components/SmallBodies/EmptyScientificData';
-import { InteractiveApproachTimeline } from '@/Components/SmallBodies/InteractiveApproachTimeline';
-import { ObjectDistanceComparison } from '@/Components/SmallBodies/ObjectDistanceComparison';
-import { OrbitalDossierHeader } from '@/Components/SmallBodies/OrbitalDossierHeader';
-import { OrbitalElementsVisualGrid } from '@/Components/SmallBodies/OrbitalElementsVisualGrid';
-import { PhysicalDataVisualCards } from '@/Components/SmallBodies/PhysicalDataVisualCards';
-import { SimplifiedApproachDiagram } from '@/Components/SmallBodies/SimplifiedApproachDiagram';
-import { VelocityIndicator } from '@/Components/SmallBodies/VelocityIndicator';
+import { AsteroidUsefulSummary } from '@/Components/Dossie/AsteroidUsefulSummary';
+import { EmptyScientificData } from '@/Components/Dossie/EmptyScientificData';
+import { InteractiveApproachTimeline } from '@/Components/Dossie/InteractiveApproachTimeline';
+import { ObjectDistanceComparison } from '@/Components/Dossie/ObjectDistanceComparison';
+import { OrbitalDossierHeader } from '@/Components/Dossie/OrbitalDossierHeader';
+import { OrbitalElementsVisualGrid } from '@/Components/Dossie/OrbitalElementsVisualGrid';
+import { PhysicalDataVisualCards } from '@/Components/Dossie/PhysicalDataVisualCards';
+import { SimplifiedApproachDiagram } from '@/Components/Dossie/SimplifiedApproachDiagram';
+import { VelocityIndicator } from '@/Components/Dossie/VelocityIndicator';
 import { useTranslation } from '@/i18n';
 import { compactKm, formatNumber, lunarDistanceFromKm, lunarDistanceLabel } from '@/lib/format';
 import { PageProps, SmallBody, SmallBodyCloseApproach } from '@/types';
 
 const AsteroidScaleComparison = lazy(() =>
-    import('@/Components/SmallBodies/AsteroidScaleComparison').then((module) => ({ default: module.AsteroidScaleComparison })),
+    import('@/Components/Dossie/AsteroidScaleComparison').then((module) => ({ default: module.AsteroidScaleComparison })),
 );
 
 type Props = PageProps<{

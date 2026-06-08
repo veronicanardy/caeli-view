@@ -5,14 +5,14 @@ import { AppLayout } from '@/Components/AppLayout';
 import { EmptyState } from '@/Components/EmptyState';
 import { ErrorMessage } from '@/Components/ErrorMessage';
 import { PageHeader } from '@/Components/PageHeader';
-import { ApproachVisualMap } from '@/Components/SmallBodies/ApproachVisualMap';
+import { ApproachVisualMap } from '@/Components/Dossie/ApproachVisualMap';
 
 const ApproachOverviewCharts = lazy(() =>
-    import('@/Components/SmallBodies/ApproachOverviewCharts').then((m) => ({ default: m.ApproachOverviewCharts })),
+    import('@/Components/Dossie/ApproachOverviewCharts').then((m) => ({ default: m.ApproachOverviewCharts })),
 );
-import { CloseApproachCard } from '@/Components/SmallBodies/CloseApproachCard';
-import { CloseApproachTable } from '@/Components/SmallBodies/CloseApproachTable';
-import { SmallBodySummaryCards } from '@/Components/SmallBodies/SmallBodySummaryCards';
+import { CloseApproachCard } from '@/Components/Dossie/CloseApproachCard';
+import { CloseApproachTable } from '@/Components/Dossie/CloseApproachTable';
+import { SmallBodySummaryCards } from '@/Components/Dossie/SmallBodySummaryCards';
 import { JplApproachCharts, JplApproachSummary, JplCloseApproach, JplCloseApproachFilters, PageProps } from '@/types';
 
 type Props = PageProps<{
