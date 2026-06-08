@@ -21,6 +21,20 @@ import { BodyImagePreview } from './BodyImagePreview';
 
 type Tab = 'summary' | 'physical' | 'approach' | 'history';
 
+const TAB_LABELS_PT: Record<Tab, string> = {
+    summary: 'Resumo',
+    physical: 'Físico',
+    approach: 'Aproximação',
+    history: 'História',
+};
+
+const TAB_LABELS_EN: Record<Tab, string> = {
+    summary: 'Summary',
+    physical: 'Physical',
+    approach: 'Approach',
+    history: 'History',
+};
+
 // ─── Props discriminadas ───────────────────────────────────────────────────────
 
 type AsteroidProps = {
@@ -138,6 +152,7 @@ function AsteroidCard({
     const risk = riskAssessment(a, en);
     const summary = humanSummary(object, en);
     const trajectoryStatus = trajectoryStatusBadge(object.trajectory, en);
+    const velocity = a.relativeVelocityKph ?? object.trajectory?.currentVelocityKph ?? null;
 
     const typeInfo = objectTypeEyebrow(a.objectType, en);
     const eyebrowText = orbitMode
@@ -158,12 +173,7 @@ function AsteroidCard({
     ) : undefined;
 
     const tabs: Tab[] = ['summary', 'physical', 'approach'];
-    const tabLabels: Record<Tab, string> = {
-        summary: en ? 'Summary' : 'Resumo',
-        physical: en ? 'Physical' : 'Físico',
-        approach: en ? 'Approach' : 'Aproximação',
-        history: en ? 'History' : 'História',
-    };
+    const tabLabels = en ? TAB_LABELS_EN : TAB_LABELS_PT;
 
     return (
         <PanelShell
@@ -261,15 +271,12 @@ function AsteroidCard({
 
                     {tab === 'approach' ? (
                         <dl className="space-y-2.5 text-[13px]">
-                            {(() => {
-                                const v = a.relativeVelocityKph ?? object.trajectory?.currentVelocityKph ?? null;
-                                return v != null ? (
-                                    <Row label={en ? 'Velocity' : 'Velocidade'}>
-                                        {new Intl.NumberFormat(locale).format(Math.round(v))} km/h
-                                        {a.relativeVelocityKph == null ? <span className="text-white/45"> · {en ? 'from vectors' : 'dos vetores'}</span> : null}
-                                    </Row>
-                                ) : null;
-                            })()}
+                            {velocity != null ? (
+                                <Row label={en ? 'Velocity' : 'Velocidade'}>
+                                    {new Intl.NumberFormat(locale).format(Math.round(velocity))} km/h
+                                    {a.relativeVelocityKph == null ? <span className="text-white/45"> · {en ? 'from vectors' : 'dos vetores'}</span> : null}
+                                </Row>
+                            ) : null}
                             {a.approachDate ? (
                                 <Row label={en ? 'Closest approach' : 'Máxima aproximação'}>
                                     {formatTimestamp(a.approachDate, locale)}
@@ -337,18 +344,14 @@ function BodyCard({
 }: Omit<BodyProps, 'kind'> & TabState) {
     const cfg = BODIES[body];
 
-    const val = (raw: string) => {
+    // Fatos de corpo celeste armazenam PT e EN na mesma string separados por " / ".
+    const localizedFact = (raw: string) => {
         const parts = raw.split(' / ');
         return en ? (parts[1] ?? parts[0]) : parts[0];
     };
 
     const tabs: Tab[] = ['summary', 'physical', 'history'];
-    const tabLabels: Record<Tab, string> = {
-        summary: en ? 'Summary' : 'Resumo',
-        physical: en ? 'Physical' : 'Físico',
-        approach: en ? 'Approach' : 'Aproximação',
-        history: en ? 'History' : 'História',
-    };
+    const tabLabels = en ? TAB_LABELS_EN : TAB_LABELS_PT;
 
     const PHYSICAL_ORDER = ['Diameter', 'Temperature (avg.)', 'Temperature (surf.)', 'Distance from Sun', 'Distance from Earth', 'Orbital period', 'Rotation period', 'Rotation', 'Natural satellites', 'Phases', 'Spectral type'];
     const physicalFacts = PHYSICAL_ORDER.flatMap((key) => cfg.facts.filter((f) => f.labelEn === key));
@@ -391,7 +394,7 @@ function BodyCard({
                             <dl className="space-y-2.5 text-[13px]">
                                 {cfg.facts.slice(0, 2).map((fact) => (
                                     <Row key={fact.labelEn} label={en ? fact.labelEn : fact.labelPt}>
-                                        <span className="font-semibold text-white">{val(fact.value)}</span>
+                                        <span className="font-semibold text-white">{localizedFact(fact.value)}</span>
                                     </Row>
                                 ))}
                             </dl>
@@ -402,7 +405,7 @@ function BodyCard({
                         <dl className="space-y-2.5 text-[13px]">
                             {physicalFacts.map((fact) => (
                                 <Row key={fact.labelEn} label={en ? fact.labelEn : fact.labelPt}>
-                                    <span className="font-semibold text-white">{val(fact.value)}</span>
+                                    <span className="font-semibold text-white">{localizedFact(fact.value)}</span>
                                 </Row>
                             ))}
                         </dl>

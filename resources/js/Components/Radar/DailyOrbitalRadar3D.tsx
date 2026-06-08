@@ -115,7 +115,6 @@ export function DailyOrbitalRadar3D({
         focusPlanet,
         focusSun,
         orbitMode,
-        pickView,
         planetFocusTargets,
         resetView,
         selectObject,
@@ -137,8 +136,6 @@ export function DailyOrbitalRadar3D({
         setPlanetsOpen,
         triggerTransition,
     });
-    const view = cameraIntent.view;
-
     // Enquadramento derivado da intenção explícita de seleção/foco, sem reiniciar a câmera a cada tick de efeméride.
     const focusTarget = useSelectionFocusFraming(
         focusedObject,
