@@ -71,20 +71,24 @@ export function Earth({
     const matRef = useRef<THREE.ShaderMaterial>(null);
     const [hovered, setHovered] = useState(false);
 
-    // Os materiais nascem uma vez por textura; sunDir é sincronizado depois por efeito.
+    // Os materiais nascem com o sunDir já correto (fallback do servidor) para evitar
+    // o flash de iluminação errada nos primeiros segundos antes da efeméride resolver.
+    // sunDirection não entra nas deps do useMemo — o valor inicial já é suficiente;
+    // atualizações subsequentes são tratadas pelo useEffect abaixo.
     const cloudsMaterial = useMemo(() => {
         if (!clouds) return null;
 
         return new THREE.ShaderMaterial({
             uniforms: {
                 cloudMap: { value: clouds },
-                sunDir: { value: INITIAL_SUN_DIR.clone() },
+                sunDir: { value: new THREE.Vector3(...sunDirection) },
             },
             vertexShader: EARTH_VERT,
             fragmentShader: CLOUDS_FRAG,
             transparent: true,
             depthWrite: CLOUD_MATERIAL_DEPTH_WRITE,
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [clouds]);
 
     // Dia/noite usa shader próprio da Terra, então este material permanece isolado.
@@ -95,11 +99,12 @@ export function Earth({
             uniforms: {
                 dayMap: { value: day },
                 nightMap: { value: night },
-                sunDir: { value: INITIAL_SUN_DIR.clone() },
+                sunDir: { value: new THREE.Vector3(...sunDirection) },
             },
             vertexShader: EARTH_VERT,
             fragmentShader: EARTH_FRAG,
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [day, night]);
 
     useEffect(() => {
@@ -115,19 +120,21 @@ export function Earth({
     }, [cloudsMaterial]);
 
     // A orientação real e os uniforms solares são atualizados juntos para manter coerência visual.
+    // Atualiza o material diretamente (além da ref) para cobrir o caso em que o useEffect
+    // dispara antes de o <primitive ref={matRef}> ter montado.
     useEffect(() => {
         if (groupRef.current) {
             orientEarth(groupRef.current, sunDirection, subsolarLatDeg, subsolarLonDeg);
         }
 
-        if (matRef.current) {
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).set(...sunDirection);
+        const sunVec = sunDirection;
+        if (material) {
+            (material.uniforms.sunDir.value as THREE.Vector3).set(...sunVec);
         }
-
-        if (cloudsMatRef.current) {
-            (cloudsMatRef.current.uniforms.sunDir.value as THREE.Vector3).set(...sunDirection);
+        if (cloudsMaterial) {
+            (cloudsMaterial.uniforms.sunDir.value as THREE.Vector3).set(...sunVec);
         }
-    }, [subsolarLatDeg, subsolarLonDeg, sunDirection]);
+    }, [subsolarLatDeg, subsolarLonDeg, sunDirection, material, cloudsMaterial]);
 
     return (
         <group>
