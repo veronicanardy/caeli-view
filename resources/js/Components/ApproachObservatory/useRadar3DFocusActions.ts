@@ -142,7 +142,13 @@ export function useRadar3DFocusActions({
             setSunFocusTarget(null);
             collapseNavigationForMobile();
             if (pos) {
-                setPlanetFocusTargets({ [id]: framingForBody(new THREE.Vector3(...pos), cfg.framingRadius) });
+                // Câmera do lado iluminado: fica entre o Sol (origem) e o planeta.
+                // planetToSun = normalize(0 - planetPos) = normalize(-planetPos).
+                const planetVec = new THREE.Vector3(...pos);
+                const planetToSun = planetVec.clone().negate().normalize();
+                // Leve elevação para evitar enquadramento raso no plano eclíptico.
+                planetToSun.add(new THREE.Vector3(0, 0.25, 0)).normalize();
+                setPlanetFocusTargets({ [id]: framingForBody(planetVec, cfg.framingRadius, planetToSun) });
             } else {
                 setPlanetFocusTargets({});
             }

@@ -48,12 +48,17 @@ export function useBodyFocus({
             : new THREE.Vector3(...moonPos);
         const radius = body === 'earth' ? EARTH_RADIUS_DL : MOON_RADIUS_DL;
 
-        // Ao focar a Terra, posiciona a câmera do lado iluminado (lado do Sol).
-        // sunDir é Terra→Sol; a câmera fica nessa direção em relação ao centro da Terra,
-        // com leve elevação para evitar que o Sol apareça em choque direto com o enquadramento.
+        // Ao focar a Terra, câmera fica do lado iluminado (sunDir = Terra→Sol).
+        // Ao focar a Lua, câmera fica do lado voltado para a Terra (moonToEarth).
+        // Leve elevação em Y evita enquadramento raso no plano eclíptico.
         let preferredDir: THREE.Vector3 | undefined;
         if (body === 'earth' && sunDir) {
             preferredDir = new THREE.Vector3(...sunDir).add(new THREE.Vector3(0, 0.35, 0)).normalize();
+        } else if (body === 'moon') {
+            const moonToEarth = new THREE.Vector3(...earthPos).sub(new THREE.Vector3(...moonPos));
+            if (moonToEarth.lengthSq() > 0) {
+                preferredDir = moonToEarth.normalize().add(new THREE.Vector3(0, 0.25, 0)).normalize();
+            }
         }
 
         setBodyFocus({
