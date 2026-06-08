@@ -1,8 +1,8 @@
 import { Head } from '@inertiajs/react';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/Components/AppLayout';
-import { CompactConsoleBar } from '@/Components/ApproachObservatory/Controls/CompactConsoleBar';
-import { RadarDataQualityCard } from '@/Components/ApproachObservatory/Panels/RadarDataQualityCard';
+import { CompactConsoleBar } from '@/Components/Radar/Controls/CompactConsoleBar';
+import { RadarDataQualityCard } from '@/Components/Radar/Panels/RadarDataQualityCard';
 import { ErrorMessage } from '@/Components/ErrorMessage';
 import { buildRadarObjects } from '@/lib/radarData';
 import { useTranslation } from '@/i18n';
@@ -19,7 +19,7 @@ import {
 } from '@/types';
 
 const DailyOrbitalRadar3D = lazy(() =>
-    import('@/Components/ApproachObservatory/DailyOrbitalRadar3D').then((module) => ({ default: module.DailyOrbitalRadar3D })),
+    import('@/Components/Radar/DailyOrbitalRadar3D').then((module) => ({ default: module.DailyOrbitalRadar3D })),
 );
 
 type ObservatoryData = {
