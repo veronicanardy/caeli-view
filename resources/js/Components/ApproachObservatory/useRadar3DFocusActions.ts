@@ -82,9 +82,10 @@ export function useRadar3DFocusActions({
         setDismissedFocusObjectId(null);
         setBodyCardOpen(null);
         clearPlanetTargets();
+        collapseNavigationForMobile();
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
         onSelect(approach);
-    }, [clearPlanetTargets, closestNowObjects, onSelect, orbitMode]);
+    }, [clearPlanetTargets, closestNowObjects, collapseNavigationForMobile, onSelect, orbitMode]);
 
     const showOrbit = useCallback(() => triggerTransition(() => {
         setOrbitMode(true);
@@ -155,7 +156,9 @@ export function useRadar3DFocusActions({
             setBodyCardOpen('sun');
             clearPlanetTargets();
             collapseNavigationForMobile();
-            setSunFocusTarget(framingForBody(new THREE.Vector3(0, 0, 0), 0.5));
+            // No mobile, recua mais para que o Sol não domine a composição.
+            const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
+            setSunFocusTarget(framingForBody(new THREE.Vector3(0, 0, 0), 0.5, undefined, isMobile ? 30 : 20));
         });
     }, [clearPlanetTargets, collapseNavigationForMobile, onClearSelection, withOrbitExit]);
 

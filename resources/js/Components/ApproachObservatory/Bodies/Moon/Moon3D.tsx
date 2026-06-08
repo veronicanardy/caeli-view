@@ -91,9 +91,11 @@ export function Moon3D({ sizePx = 56, autoRotate = true, autoRotateSpeed = 0.08,
             resize();
 
             let frame = 0;
-            const clock = new THREE.Clock();
+            // THREE.Timer é o substituto moderno de THREE.Clock (depreciado em Three.js ≥0.160).
+            const timer = new THREE.Timer();
             const animate = () => {
-                const delta = clock.getDelta();
+                timer.update();
+                const delta = timer.getDelta();
                 if (autoRotate && !reducedMotion) {
                     moon.rotation.y += delta * autoRotateSpeed;
                 }

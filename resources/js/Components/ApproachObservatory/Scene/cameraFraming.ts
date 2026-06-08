@@ -26,13 +26,23 @@ export type FocusFraming = {
 };
 
 /**
- * Monta um enquadramento de câmera centrado em um corpo celeste (Terra ou Lua) na posição de
- * cena `center` com raio visual `radius`. Usado pelo atalho de clique na Terra/Lua. Recua ao
- * longo de um ângulo 3/4 suave longe o suficiente para ver o corpo confortavelmente sem cortá-lo.
+ * Monta um enquadramento de câmera centrado em um corpo celeste na posição de cena `center`
+ * com raio visual `radius`. Aceita:
+ * - `preferredDir`: direção preferencial de câmera (ex: Terra→Sol para focar o lado diurno).
+ * - `distanceMultiplier`: substitui o multiplicador padrão (20×) — útil para afastar mais
+ *   a câmera de corpos que dominam demais o campo de visão (ex: Sol no mobile).
  */
-export function framingForBody(center: THREE.Vector3, radius: number): FocusFraming {
-    const dir = new THREE.Vector3(0.4, 0.45, 0.8).normalize();
-    const distance = Math.max(radius * 20, 0.2);
+export function framingForBody(
+    center: THREE.Vector3,
+    radius: number,
+    preferredDir?: THREE.Vector3,
+    distanceMultiplier?: number,
+): FocusFraming {
+    const dir = preferredDir
+        ? preferredDir.clone().normalize()
+        : new THREE.Vector3(0.4, 0.45, 0.8).normalize();
+    const multiplier = distanceMultiplier ?? 20;
+    const distance = Math.max(radius * multiplier, 0.2);
     return { target: center.clone(), position: center.clone().add(dir.multiplyScalar(distance)), transition: 'default' };
 }
 

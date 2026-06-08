@@ -44,9 +44,7 @@ export const MERCURY_FRAG = /* glsl */ `
 
         float lambert = dot(normal, sun);
 
-        // Terminador suavizado: -0.08 a +0.20 (transição mais estreita que a Terra —
-        // sem atmosfera, a sombra é mais abrupta na realidade).
-        float dayAmount = smoothstep(-0.08, 0.20, lambert);
+        float dayAmount = smoothstep(-0.10, 0.42, lambert);
 
         vec3 surfaceColor = texture2D(surfaceMap, vUv).rgb;
 

@@ -49,8 +49,7 @@ export const SATURN_FRAG = /* glsl */ `
 
         float lambert = dot(normal, sun);
 
-        // Atmosfera densa de H₂/He → terminador suavizado, similar a Júpiter.
-        float dayAmount = smoothstep(-0.08, 0.26, lambert);
+        float dayAmount = smoothstep(-0.10, 0.42, lambert);
 
         vec3 surfColor = texture2D(surfaceMap, vUv).rgb;
 

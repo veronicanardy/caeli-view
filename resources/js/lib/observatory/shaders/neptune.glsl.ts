@@ -51,9 +51,7 @@ export const NEPTUNE_FRAG = /* glsl */ `
 
         float lambert = dot(normal, sun);
 
-        // Atmosfera espessa de H₂/He/CH₄ → terminador suavizado.
-        // Transição ligeiramente mais ampla que Urano — ventos vigorosos redistribuem calor.
-        float dayAmount = smoothstep(-0.12, 0.32, lambert);
+        float dayAmount = smoothstep(-0.10, 0.42, lambert);
 
         vec3 surfColor = texture2D(surfaceMap, vUv).rgb;
 

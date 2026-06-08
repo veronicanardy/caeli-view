@@ -49,8 +49,7 @@ export const JUPITER_FRAG = /* glsl */ `
 
         float lambert = dot(normal, sun);
 
-        // Atmosfera densa de H₂/He → terminador levemente suavizado, mais amplo que Marte.
-        float dayAmount = smoothstep(-0.10, 0.28, lambert);
+        float dayAmount = smoothstep(-0.10, 0.42, lambert);
 
         vec3 surfColor = texture2D(surfaceMap, vUv).rgb;
 

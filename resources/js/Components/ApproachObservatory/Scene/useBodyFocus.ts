@@ -20,6 +20,8 @@ type UseBodyFocusArgs = {
     focusTarget: FocusFraming | null;
     earthPos: SceneVector;
     moonPos: SceneVector;
+    /** Vetor Terra→Sol unitário — usado para enquadrar a Terra pelo lado iluminado. */
+    sunDir?: [number, number, number];
 };
 
 type UseBodyFocusResult = {
@@ -33,6 +35,7 @@ export function useBodyFocus({
     focusTarget,
     earthPos,
     moonPos,
+    sunDir,
 }: UseBodyFocusArgs): UseBodyFocusResult {
     const [bodyFocus, setBodyFocus] = useState<BodyFocus | null>(null);
 
@@ -45,9 +48,17 @@ export function useBodyFocus({
             : new THREE.Vector3(...moonPos);
         const radius = body === 'earth' ? EARTH_RADIUS_DL : MOON_RADIUS_DL;
 
+        // Ao focar a Terra, posiciona a câmera do lado iluminado (lado do Sol).
+        // sunDir é Terra→Sol; a câmera fica nessa direção em relação ao centro da Terra,
+        // com leve elevação para evitar que o Sol apareça em choque direto com o enquadramento.
+        let preferredDir: THREE.Vector3 | undefined;
+        if (body === 'earth' && sunDir) {
+            preferredDir = new THREE.Vector3(...sunDir).add(new THREE.Vector3(0, 0.35, 0)).normalize();
+        }
+
         setBodyFocus({
             body,
-            framing: framingForBody(center, radius),
+            framing: framingForBody(center, radius, preferredDir),
             nonce: cameraIntent.nonce,
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps

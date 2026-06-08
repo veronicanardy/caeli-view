@@ -26,10 +26,13 @@ import { useBodyTexture } from '../useBodyTexture';
 const CLOUD_LAYER_SCALE = 1.012;
 const ATMOSPHERE_OUTER_SCALE = 1.06;
 const ATMOSPHERE_INNER_SCALE = 1.18;
-const ATMOSPHERE_OUTER_OPACITY = 0.16;
-const ATMOSPHERE_INNER_OPACITY = 0.06;
+const ATMOSPHERE_RIM_SCALE = 1.28;
+const ATMOSPHERE_OUTER_OPACITY = 0.22;
+const ATMOSPHERE_INNER_OPACITY = 0.09;
+const ATMOSPHERE_RIM_OPACITY = 0.055;
 const ATMOSPHERE_OUTER_COLOR = '#6fd0ff';
 const ATMOSPHERE_INNER_COLOR = '#3aa0ff';
+const ATMOSPHERE_RIM_COLOR = '#4a9fff';
 const ATMOSPHERE_SIDES = THREE.BackSide;
 const CLOUD_MATERIAL_DEPTH_WRITE = false;
 const EARTH_SPHERE_SEGMENTS = 64;
@@ -169,6 +172,19 @@ export function Earth({
                     transparent
                     opacity={ATMOSPHERE_INNER_OPACITY}
                     side={ATMOSPHERE_SIDES}
+                />
+            </mesh>
+
+            {/* Rim glow: halo muito sutil que contorna o globo mesmo no lado noturno,
+                preservando o realismo ao dar apenas leitura visual do contorno. */}
+            <mesh>
+                <sphereGeometry args={[EARTH_RADIUS_DL * ATMOSPHERE_RIM_SCALE, ATMOSPHERE_SPHERE_SEGMENTS, ATMOSPHERE_SPHERE_SEGMENTS]} />
+                <meshBasicMaterial
+                    color={ATMOSPHERE_RIM_COLOR}
+                    transparent
+                    opacity={ATMOSPHERE_RIM_OPACITY}
+                    side={ATMOSPHERE_SIDES}
+                    depthWrite={false}
                 />
             </mesh>
 

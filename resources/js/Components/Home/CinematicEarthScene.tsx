@@ -590,16 +590,18 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
             window.addEventListener('pointermove', onPointerMove, { passive: true });
 
             // ── Animation loop ───────────────────────────────────────────────
-            const clock = new THREE.Clock();
+            const timer = new THREE.Timer();
             const animate = () => {
-                const delta = clock.getDelta();
+                timer.update();
+                const delta = timer.getDelta();
+                const elapsed = timer.getElapsed();
                 earthGroup.position.set(0, 0, 0);
 
                 if (!reducedMotion) {
                     surfaceGroup.rotation.y += delta * 0.044;
                     if (!EARTH_DEBUG_MINIMAL && clouds) {
                         clouds.rotation.y += delta * 0.038;
-                        clouds.rotation.x = Math.sin(clock.elapsedTime * 0.04) * 0.01;
+                        clouds.rotation.x = Math.sin(elapsed * 0.04) * 0.01;
                         // Pass the cloud/surface rotation delta to the surface shader so
                         // shadows track the actual cloud positions as they rotate.
                         const surfaceRotY = surfaceGroup.rotation.y;
@@ -609,13 +611,13 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                     }
                     // Wind animation on the ocean sheen
                     if (!EARTH_DEBUG_MINIMAL && oceanSheen) {
-                        oceanSheen.material.uniforms.uTime.value = clock.elapsedTime;
+                        oceanSheen.material.uniforms.uTime.value = elapsed;
                     }
                     earthGroup.rotation.x += ((mouse.y * 0.025) - earthGroup.rotation.x) * 0.03;
                     earthGroup.rotation.z += ((-mouse.x * 0.02) - earthGroup.rotation.z) * 0.03;
 
                     // Cinematic camera drift: slow zoom + minute lateral float
-                    const t = clock.elapsedTime;
+                    const t = elapsed;
                     camera.position.z = CAMERA_BASE_Z + Math.sin(t * 0.18) * 0.05;
                     camera.position.x = Math.sin(t * 0.11) * 0.018;
                     camera.position.y = Math.cos(t * 0.09) * 0.012;

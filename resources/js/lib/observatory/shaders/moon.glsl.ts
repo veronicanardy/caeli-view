@@ -36,7 +36,7 @@ export const MOON_FRAG = /* glsl */ `
 
         float lambert = dot(normal, sun);
         float lit = clamp(lambert, 0.0, 1.0);
-        float dayAmount = smoothstep(-0.015, 0.03, lambert);
+        float dayAmount = smoothstep(-0.10, 0.42, lambert);
         vec3 dayColor = albedo * (0.05 + 1.22 * pow(lit, 0.9));
 
         float earthFacing = max(dot(normal, earth), 0.0);

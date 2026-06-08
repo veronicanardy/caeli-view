@@ -50,8 +50,7 @@ export const URANUS_FRAG = /* glsl */ `
 
         float lambert = dot(normal, sun);
 
-        // Atmosfera espessa de H₂/He/CH₄ → terminador suavizado.
-        float dayAmount = smoothstep(-0.10, 0.30, lambert);
+        float dayAmount = smoothstep(-0.10, 0.42, lambert);
 
         vec3 surfColor = texture2D(surfaceMap, vUv).rgb;
 

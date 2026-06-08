@@ -36,6 +36,7 @@ export function CameraRig({
     earthPos,
     sunDir,
     panelBiasX = 0,
+    panelBiasY = 0,
 }: {
     view: CameraViewKey;
     viewNonce: number;
@@ -46,6 +47,8 @@ export function CameraRig({
     sunDir: [number, number, number];
     /** Fração [0..1] da largura do canvas coberta pelo painel lateral. Desloca o foco para o centro da área útil. */
     panelBiasX?: number;
+    /** Fração [0..1] da altura do canvas coberta pela UI inferior (bottom sheet). Empurra o foco para a área livre acima. */
+    panelBiasY?: number;
 }) {
     const camera = useThree((s) => s.camera);
     const controls = useThree((s) => s.controls) as unknown as Controls | null;
@@ -135,14 +138,29 @@ export function CameraRig({
         // biasNDC = fração do canvas coberta pelo painel → o centro útil está deslocado para
         // a direita em biasNDC/2 da tela. Compensamos movendo o target na direção -right da câmera.
         let desiredTarget = ed.target;
-        if (panelBiasX > 0.01 && focusTarget) {
+        if ((panelBiasX > 0.01 || panelBiasY > 0.01) && focusTarget) {
             const distance = fc.position.distanceTo(ed.target);
             const halfFovRad = THREE.MathUtils.degToRad(CAMERA_FOV_DEG / 2);
-            const right = new THREE.Vector3().setFromMatrixColumn(fc.matrixWorld, 0).normalize();
-            // panelBiasX é a fração coberta pelo painel; o centro útil está deslocado para a direita
-            // em panelBiasX/2 do total — então compensamos movendo o target para a esquerda.
-            const worldOffset = Math.tan(halfFovRad) * distance * panelBiasX * 0.5;
-            desiredTarget = ed.target.clone().addScaledVector(right, -worldOffset);
+            desiredTarget = ed.target.clone();
+
+            if (panelBiasX > 0.01) {
+                const right = new THREE.Vector3().setFromMatrixColumn(fc.matrixWorld, 0).normalize();
+                // panelBiasX é a fração coberta pelo painel; o centro útil está deslocado para a direita
+                // em panelBiasX/2 do total — então compensamos movendo o target para a esquerda.
+                const worldOffsetX = Math.tan(halfFovRad) * distance * panelBiasX * 0.5;
+                desiredTarget.addScaledVector(right, -worldOffsetX);
+            }
+
+            if (panelBiasY > 0.01) {
+                // panelBiasY é a fração da altura coberta pela UI inferior (bottom sheet).
+                // O FOV vertical é o ângulo real; compensamos movendo o target para cima.
+                const aspectRatio = fc instanceof THREE.PerspectiveCamera ? (fc as THREE.PerspectiveCamera).aspect : 1;
+                const halfFovVertRad = Math.atan(Math.tan(halfFovRad) / Math.max(0.01, aspectRatio));
+                const up = new THREE.Vector3().setFromMatrixColumn(fc.matrixWorld, 1).normalize();
+                // 0.38 em vez de 0.5: empurra menos para cima, objeto fica mais naturalmente centralizado na área livre.
+                const worldOffsetY = Math.tan(halfFovVertRad) * distance * panelBiasY * 0.38;
+                desiredTarget.addScaledVector(up, -worldOffsetY);
+            }
         }
 
         /* Lerp com ease-out suave: fator baixo para movimento fluido, desacelera naturalmente

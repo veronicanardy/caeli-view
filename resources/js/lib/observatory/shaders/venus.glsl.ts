@@ -43,9 +43,7 @@ export const VENUS_FRAG = /* glsl */ `
 
         float lambert = dot(normal, sun);
 
-        // Terminador mais suave que Mercúrio: a atmosfera densa de Vênus difunde a luz
-        // pelo lado noturno, alargando a transição dia/noite.
-        float dayAmount = smoothstep(-0.25, 0.35, lambert);
+        float dayAmount = smoothstep(-0.10, 0.42, lambert);
 
         // Superfície base (rocha/topografia) coberta pela camada de nuvens/atmosfera.
         vec3 surfaceColor = texture2D(surfaceMap, vUv).rgb;

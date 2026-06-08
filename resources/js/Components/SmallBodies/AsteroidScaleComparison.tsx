@@ -220,9 +220,10 @@ function AsteroidCanvas({ size }: { size: number }) {
             resize();
 
             let frame = 0;
-            const clock = new THREE.Clock();
+            const timer = new THREE.Timer();
             const animate = () => {
-                const delta = clock.getDelta();
+                timer.update();
+                const delta = timer.getDelta();
 
                 if (!reducedMotion) {
                     asteroid.rotation.y += delta * 0.16;
