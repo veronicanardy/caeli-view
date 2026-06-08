@@ -2,7 +2,7 @@
 
 ## Responsabilidade
 
-`Overlays` concentra camadas visuais sobrepostas do `ApproachObservatory`. Aqui ficam labels HTML da cena 3D, guias visuais 3D e pequenos helpers de apresentação ligados a elementos sobrepostos.
+`Overlays` concentra camadas visuais sobrepostas do `Radar`. Aqui ficam labels HTML da cena 3D, guias visuais 3D e pequenos helpers de apresentação ligados a elementos sobrepostos.
 
 ## O Que Pode Conter
 

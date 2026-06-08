@@ -2,7 +2,7 @@
 
 ## Responsabilidade
 
-`Panels` contém painéis, cards, overlays laterais e controles visuais usados pelo `ApproachObservatory`.
+`Panels` contém painéis, cards, overlays laterais e controles visuais usados pelo `Radar`.
 
 Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de radar 3D, trajetória, seleção e interpretação.
 

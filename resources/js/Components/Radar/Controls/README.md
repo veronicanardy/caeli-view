@@ -1,6 +1,6 @@
 # Controls
 
-Esta pasta concentra os componentes de controle e UX do `ApproachObservatory`.
+Esta pasta concentra os componentes de controle e UX do `Radar`.
 
 O objetivo aqui é organizar a interface que permite ao usuário:
 

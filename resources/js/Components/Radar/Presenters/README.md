@@ -2,7 +2,7 @@
 
 ## Responsabilidade
 
-`Presenters` reúne componentes pequenos e reutilizáveis de apresentação visual do `ApproachObservatory`. Eles recebem dados já resolvidos por outras camadas e os organizam em badges, réguas e elementos visuais leves.
+`Presenters` reúne componentes pequenos e reutilizáveis de apresentação visual do `Radar`. Eles recebem dados já resolvidos por outras camadas e os organizam em badges, réguas e elementos visuais leves.
 
 ## O Que Pode Conter
 

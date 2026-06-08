@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { velocityPercent } from '@/Components/ApproachObservatory/Charts/VelocityIndicator';
+import { velocityPercent } from '@/Components/Radar/Charts/VelocityIndicator';
 
 describe('velocityPercent', () => {
     it('retorna zero para null e undefined', () => {

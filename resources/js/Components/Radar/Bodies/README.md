@@ -1,6 +1,6 @@
 # Bodies
 
-Esta pasta concentra apenas os corpos visuais da cena 3D do `ApproachObservatory`.
+Esta pasta concentra apenas os corpos visuais da cena 3D do `Radar`.
 
 Ela não deve decidir seleção global, modo de câmera, critérios de lista, ranking ou cálculo orbital. Essas decisões ficam nas camadas de cena, trajetória, efemérides e painéis.
 
@@ -107,4 +107,4 @@ Sempre que a cena precisar de orientação física mais rigorosa, o cálculo dev
 
 ## Testes relacionados
 
-Os contratos matemáticos e geométricos que sustentam `Bodies` e seus helpers são protegidos principalmente pela suíte em `tests/js/observatory/`.
+Os contratos matemáticos e geométricos que sustentam `Bodies` e seus helpers são protegidos principalmente pela suíte em `tests/js/Radar/`.

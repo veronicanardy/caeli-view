@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {
     buildMoonOrbitPoints,
     buildOrbitBasis,
-} from '@/Components/ApproachObservatory/Bodies/Moon/MoonOrbit';
+} from '@/Components/Radar/Bodies/Moon/MoonOrbit';
 
 /**
  * Estes testes cobrem apenas a matemática da órbita lunar em espaço de cena.

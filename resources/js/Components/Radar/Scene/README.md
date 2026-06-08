@@ -2,7 +2,7 @@
 
 ## Responsabilidade
 
-`Scene` compõe a visualização 3D do `ApproachObservatory`. Esta camada recebe dados já calculados, adapta posições para coordenadas de cena e monta Canvas, câmera, corpos, planetas, trajetórias, labels e controles.
+`Scene` compõe a visualização 3D do `Radar`. Esta camada recebe dados já calculados, adapta posições para coordenadas de cena e monta Canvas, câmera, corpos, planetas, trajetórias, labels e controles.
 
 ## O que pode conter
 

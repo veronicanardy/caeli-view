@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {
     buildAsteroidGeometry,
     sphericalDirection,
-} from '@/Components/ApproachObservatory/Bodies/Asteroid/asteroidProcedural';
+} from '@/Components/Radar/Bodies/Asteroid/asteroidProcedural';
 
 /**
  * Lê o buffer de posições para comparar geometria gerada de forma determinística.

@@ -2,7 +2,7 @@
 
 ## Responsabilidade
 
-Renderizar trajetórias visuais, linhas heliocêntricas, marcadores e cone de direção a partir de dados já calculados por outras camadas do `ApproachObservatory`.
+Renderizar trajetórias visuais, linhas heliocêntricas, marcadores e cone de direção a partir de dados já calculados por outras camadas do `Radar`.
 
 ## O que pode conter
 

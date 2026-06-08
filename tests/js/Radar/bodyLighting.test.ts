@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { directionFromBodyToSceneSun } from '@/Components/ApproachObservatory/Bodies/bodyLighting';
+import { directionFromBodyToSceneSun } from '@/Components/Radar/Bodies/bodyLighting';
 
 /**
  * `bodyLighting` é um helper geométrico puro: os testes abaixo validam

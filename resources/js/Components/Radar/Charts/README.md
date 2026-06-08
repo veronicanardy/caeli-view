@@ -1,6 +1,6 @@
 # Charts
 
-Esta pasta concentra apenas os componentes visuais de gráficos e linha do tempo do `ApproachObservatory`.
+Esta pasta concentra apenas os componentes visuais de gráficos e linha do tempo do `Radar`.
 
 Ela não deve calcular efemérides, ranking global, seleção de objetos, reconciliação de dados de CAD/SBDB/Horizons nem lógica pesada de domínio. Essas decisões e transformações devem continuar nas camadas de `lib`, formatadores e helpers específicos do observatório.
 
@@ -75,6 +75,6 @@ Os testes desta pasta devem continuar enxutos e focados em comportamento puro.
 
 Hoje, o principal contrato unitário associado a `Charts` é:
 
-* `tests/js/observatory/velocityIndicator.test.ts`: protege o helper `velocityPercent` contra entradas inválidas e regressões no percentual visual.
+* `tests/js/Radar/velocityIndicator.test.ts`: protege o helper `velocityPercent` contra entradas inválidas e regressões no percentual visual.
 
 Não é objetivo desta pasta testar visual de `Recharts`, SVG, tooltip, snapshot, canvas ou montagem completa dos componentes para validar regras simples de apresentação.
