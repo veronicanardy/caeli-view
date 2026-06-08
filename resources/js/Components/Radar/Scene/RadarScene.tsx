@@ -8,7 +8,7 @@
 
 import { OrbitControls } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
@@ -124,8 +124,9 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     const hideAsteroidLabels = useHideAsteroidLabelsMode();
 
     // Foco Terra/Lua fica em hook local para preservar a precedência: seleção > corpo > preset.
-    const focusEarth = () => onFocusBody('earth');
-    const focusMoon = () => onFocusBody('moon');
+    // useCallback evita que funções novas sejam criadas a cada render de RadarScene.
+    const focusEarth = useCallback(() => onFocusBody('earth'), [onFocusBody]);
+    const focusMoon  = useCallback(() => onFocusBody('moon'),  [onFocusBody]);
     const { bodyFocus, activeFocus, focusNonce } = useBodyFocus({
         cameraIntent,
         focusTarget,
@@ -147,8 +148,16 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         hideAsteroidLabels,
     });
 
-    const focusedObjectPosition = focusedObjectScenePosition(focusedObject, earthPos);
-    const labelOccluder = computeLabelOccluder({ bodyFocus, earthPos, moonPos, focusedObjectPosition });
+    // useMemo evita que novos objetos sejam criados a cada render, prevenindo
+    // invalidação desnecessária dos contextos LabelOccluder e SceneObjectOccluders.
+    const focusedObjectPosition = useMemo(
+        () => focusedObjectScenePosition(focusedObject, earthPos),
+        [focusedObject, earthPos],
+    );
+    const labelOccluder = useMemo(
+        () => computeLabelOccluder({ bodyFocus, earthPos, moonPos, focusedObjectPosition }),
+        [bodyFocus, earthPos, moonPos, focusedObjectPosition],
+    );
     const useHelioScene = shouldUseHelioScene(orbitMode, selectedHasOrbit, focusedObject);
     const sceneObjectOccluders = useMemo(
         () => computeSceneObjectOccluders({

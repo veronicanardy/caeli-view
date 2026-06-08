@@ -77,22 +77,31 @@ export function TimeTickGroup({
     const controls = useThree((s) => s.controls) as unknown as Controls | null;
     const [visible, setVisible] = useState<boolean[]>(() => ticks.map(() => true));
     const visibleRef = useRef<boolean[]>(ticks.map(() => true));
+
+    // Vetores reutilizados dentro do useFrame — evitam ~3 alocações por frame por trajetória.
+    const _tmpOrigin = useRef(new THREE.Vector3());
+    const _tmpOneDl  = useRef(new THREE.Vector3());
+    const _tmpFallback = useRef(new THREE.Vector3(0, 0, 0));
+
     useFrame(() => {
         // Verifica zoom out extremo.
-        const orbitTarget = controls?.target ?? new THREE.Vector3(0, 0, 0);
-        const center = orbitTarget.clone().project(camera);
-        const oneDl = orbitTarget.clone().add(new THREE.Vector3(1, 0, 0)).project(camera);
+        const orbitTarget = controls?.target ?? _tmpFallback.current;
+        _tmpOrigin.current.copy(orbitTarget).project(camera);
+        _tmpOneDl.current.copy(orbitTarget).setX(orbitTarget.x + 1).project(camera);
         const lunarPx = Math.hypot(
-            (oneDl.x - center.x) * size.width * 0.5,
-            (oneDl.y - center.y) * size.height * 0.5,
+            (_tmpOneDl.current.x - _tmpOrigin.current.x) * size.width * 0.5,
+            (_tmpOneDl.current.y - _tmpOrigin.current.y) * size.height * 0.5,
         );
         const allVisible = lunarPx >= TICK_HIDE_LUNAR_PX;
-        const next = ticks.map(() => allVisible);
-        if (next.some((v, i) => v !== visibleRef.current[i])) {
-            visibleRef.current = next;
-            setVisible(next);
+        // Reutiliza o mesmo array — só chama setVisible se o estado realmente mudou.
+        let changed = false;
+        for (let i = 0; i < ticks.length; i++) {
+            if (visibleRef.current[i] !== allVisible) { changed = true; break; }
         }
-
+        if (changed) {
+            visibleRef.current = ticks.map(() => allVisible);
+            setVisible(visibleRef.current.slice());
+        }
     });
 
     return (

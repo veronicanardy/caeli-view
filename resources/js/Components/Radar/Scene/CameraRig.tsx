@@ -78,6 +78,12 @@ export function CameraRig({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view, viewNonce, focusTarget, focusNonce]);
 
+    // Vetores temporários reutilizados dentro do useFrame para evitar alocação a cada frame.
+    // Criados uma única vez — nunca usar fora do useFrame, pois são mutados in-place.
+    const _tmpTarget = useRef(new THREE.Vector3());
+    const _tmpRight  = useRef(new THREE.Vector3());
+    const _tmpUp     = useRef(new THREE.Vector3());
+
     // No primeiro frame os OrbitControls já existem: posiciona câmera e target
     // diretamente, sem tween, para que a cena apareça centrada na Terra desde o início.
     const initialised = useRef(false);
@@ -141,14 +147,15 @@ export function CameraRig({
         if ((panelBiasX > 0.01 || panelBiasY > 0.01) && focusTarget) {
             const distance = fc.position.distanceTo(ed.target);
             const halfFovRad = THREE.MathUtils.degToRad(CAMERA_FOV_DEG / 2);
-            desiredTarget = ed.target.clone();
+            // Reutiliza ref em vez de clonar — evita alocação de Vector3 a cada frame.
+            desiredTarget = _tmpTarget.current.copy(ed.target);
 
             if (panelBiasX > 0.01) {
-                const right = new THREE.Vector3().setFromMatrixColumn(fc.matrixWorld, 0).normalize();
                 // panelBiasX é a fração coberta pelo painel; o centro útil está deslocado para a direita
                 // em panelBiasX/2 do total — então compensamos movendo o target para a esquerda.
+                _tmpRight.current.setFromMatrixColumn(fc.matrixWorld, 0).normalize();
                 const worldOffsetX = Math.tan(halfFovRad) * distance * panelBiasX * 0.5;
-                desiredTarget.addScaledVector(right, -worldOffsetX);
+                desiredTarget.addScaledVector(_tmpRight.current, -worldOffsetX);
             }
 
             if (panelBiasY > 0.01) {
@@ -156,10 +163,10 @@ export function CameraRig({
                 // O FOV vertical é o ângulo real; compensamos movendo o target para cima.
                 const aspectRatio = fc instanceof THREE.PerspectiveCamera ? (fc as THREE.PerspectiveCamera).aspect : 1;
                 const halfFovVertRad = Math.atan(Math.tan(halfFovRad) / Math.max(0.01, aspectRatio));
-                const up = new THREE.Vector3().setFromMatrixColumn(fc.matrixWorld, 1).normalize();
                 // 0.38 em vez de 0.5: empurra menos para cima, objeto fica mais naturalmente centralizado na área livre.
+                _tmpUp.current.setFromMatrixColumn(fc.matrixWorld, 1).normalize();
                 const worldOffsetY = Math.tan(halfFovVertRad) * distance * panelBiasY * 0.38;
-                desiredTarget.addScaledVector(up, -worldOffsetY);
+                desiredTarget.addScaledVector(_tmpUp.current, -worldOffsetY);
             }
         }
 

@@ -43,8 +43,11 @@ export function AsteroidSceneLayer({
     showLabels: boolean;
     showLabelForObject: (id: string) => boolean;
 }) {
-    const renderableAsteroids = useMemo(
-        () => closestNowObjects
+    const renderableAsteroids = useMemo(() => {
+        // Um único Vector3 reutilizado para todas as checagens de proximidade —
+        // evita N alocações por render quando closestNowObjects muda.
+        const tmpVec = new THREE.Vector3();
+        return closestNowObjects
             .map((object) => {
                 const position = currentPositionInScene(object);
                 if (!position) return null;
@@ -54,7 +57,7 @@ export function AsteroidSceneLayer({
                     position,
                     nearbyClosestApproach: Boolean(closestApproachNearPosition(
                         object.trajectory,
-                        new THREE.Vector3(...position),
+                        tmpVec.set(position[0], position[1], position[2]),
                     )),
                 };
             })
@@ -62,9 +65,8 @@ export function AsteroidSceneLayer({
                 object: ClosestNowObject;
                 position: SceneVector;
                 nearbyClosestApproach: boolean;
-            } => entry !== null),
-        [closestNowObjects],
-    );
+            } => entry !== null);
+    }, [closestNowObjects]);
 
     return (
         <group position={earthPos}>
