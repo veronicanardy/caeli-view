@@ -97,9 +97,11 @@ export function Sun({
                     <sphereGeometry args={[radius, 64, 64]} />
                     <primitive object={surfaceMaterial} attach="material" />
                 </mesh>
-                {/* Corona: BackSide esfera grande — o shader faz todo o fade internamente */}
+                {/* Corona: BackSide esfera grande — o shader faz todo o fade internamente.
+                    Segmentos reduzidos: o efeito é inteiramente feito no fragment shader,
+                    então triângulos extras não melhoram o visual mas aumentam o drawcall. */}
                 <mesh scale={2.2}>
-                    <sphereGeometry args={[radius, 128, 96]} />
+                    <sphereGeometry args={[radius, 48, 36]} />
                     <primitive object={glowMaterial} attach="material" />
                 </mesh>
                 <SunProminences radius={radius} />
@@ -120,21 +122,24 @@ export function Sun({
     );
 }
 
+// Configurações das prominências — estáticas, nunca dependem de props.
+const PROMINENCE_CONFIGS = [
+    { start: 0.35, height: 0.18, span: 0.36, tilt: 0.1 },
+    { start: 2.15, height: 0.13, span: 0.28, tilt: -0.18 },
+    { start: 4.7,  height: 0.16, span: 0.32, tilt: 0.22 },
+] as const;
+
 /**
  * Prominências solares animadas.
  *
  * Geradas proceduralmente como linhas que orbitam suavemente em torno do Sol.
+ * Geometrias e materiais criados uma única vez — recriados apenas se `radius` mudar,
+ * o que na prática nunca acontece (radius = SUN_RADIUS_SCENE, constante de módulo).
  */
 function SunProminences({ radius }: { radius: number }) {
     const groupRef = useRef<THREE.Group>(null);
     const arcs = useMemo(() => {
-        const configs = [
-            { start: 0.35, height: 0.18, span: 0.36, tilt: 0.1 },
-            { start: 2.15, height: 0.13, span: 0.28, tilt: -0.18 },
-            { start: 4.7, height: 0.16, span: 0.32, tilt: 0.22 },
-        ];
-
-        return configs.map((config) => {
+        return PROMINENCE_CONFIGS.map((config) => {
             const points: THREE.Vector3[] = [];
             for (let i = 0; i <= 28; i += 1) {
                 const t = i / 28;
