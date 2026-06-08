@@ -3,7 +3,7 @@
  * Mesmo espaço visual do AsteroidModelPreview — substitui o Canvas por um <img>.
  */
 
-import type { BodyId } from './bodyInfoContent';
+import type { BodyId } from './bodyData';
 
 type ImageConfig = {
     src: string;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     formatApproachDate,
-    formatApproachTime,
+    formatApproachDateTime,
     formatAstronomicalUnit,
 } from '@/Components/Radar/Panels/panelFormatters';
 
@@ -82,23 +82,23 @@ describe('formatApproachDate', () => {
     });
 });
 
-// ─── formatApproachTime ────────────────────────────────────────────────────────
+// ─── formatApproachDateTime ────────────────────────────────────────────────────────
 
-describe('formatApproachTime (panelFormatters)', () => {
+describe('formatApproachDateTime', () => {
     it('retorna "—" para null', () => {
-        expect(formatApproachTime(null, 'pt-BR')).toBe('—');
-        expect(formatApproachTime(null, 'en')).toBe('—');
+        expect(formatApproachDateTime(null, 'pt-BR')).toBe('—');
+        expect(formatApproachDateTime(null, 'en')).toBe('—');
     });
 
     it('retorna o valor original para string inválida', () => {
-        expect(formatApproachTime('invalido', 'pt-BR')).toBe('invalido');
+        expect(formatApproachDateTime('invalido', 'pt-BR')).toBe('invalido');
     });
 
     it('formata ISO incluindo dia, mês, hora e timezone', () => {
         // panelFormatters inclui dia/mês além de hora (diferente da versão de dailyProximityPresentation).
         // O locale 'en' pode usar formato 12h (AM/PM), por isso validamos '30' (minuto) e a presença
         // de dia/mês em vez de assumir formato 24h.
-        const result = formatApproachTime('2025-06-15T14:30:00Z', 'en');
+        const result = formatApproachDateTime('2025-06-15T14:30:00Z', 'en');
         expect(result).toContain('30');
         expect(result).toMatch(/\d{2}.*\d{2}/); // dia e mês presentes
     });

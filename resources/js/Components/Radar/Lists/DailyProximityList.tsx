@@ -4,7 +4,7 @@ import { compactKm, formatNumber, lunarDistanceFromKm } from '@/lib/format';
 import { bestDistanceKm, bestDistanceLD } from '@/lib/radarData';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import { AsteroidTrajectory, HorizonsPositionResult, UnifiedApproach } from '@/types';
-import { dailyReasonText, distanceBandLabel, formatApproachTime, horizonsStatusLabel, isToday, motionText } from './dailyProximityPresentation';
+import { dailyReasonText, distanceBandLabel, formatApproachHour, horizonsStatusLabel, isToday, motionText } from './dailyProximityPresentation';
 
 type Props = {
     approaches: UnifiedApproach[];
@@ -41,7 +41,7 @@ export function DailyProximityList({ approaches, positionsById, focusId, selecte
                 const trajectory = trajectoryByKey[key] ?? null;
                 const isLoading = trajectoryLoadingKey === key;
                 const isFocus = approach.id === focusId;
-                const time = formatApproachTime(approach.approachDate, locale);
+                const time = formatApproachHour(approach.approachDate, locale);
                 const todaySelected = isToday(selectedDate);
 
                 return (

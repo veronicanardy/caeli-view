@@ -12,7 +12,7 @@ import type { Translator } from '@/i18n';
 import { compactKm, formatNumber, lunarDistanceLabel } from '@/lib/format';
 import type { RadarObject } from '@/lib/radarData';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
-import { formatApproachTime } from './panelFormatters';
+import { formatApproachDateTime } from './panelFormatters';
 
 type Props = {
     objects: RadarObject[];
@@ -74,7 +74,7 @@ export function RadarDataQualityCard({ objects, locale, t }: Props) {
 
 function ClosestObject({ closest, locale, en, t }: { closest: RadarObject; locale: 'pt-BR' | 'en'; en: boolean; t: Translator }) {
     const identity = resolveApproachIdentity(closest.approach);
-    const approachTime = formatApproachTime(closest.closestApproachTime, locale);
+    const approachTime = formatApproachDateTime(closest.closestApproachTime, locale);
     const lunar = closest.distanceLD;
     const velocity = closest.relativeVelocityKph;
 

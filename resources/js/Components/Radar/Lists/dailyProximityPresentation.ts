@@ -89,7 +89,8 @@ export function distanceBandLabel(lunar: number | null, locale: ObservatoryLocal
     return en ? '20+ LD \u00B7 Monitored' : '20+ DL \u00B7 Monitorado';
 }
 
-export function formatApproachTime(value: string | null, locale: ObservatoryLocale): string {
+/** Formata apenas a hora da aproximação (HH:MM + timezone) — sem dia nem mês. */
+export function formatApproachHour(value: string | null, locale: ObservatoryLocale): string {
     if (!value) return '\u2014';
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return value;

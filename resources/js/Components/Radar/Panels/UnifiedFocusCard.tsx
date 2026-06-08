@@ -14,8 +14,7 @@ import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
 import { formatDistanceAU, formatTimestamp } from '@/lib/observatory/format';
 import { humanSummary, motionLabel, objectTypeEyebrow, riskAssessment, sizeComparison, trajectoryStatusBadge } from './focusCardPresentation';
-import { BODIES, type BodyId } from './bodyInfoContent';
-import { BODY_HISTORY } from './bodyHistory';
+import { BODIES, type BodyId } from './bodyData';
 import { PanelShell } from './PanelShell';
 import { AsteroidModelPreview } from './AsteroidModelPreview';
 import { BodyImagePreview } from './BodyImagePreview';
@@ -337,7 +336,6 @@ function BodyCard({
     enterStyle,
 }: Omit<BodyProps, 'kind'> & TabState) {
     const cfg = BODIES[body];
-    const history = BODY_HISTORY[body];
 
     const val = (raw: string) => {
         const parts = raw.split(' / ');
@@ -412,7 +410,7 @@ function BodyCard({
 
                     {tab === 'history' ? (
                         <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">
-                            {en ? history.historyEn : history.historyPt}
+                            {en ? cfg.historyEn : cfg.historyPt}
                         </p>
                     ) : null}
                 </div>

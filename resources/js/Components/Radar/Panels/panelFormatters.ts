@@ -38,7 +38,8 @@ export function formatIsoToLocal(value: string, locale: 'pt-BR' | 'en'): string 
     }).format(parsed);
 }
 
-export function formatApproachTime(value: string | null, locale: 'pt-BR' | 'en'): string {
+/** Formata a data e hora da aproximação (DD/MM + HH:MM + timezone) — inclui dia e mês. */
+export function formatApproachDateTime(value: string | null, locale: 'pt-BR' | 'en'): string {
     if (!value) return '—';
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return value;
