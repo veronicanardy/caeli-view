@@ -10,6 +10,7 @@ import { nextCameraNonce } from './Scene/cameraIntent';
 import type { CameraIntent } from './Scene/cameraIntent';
 import { PLANET_CONFIG } from './Scene/planetConfig';
 import type { PlanetId } from './Scene/planetConfig';
+import { MOBILE_MEDIA_QUERY } from './radarLayoutConstants';
 
 export type Radar3DBodyCardTarget = 'earth' | 'moon' | 'sun' | PlanetId | null;
 
@@ -63,7 +64,7 @@ export function useRadar3DFocusActions({
 
     const collapseNavigationForMobile = useCallback(() => {
         if (typeof window === 'undefined') return;
-        if (!window.matchMedia('(max-width: 1023px)').matches) return;
+        if (!window.matchMedia(MOBILE_MEDIA_QUERY).matches) return;
         setPlanetsOpen(false);
         setPanelCollapsed(true);
     }, [setPanelCollapsed, setPlanetsOpen]);
@@ -163,7 +164,7 @@ export function useRadar3DFocusActions({
             clearPlanetTargets();
             collapseNavigationForMobile();
             // No mobile, recua mais para que o Sol não domine a composição.
-            const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
+            const isMobile = typeof window !== 'undefined' && window.matchMedia(MOBILE_MEDIA_QUERY).matches;
             setSunFocusTarget(framingForBody(new THREE.Vector3(0, 0, 0), 0.5, undefined, isMobile ? 30 : 20));
         });
     }, [clearPlanetTargets, collapseNavigationForMobile, onClearSelection, withOrbitExit]);

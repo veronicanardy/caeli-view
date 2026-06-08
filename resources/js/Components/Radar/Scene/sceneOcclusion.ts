@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
 import { JUPITER, MARS, MERCURY, NEPTUNE, SATURN, URANUS, VENUS } from '@/lib/observatory/planetData';
 import type { SceneObjectOccluder } from '../Overlays/SceneLabels';
-import { SUN_RADIUS_SCENE } from './sceneBodyConstants';
+import { SUN_RADIUS_SCENE } from '../Bodies/bodyRenderConstants';
 import type { PlanetScenePositions, SceneVector } from './scenePositions';
 
 type SceneObjectOccluderInput = {

@@ -1,4 +1,5 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { usePanelBias } from './Scene/usePanelBias';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
 import { sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
 import type { SceneMode } from './Controls/Manual/manualTypes';
@@ -167,55 +168,14 @@ export function DailyOrbitalRadar3D({
         mobilePanelSection,
     });
 
-    // Fração [0..1] da largura do canvas ocupada pelo painel lateral (lado esquerdo, desktop only).
-    // Usado pelo CameraRig para deslocar o foco para o centro da área útil ao selecionar um objeto.
-    const [panelBiasX, setPanelBiasX] = useState(0);
-    const updatePanelBiasX = useCallback(() => {
-        const canvas = canvasContainerRef.current;
-        const panel = sidePanelRef.current;
-        if (!canvas || !panel || panelCollapsed) { setPanelBiasX(0); return; }
-        const canvasRect = canvas.getBoundingClientRect();
-        const panelRect = panel.getBoundingClientRect();
-        // Painel fica à esquerda do canvas — calcula quanto da largura ele cobre.
-        const overlap = Math.max(0, panelRect.right - canvasRect.left);
-        setPanelBiasX(canvasRect.width > 0 ? overlap / canvasRect.width : 0);
-    }, [panelCollapsed]);
-    useEffect(() => {
-        updatePanelBiasX();
-        const observer = new ResizeObserver(updatePanelBiasX);
-        if (sidePanelRef.current) observer.observe(sidePanelRef.current);
-        if (canvasContainerRef.current) observer.observe(canvasContainerRef.current);
-        window.addEventListener('resize', updatePanelBiasX);
-        return () => { observer.disconnect(); window.removeEventListener('resize', updatePanelBiasX); };
-    }, [updatePanelBiasX]);
-
-    // Fração [0..1] da altura do canvas coberta pelo bottom sheet (mobile only).
-    // Só compensa no mobile — no desktop o card fica ao lado, não embaixo.
-    const [panelBiasY, setPanelBiasY] = useState(0);
-    const activeCardRef = visibleFocusedObject ? focusCardRef : bodyCardOpen ? bodyCardRef : null;
-    const updatePanelBiasY = useCallback(() => {
-        const canvas = canvasContainerRef.current;
-        const card = activeCardRef?.current;
-        // No desktop (lg: 1024px+) o card fica ao lado — sem compensação vertical.
-        if (!canvas || !card || window.matchMedia('(min-width: 1024px)').matches) {
-            setPanelBiasY(0);
-            return;
-        }
-        const canvasRect = canvas.getBoundingClientRect();
-        const cardRect = card.getBoundingClientRect();
-        // Card fica ancorado na base do canvas — calcula quanto da altura ele cobre.
-        const overlap = Math.max(0, canvasRect.bottom - cardRect.top);
-        setPanelBiasY(canvasRect.height > 0 ? overlap / canvasRect.height : 0);
-    }, [activeCardRef]);
-    useEffect(() => {
-        updatePanelBiasY();
-        const observer = new ResizeObserver(updatePanelBiasY);
-        if (focusCardRef.current) observer.observe(focusCardRef.current);
-        if (bodyCardRef.current) observer.observe(bodyCardRef.current);
-        if (canvasContainerRef.current) observer.observe(canvasContainerRef.current);
-        window.addEventListener('resize', updatePanelBiasY);
-        return () => { observer.disconnect(); window.removeEventListener('resize', updatePanelBiasY); };
-    }, [updatePanelBiasY]);
+    const { biasX: panelBiasX, biasY: panelBiasY } = usePanelBias({
+        canvasContainerRef,
+        sidePanelRef,
+        focusCardRef,
+        bodyCardRef,
+        panelCollapsed,
+        activeCardVisible: Boolean(visibleFocusedObject || bodyCardOpen),
+    });
 
     useEffect(() => {
         if (!fullscreen) return;

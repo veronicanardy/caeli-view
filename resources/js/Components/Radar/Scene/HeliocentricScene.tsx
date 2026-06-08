@@ -13,7 +13,7 @@ import { heliocentricPositionAU } from '@/lib/keplerOrbit';
 import { FocusProtectedHtml, ScreenLabel } from '../Overlays/SceneLabels';
 import { Sun } from '../Bodies/Sun/Sun';
 import { OrbitLineHelio } from '../Trajectory/HeliocentricLines';
-import { SUN_RADIUS_SCENE } from './sceneBodyConstants';
+import { SUN_RADIUS_SCENE } from '../Bodies/bodyRenderConstants';
 
 const ASTEROID_RADIUS_HELIO = 0.06;
 

@@ -70,6 +70,8 @@ export function RadarSceneCanvas({
     onFocusPlanet,
     onFocusBody,
 }: Props) {
+    // Prioridade de foco: seleção de objeto > foco no Sol > foco em planeta.
+    // Garante que a câmera siga a seleção do usuário antes de qualquer alvo secundário.
     const activeFocusTarget = focusTarget ?? sunFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
     const [sceneReady, setSceneReady] = useState(false);
 

@@ -32,7 +32,7 @@ import { TouchGestures } from './TouchGestures';
 import { PlanetLayer } from './PlanetLayer';
 import { PlanetOrbitLayer } from './PlanetOrbitLayer';
 import { computeLabelOccluder, focusedObjectScenePosition, shouldShowLabelForObject, shouldUseHelioScene } from './sceneFocus';
-import { SUN_RADIUS_SCENE } from './sceneBodyConstants';
+import { SUN_RADIUS_SCENE } from '../Bodies/bodyRenderConstants';
 import { computeSceneObjectOccluders } from './sceneOcclusion';
 import { computeEarthPosition, computeMoonGeoPosition, computeMoonPosition, computeSunDirection, planetScenePositions } from './scenePositions';
 import { useBodyFocus } from './useBodyFocus';
