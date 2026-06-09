@@ -39,7 +39,7 @@ class ApproachObservatoryController
             CarbonImmutable::now('UTC'),
         );
 
-        return Inertia::render('ApproachObservatory/Index', [
+        return Inertia::render('Radar/Index', [
             'filters' => $filters,
             'initialSunDirection' => $initialSunDirection,
         ]);
