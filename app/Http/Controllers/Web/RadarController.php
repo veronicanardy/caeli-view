@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Exceptions\NasaApiException;
 use App\Http\Requests\ApproachObservatoryRequest;
 use App\Services\Approaches\AsteroidModelResolverService;
 use App\Services\Approaches\ApproachObservatoryService;
 use App\Services\Approaches\ClosestNowSelector;
 use App\Services\Jpl\Horizons\HorizonsTrajectoryService;
-use App\Services\Nasa\EpicService;
 use App\Support\SunDirectionCalculator;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -21,150 +19,41 @@ class RadarController
     public function __construct(
         private readonly ApproachObservatoryService $observatory,
         private readonly AsteroidModelResolverService $asteroidModels,
-        private readonly EpicService $epic,
         private readonly HorizonsTrajectoryService $horizons,
         private readonly ClosestNowSelector $closestNow,
     ) {
     }
 
+    /**
+     * Renderiza a página do radar orbital 3D.
+     *
+     * Envia a direção solar calculada pelo servidor para que a cena ilumine
+     * corretamente desde o primeiro frame, antes do astronomy-engine resolver
+     * seu import lazy no cliente.
+     */
     public function index(ApproachObservatoryRequest $request): Response
     {
         $defaults = $this->observatory->defaultFilters();
         $filters = $request->filters($defaults);
 
-        // Seed the 3D radar with a plausible Sun direction for the current instant. Without this the
-        // scene would start with an arbitrary fallback vector and re-light the moment astronomy-engine
-        // finishes lazy-loading — visibly wrong for the first second or two.
         $initialSunDirection = SunDirectionCalculator::eclipticDirectionAt(
             CarbonImmutable::now('UTC'),
         );
 
         return Inertia::render('Radar/Index', [
-            'filters' => $filters,
+            'filters'            => $filters,
             'initialSunDirection' => $initialSunDirection,
         ]);
-    }
-
-    public function data(ApproachObservatoryRequest $request): JsonResponse
-    {
-        $filters = $request->filters($this->observatory->defaultFilters());
-        $data = $this->observatory->observe($filters);
-
-        try {
-            $earthImage = $this->epic->homeEarthImage();
-        } catch (NasaApiException) {
-            $earthImage = $this->epic->fallbackEarthImage();
-        }
-
-        $ttl = (int) config('services.jpl.cad_cache_ttl', 21600);
-
-        return response()->json([
-            ...$data,
-            'earthImage' => $earthImage,
-        ])->header('Cache-Control', "public, max-age={$ttl}, stale-while-revalidate=3600");
-    }
-
-    public function positions(ApproachObservatoryRequest $request): JsonResponse
-    {
-        $filters = $request->filters($this->observatory->defaultFilters());
-        $data = $this->observatory->observe($filters);
-        $approaches = $data['approaches'] ?? [];
-
-        $payload = array_map(static function (array $approach): array {
-            return [
-                'id' => $approach['id'] ?? null,
-                'name' => $approach['name'] ?? null,
-                'displayName' => $approach['displayName'] ?? $approach['name'] ?? null,
-                'rawName' => $approach['rawName'] ?? $approach['name'] ?? null,
-                'designation' => $approach['designation'] ?? null,
-                'detailIdentifier' => $approach['detailIdentifier'] ?? null,
-                'spkId' => $approach['spkId'] ?? null,
-                'approachTime' => $approach['approachDate'] ?? null,
-                'nominalDistanceKm' => $approach['nominalDistanceKm'] ?? null,
-                'sourceLabel' => $approach['sourceLabel'] ?? null,
-            ];
-        }, $approaches);
-
-        $requestedMode = (string) $request->query('reference_mode', '');
-        $resolvedMode = $this->resolveReferenceMode($requestedMode, $filters);
-
-        $positions = $this->horizons->positionsAtReferenceTimeBatch($payload, $resolvedMode);
-
-        $sunDirection = SunDirectionCalculator::eclipticDirectionAt(
-            $this->sunReferenceInstantFor($resolvedMode, $payload, $filters),
-        );
-
-        return response()->json([
-            'positions' => $positions,
-            'referenceMode' => $resolvedMode,
-            'sunDirection' => $sunDirection,
-            'generatedAt' => now()->toIso8601String(),
-        ])->header('Cache-Control', 'public, max-age=900, stale-while-revalidate=900');
-    }
-
-    /**
-     * Best single instant to anchor the Sun-direction indicator for the radar.
-     * - `current`: just use now (UTC). Sun longitude moves ~1°/day, so the precise instant
-     *   inside a 15-minute bucket doesn't matter for a visual cue.
-     * - `closest_approach`: use the approach time of the object that comes closest on the day,
-     *   so the indicator reflects the Sun's direction at the dominant event.
-     */
-    private function sunReferenceInstantFor(string $mode, array $payload, array $filters): CarbonImmutable
-    {
-        if ($mode === 'current') {
-            return CarbonImmutable::now('UTC');
-        }
-
-        $closestTime = null;
-        $closestDistance = INF;
-        foreach ($payload as $approach) {
-            $distance = $approach['nominalDistanceKm'] ?? null;
-            $time = $approach['approachTime'] ?? null;
-            if (! is_numeric($distance) || ! is_string($time) || $time === '') {
-                continue;
-            }
-            if ((float) $distance < $closestDistance) {
-                try {
-                    $closestTime = CarbonImmutable::parse($time, 'UTC');
-                    $closestDistance = (float) $distance;
-                } catch (\Throwable) {
-                    continue;
-                }
-            }
-        }
-
-        if ($closestTime !== null) {
-            return $closestTime;
-        }
-
-        // Fallback: midday UTC of the selected date.
-        $date = (string) ($filters['date_min'] ?? CarbonImmutable::now('UTC')->toDateString());
-        try {
-            return CarbonImmutable::parse($date.' 12:00:00', 'UTC');
-        } catch (\Throwable) {
-            return CarbonImmutable::now('UTC');
-        }
-    }
-
-    private function resolveReferenceMode(string $requestedMode, array $filters): string
-    {
-        if (in_array($requestedMode, ['current', 'closest_approach'], true)) {
-            return $requestedMode;
-        }
-
-        $today = now((string) config('app.timezone', 'UTC'))->toDateString();
-        $selectedDate = (string) ($filters['date_min'] ?? '');
-
-        return $selectedDate === $today ? 'current' : 'closest_approach';
     }
 
     /**
      * Retorna os N objetos mais próximos da Terra agora, com trajetória completa do Horizons.
      *
      * Parâmetros aceitos:
-     *   - limit : 1–30 (padrão 5). Aumentar o limite aumenta candidatos avaliados e tempo de resposta.
-     *   - mode  : 'nearest' | 'upcoming' | 'featured' | 'attention' (padrão 'nearest').
-     *             Controla o critério de seleção e ordenação dos objetos retornados.
+     *   - limit : 1–30 (padrão 5)
+     *   - mode  : 'nearest' | 'upcoming' (padrão 'nearest')
+     *   - date_min / date_max : janela de busca (padrão: filtros do observatório)
+     *   - force_refresh : ignora cache e força nova busca
      */
     public function closestNow(Request $request): JsonResponse
     {
@@ -172,19 +61,20 @@ class RadarController
             'date_min'      => ['nullable', 'date_format:Y-m-d'],
             'date_max'      => ['nullable', 'date_format:Y-m-d'],
             'limit'         => ['nullable', 'integer', 'min:1', 'max:30'],
-            'mode'          => ['nullable', 'string', 'in:nearest,upcoming,attention'],
+            'mode'          => ['nullable', 'string', 'in:nearest,upcoming'],
             'force_refresh' => ['nullable', 'boolean'],
         ]);
 
-        $defaults = $this->observatory->defaultFilters();
+        $defaults     = $this->observatory->defaultFilters();
         $anchorMin    = (string) ($validated['date_min'] ?? $defaults['date_min']);
         $anchorMax    = (string) ($validated['date_max'] ?? $defaults['date_max']);
         $limit        = (int) ($validated['limit'] ?? 5);
         $mode         = (string) ($validated['mode'] ?? 'nearest');
         $forceRefresh = (bool) ($validated['force_refresh'] ?? false);
 
-        // Para 'nearest': alarga ±3 dias para capturar objetos cujo pico foi ontem mas ainda
-        // estão entre os mais próximos agora. Para outros modos o selector define a própria janela.
+        // Para 'nearest': alarga ±3 dias para capturar objetos cujo pico foi ontem
+        // mas ainda estão entre os mais próximos agora. Para outros modos o selector
+        // define a própria janela de candidatos.
         try {
             if ($mode === 'nearest') {
                 $dateMin = CarbonImmutable::parse($anchorMin, 'UTC')->subDays(3)->toDateString();
@@ -224,27 +114,35 @@ class RadarController
             ->header('Cache-Control', 'no-store');
     }
 
+    /**
+     * Retorna a trajetória geocêntrica de um objeto via JPL Horizons.
+     *
+     * Âncoras disponíveis:
+     *   - 'approach' (padrão): trajetória centrada no momento de maior aproximação.
+     *   - 'now': trajetória centrada no instante atual, com janela histórica configurável.
+     */
     public function trajectory(Request $request): JsonResponse
     {
         $payload = $request->validate([
-            'id' => ['required', 'string', 'max:160'],
-            'name' => ['required', 'string', 'max:180'],
-            'displayName' => ['nullable', 'string', 'max:180'],
-            'rawName' => ['nullable', 'string', 'max:220'],
-            'designation' => ['nullable', 'string', 'max:80'],
+            'id'               => ['required', 'string', 'max:160'],
+            'name'             => ['required', 'string', 'max:180'],
+            'displayName'      => ['nullable', 'string', 'max:180'],
+            'rawName'          => ['nullable', 'string', 'max:220'],
+            'designation'      => ['nullable', 'string', 'max:80'],
             'detailIdentifier' => ['nullable', 'string', 'max:120'],
-            'spkId' => ['nullable', 'string', 'max:80'],
-            'approachTime' => ['required', 'string', 'max:80'],
-            'anchor' => ['nullable', 'string', 'in:approach,now'],
-            'history_days' => ['nullable', 'integer', 'min:7', 'max:720'],
+            'spkId'            => ['nullable', 'string', 'max:80'],
+            'approachTime'     => ['required', 'string', 'max:80'],
+            'anchor'           => ['nullable', 'string', 'in:approach,now'],
+            'history_days'     => ['nullable', 'integer', 'min:7', 'max:720'],
         ]);
 
         $anchor = (string) ($payload['anchor'] ?? 'approach');
+
         if ($anchor === 'now') {
             $historyDays = (int) ($payload['history_days'] ?? 365);
 
             return response()->json(
-                $this->horizons->trajectoryAroundNow($payload, $this->selectedNowTrajectoryWindow($historyDays))
+                $this->horizons->trajectoryAroundNow($payload, $this->trajectoryWindowFor($historyDays))
             )->header('Cache-Control', 'public, max-age=1800, stale-while-revalidate=1800');
         }
 
@@ -253,46 +151,20 @@ class RadarController
     }
 
     /**
-     * @return array{startOffsetHours:int, stopOffsetHours:int, stepSize:string}
+     * Resolve o modelo 3D mais adequado para um asteroide com base em nome,
+     * designação e parâmetros físicos.
      */
-    private function selectedNowTrajectoryWindow(int $historyDays): array
-    {
-        $days = max(7, min($historyDays, 720));
-
-        if ($days <= 45) {
-            return [
-                'startOffsetHours' => -($days * 24),
-                'stopOffsetHours' => 0,
-                'stepSize' => '6 hours',
-            ];
-        }
-
-        if ($days <= 365) {
-            return [
-                'startOffsetHours' => -($days * 24),
-                'stopOffsetHours' => 0,
-                'stepSize' => '1 day',
-            ];
-        }
-
-        return [
-            'startOffsetHours' => -($days * 24),
-            'stopOffsetHours' => 0,
-            'stepSize' => '3 days',
-        ];
-    }
-
     public function asteroidModel(Request $request): JsonResponse
     {
         $payload = $request->validate([
-            'id' => ['required', 'string', 'max:160'],
-            'name' => ['required', 'string', 'max:180'],
-            'displayName' => ['nullable', 'string', 'max:180'],
-            'designation' => ['nullable', 'string', 'max:80'],
+            'id'               => ['required', 'string', 'max:160'],
+            'name'             => ['required', 'string', 'max:180'],
+            'displayName'      => ['nullable', 'string', 'max:180'],
+            'designation'      => ['nullable', 'string', 'max:80'],
             'detailIdentifier' => ['nullable', 'string', 'max:120'],
-            'spkId' => ['nullable', 'string', 'max:80'],
-            'objectType' => ['nullable', 'string', 'max:40'],
-            'diameterMeters' => ['nullable', 'numeric'],
+            'spkId'            => ['nullable', 'string', 'max:80'],
+            'objectType'       => ['nullable', 'string', 'max:40'],
+            'diameterMeters'   => ['nullable', 'numeric'],
             'diameterMinMeters' => ['nullable', 'numeric'],
             'diameterMaxMeters' => ['nullable', 'numeric'],
             'absoluteMagnitude' => ['nullable', 'numeric'],
@@ -302,5 +174,27 @@ class RadarController
 
         return response()->json($this->asteroidModels->resolve($payload))
             ->header('Cache-Control', "public, max-age={$ttl}, stale-while-revalidate=86400");
+    }
+
+    /**
+     * Define a janela temporal para trajetórias ancoradas em "agora".
+     * Step menor para históricos curtos (mais detalhe); step maior para janelas longas
+     * (menos pontos, resposta mais rápida do Horizons).
+     *
+     * @return array{startOffsetHours:int, stopOffsetHours:int, stepSize:string}
+     */
+    private function trajectoryWindowFor(int $historyDays): array
+    {
+        $days = max(7, min($historyDays, 720));
+
+        if ($days <= 45) {
+            return ['startOffsetHours' => -($days * 24), 'stopOffsetHours' => 0, 'stepSize' => '6 hours'];
+        }
+
+        if ($days <= 365) {
+            return ['startOffsetHours' => -($days * 24), 'stopOffsetHours' => 0, 'stepSize' => '1 day'];
+        }
+
+        return ['startOffsetHours' => -($days * 24), 'stopOffsetHours' => 0, 'stepSize' => '3 days'];
     }
 }
