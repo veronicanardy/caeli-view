@@ -9,10 +9,14 @@ use Illuminate\Support\Facades\Http;
 
 class SkyObservationProxyController
 {
+    /**
+     * Responsabilidade: proxy com cache para a API 7Timer, retornando
+     * condições astronômicas do céu para as coordenadas informadas.
+     */
     public function __invoke(Request $request): JsonResponse
     {
-        $lat = (float) $request->query('lat', '0');
-        $lon = (float) $request->query('lon', '0');
+        $lat = $request->float('lat');
+        $lon = $request->float('lon');
 
         if ($lat === 0.0 && $lon === 0.0) {
             return response()->json(['error' => 'Missing coordinates'], 422);
@@ -22,19 +26,15 @@ class SkyObservationProxyController
 
         $data = Cache::remember($cacheKey, now()->addHours(4), function () use ($lat, $lon) {
             $response = Http::timeout(8)->get('https://www.7timer.info/bin/astro.php', [
-                'lon' => $lon,
-                'lat' => $lat,
-                'ac' => 0,
-                'unit' => 'metric',
-                'output' => 'json',
+                'lon'     => $lon,
+                'lat'     => $lat,
+                'ac'      => 0,
+                'unit'    => 'metric',
+                'output'  => 'json',
                 'tzshift' => 0,
             ]);
 
-            if (!$response->successful()) {
-                return null;
-            }
-
-            return $response->json();
+            return $response->successful() ? $response->json() : null;
         });
 
         if ($data === null) {
