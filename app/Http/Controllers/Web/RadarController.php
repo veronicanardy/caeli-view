@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Http\Requests\ApproachObservatoryRequest;
+use App\Http\Requests\RadarIndexRequest;
 use App\Services\Approaches\AsteroidModelResolverService;
 use App\Services\Approaches\RadarService;
 use App\Services\Approaches\ClosestNowSelector;
@@ -31,7 +31,7 @@ class RadarController
      * corretamente desde o primeiro frame, antes do astronomy-engine resolver
      * seu import lazy no cliente.
      */
-    public function index(ApproachObservatoryRequest $request): Response
+    public function index(RadarIndexRequest $request): Response
     {
         $defaults = $this->observatory->defaultFilters();
         $filters = $request->filters($defaults);
