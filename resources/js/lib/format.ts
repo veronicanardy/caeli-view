@@ -3,7 +3,8 @@
  * Todas as funções respeitam o locale ativo (pt-BR ou en) via localStorage. Não depende de DOM
  * além da leitura do localStorage — pode ser usada em qualquer componente ou helper.
  */
-export const LUNAR_DISTANCE_KM = 384400;
+import { LUNAR_DISTANCE_KM } from '@/lib/physicalConstants';
+export { LUNAR_DISTANCE_KM };
 
 /** Retorna o locale ativo da aplicação. Cai em pt-BR em ambiente Node (testes, SSR). */
 function currentLocale(): 'pt-BR' | 'en' {

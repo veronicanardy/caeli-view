@@ -1,23 +1,24 @@
 /**
- * Coordinate transformations shared between the geocentric (radar) and heliocentric (orbit) scenes.
+ * Transformações de coordenadas compartilhadas entre as cenas geocêntrica (radar) e heliocêntrica (órbita).
  *
- * Conventions:
- * - JPL Horizons returns geocentric ecliptic vectors in km.
- * - Scene axes: ecliptic X → scene X, ecliptic Z → scene Y, ecliptic −Y → scene Z.
- *   This puts the ecliptic plane on XZ (where the DL rings live) and ecliptic north along scene +Y.
- * - "Scene units" in the geocentric layer means "1 unit = 1 DL", further compressed radially via
- *   compressSceneVector (in sceneEphemeris.ts) — direction is preserved, magnitude is rescaled.
+ * Convenções:
+ * - O JPL Horizons retorna vetores geocêntricos eclípticos em km.
+ * - Eixos da cena: eclíptico X → cena X, eclíptico Z → cena Y, eclíptico −Y → cena Z.
+ *   Isso coloca o plano eclíptico em XZ (onde ficam os anéis de DL) e o norte eclíptico em +Y da cena.
+ * - "Unidades de cena" na camada geocêntrica significa "1 unidade = 1 DL", comprimido
+ *   radialmente via compressSceneVector (em sceneEphemeris.ts) — a direção é preservada, só a
+ *   magnitude é reescalonada.
  *
- * Everything in this file is pure: same input → same output, no I/O, no DOM.
+ * Tudo neste arquivo é puro: mesma entrada → mesma saída, sem I/O nem DOM.
  */
 
 import type { SunDirection } from '@/types';
 import { KM_PER_AU, KM_PER_LD, ORBIT_AU_SCALE, compressSceneVector } from '@/lib/sceneEphemeris';
 
 /**
- * Transforms a geocentric ecliptic vector (km) into a radar-scene vector (scene units, post log
- * compression). The Y ↔ Z swap aligns the ecliptic plane with the scene XZ plane; the radial log
- * compression keeps direction and inclination honest while folding in the huge gap to the Sun.
+ * Transforma um vetor geocêntrico eclíptico (km) em um vetor de cena radar (unidades de cena,
+ * pós compressão logarítmica). A troca Y ↔ Z alinha o plano eclíptico com o plano XZ da cena;
+ * a compressão radial mantém direção e inclinação honestas enquanto recolhe o enorme gap até o Sol.
  */
 export function horizonsToScene(xKm: number, yKm: number, zKm: number): [number, number, number] {
     return compressSceneVector([
@@ -28,17 +29,18 @@ export function horizonsToScene(xKm: number, yKm: number, zKm: number): [number,
 }
 
 /**
- * Transforms a geocentric ecliptic vector (km) into a heliocentric scene position (scene units,
- * post log compression), given the Earth's heliocentric position in AU (ecliptic J2000).
+ * Transforma um vetor geocêntrico eclíptico (km) em uma posição heliocêntrica de cena (unidades
+ * de cena, pós compressão logarítmica), dado o ponto heliocêntrico da Terra em UA (eclíptico J2000).
  *
- * Why: applying log compression to a geocentric vector and then adding earthPos (which is itself
- * log-compressed heliocentrically) does NOT produce the correct heliocentric position — the two
- * compressions don't compose linearly. For nearby objects (< ~0.1 AU) the error is negligible,
- * but for belt objects like Ceres or Vesta (2–4 AU geocentric) the asteroid ends up compressed
- * right next to the Sun instead of at its true heliocentric distance.
+ * Por que: aplicar compressão logarítmica em um vetor geocêntrico e depois somar earthPos
+ * (que é ele próprio comprimido heliocentricamente) NÃO produz a posição heliocêntrica correta
+ * — as duas compressões não compõem linearmente. Para objetos próximos (< ~0,1 UA) o erro é
+ * desprezível, mas para objetos do cinturão como Ceres ou Vesta (2–4 UA geocêntricas) o asteroide
+ * aparece comprimido junto ao Sol em vez de estar na sua distância heliocêntrica real.
  *
- * Fix: convert geo (km) → geo (AU) → add earthHelio (AU) → helio (AU) → linear scale matching
- * helioToScene/ORBIT_AU_SCALE so the asteroid lands on the same grid as planet orbits and earthPos.
+ * Solução: converte geo (km) → geo (UA) → soma earthHelio (UA) → helio (UA) → escala LINEAR
+ * compatível com helioToScene/ORBIT_AU_SCALE, para que o asteroide caia na mesma grade das
+ * órbitas planetárias e do earthPos.
  */
 export function horizonsGeoToHelioScene(
     xKm: number,
@@ -48,12 +50,13 @@ export function horizonsGeoToHelioScene(
 ): [number, number, number] {
     const helioX = earthHelioAU.x + xKm / KM_PER_AU;
     const helioY = earthHelioAU.y + yKm / KM_PER_AU;
-    // Axis convention matches helioToScene in sceneEphemeris.ts (used by planets and earthScenePosition):
-    //   ecl.x → scene X,  -ecl.y → scene Z,  ecliptic plane is flat (Y=0 in scene).
-    // LINEAR scale (ORBIT_AU_SCALE) so asteroids land on the same scale as the drawn planet orbits.
+    const helioZ = earthHelioAU.z + zKm / KM_PER_AU;
+    // Convenção consistente com helioAUToSunCenteredScene e horizonsToScene:
+    //   eclíptico (x, y, z) → cena (x, z, −y).
+    // Norte eclíptico (z > 0) aponta para +Y da cena; escala LINEAR (ORBIT_AU_SCALE).
     return [
         helioX * ORBIT_AU_SCALE,
-        0,
+        helioZ * ORBIT_AU_SCALE,
         -helioY * ORBIT_AU_SCALE,
     ];
 }
@@ -66,10 +69,10 @@ export function normalize3(v: [number, number, number]): [number, number, number
 }
 
 /**
- * Converts the backend's 2D ecliptic Sun direction (x, y in the ecliptic plane, z dropped) into
- * the scene's 3D axis convention (ecliptic x/y → scene x/z, ecliptic z → scene y). The geocentric
- * Sun has |z_ecl| ≲ 1e-4, so collapsing it to zero is well within the radar's visual precision —
- * astronomy-engine takes over once it resolves and supplies the full 3D vector anyway.
+ * Converte a direção solar 2D do backend (x, y no plano eclíptico, z descartado) para a
+ * convenção de eixos 3D da cena (eclíptico x/y → cena x/z, eclíptico z → cena y). O Sol
+ * geocêntrico tem |z_ecl| ≲ 1e-4, então colapsar para zero está dentro da precisão visual
+ * do radar — o astronomy-engine assume o controle assim que resolve e fornece o vetor 3D completo.
  */
 export function sunDirectionFromIncoming(input: SunDirection): [number, number, number] {
     return normalize3([input.x, 0, input.y]);

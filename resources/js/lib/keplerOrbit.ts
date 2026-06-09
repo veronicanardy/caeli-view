@@ -61,7 +61,7 @@ export function heliocentricPositionAU(
     const M = n * (julianDayUtc(date) - tpJd);
     const E = solveKeplerEquation(M, ec);
 
-    // Perifocal frame: x toward perihelion, y at +90° in the direction of motion.
+    // Referencial perifocal: x em direção ao periélio, y a +90° no sentido do movimento.
     const xp = a * (Math.cos(E) - ec);
     const yp = a * Math.sqrt(1 - ec * ec) * Math.sin(E);
 
@@ -120,39 +120,39 @@ export function heliocentricArcAU(
 export function runKeplerOrbitAssertions(): void {
     const approx = (actual: number, expected: number, tol: number, label: string): void => {
         if (!(Math.abs(actual - expected) <= tol)) {
-            throw new Error(`[keplerOrbit] ${label}: expected ${expected} ± ${tol}, got ${actual}`);
+            throw new Error(`[keplerOrbit] ${label}: esperado ${expected} ± ${tol}, obtido ${actual}`);
         }
     };
 
-    // Newton's method on E - e sin E = M converges to a fixed point: f(E) - M ≈ 0.
+    // O método de Newton em E - e·sin(E) = M converge para um ponto fixo: f(E) - M ≈ 0.
     const E1 = solveKeplerEquation(1.2, 0.5);
-    approx(E1 - 0.5 * Math.sin(E1) - 1.2, 0, 1e-12, 'Kepler equation residual @ M=1.2, e=0.5');
+    approx(E1 - 0.5 * Math.sin(E1) - 1.2, 0, 1e-12, 'resíduo da equação de Kepler @ M=1.2, e=0.5');
 
     const E2 = solveKeplerEquation(0.1, 0.9);
-    approx(E2 - 0.9 * Math.sin(E2) - 0.1, 0, 1e-12, 'Kepler equation residual @ M=0.1, e=0.9');
+    approx(E2 - 0.9 * Math.sin(E2) - 0.1, 0, 1e-12, 'resíduo da equação de Kepler @ M=0.1, e=0.9');
 
-    // At perihelion (M = 0 → E = 0) the heliocentric radius equals q.
+    // No periélio (M = 0 → E = 0) o raio heliocêntrico é igual a q.
     const tpJd = julianDayUtc(new Date());
     const els = { ec: 0.5, qrAu: 1.0, inDeg: 0, omDeg: 0, wDeg: 0, tpJd, epochJd: tpJd } as OrbitalElements;
     const p = heliocentricPositionAU(els, new Date());
-    if (!p) throw new Error('[keplerOrbit] perihelion sanity returned null');
-    approx(Math.hypot(p.x, p.y, p.z), 1.0, 1e-9, 'asteroid at M=0 lies at perihelion radius q');
+    if (!p) throw new Error('[keplerOrbit] sanidade do periélio retornou null');
+    approx(Math.hypot(p.x, p.y, p.z), 1.0, 1e-9, 'asteroide em M=0 está no raio do periélio q');
 
-    // Hyperbolic orbits (e ≥ 1) are rejected — we refuse to propagate unbound trajectories.
+    // Órbitas hiperbólicas (e ≥ 1) são rejeitadas — recusamos propagar trajetórias não ligadas.
     const hyp = { ec: 1.2, qrAu: 1, inDeg: 0, omDeg: 0, wDeg: 0, tpJd, epochJd: tpJd } as OrbitalElements;
     if (heliocentricPositionAU(hyp, new Date()) !== null) {
-        throw new Error('[keplerOrbit] must reject hyperbolic e ≥ 1');
+        throw new Error('[keplerOrbit] deve rejeitar hiperbólico e ≥ 1');
     }
 
-    // Zero-perihelion is rejected.
+    // Periélio zero é rejeitado.
     const degenerate = { ec: 0.5, qrAu: 0, inDeg: 0, omDeg: 0, wDeg: 0, tpJd, epochJd: tpJd } as OrbitalElements;
     if (heliocentricPositionAU(degenerate, new Date()) !== null) {
-        throw new Error('[keplerOrbit] must reject q ≤ 0');
+        throw new Error('[keplerOrbit] deve rejeitar q ≤ 0');
     }
 
-    // Missing perihelion epoch (tpJd = 0) is rejected — we never invent a position.
+    // Época de periélio ausente (tpJd = 0) é rejeitada — nunca inventamos uma posição.
     const noTp = { ec: 0.5, qrAu: 1, inDeg: 0, omDeg: 0, wDeg: 0, tpJd: 0, epochJd: 0 } as OrbitalElements;
     if (heliocentricPositionAU(noTp, new Date()) !== null) {
-        throw new Error('[keplerOrbit] must reject tpJd = 0');
+        throw new Error('[keplerOrbit] deve rejeitar tpJd = 0');
     }
 }

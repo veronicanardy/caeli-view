@@ -6,6 +6,7 @@
  * nem altera dados — apenas apresenta as opções disponíveis.
  */
 
+import { OBJECT_LIMITS } from '@/types';
 import type { ObjectLimit, SelectionMode } from '@/types';
 import { Tooltip } from './Tooltip';
 
@@ -19,10 +20,10 @@ type Props = {
     criterionLocked?: boolean;
 };
 
-const LIMITS: ObjectLimit[] = [5, 15, 30];
+const LIMITS = OBJECT_LIMITS;
 
 const MODE_OPTIONS: Array<{ value: SelectionMode; labelPt: string; labelEn: string }> = [
-    { value: 'nearest', labelPt: 'Mais próximos agora', labelEn: 'Closest now' },
+    { value: 'nearest',  labelPt: 'Mais próximos agora',   labelEn: 'Closest now' },
     { value: 'upcoming', labelPt: 'Próximas aproximações', labelEn: 'Upcoming passes' },
 ];
 

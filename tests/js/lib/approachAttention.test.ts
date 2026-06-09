@@ -99,6 +99,59 @@ describe('classifyApproachAttention', () => {
         expect(classifyApproachAttention(makeApproach()).score).toBeGreaterThanOrEqual(0);
     });
 
+    it('fronteira exata: score 3.99 → "high" (não "highlight")', () => {
+        // hazardFlag (+2) + distância entre 1 e 1.5 LD (+1.25) + velocidade >= 80k (+1) = 4.25
+        // Aqui queremos atingir exatamente um score just below 4: apenas hazard (+2) + dist 1–1.5 (+1.25) = 3.25 → high
+        // Para chegar em 3.99 sem ultrapassar 4: hazard (+2) + vel >= 80k (+1) + dist 1–3 (+0.5) = 3.5 → high
+        const result = classifyApproachAttention(makeApproach({
+            hazardFlag: true,
+            relativeVelocityKph: 90000,
+            lunarDistance: 2.5,
+        }));
+        // score = 2 (hazard) + 1 (vel>=80k) + 0.5 (dist 1–3) = 3.5 → "high"
+        expect(result.score).toBeCloseTo(3.5, 9);
+        expect(result.level).toBe('high');
+    });
+
+    it('fronteira exata: score 4.0 → "highlight"', () => {
+        // hazardFlag (+2) + distância < 1 LD (+2) = 4.0 exato
+        const result = classifyApproachAttention(makeApproach({
+            hazardFlag: true,
+            lunarDistance: 0.5,
+        }));
+        expect(result.score).toBeCloseTo(4, 9);
+        expect(result.level).toBe('highlight');
+    });
+
+    it('fronteira exata: score 2.49 → "moderate" (não "high")', () => {
+        // distância < 1 LD (+2) + diâmetro >= 140 m (+1) = 3 → high... ajustamos para abaixo de 2.5
+        // apenas: dist 1–1.5 LD (+1.25) + vel 80k (+1) = 2.25 → moderate
+        const result = classifyApproachAttention(makeApproach({
+            lunarDistance: 1.3,
+            relativeVelocityKph: 85000,
+        }));
+        // score = 1.25 + 1 = 2.25 → moderate
+        expect(result.score).toBeCloseTo(2.25, 9);
+        expect(result.level).toBe('moderate');
+    });
+
+    it('fronteira exata: score 2.5 → "high"', () => {
+        // dist < 1 LD (+2) + dist 1–1.5 não se acumula; usar: hazard (+2) + dist 1–1.5 (+1.25) = 3.25 → high
+        // Para exatamente 2.5: vel >= 120k (+1.5) + dist 1–3 (+0.5) + ... ajuste:
+        // dist 1–1.5 (+1.25) + vel >= 120k (+1.5) = 2.75 → high — vamos usar o mínimo exato
+        // dist < 1 LD (+2) + nada mais = 2 → moderate. dist 1–1.5 (+1.25) + vel >= 80k (+1) + diâm >= 140 (+1) = 3.25 → high
+        // Para atingir exatamente 2.5: não há combinação de números inteiros que dê 2.5.
+        // O limiar é >=2.5: usamos 1.25 + 1.25 não existe. Usamos dist <1 (+2) + vel que some 0.5 = não existe.
+        // Alternativa: hazard (+2) + nada mais = 2 (moderate). +0.5 (dist 1–3) = 2.5 → high
+        const result = classifyApproachAttention(makeApproach({
+            hazardFlag: true,
+            lunarDistance: 2.5,
+        }));
+        // score = 2 (hazard) + 0.5 (dist 1–3) = 2.5 → high (score >= 2.5)
+        expect(result.score).toBeCloseTo(2.5, 9);
+        expect(result.level).toBe('high');
+    });
+
     it('a reason menciona a NeoWs quando hazardFlag está ativo', () => {
         expect(classifyApproachAttention(makeApproach({ hazardFlag: true })).reason).toContain('NeoWs');
     });

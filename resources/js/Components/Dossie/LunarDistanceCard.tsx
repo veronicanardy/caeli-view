@@ -6,7 +6,7 @@
  */
 
 import { Moon } from 'lucide-react';
-import { compactKm, formatNumber, lunarDistanceLabel } from '@/lib/format';
+import { compactKm, formatNumber, lunarDistanceLabel, LUNAR_DISTANCE_KM } from '@/lib/format';
 
 export function LunarDistanceCard({ distanceKm, lunarDistance }: { distanceKm: number | null | undefined; lunarDistance: number | null | undefined }) {
     const band = lunarDistance === null || lunarDistance === undefined ? 'unknown' : lunarDistance < 1 ? 'inside' : lunarDistance <= 1.5 ? 'near' : 'beyond';
@@ -34,7 +34,7 @@ export function LunarDistanceCard({ distanceKm, lunarDistance }: { distanceKm: n
                 </div>
             </dl>
             <p className="mt-4 text-xs leading-5 text-white/45">
-                A referência usa a distância média Terra-Lua de {formatNumber(384400, 0)} km, uma régua didática para sentir a escala.
+                A referência usa a distância média Terra-Lua de {formatNumber(LUNAR_DISTANCE_KM, 0)} km, uma régua didática para sentir a escala.
             </p>
         </article>
     );

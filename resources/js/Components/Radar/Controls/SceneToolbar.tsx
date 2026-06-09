@@ -36,7 +36,7 @@ export function SceneToolbar({
 }: Props) {
     return (
         <div className="pointer-events-none absolute right-3 top-3 z-20">
-            <div className="pointer-events-auto flex items-center gap-1.5">
+            <div className="pointer-events-auto flex items-center gap-1.5 cursor-auto">
                 {activeMode !== 'orbit' ? (
                     <Tooltip content={en ? 'Reset view' : 'Resetar vista'} align="right">
                         <IconButton onClick={onResetView} aria-label={en ? 'Reset view' : 'Resetar vista'}>

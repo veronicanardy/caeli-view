@@ -55,7 +55,7 @@ export function PanelShell({
                 ref={panelRef}
                 style={{ ...style, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
                 className={[
-                    'pointer-events-auto absolute z-20 overflow-hidden border',
+                    'pointer-events-auto absolute z-20 overflow-hidden border cursor-auto',
                     'bg-space-950/96 shadow-[0_0_48px_rgba(34,211,238,0.12),0_12px_40px_rgba(0,0,0,0.7)] backdrop-blur-2xl',
                     /* Mobile: bottom sheet largura total, canto superior arredondado */
                     'left-0 right-0 bottom-0 rounded-t-2xl',

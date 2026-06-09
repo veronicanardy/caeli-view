@@ -46,7 +46,7 @@ export function RadarNavigationPanel({
 
     return (
         <div className="pointer-events-none absolute left-3 top-3 z-40">
-            <div className="pointer-events-auto relative flex flex-col items-start gap-2 overflow-visible lg:flex-row">
+            <div className="pointer-events-auto relative flex flex-col items-start gap-2 overflow-visible lg:flex-row cursor-auto">
                 {panelCollapsed ? (
                     <button
                         type="button"

@@ -4,7 +4,7 @@ import { AppLayout } from '@/Components/AppLayout';
 import { CompactConsoleBar } from '@/Components/Radar/Controls/CompactConsoleBar';
 import { RadarDataQualityCard } from '@/Components/Radar/Panels/RadarDataQualityCard';
 import { ErrorMessage } from '@/Components/ErrorMessage';
-import { buildRadarObjects } from '@/lib/radarData';
+import { buildRadarObjects, trajectoryToPositionResult } from '@/lib/radarData';
 import { useTranslation } from '@/i18n';
 import { useClosestNow } from '@/hooks/useClosestNow';
 import { useRadarControls } from '@/hooks/useRadarControls';
@@ -12,7 +12,6 @@ import {
     ApproachObservatoryFilters,
     AsteroidTrajectory,
     HorizonsPositionResult,
-    LunarReference,
     PageProps,
     SunDirection,
     UnifiedApproach,
@@ -22,26 +21,17 @@ const DailyOrbitalRadar3D = lazy(() =>
     import('@/Components/Radar/DailyOrbitalRadar3D').then((module) => ({ default: module.DailyOrbitalRadar3D })),
 );
 
-type ObservatoryData = {
-    errorsBySource: Record<string, string>;
-    lunarReference: LunarReference;
-};
-
 type Props = PageProps<{
     filters: ApproachObservatoryFilters;
     initialSunDirection: SunDirection;
 }>;
 
-export default function ApproachObservatoryIndex({ filters, initialSunDirection, errors = {} }: Props) {
+export default function ApproachObservatoryIndex({ filters, initialSunDirection }: Props) {
     const [radarFullscreen, setRadarFullscreen] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<ObservatoryData | null>(null);
-    const [fetchError, setFetchError] = useState<string | null>(null);
     const [selectedFocusId, setSelectedFocusId] = useState<string | null>(null);
     const [trajectoryByKey, setTrajectoryByKey] = useState<Record<string, AsteroidTrajectory>>({});
     const [trajectoryLoadingKey, setTrajectoryLoadingKey] = useState<string | null>(null);
     const { locale, t } = useTranslation();
-    const en = locale === 'en';
 
     const { objectLimit, selectionMode, setObjectLimit, setSelectionMode } = useRadarControls();
     const [refreshNonce, setRefreshNonce] = useState(0);
@@ -49,45 +39,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
     useEffect(() => {
         setSelectedFocusId(null);
     }, [filters.date_min, filters.date_max, filters.type]);
-
-    const dataWindow = useMemo(() => ({ date_min: filters.date_min, date_max: filters.date_max }), [filters.date_min, filters.date_max]);
-
-    useEffect(() => {
-        const controller = new AbortController();
-        setLoading(true);
-        setFetchError(null);
-
-        const params = new URLSearchParams({
-            date_min: dataWindow.date_min,
-            date_max: dataWindow.date_max,
-            type: filters.type,
-            dist_max: filters.dist_max ?? '0.2',
-            sort: filters.sort ?? 'dist',
-            distance_unit: filters.distance_unit ?? 'km',
-        });
-
-        fetch(`/radar/data?${params.toString()}`, {
-            signal: controller.signal,
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
-        })
-            .then((response) => {
-                if (!response.ok) throw new Error('Observatory unavailable.');
-                return response.json() as Promise<ObservatoryData>;
-            })
-            .then((payload) => {
-                setData(payload);
-            })
-            .catch((err: unknown) => {
-                if (err instanceof DOMException && err.name === 'AbortError') return;
-                setFetchError(en ? 'Could not load observatory data right now.' : 'Não foi possível carregar os dados do observatório agora.');
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setLoading(false);
-            });
-
-        return () => controller.abort();
-    }, [dataWindow.date_min, dataWindow.date_max, filters.type, filters.dist_max, filters.sort, filters.distance_unit, en]);
 
     const {
         data:    closestNowData,
@@ -110,29 +61,8 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
         if (!closestNowData) return {};
         const map: Record<string, HorizonsPositionResult> = {};
         for (const object of closestNowData.objects) {
-            const traj = object.trajectory;
-            if (!traj || traj.status !== 'available' || !traj.currentPoint) continue;
-            const current = traj.currentPoint;
-            map[object.approach.id] = {
-                id: object.approach.id,
-                status: 'available',
-                positionKind: 'horizons_current',
-                x: current.x,
-                y: current.y,
-                z: typeof current.z === 'number' ? current.z : null,
-                vx: typeof current.vx === 'number' ? current.vx : null,
-                vy: typeof current.vy === 'number' ? current.vy : null,
-                vz: typeof current.vz === 'number' ? current.vz : null,
-                currentPositionTime: current.timestamp ?? traj.anchorTime ?? null,
-                closestApproachTime: traj.closestApproachTime ?? object.approach.approachDate ?? null,
-                closestApproachDistanceKm: object.currentDistanceKm,
-                closestApproachDistanceLD: object.currentDistanceLD,
-                distanceSource: 'JPL Horizons',
-                positionSource: 'JPL Horizons',
-                failureReason: null,
-                horizonsFailureKind: traj.horizonsFailureKind ?? null,
-                note: traj.note ?? null,
-            };
+            const pos = trajectoryToPositionResult(object);
+            if (pos) map[object.approach.id] = pos;
         }
         return map;
     }, [closestNowData]);
@@ -146,8 +76,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
         return map;
     }, [closestNowData]);
 
-    const lunarReference = data?.lunarReference ?? closestNowData?.lunarReference;
-    const errorsBySource = data?.errorsBySource ?? {};
+    const lunarReference = closestNowData?.lunarReference;
 
     const radarObjects = useMemo(
         () => buildRadarObjects(closestNowApproaches, closestNowPositionsById),
@@ -227,11 +156,9 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection,
             <Head title={t('observatory.title')} />
 
             <section className="mx-auto max-w-[1800px] space-y-3 px-3 py-2 sm:px-6 sm:py-4 sm:space-y-4 lg:px-8">
-                {Object.values(errorsBySource).map((message) => <ErrorMessage key={message} message={message} />)}
-                <ErrorMessage message={fetchError} />
                 <ErrorMessage message={closestNowError} />
 
-                {loading || (closestNowLoading && !closestNowData) ? (
+                {closestNowLoading && !closestNowData ? (
                     <ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />
                 ) : (
                     <>

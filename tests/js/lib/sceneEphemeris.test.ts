@@ -126,15 +126,42 @@ describe('buildHeliocentricOrbit', () => {
 });
 
 describe('helioAUToSunCenteredScene', () => {
-    it('applies the AU→scene swap (x, z, y) and the linear ORBIT_AU_SCALE factor', () => {
+    it('aplica o swap de eixos (x, z, −y) e o fator linear ORBIT_AU_SCALE', () => {
+        // eclíptico (1, 2, 3) → cena (1*s, 3*s, -2*s)
         const s = helioAUToSunCenteredScene({ x: 1, y: 2, z: 3 });
         expect(s[0]).toBeCloseTo(1 * ORBIT_AU_SCALE, 12);
         expect(s[1]).toBeCloseTo(3 * ORBIT_AU_SCALE, 12);
-        expect(s[2]).toBeCloseTo(2 * ORBIT_AU_SCALE, 12);
+        expect(s[2]).toBeCloseTo(-2 * ORBIT_AU_SCALE, 12);
     });
 
-    it('places the Sun (origin) at the scene origin', () => {
-        expect(helioAUToSunCenteredScene({ x: 0, y: 0, z: 0 })).toEqual([0, 0, 0]);
+    it('coloca o Sol (origem) na origem da cena', () => {
+        const s = helioAUToSunCenteredScene({ x: 0, y: 0, z: 0 });
+        expect(s[0]).toBeCloseTo(0, 12);
+        expect(s[1]).toBeCloseTo(0, 12);
+        expect(s[2]).toBeCloseTo(0, 12);
+    });
+
+    it('convenção de eixos: polo norte eclíptico (z > 0) mapeia para Y positivo na cena', () => {
+        // eclíptico (x, y, z) → cena (x, z, −y): z=1 → scene Y = 1*scale > 0
+        const s = helioAUToSunCenteredScene({ x: 0, y: 0, z: 1 });
+        expect(s[1]).toBeGreaterThan(0);
+        expect(s[0]).toBeCloseTo(0, 12);
+        expect(s[2]).toBeCloseTo(0, 12);
+    });
+
+    it('convenção de eixos: eclíptico +x mapeia para cena +x (inalterado)', () => {
+        const s = helioAUToSunCenteredScene({ x: 1, y: 0, z: 0 });
+        expect(s[0]).toBeGreaterThan(0);
+        expect(s[1]).toBeCloseTo(0, 12);
+        expect(s[2]).toBeCloseTo(0, 12);
+    });
+
+    it('convenção de eixos: eclíptico +y mapeia para cena −z', () => {
+        // eclíptico (0, 1, 0) → cena (0, 0, -1*scale)
+        const s = helioAUToSunCenteredScene({ x: 0, y: 1, z: 0 });
+        expect(s[0]).toBeCloseTo(0, 12);
+        expect(s[1]).toBeCloseTo(0, 12);
+        expect(s[2]).toBeCloseTo(-1 * ORBIT_AU_SCALE, 12);
     });
 });
 

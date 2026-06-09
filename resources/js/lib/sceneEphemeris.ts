@@ -10,50 +10,47 @@
  */
 
 import type * as Astronomy from 'astronomy-engine';
+import { KM_PER_AU, LUNAR_DISTANCE_KM as KM_PER_LD } from '@/lib/physicalConstants';
 
-const KM_PER_AU = 149_597_870.7;
-const KM_PER_LD = 384_400;
-
-/**
- * AU expressed in lunar distances (DL). 1 AU ≈ 389 DL.
- */
+/** 1 UA expresso em distâncias lunares (DL). 1 UA ≈ 389 DL. */
 export const AU_IN_DL = KM_PER_AU / KM_PER_LD;
 
 /**
- * Radial log compression — the ONE scale rule for the whole scene.
+ * Compressão logarítmica radial — A ÚNICA regra de escala de toda a cena.
  *
- * A purely linear scale (1 DL = 1 unit) is honest but unusable: 1 AU = 389 DL, so the Sun ends up
- * ~389 units from Earth while the Moon sits at 1, an impossible spread to view at once. Instead we
- * compress the radial DISTANCE through a logarithm, exactly like an astronomical log-scale diagram:
+ * Uma escala puramente linear (1 DL = 1 unidade) é honesta mas inutilizável: 1 UA = 389 DL, então
+ * o Sol ficaria a ~389 unidades da Terra enquanto a Lua estaria em 1, uma dispersão impossível de
+ * visualizar ao mesmo tempo. Em vez disso, comprimimos a DISTÂNCIA radial via logaritmo, exatamente
+ * como em um diagrama astronômico em escala log:
  *
- *     r_scene = K · ln(1 + r_dl / R0)
+ *     r_cena = K · ln(1 + r_dl / R0)
  *
- * Properties that keep this scientifically defensible:
- *  - Strictly monotonic: a larger real distance always maps to a larger scene distance — nothing
- *    near/far ever swaps order.
- *  - Direction-preserving: only the magnitude is compressed; we keep the unit vector, so angles,
- *    orbital inclination and the shape of every trajectory are undistorted (Z is never squashed
- *    relative to X/Y — the prototype's core promise).
- *  - Near-linear close to Earth: for r ≪ R0 the curve is ≈ r·K/R0, so the Earth–Moon–near-asteroid
- *    neighbourhood stays almost true to scale; the log only "folds in" the huge empty gap to the Sun.
+ * Propriedades que mantêm isso cientificamente defensável:
+ *  - Estritamente monotônico: uma distância real maior sempre mapeia para uma distância de cena
+ *    maior — nada próximo/distante inverte a ordem.
+ *  - Preserva direção: apenas a magnitude é comprimida; mantemos o vetor unitário, então ângulos,
+ *    inclinação orbital e a forma de cada trajetória são não distorcidos (Z nunca é achatado em
+ *    relação a X/Y — a promessa central da cena 3D).
+ *  - Quase linear próximo à Terra: para r ≪ R0 a curva é ≈ r·K/R0, então a vizinhança
+ *    Terra–Lua–asteroide próximo fica quase fiel à escala; o log só "dobra" o enorme vazio até o Sol.
  *
- * R0 is the transition distance (DL) below which the mapping is ~linear. K is fixed so the Moon
- * (1 DL) lands at exactly 1 scene unit. With R0 = 8 the Sun (389 DL) lands at ~33 units: clearly
- * farther than everything else, yet on screen together with the Moon.
+ * R0 é a distância de transição (DL) abaixo da qual o mapeamento é ~linear. K é fixo para que a
+ * Lua (1 DL) caia exatamente em 1 unidade de cena. Com R0 = 8, o Sol (389 DL) fica a ~33 unidades:
+ * claramente mais longe que todo o resto, mas ainda na tela junto com a Lua.
  */
 const COMPRESS_R0_DL = 8;
 const COMPRESS_K = 1 / Math.log(1 + 1 / COMPRESS_R0_DL);
 
-/** Compresses a radial distance in DL to scene units via the log rule above. */
+/** Comprime uma distância radial em DL para unidades de cena via a regra logarítmica acima. */
 export function compressDistanceDl(rDl: number): number {
     if (rDl <= 0) return 0;
     return COMPRESS_K * Math.log(1 + rDl / COMPRESS_R0_DL);
 }
 
 /**
- * Applies the radial log compression to a scene-axis vector expressed in LINEAR DL (1 unit = 1 DL).
- * Keeps the direction, rescales the magnitude. This is the single funnel every distance passes
- * through: the Moon, the Horizons asteroid vectors, and the heliocentric orbit points.
+ * Aplica a compressão logarítmica radial a um vetor de eixo de cena expresso em DL LINEARES
+ * (1 unidade = 1 DL). Preserva a direção, reescalona a magnitude. Este é o único funil pelo qual
+ * toda distância passa: a Lua, os vetores de asteroides do Horizons e os pontos de órbita heliocêntrica.
  */
 export function compressSceneVector(v: [number, number, number]): [number, number, number] {
     const r = Math.hypot(v[0], v[1], v[2]);
@@ -63,46 +60,46 @@ export function compressSceneVector(v: [number, number, number]): [number, numbe
 }
 
 /**
- * Where the Sun marker is drawn, in scene units: its real 1 AU distance run through the same log
- * compression as everything else. Derived, not hand-picked, so the Earth→Sun gap stays honest in
- * ORDER relative to the Earth→Moon gap (just compressed, never reordered).
+ * Onde o marcador do Sol é desenhado, em unidades de cena: sua distância real de 1 UA passa pela
+ * mesma compressão logarítmica de tudo o mais. Derivado, não escolhido à mão, para que o gap
+ * Terra→Sol permaneça honesto em ORDEM em relação ao gap Terra→Lua (apenas comprimido, nunca reordenado).
  */
 export const SUN_DISPLAY_DL = compressDistanceDl(AU_IN_DL);
 
 export type SceneEphemeris = {
-    /** Unit vector pointing FROM Earth TO the Sun, in scene axes. Use for the light direction. */
+    /** Vetor unitário apontando DA Terra PARA o Sol, nos eixos da cena. Usado como direção de luz. */
     sunDirection: [number, number, number];
-    /** Sun position in scene units (1 unit = 1 DL), clamped to a finite display distance. */
+    /** Posição do Sol em unidades de cena (1 unidade = 1 DL), limitada a uma distância de exibição finita. */
     sunScenePosition: [number, number, number];
-    /** Moon position in scene units (1 unit = 1 DL). Magnitude is roughly 1. */
+    /** Posição da Lua em unidades de cena (1 unidade = 1 DL). Magnitude é aproximadamente 1. */
     moonScenePosition: [number, number, number];
     /**
-     * Unit normal of the Moon's real orbital plane, in scene axes (position x velocity). Defines
-     * the actual tilt of the Moon's orbit so the drawn orbit line is not arbitrary.
+     * Normal unitária do plano orbital real da Lua, nos eixos da cena (posição × velocidade). Define
+     * a inclinação real da órbita lunar para que a linha de órbita desenhada não seja arbitrária.
      */
     moonOrbitNormal: [number, number, number];
-    /** Geocentric Moon distance in km. */
+    /** Distância geocêntrica da Lua em km. */
     moonDistanceKm: number;
-    /** Illuminated fraction of the Moon's disk, 0..1. */
+    /** Fração iluminada do disco lunar, 0..1. */
     moonIlluminatedFraction: number;
     /**
-     * Geographic lat/lon where the Sun is directly overhead now. The Earth shader uses this to put
-     * the correct continents on the day side.
+     * Lat/lon geográfico onde o Sol está diretamente no zênite agora. O shader da Terra usa isso para
+     * colocar os continentes corretos no lado iluminado.
      */
     subsolarLatDeg: number;
     subsolarLonDeg: number;
     /**
-     * Heliocentric Earth position in ecliptic J2000 (AU). Used by the orbit-solar mode to draw
-     * Earth at its real position on its 1 AU orbit (with eccentricity ~0.017 honestly applied).
+     * Posição heliocêntrica da Terra em eclíptico J2000 (UA). Usada pelo modo órbita-solar para
+     * desenhar a Terra em sua posição real na órbita de 1 UA (com excentricidade ~0,017 aplicada honestamente).
      */
     earthHelioPositionAU: { x: number; y: number; z: number };
-    /** Earth's heliocentric position in scene units (Sol at origin). Anchor for Moon, asteroids and the Earth visual. */
+    /** Posição heliocêntrica da Terra em unidades de cena (Sol na origem). Âncora para Lua, asteroides e visual da Terra. */
     earthScenePosition: [number, number, number];
-    /** Longitude of Earth's perihelion derived from real position (degrees). Used for the Earth orbit ellipse. */
+    /** Longitude do periélio da Terra derivada da posição real (graus). Usada para a elipse de órbita terrestre. */
     earthLonPerihelionDeg: number;
     /**
-     * Mercury's heliocentric position in scene units (Sol at origin, 1 AU = ORBIT_AU_SCALE).
-     * Null until the async ephemeris resolves.
+     * Posição heliocêntrica de Mercúrio em unidades de cena (Sol na origem, 1 UA = ORBIT_AU_SCALE).
+     * Nulo até que a efeméride assíncrona seja resolvida.
      */
     mercuryScenePosition: [number, number, number]; mercuryLonPerihelionDeg: number; mercurySemiMajorAU: number; mercuryEccentricity: number;
     venusScenePosition:   [number, number, number]; venusLonPerihelionDeg:   number; venusSemiMajorAU:   number; venusEccentricity:   number;
@@ -120,8 +117,8 @@ function loadAstronomy(): Promise<typeof Astronomy> {
 }
 
 /**
- * EQJ → ecliptic-J2000 rotation matrix. Constant (depends only on J2000), so we cache it once per
- * module load. Previously this was rebuilt on every frame-driven ephemeris call.
+ * Matriz de rotação EQJ → eclíptico J2000. Constante (depende apenas de J2000), então é cacheada
+ * uma vez por carga de módulo. Anteriormente era reconstruída a cada chamada de efeméride por frame.
  */
 let cachedEqjToEcl: Astronomy.RotationMatrix | null = null;
 function eqjToEclMatrix(A: typeof Astronomy): Astronomy.RotationMatrix {
@@ -201,7 +198,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         try {
             moonIlluminatedFraction = A.Illumination(A.Body.Moon, date).phase_fraction;
         } catch {
-            /* keep default */
+            /* mantém o default */
         }
 
         const sunEqOfDate = A.Equator(A.Body.Sun, date, new A.Observer(0, 0, 0), true, false);
@@ -210,8 +207,8 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         let subsolarLonDeg = (sunEqOfDate.ra - gastHours) * 15.0;
         subsolarLonDeg = (((subsolarLonDeg + 180) % 360) + 360) % 360 - 180;
 
-        // Heliocentric Earth position (AU, ecliptic J2000). Used by the orbit-solar scene to draw
-        // Earth at its real orbital position with honest eccentricity, not a clamped 1 AU circle.
+        // Posição heliocêntrica da Terra (UA, eclíptico J2000). Usada pela cena órbita-solar para
+        // desenhar a Terra em sua posição orbital real com excentricidade honesta, não um círculo fixo de 1 UA.
         const earthHelioEqj = A.HelioVector(A.Body.Earth, date);
         const earthHelioEcl = A.RotateVector(eqjToEclMatrix(A), earthHelioEqj);
         const earthHelioPositionAU = { x: earthHelioEcl.x, y: earthHelioEcl.y, z: earthHelioEcl.z };
@@ -327,23 +324,24 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
 }
 
 /**
- * The heliocentric layer's linear AU scale: how many scene units one AU of true heliocentric
- * distance maps to. Set equal to SUN_DISPLAY_DL so that 1 AU (the Earth–Sun distance) lands exactly
- * on the drawn Sun — i.e. the Earth-orbit reference of 1 AU closes right back on Earth at the origin.
+ * Escala linear UA da camada heliocêntrica: quantas unidades de cena correspondem a 1 UA de distância
+ * heliocêntrica real. Definida igual a SUN_DISPLAY_DL para que 1 UA (distância Terra–Sol) caia
+ * exatamente sobre o Sol desenhado — ou seja, a referência de órbita de 1 UA fecha de volta na Terra
+ * na origem.
  *
- * Crucially this is a LINEAR scale, so the orbit's SHAPE is exact: the Sun sits at the true focus of
- * the ellipse, eccentricity/perihelion/aphelion are all faithful. The near-Earth geocentric layer
- * (Moon, close asteroids) is what uses the log compression — the two layers meet at the Sun.
+ * Crucialmente esta é uma escala LINEAR, então o SHAPE da órbita é exato: o Sol está no foco real da
+ * elipse, excentricidade/periélio/afélio são todos fiéis. A camada geocêntrica próxima à Terra
+ * (Lua, asteroides próximos) é a que usa a compressão log — as duas camadas se encontram no Sol.
  */
 export const ORBIT_AU_SCALE = SUN_DISPLAY_DL;
 
 /**
- * Perifocal (x toward perihelion, y at +90° in the direction of motion) → heliocentric ecliptic
- * J2000, both in AU. Pure function, shared between the orbit-curve builder and the Kepler-equation
- * propagator (lib/keplerOrbit) so the drawn ellipse and the asteroid's "now" point use IDENTICAL
- * orientation — no chance of a drift between the two.
+ * Perifocal (x em direção ao periélio, y a +90° no sentido do movimento) → eclíptico heliocêntrico
+ * J2000, ambos em UA. Função pura, compartilhada entre o construtor de curva orbital e o propagador
+ * da equação de Kepler (lib/keplerOrbit) para que a elipse desenhada e o ponto "agora" do asteroide
+ * usem orientação IDÊNTICA — sem chance de deriva entre os dois.
  *
- * Rotation is R_z(Ω) · R_x(i) · R_z(ω) applied to (xp, yp, 0).
+ * Rotação é R_z(Ω) · R_x(i) · R_z(ω) aplicada a (xp, yp, 0).
  */
 export function perifocalToEclipticAU(
     xp: number,
@@ -366,12 +364,12 @@ export function perifocalToEclipticAU(
 }
 
 /**
- * Builds the asteroid's full heliocentric orbit as a closed loop of scene-space points, with the
- * Sun at the scene origin and a LINEAR AU scale (1 AU = ORBIT_AU_SCALE units). Shape-faithful:
- * eccentricity, perihelion and orbital orientation are exact — no log distortion of the curve.
+ * Constrói a órbita heliocêntrica completa do asteroide como um loop fechado de pontos no espaço de
+ * cena, com o Sol na origem e escala LINEAR em UA (1 UA = ORBIT_AU_SCALE unidades). Fiel à forma:
+ * excentricidade, periélio e orientação orbital são exatos — sem distorção logarítmica da curva.
  *
- * Used in the orbit-solar scene alongside lib/keplerOrbit's Kepler propagator. Because both share
- * perifocalToEclipticAU below, the propagated "now" point lies ON the drawn ellipse by construction.
+ * Usado na cena órbita-solar junto com o propagador de Kepler de lib/keplerOrbit. Como ambos
+ * compartilham perifocalToEclipticAU abaixo, o ponto propagado "agora" cai NA elipse desenhada por construção.
  */
 export function buildHeliocentricOrbit(
     elements: {
@@ -384,89 +382,90 @@ export function buildHeliocentricOrbit(
     segments = 256,
 ): Float32Array | null {
     const { ec, qrAu, inDeg, omDeg, wDeg } = elements;
-    if (!Number.isFinite(ec) || ec < 0 || ec >= 1) return null;     // bound orbits only
-    if (!Number.isFinite(qrAu) || !(qrAu > 0)) return null;          // sane perihelion
+    if (!Number.isFinite(ec) || ec < 0 || ec >= 1) return null;     // apenas órbitas ligadas
+    if (!Number.isFinite(qrAu) || !(qrAu > 0)) return null;          // periélio válido
     if (!Number.isFinite(inDeg) || !Number.isFinite(omDeg) || !Number.isFinite(wDeg)) return null;
 
-    const a = qrAu / (1 - ec);          // semi-major axis, AU
-    const p = a * (1 - ec * ec);        // semi-latus rectum, AU
+    const a = qrAu / (1 - ec);          // semieixo maior, UA
+    const p = a * (1 - ec * ec);        // semilatus rectum, UA
 
     const out: number[] = [];
     for (let s = 0; s <= segments; s += 1) {
-        const nu = (s / segments) * Math.PI * 2; // true anomaly
-        const r = p / (1 + ec * Math.cos(nu));   // AU
+        const nu = (s / segments) * Math.PI * 2; // anomalia verdadeira
+        const r = p / (1 + ec * Math.cos(nu));   // UA
         const xp = r * Math.cos(nu);
         const yp = r * Math.sin(nu);
 
         const ecl = perifocalToEclipticAU(xp, yp, inDeg, omDeg, wDeg);
 
-        // AU → scene (LINEAR, shape-exact); ecliptic (x, y, z) → scene (x, z, y).
+        // UA → cena (LINEAR, forma exata); eclíptico (x, y, z) → cena (x, z, −y).
         out.push(
             ecl.x * ORBIT_AU_SCALE,
             ecl.z * ORBIT_AU_SCALE,
-            ecl.y * ORBIT_AU_SCALE,
+            -ecl.y * ORBIT_AU_SCALE,
         );
     }
     return new Float32Array(out);
 }
 
 /**
- * Converts a heliocentric ecliptic position (AU, J2000) into scene units, with the Sun at the
- * scene origin. Identical axis-swap convention as the orbit builder above so they always agree.
+ * Converte uma posição eclíptica heliocêntrica (UA, J2000) em unidades de cena, com o Sol na origem.
+ * Convenção consistente com o modo geocêntrico: eclíptico (x, y, z) → cena (x, z, −y).
+ * Norte eclíptico (z > 0) aponta para +Y da cena; plano XZ da cena é o plano eclíptico.
  */
 export function helioAUToSunCenteredScene(p: { x: number; y: number; z: number }): [number, number, number] {
-    return [p.x * ORBIT_AU_SCALE, p.z * ORBIT_AU_SCALE, p.y * ORBIT_AU_SCALE];
+    return [p.x * ORBIT_AU_SCALE, p.z * ORBIT_AU_SCALE, -p.y * ORBIT_AU_SCALE];
 }
 
-export { KM_PER_LD, KM_PER_AU };
+export { LUNAR_DISTANCE_KM as KM_PER_LD, KM_PER_AU } from '@/lib/physicalConstants';
 
 /**
- * Scientific self-consistency assertions. Pure math, deterministic — call from a dev console or a
- * future test harness. Throws on the first failure so the caller knows exactly which invariant
- * regressed. Does not exercise astronomy-engine: those checks belong in computeSceneEphemeris's
- * integration coverage.
+ * Verificações de autoconsistência científica. Matemática pura, determinística — chame do console de
+ * dev ou de um harness de testes futuro. Lança na primeira falha para que o chamador saiba exatamente
+ * qual invariante regrediu. Não exercita o astronomy-engine: essas verificações pertencem à cobertura
+ * de integração de computeSceneEphemeris.
  */
 export function runSceneEphemerisAssertions(): void {
     const approx = (actual: number, expected: number, tol: number, label: string): void => {
         if (!(Math.abs(actual - expected) <= tol)) {
-            throw new Error(`[sceneEphemeris] ${label}: expected ${expected} ± ${tol}, got ${actual}`);
+            throw new Error(`[sceneEphemeris] ${label}: esperado ${expected} ± ${tol}, obtido ${actual}`);
         }
     };
 
-    // The Moon (1 DL) lands at exactly 1 scene unit by construction of COMPRESS_K.
-    approx(compressDistanceDl(1), 1, 1e-9, 'Moon at 1 DL → 1 scene unit');
+    // A Lua (1 DL) cai exatamente em 1 unidade de cena por construção de COMPRESS_K.
+    approx(compressDistanceDl(1), 1, 1e-9, 'Lua em 1 DL → 1 unidade de cena');
 
-    // Compression is strictly monotonic on (0, ∞) — half-the-distance is closer than full.
+    // A compressão é estritamente monotônica em (0, ∞) — meia distância é mais próxima que a distância inteira.
     if (!(compressDistanceDl(0.5) < compressDistanceDl(1))) {
-        throw new Error('[sceneEphemeris] compression must be monotonic');
+        throw new Error('[sceneEphemeris] compressão deve ser monotônica');
     }
     if (!(compressDistanceDl(10) < compressDistanceDl(100))) {
-        throw new Error('[sceneEphemeris] compression must be monotonic at larger radii');
+        throw new Error('[sceneEphemeris] compressão deve ser monotônica em raios maiores');
     }
 
-    // Compression preserves direction (only magnitude rescales).
+    // A compressão preserva a direção (apenas a magnitude é reescalonada).
     const v: [number, number, number] = [10, 5, 2];
     const c = compressSceneVector(v);
     const r0 = Math.hypot(...v);
     const r1 = Math.hypot(...c);
-    approx(c[0] / r1, v[0] / r0, 1e-12, 'compression preserves x direction');
-    approx(c[1] / r1, v[1] / r0, 1e-12, 'compression preserves y direction');
-    approx(c[2] / r1, v[2] / r0, 1e-12, 'compression preserves z direction');
+    approx(c[0] / r1, v[0] / r0, 1e-12, 'compressão preserva direção x');
+    approx(c[1] / r1, v[1] / r0, 1e-12, 'compressão preserva direção y');
+    approx(c[2] / r1, v[2] / r0, 1e-12, 'compressão preserva direção z');
 
-    // 1 AU should fold to a clearly larger scene distance than the Moon, but not absurdly so.
+    // 1 UA deve dobrar para uma distância de cena claramente maior que a Lua, mas não absurdamente.
     if (!(SUN_DISPLAY_DL > 20 && SUN_DISPLAY_DL < 60)) {
-        throw new Error(`[sceneEphemeris] SUN_DISPLAY_DL out of expected band: ${SUN_DISPLAY_DL}`);
+        throw new Error(`[sceneEphemeris] SUN_DISPLAY_DL fora da faixa esperada: ${SUN_DISPLAY_DL}`);
     }
 
-    // Perifocal-to-ecliptic with i = Ω = ω = 0: perihelion lies on +x ecliptic.
+    // Perifocal para eclíptico com i = Ω = ω = 0: periélio cai em +x eclíptico.
     const p = perifocalToEclipticAU(1, 0, 0, 0, 0);
-    approx(p.x, 1, 1e-12, 'perihelion at i=Ω=ω=0 maps to +x');
-    approx(p.y, 0, 1e-12, 'perihelion at i=Ω=ω=0 has y=0');
-    approx(p.z, 0, 1e-12, 'perihelion at i=Ω=ω=0 has z=0');
+    approx(p.x, 1, 1e-12, 'periélio em i=Ω=ω=0 mapeia para +x');
+    approx(p.y, 0, 1e-12, 'periélio em i=Ω=ω=0 tem y=0');
+    approx(p.z, 0, 1e-12, 'periélio em i=Ω=ω=0 tem z=0');
 
-    // Inclination of 90° pushes the +y perifocal axis out of the ecliptic plane (to +z ecliptic).
+    // Inclinação de 90° empurra o eixo perifocal +y para fora do plano eclíptico (para +z eclíptico).
     const q = perifocalToEclipticAU(0, 1, 90, 0, 0);
-    approx(q.x, 0, 1e-12, 'i=90, yp=1 has x=0');
-    approx(q.y, 0, 1e-12, 'i=90, yp=1 has y=0');
-    approx(q.z, 1, 1e-12, 'i=90, yp=1 maps to +z ecliptic');
+    approx(q.x, 0, 1e-12, 'i=90, yp=1 tem x=0');
+    approx(q.y, 0, 1e-12, 'i=90, yp=1 tem y=0');
+    approx(q.z, 1, 1e-12, 'i=90, yp=1 mapeia para +z eclíptico');
 }

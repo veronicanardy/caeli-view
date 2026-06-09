@@ -201,7 +201,8 @@ export type ClosestNowObject = {
     hasRealCurrentDistance: boolean;
 };
 
-export type ObjectLimit = 5 | 15 | 30;
+export const OBJECT_LIMITS = [5, 15, 30] as const;
+export type ObjectLimit = (typeof OBJECT_LIMITS)[number];
 export type SelectionMode = 'nearest' | 'upcoming';
 
 export type ClosestNowResponse = {
