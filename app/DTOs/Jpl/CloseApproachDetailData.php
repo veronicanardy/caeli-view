@@ -2,8 +2,11 @@
 
 namespace App\DTOs\Jpl;
 
+use App\DTOs\DtoValueParser;
+
 final readonly class CloseApproachDetailData
 {
+    use DtoValueParser;
     public function __construct(
         public ?string $date,
         public ?string $julianDate,
@@ -68,23 +71,4 @@ final readonly class CloseApproachDetailData
         ];
     }
 
-    private static function cleanText(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $text = trim((string) $value);
-
-        return $text === '' ? null : $text;
-    }
-
-    private static function floatOrNull(mixed $value): ?float
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return is_numeric($value) ? (float) $value : null;
-    }
 }

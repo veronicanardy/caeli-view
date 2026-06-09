@@ -2,8 +2,11 @@
 
 namespace App\DTOs\Jpl;
 
+use App\DTOs\DtoValueParser;
+
 final readonly class SmallBodyData
 {
+    use DtoValueParser;
     /**
      * @param array<int, OrbitalElementData> $orbitalElements
      * @param array<int, PhysicalParameterData> $physicalParameters
@@ -141,14 +144,4 @@ final readonly class SmallBodyData
         return CloseApproachData::inferObjectType($designation ?? '', $fullName);
     }
 
-    private static function cleanText(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $text = trim((string) $value);
-
-        return $text === '' ? null : $text;
-    }
 }
