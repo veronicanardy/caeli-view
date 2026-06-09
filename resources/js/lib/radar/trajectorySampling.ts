@@ -28,6 +28,7 @@ export function currentPositionInScene(object: ClosestNowObject): [number, numbe
     return horizonsToScene(point.x, point.y, point.z ?? 0);
 }
 
+/** Converte um ponto de trajetória (km, geocêntrico eclíptico) para THREE.Vector3 na cena. */
 export function toVec3(point: { x: number; y: number; z?: number | null }): THREE.Vector3 {
     const [x, y, z] = horizonsToScene(point.x, point.y, point.z ?? 0);
     return new THREE.Vector3(x, y, z);

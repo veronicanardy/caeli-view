@@ -49,6 +49,22 @@ A escala logarítmica de distância (`compressSceneVector` em `sceneEphemeris.ts
 vetores brutos do Horizons (km) e as posições na cena — toda distância passa por ela antes de chegar
 aqui.
 
+## Testes
+
+Os testes unitários ficam em `tests/js/lib/radar/` e seguem o padrão Vitest do projeto.
+
+| Arquivo fonte         | Arquivo de teste                        | O que é coberto                                        |
+|-----------------------|-----------------------------------------|--------------------------------------------------------|
+| `coordinates.ts`      | `coordinates.test.ts`                   | Convenção de eixos, compressão logarítmica, normalize3 |
+| `earthOrientation.ts` | `earthOrientation.test.ts`              | Orientação da Terra, tidal lock da Lua, degenerados    |
+| `trajectorySampling.ts` | `trajectorySampling.test.ts`          | clipPolyline, findClosest, toVec3, collectTimeTicks    |
+| `moonTextures.ts`     | `moonTextures.test.ts`                  | PRNG mulberry32 (buildMoonBump requer DOM)              |
+| `format.ts`           | `format.test.ts`                        | Dígitos dinâmicos, locales, fallbacks nulos            |
+| `cursor.ts`           | `cursor.test.ts`                        | Contagem de referência, reset, leaves extras           |
+| `bodyScale.ts`        | `bodyScale.test.ts`                     | Invariantes hitbox > raio visual                       |
+
+Funções que dependem de DOM ou Three.js com contexto WebGL (`buildMoonBump`, shaders) não têm testes unitários — requerem JSDOM ou ambiente de renderização.
+
 ## Padrões de nomenclatura
 
 - Funções de transformação de coordenadas: verbo + origem + destino (ex.: `horizonsToScene`)

@@ -8,6 +8,7 @@ import {
     collectTimeTicks,
     currentPositionInScene,
     findClosestApproachPoint,
+    toVec3,
 } from '@/lib/radar/trajectorySampling';
 import { KM_PER_LD } from '@/lib/sceneEphemeris';
 
@@ -52,6 +53,50 @@ function makeTrajectory(over: Partial<AsteroidTrajectory> = {}): AsteroidTraject
         ...over,
     } as AsteroidTrajectory;
 }
+
+describe('toVec3', () => {
+    it('converte um ponto na origem para THREE.Vector3 zero', () => {
+        const v = toVec3({ x: 0, y: 0, z: 0 });
+        expect(v.x).toBeCloseTo(0, 9);
+        expect(v.y).toBeCloseTo(0, 9);
+        expect(v.z).toBeCloseTo(0, 9);
+    });
+
+    it('usa z=0 quando z é omitido', () => {
+        const com = toVec3({ x: KM_PER_LD, y: 0, z: 0 });
+        const sem = toVec3({ x: KM_PER_LD, y: 0 });
+        expect(com.x).toBeCloseTo(sem.x, 9);
+        expect(com.y).toBeCloseTo(sem.y, 9);
+        expect(com.z).toBeCloseTo(sem.z, 9);
+    });
+
+    it('usa z=0 quando z é null', () => {
+        const com = toVec3({ x: KM_PER_LD, y: 0, z: 0 });
+        const nulo = toVec3({ x: KM_PER_LD, y: 0, z: null });
+        expect(com.x).toBeCloseTo(nulo.x, 9);
+        expect(com.y).toBeCloseTo(nulo.y, 9);
+        expect(com.z).toBeCloseTo(nulo.z, 9);
+    });
+
+    it('aplica a convenção de eixos: eclíptico +X → cena +X', () => {
+        const v = toVec3({ x: KM_PER_LD, y: 0, z: 0 });
+        expect(v.x).toBeCloseTo(1, 9);
+        expect(Math.abs(v.y)).toBeLessThan(1e-9);
+        expect(Math.abs(v.z)).toBeLessThan(1e-9);
+    });
+
+    it('aplica a convenção de eixos: eclíptico +Y → cena −Z', () => {
+        const v = toVec3({ x: 0, y: KM_PER_LD, z: 0 });
+        expect(Math.abs(v.x)).toBeLessThan(1e-9);
+        expect(Math.abs(v.y)).toBeLessThan(1e-9);
+        expect(v.z).toBeCloseTo(-1, 9);
+    });
+
+    it('retorna uma instância de THREE.Vector3', () => {
+        const v = toVec3({ x: 0, y: 0, z: 0 });
+        expect(v).toBeInstanceOf(THREE.Vector3);
+    });
+});
 
 describe('clipPolylineByLength', () => {
     it('retorna a entrada sem alterações quando não é necessário cortar', () => {

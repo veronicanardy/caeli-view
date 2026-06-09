@@ -1,11 +1,12 @@
 /**
- * Color palette assigned to the "closest now" asteroids by index. Selected/non-selected entries
- * stay legible against the dark background; warm hues bias each object so collisions in 3D space
- * stay parseable when objects cross paths.
+ * Responsabilidade: paleta de cores atribuída aos asteroides "closest now" por índice.
  *
- * `past` is a solid hex (no rgba): THREE.Color ignores the alpha channel of rgba() strings and
- * would warn + render it white. The faintness of the past trail comes from material opacity, not
- * the color string.
+ * As cores de cada entrada permanecem legíveis sobre o fundo escuro do radar; os matizes quentes
+ * diferenciam os objetos visualmente quando suas trajetórias se cruzam na cena 3D.
+ *
+ * Por que `past` é hex sólido (sem rgba): THREE.Color ignora o canal alpha de strings rgba() e
+ * renderizaria branco em vez de transparente. O esmaecimento da trilha passada vem da opacidade
+ * do material, não da string de cor.
  */
 export const OBJECT_PALETTE = [
     { future: '#76e4b5', current: '#a6f0d4', past: '#9fb4ad' },  // mint

@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 
-/** Deterministic PRNG (mulberry32). Seeded so the crater field is stable across reloads. */
+/** PRNG determinístico (mulberry32). Com seed fixo, o campo de crateras é idêntico a cada reload. */
 export function mulberry32(seed: number): () => number {
     let t = seed >>> 0;
     return () => {
@@ -19,9 +19,9 @@ export function mulberry32(seed: number): () => number {
 }
 
 /**
- * Builds a greyscale bump texture (equirectangular ratio) with a sparse cloud of soft circular
- * lows simulating crater relief. The base grey + radial gradients give an even mean luminance so
- * the bump material doesn't bias the surface darker overall.
+ * Gera uma textura de relevo em escala de cinza (proporção equiretangular) com crateras simuladas
+ * por gradientes radiais suaves. A base cinza neutra + gradientes mantêm a luminância média
+ * equilibrada, evitando que o bump material escureça a superfície de forma geral.
  */
 export function buildMoonBump(size: number): THREE.CanvasTexture {
     const canvas = document.createElement('canvas');
