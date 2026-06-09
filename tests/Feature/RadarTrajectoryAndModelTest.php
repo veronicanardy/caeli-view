@@ -134,7 +134,7 @@ class RadarTrajectoryAndModelTest extends TestCase
             ->assertOk()
             ->assertJsonPath('fidelityLevel', 'N3')
             ->assertJsonPath('modelKind', 'procedural')
-            ->assertJsonPath('diameterMeters', 500.0);
+            ->assertJsonPath('diameterMeters', fn ($v) => (float) $v === 500.0);
     }
 
     public function test_asteroid_model_returns_n4_for_object_with_only_diameter_range(): void

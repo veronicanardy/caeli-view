@@ -78,9 +78,11 @@ class HorizonsCommandBuilderTest extends TestCase
     {
         $identity = AsteroidIdentityNormalizer::normalize('101955 Bennu (1999 RQ36)');
 
+        // Número permanente (101955;) tem precedência sobre SPK-ID (2101955) porque
+        // o Horizons resolve SPK-IDs no formato 2000NNN de forma ambígua para alguns objetos.
         $this->assertSame([
-            '2101955',
             '101955;',
+            '2101955',
             'DES=1999 RQ36;',
             'Bennu',
         ], HorizonsCommandBuilder::build($identity, '2101955'));
