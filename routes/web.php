@@ -35,7 +35,4 @@ Route::middleware('throttle:nasa')->group(function (): void {
     Route::get('/apod/data', [ApodController::class, 'data'])->name('apod.data');
     Route::get('/apod', [ApodController::class, 'index'])->name('apod.index');
     Route::get('/viajantes', [SmallBodiesController::class, 'index'])->name('small-bodies.index');
-    Route::get('/viajantes/{identifier}', [SmallBodiesController::class, 'show'])
-        ->where('identifier', '[A-Za-z0-9%._ -]+')
-        ->name('small-bodies.show');
 });

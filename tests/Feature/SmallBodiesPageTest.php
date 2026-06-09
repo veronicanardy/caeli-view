@@ -67,7 +67,7 @@ class SmallBodiesPageTest extends TestCase
             'ssd-api.jpl.nasa.gov/*' => Http::response(JplResponses::sbdbNotFound()),
         ]);
 
-        $this->get('/viajantes/ZZZ123')
+        $this->get('/radar/objetos/ZZZ123')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('SmallBodies/Show')
@@ -107,7 +107,7 @@ class SmallBodiesPageTest extends TestCase
 
     public function test_identifier_validation_rejects_unsafe_values(): void
     {
-        $this->get('/viajantes/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
+        $this->get('/radar/objetos/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
             ->assertSessionHasErrors('identifier');
 
         Http::assertNothingSent();
