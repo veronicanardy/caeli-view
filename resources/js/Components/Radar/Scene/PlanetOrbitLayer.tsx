@@ -12,13 +12,15 @@ type PlanetOrbitConfig = {
     lonPerihelionKey: keyof Pick<SceneEphemeris,
         'mercuryLonPerihelionDeg' | 'venusLonPerihelionDeg' | 'earthLonPerihelionDeg' |
         'marsLonPerihelionDeg' | 'jupiterLonPerihelionDeg' | 'saturnLonPerihelionDeg' |
-        'uranusLonPerihelionDeg' | 'neptuneLonPerihelionDeg'>;
+        'uranusLonPerihelionDeg' | 'neptuneLonPerihelionDeg' | 'plutoLonPerihelionDeg'>;
     semiMajorKey: keyof Pick<SceneEphemeris,
         'mercurySemiMajorAU' | 'venusSemiMajorAU' | 'marsSemiMajorAU' |
-        'jupiterSemiMajorAU' | 'saturnSemiMajorAU' | 'uranusSemiMajorAU' | 'neptuneSemiMajorAU'> | null;
+        'jupiterSemiMajorAU' | 'saturnSemiMajorAU' | 'uranusSemiMajorAU' | 'neptuneSemiMajorAU' |
+        'plutoSemiMajorAU'> | null;
     eccentricityKey: keyof Pick<SceneEphemeris,
         'mercuryEccentricity' | 'venusEccentricity' | 'marsEccentricity' |
-        'jupiterEccentricity' | 'saturnEccentricity' | 'uranusEccentricity' | 'neptuneEccentricity'> | null;
+        'jupiterEccentricity' | 'saturnEccentricity' | 'uranusEccentricity' | 'neptuneEccentricity' |
+        'plutoEccentricity'> | null;
     fallbackSemiMajorAU: number;
     fallbackEccentricity: number;
     color: string;
@@ -34,6 +36,7 @@ const PLANET_ORBIT_CONFIGS: PlanetOrbitConfig[] = [
     { lonPerihelionKey: 'saturnLonPerihelionDeg',  semiMajorKey: 'saturnSemiMajorAU',  eccentricityKey: 'saturnEccentricity',  fallbackSemiMajorAU: 9.537,  fallbackEccentricity: 0.0565, color: '#c8a840', opacity: 0.06 },
     { lonPerihelionKey: 'uranusLonPerihelionDeg',  semiMajorKey: 'uranusSemiMajorAU',  eccentricityKey: 'uranusEccentricity',  fallbackSemiMajorAU: 19.19,  fallbackEccentricity: 0.0472, color: '#4ab8c8', opacity: 0.05 },
     { lonPerihelionKey: 'neptuneLonPerihelionDeg', semiMajorKey: 'neptuneSemiMajorAU', eccentricityKey: 'neptuneEccentricity', fallbackSemiMajorAU: 30.07,  fallbackEccentricity: 0.0086, color: '#2878d8', opacity: 0.04 },
+    { lonPerihelionKey: 'plutoLonPerihelionDeg',   semiMajorKey: 'plutoSemiMajorAU',   eccentricityKey: 'plutoEccentricity',   fallbackSemiMajorAU: 39.48,  fallbackEccentricity: 0.2488, color: '#c8b89a', opacity: 0.04 },
 ];
 
 /**

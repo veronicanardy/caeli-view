@@ -66,6 +66,8 @@ type RadarSceneProps = {
     isUranusFocused: boolean;
     onFocusNeptune: () => void;
     isNeptuneFocused: boolean;
+    onFocusPluto: () => void;
+    isPlutoFocused: boolean;
     /** Chamado quando Terra ou Lua são focados de dentro da cena (clique no label/hitbox). */
     onFocusBody: (body: 'earth' | 'moon') => void;
     onFocusSun?: () => void;
@@ -86,7 +88,7 @@ function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
     return null;
 }
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, onFirstFrame }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusPluto, isPlutoFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, onFirstFrame }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -246,6 +248,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         isUranusFocused={isUranusFocused}
                         onFocusNeptune={onFocusNeptune}
                         isNeptuneFocused={isNeptuneFocused}
+                        onFocusPluto={onFocusPluto}
+                        isPlutoFocused={isPlutoFocused}
                     />
                     {/* Elipses orbitais — longitude do periélio calculada dinamicamente da efeméride. */}
                     <PlanetOrbitLayer ephemeris={ephemeris} show={showLabels && !orbitLabelsOnly} />

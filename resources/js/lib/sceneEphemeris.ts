@@ -110,6 +110,7 @@ export type SceneEphemeris = {
     saturnScenePosition:  [number, number, number]; saturnLonPerihelionDeg:  number; saturnSemiMajorAU:  number; saturnEccentricity:  number;
     uranusScenePosition:  [number, number, number]; uranusLonPerihelionDeg:  number; uranusSemiMajorAU:  number; uranusEccentricity:  number;
     neptuneScenePosition: [number, number, number]; neptuneLonPerihelionDeg: number; neptuneSemiMajorAU: number; neptuneEccentricity: number;
+    plutoScenePosition:   [number, number, number]; plutoLonPerihelionDeg:   number; plutoSemiMajorAU:   number; plutoEccentricity:   number;
 };
 
 let modulePromise: Promise<typeof Astronomy> | null = null;
@@ -291,6 +292,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         const saturn   = planetData(A.Body.Saturn);
         const uranus   = planetData(A.Body.Uranus);
         const neptune  = planetData(A.Body.Neptune);
+        const pluto    = planetData(A.Body.Pluto);
 
         const mercuryScenePosition = mercury.scenePosition;
         const venusScenePosition   = venus.scenePosition;
@@ -299,6 +301,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         const saturnScenePosition  = saturn.scenePosition;
         const uranusScenePosition  = uranus.scenePosition;
         const neptuneScenePosition = neptune.scenePosition;
+        const plutoScenePosition   = pluto.scenePosition;
 
         return {
             sunDirection,
@@ -319,6 +322,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             saturnScenePosition,  saturnLonPerihelionDeg:  saturn.lonPerihelionDeg,  saturnSemiMajorAU:  saturn.semiMajorAU,  saturnEccentricity:  saturn.eccentricity,
             uranusScenePosition,  uranusLonPerihelionDeg:  uranus.lonPerihelionDeg,  uranusSemiMajorAU:  uranus.semiMajorAU,  uranusEccentricity:  uranus.eccentricity,
             neptuneScenePosition, neptuneLonPerihelionDeg: neptune.lonPerihelionDeg, neptuneSemiMajorAU: neptune.semiMajorAU, neptuneEccentricity: neptune.eccentricity,
+            plutoScenePosition,   plutoLonPerihelionDeg:   pluto.lonPerihelionDeg,   plutoSemiMajorAU:   pluto.semiMajorAU,   plutoEccentricity:   pluto.eccentricity,
         };
     } catch {
         return null;

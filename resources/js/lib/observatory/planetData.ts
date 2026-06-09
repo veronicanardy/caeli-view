@@ -210,6 +210,36 @@ export const NEPTUNE: PlanetDatum = {
  * Textura: camada de nuvens de amônia e água na troposfera superior (2K).
  *   As bandas laranja/bege/brancas e as zonas escuras são a face permanente visual de Júpiter.
  */
+/**
+ * Pluto's physical constants.
+ *
+ * physicalRadiusDl = 1188.3 km / 384400 km/DL = 0.003091 DL
+ *
+ * Plutão é um planeta anão no Cinturão de Kuiper — o maior objeto dessa categoria conhecido.
+ * Raio físico de apenas 1188.3 km (18.5% da Terra), o que o tornaria sub-pixel na escala real do radar.
+ * Renderizamos em 0.022 DL (~7× físico) — menor que Mercúrio (0.028 DL), mas visível e clicável.
+ *
+ * Rotation: −6.3874 Earth days (retrógrado — mesmo sentido que Vênus e Urano).
+ *   A inclinação axial de 122.53° codifica a rotação retrógrada na convenção IAU.
+ * Axial tilt: 122.53° (IAU WGCCRE 2015) — obliquidade extrema, similar a Urano.
+ *
+ * Textura: imagens da missão New Horizons (2015) revelaram superfície com nitrogênio,
+ *   metano e monóxido de carbono congelados. O coração de Tombaugh (Sputnik Planitia)
+ *   é a região brilhante mais famosa — textura 2K cobre esse detalhe real.
+ *
+ * Nota: desde 2006 é classificado como planeta anão pela IAU. Incluído aqui pelo valor
+ *   científico e narrativo — a New Horizons revelou um mundo muito mais complexo do que
+ *   qualquer previsão sugeria.
+ */
+export const PLUTO: PlanetDatum = {
+    physicalRadiusDl: 1_188.3 / KM_PER_LD,             // 0.003091 DL — true radius
+    visualRadiusDl: 0.022,                               // rendered radius (~7× — smaller than Mercury)
+    rotationPeriodS: 6.3874 * 24 * 3600,                // magnitude; sign applied in Pluto.tsx (retrograde)
+    axialTiltDeg: 122.53,                                // obliquity (IAU WGCCRE 2015) — retrograde
+    texturePath: '/images/pluto/pluto-2k.jpg',
+    fallbackColor: '#c8b89a',                            // bege-arenoso — nitrogênio e metano congelados
+};
+
 export const JUPITER: PlanetDatum = {
     physicalRadiusDl: 71_492 / KM_PER_LD,             // 0.18596 DL — true equatorial radius
     visualRadiusDl: 0.19,                               // rendered radius (~1.02× — quase real!)

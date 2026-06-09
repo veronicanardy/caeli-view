@@ -21,6 +21,7 @@ export type PlanetScenePositions = {
     saturnPos: SceneVector | null;
     uranusPos: SceneVector | null;
     neptunePos: SceneVector | null;
+    plutoPos: SceneVector | null;
 };
 
 export function computeSunDirection(ephemeris: SceneEphemeris | null, fallbackSunDirection: SceneVector): SceneVector {
@@ -59,5 +60,6 @@ export function planetScenePositions(ephemeris: SceneEphemeris | null): PlanetSc
         saturnPos: ephemeris?.saturnScenePosition ?? null,
         uranusPos: ephemeris?.uranusScenePosition ?? null,
         neptunePos: ephemeris?.neptuneScenePosition ?? null,
+        plutoPos: ephemeris?.plutoScenePosition ?? null,
     };
 }
