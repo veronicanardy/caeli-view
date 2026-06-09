@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Log;
  * @see ApproachMerger            Combinação e deduplicação das fontes
  * @see ApproachSummarizer        Estatísticas e séries para gráficos
  */
-final class ApproachObservatoryService
+final class RadarService
 {
     /** Fator de conversão de Unidades Astronômicas para quilômetros */
     private const ASTRONOMICAL_UNIT_KM = 149_597_870.7;

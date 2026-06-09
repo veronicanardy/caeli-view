@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Services\Approaches\ApproachObservatoryService;
+use App\Services\Approaches\RadarService;
 use App\Services\Nasa\ApodService;
 use App\Services\SpaceNews\SpaceNewsService;
 use Illuminate\Http\JsonResponse;
@@ -13,7 +13,7 @@ class HomeAstronomyFeedController
 {
     public function __construct(
         private readonly ApodService $apod,
-        private readonly ApproachObservatoryService $observatory,
+        private readonly RadarService $observatory,
         private readonly SpaceNewsService $spaceNews,
     ) {
     }

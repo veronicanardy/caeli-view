@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Requests\ApproachObservatoryRequest;
 use App\Services\Approaches\AsteroidModelResolverService;
-use App\Services\Approaches\ApproachObservatoryService;
+use App\Services\Approaches\RadarService;
 use App\Services\Approaches\ClosestNowSelector;
 use App\Services\Jpl\Horizons\HorizonsTrajectoryService;
 use App\Support\SunDirectionCalculator;
@@ -17,7 +17,7 @@ use Inertia\Response;
 class RadarController
 {
     public function __construct(
-        private readonly ApproachObservatoryService $observatory,
+        private readonly RadarService $observatory,
         private readonly AsteroidModelResolverService $asteroidModels,
         private readonly HorizonsTrajectoryService $horizons,
         private readonly ClosestNowSelector $closestNow,

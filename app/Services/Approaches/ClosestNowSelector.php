@@ -17,13 +17,13 @@ use Illuminate\Support\Facades\Log;
  * reais centrados no momento presente, reordenando os candidatos pela distância real de agora.
  *
  * Pipeline:
- *   1. Descobre candidatos via `ApproachObservatoryService` (CAD + NeoWs, já com dedup e filtro).
+ *   1. Descobre candidatos via `RadarService` (CAD + NeoWs, já com dedup e filtro).
  *   2. Seleciona os N mais próximos por miss_distance + todos os PHAs (objetos potencialmente perigosos).
  *   3. Busca trajetórias do Horizons em paralelo para cada candidato.
  *   4. Reordena pela distância real derivada do Horizons; usa miss_distance como fallback.
  *   5. Retorna os K melhores com a trajetória completa (passado/presente/futuro) anexada.
  *
- * @see ApproachObservatoryService  Fonte dos candidatos iniciais
+ * @see RadarService  Fonte dos candidatos iniciais
  * @see HorizonsTrajectoryService   Provedor das trajetórias vetoriais reais
  */
 final class ClosestNowSelector
@@ -98,7 +98,7 @@ final class ClosestNowSelector
     private const RESULT_CACHE_TTL_SECONDS = 900; // 15 minutos
 
     public function __construct(
-        private readonly ApproachObservatoryService $observatory,
+        private readonly RadarService $observatory,
         private readonly HorizonsTrajectoryService  $horizons,
     ) {
     }

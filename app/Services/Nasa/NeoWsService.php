@@ -28,7 +28,7 @@ final class NeoWsService
      * Retorna os asteroides que se aproximam da Terra no período informado.
      *
      * A API do NeoWs aceita no máximo 8 dias por requisição. Intervalos maiores
-     * devem ser fatiados externamente (veja `ApproachObservatoryService`).
+     * devem ser fatiados externamente (veja `RadarService`).
      *
      * @param  string  $startDate  Data inicial no formato Y-m-d
      * @param  string  $endDate    Data final no formato Y-m-d (máx. 8 dias após $startDate)
