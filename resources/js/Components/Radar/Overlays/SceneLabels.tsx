@@ -200,9 +200,11 @@ export function DistanceCulledScreenLabel({
 }) {
     const camera = useThree((state) => state.camera);
     const [visible, setVisible] = useState(true);
+    const _anchor = useRef(new THREE.Vector3());
 
     useFrame(() => {
-        const d = camera.position.distanceTo(new THREE.Vector3(...anchor));
+        _anchor.current.set(...anchor);
+        const d = camera.position.distanceTo(_anchor.current);
         const nextVisible = d <= maxCameraDistance;
         setVisible((current) => (current === nextVisible ? current : nextVisible));
     });
@@ -245,28 +247,38 @@ export function FocusProtectedHtml({
  * COMPACT_LABEL_THRESHOLD_PX na tela — ou seja, o usuário afastou o suficiente para que os
  * labels primários longos entulhem a vizinhança Terra-Lua. Os labels mudam para forma compacta.
  */
-export function useCompactLabelMode(): boolean {
+/**
+ * Hook base compartilhado: projeta o raio orbital da Lua (1 DL) em pixels uma única vez por frame.
+ * useCompactLabelMode e useHideAsteroidLabelsMode consomem o resultado sem duplicar a projeção.
+ */
+function useLunarRadiusPx(): number {
     const { camera, size } = useThree();
     const controls = useThree((s) => s.controls) as unknown as { target?: THREE.Vector3 } | null;
-    const [compact, setCompact] = useState(false);
-    const compactRef = useRef(false);
+    const [radiusPx, setRadiusPx] = useState(0);
+    const radiusPxRef = useRef(0);
+    const _fallbackTarget = useRef(new THREE.Vector3());
+    const _oneDl = useRef(new THREE.Vector3());
 
     useFrame(() => {
-        const target = controls?.target ?? new THREE.Vector3(0, 0, 0);
+        const target = controls?.target ?? _fallbackTarget.current.set(0, 0, 0);
         const center = target.clone().project(camera);
-        const oneDl = target.clone().add(new THREE.Vector3(1, 0, 0)).project(camera);
-        const lunarRadiusPx = Math.hypot(
+        _oneDl.current.copy(target).x += 1;
+        const oneDl = _oneDl.current.project(camera);
+        const next = Math.hypot(
             (oneDl.x - center.x) * size.width * 0.5,
             (oneDl.y - center.y) * size.height * 0.5,
         );
-        const next = lunarRadiusPx < COMPACT_LABEL_THRESHOLD_PX;
-        if (next !== compactRef.current) {
-            compactRef.current = next;
-            setCompact(next);
+        if (Math.abs(next - radiusPxRef.current) > 0.5) {
+            radiusPxRef.current = next;
+            setRadiusPx(next);
         }
     });
 
-    return compact;
+    return radiusPx;
+}
+
+export function useCompactLabelMode(): boolean {
+    return useLunarRadiusPx() < COMPACT_LABEL_THRESHOLD_PX;
 }
 
 /**
@@ -276,27 +288,7 @@ export function useCompactLabelMode(): boolean {
  * labels de rochas devem ser ocultados (exceto o objeto selecionado, responsabilidade do chamador).
  */
 export function useHideAsteroidLabelsMode(): boolean {
-    const { camera, size } = useThree();
-    const controls = useThree((s) => s.controls) as unknown as { target?: THREE.Vector3 } | null;
-    const [hide, setHide] = useState(false);
-    const hideRef = useRef(false);
-
-    useFrame(() => {
-        const target = controls?.target ?? new THREE.Vector3(0, 0, 0);
-        const center = target.clone().project(camera);
-        const oneDl = target.clone().add(new THREE.Vector3(1, 0, 0)).project(camera);
-        const lunarRadiusPx = Math.hypot(
-            (oneDl.x - center.x) * size.width * 0.5,
-            (oneDl.y - center.y) * size.height * 0.5,
-        );
-        const next = lunarRadiusPx < HIDE_ASTEROID_LABELS_THRESHOLD_PX;
-        if (next !== hideRef.current) {
-            hideRef.current = next;
-            setHide(next);
-        }
-    });
-
-    return hide;
+    return useLunarRadiusPx() < HIDE_ASTEROID_LABELS_THRESHOLD_PX;
 }
 
 /**
@@ -346,6 +338,9 @@ function useLabelHiddenByFocusRef(
     const hiddenRef = useRef(false);
     const labelPosition = useRef(new THREE.Vector3());
 
+    const _cameraRight = useRef(new THREE.Vector3());
+    const _edge = useRef(new THREE.Vector3());
+
     useFrame(() => {
         if (!labelRef.current || !occluder) {
             if (hiddenRef.current) {
@@ -366,8 +361,8 @@ function useLabelHiddenByFocusRef(
         }
 
         const label = labelPosition.current.clone().project(camera);
-        const cameraRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize();
-        const edge = occluder.center.clone().add(cameraRight.multiplyScalar(occluder.radius)).project(camera);
+        _cameraRight.current.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+        const edge = _edge.current.copy(occluder.center).addScaledVector(_cameraRight.current, occluder.radius).project(camera);
 
         const centerPx = {
             x: (center.x * 0.5 + 0.5) * size.width,
@@ -404,6 +399,7 @@ function useLabelOverlapsSceneObjects(
     const [hidden, setHidden] = useState(false);
     const hiddenRef = useRef(false);
     const cameraRight = useRef(new THREE.Vector3());
+    const _occluderEdge = useRef(new THREE.Vector3());
 
     useFrame(() => {
         const element = labelElementRef.current;
@@ -424,15 +420,14 @@ function useLabelOverlapsSceneObjects(
             }
             return;
         }
-        const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize();
-        cameraRight.current.copy(right);
+        cameraRight.current.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
         const paddingPx = hiddenRef.current ? LABEL_OBJECT_SHOW_PADDING_PX : LABEL_OBJECT_HIDE_PADDING_PX;
 
         const nextHidden = occluders.some((occluder) => {
             const center = occluder.center.clone().project(camera);
             if (center.z < -1 || center.z > 1) return false;
 
-            const edge = occluder.center.clone().add(cameraRight.current.clone().multiplyScalar(occluder.radius)).project(camera);
+            const edge = _occluderEdge.current.copy(occluder.center).addScaledVector(cameraRight.current, occluder.radius).project(camera);
             const centerPx = {
                 x: canvasRect.left + (center.x * 0.5 + 0.5) * size.width,
                 y: canvasRect.top + (-center.y * 0.5 + 0.5) * size.height,

@@ -67,6 +67,7 @@ export function AsteroidModelPreview({ object, locale }: { object: ClosestNowObj
                 style={{ background: 'radial-gradient(ellipse at center, rgba(34,211,238,0.04) 0%, rgba(3,6,13,0.95) 70%)' }}>
                 <Canvas
                     camera={{ position: [0, 0, 3.2], fov: 32 }}
+                    dpr={[1, 1.5]}
                     gl={{ antialias: true, alpha: true, powerPreference: 'default' }}
                     style={{ width: '100%', height: '100%' }}
                 >

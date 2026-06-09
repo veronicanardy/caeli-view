@@ -140,13 +140,10 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     // Labels visíveis para todos os objetos enquanto a câmera não estiver muito afastada.
     // Só some quando hideAsteroidLabels (câmera muito longe) — independente do limite de objetos.
     // Também respeita o toggle global showLabels.
-    const showLabelForObject = (id: string) => shouldShowLabelForObject({
-        id,
-        selectedId,
-        showLabels,
-        orbitLabelsOnly,
-        hideAsteroidLabels,
-    });
+    const showLabelForObject = useCallback(
+        (id: string) => shouldShowLabelForObject({ id, selectedId, showLabels, orbitLabelsOnly, hideAsteroidLabels }),
+        [selectedId, showLabels, orbitLabelsOnly, hideAsteroidLabels],
+    );
 
     // useMemo evita que novos objetos sejam criados a cada render, prevenindo
     // invalidação desnecessária dos contextos LabelOccluder e SceneObjectOccluders.
