@@ -41,6 +41,7 @@ export type RadarObject = {
     note: string | null;
 };
 
+/** Classifica a distância lunar em uma das quatro faixas visuais do radar. */
 export function classifyDistance(distanceLD: number | null): RadarClassification {
     if (distanceLD === null || !Number.isFinite(distanceLD)) {
         return 'far';
@@ -51,6 +52,7 @@ export function classifyDistance(distanceLD: number | null): RadarClassification
     return 'far';
 }
 
+/** Melhor distância em km disponível: prefere o valor do Horizons ao nominal da API. */
 export function bestDistanceKm(approach: UnifiedApproach, position?: HorizonsPositionResult): number | null {
     if (position?.closestApproachDistanceKm !== undefined && position?.closestApproachDistanceKm !== null) {
         return position.closestApproachDistanceKm;
@@ -58,6 +60,7 @@ export function bestDistanceKm(approach: UnifiedApproach, position?: HorizonsPos
     return approach.nominalDistanceKm;
 }
 
+/** Melhor distância em DL disponível: prefere o valor do Horizons; calcula a partir de km como fallback. */
 export function bestDistanceLD(approach: UnifiedApproach, position?: HorizonsPositionResult): number | null {
     if (position?.closestApproachDistanceLD !== undefined && position?.closestApproachDistanceLD !== null) {
         return position.closestApproachDistanceLD;
@@ -66,6 +69,7 @@ export function bestDistanceLD(approach: UnifiedApproach, position?: HorizonsPos
     return km !== null ? km / LUNAR_DISTANCE_KM : (approach.lunarDistance ?? lunarDistanceFromKm(km));
 }
 
+/** Diâmetro estimado em metros: prefere o valor direto; usa a média min/max como fallback. */
 export function diameterMeters(approach: UnifiedApproach): number | null {
     if (approach.diameterMeters !== null) return approach.diameterMeters;
     const min = approach.estimatedDiameterMinMeters;
@@ -74,6 +78,7 @@ export function diameterMeters(approach: UnifiedApproach): number | null {
     return min ?? max ?? null;
 }
 
+/** Constrói a lista de RadarObject a partir das aproximações e dos resultados do Horizons. */
 export function buildRadarObjects(
     approaches: UnifiedApproach[],
     positionsById: Record<string, HorizonsPositionResult>,
@@ -124,6 +129,7 @@ export function buildRadarObjects(
     });
 }
 
+/** Contagens de qualidade de dados: total, com posição Horizons, simbólicos, dentro da DL. */
 export function radarQualityCounts(objects: RadarObject[]) {
     let withHorizons = 0;
     let symbolic = 0;

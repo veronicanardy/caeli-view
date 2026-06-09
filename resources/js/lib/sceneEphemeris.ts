@@ -1,11 +1,12 @@
 /**
- * Lightweight ephemeris helpers for the 3D radar's lighting + Moon placement.
+ * Responsabilidade: efemérides leves para iluminação, posicionamento da Lua e das órbitas
+ * planetárias na cena 3D do radar.
  *
- * Frame contract, matching DailyOrbitalRadar3D.horizonsToScene:
- * - Astronomy Engine returns Sun/Moon data in EQJ, the J2000 equatorial frame.
- * - JPL Horizons asteroid vectors are rendered in J2000 ecliptic coordinates.
- * - The scene maps ecliptic (x, y, z) to Three.js (x, y, z) as (x, z, y):
- *   ecliptic X/Z become the floor plane, and ecliptic north becomes scene +Y.
+ * Contrato de referencial (consistente com horizonsToScene em lib/radar/coordinates.ts):
+ * - Astronomy Engine retorna dados do Sol/Lua em EQJ (equatorial J2000).
+ * - Vetores de asteroides do JPL Horizons estão em coordenadas eclípticas J2000.
+ * - A cena mapeia eclíptico (x, y, z) para Three.js (x, z, −y):
+ *   X/Z eclíptico formam o plano do chão; norte eclíptico aponta para +Y da cena.
  */
 
 import type * as Astronomy from 'astronomy-engine';

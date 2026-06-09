@@ -35,6 +35,11 @@ const LEVELS: Record<ApproachAttentionLevel, { label: string; reason: string }> 
     },
 };
 
+/**
+ * Calcula o nível de atenção visual de uma aproximação com base em score composto.
+ * Fatores: distância lunar, velocidade relativa, diâmetro estimado e flag de hazard.
+ * Não implica risco de impacto.
+ */
 export function classifyApproachAttention(approach: UnifiedApproach): ApproachAttention {
     const lunarDistance = approach.lunarDistance;
     const velocityKph = approach.relativeVelocityKph ?? 0;
@@ -89,6 +94,7 @@ export function classifyApproachAttention(approach: UnifiedApproach): ApproachAt
     };
 }
 
+/** Diâmetro médio em metros: prefere o valor direto; usa média min/max como fallback. */
 export function averageDiameterMeters(approach: UnifiedApproach): number | null {
     if (approach.diameterMeters !== null) {
         return approach.diameterMeters;
@@ -101,6 +107,7 @@ export function averageDiameterMeters(approach: UnifiedApproach): number | null 
     return approach.estimatedDiameterMinMeters ?? approach.estimatedDiameterMaxMeters;
 }
 
+/** Retorna as classes Tailwind de borda, fundo e sombra correspondentes ao nível de atenção. */
 export function attentionClass(level: ApproachAttentionLevel): string {
     return {
         low: 'border-signal-cyan bg-signal-cyan shadow-glow',

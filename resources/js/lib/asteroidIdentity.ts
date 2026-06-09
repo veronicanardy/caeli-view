@@ -15,6 +15,10 @@ export type AsteroidIdentity = {
     aliases: string[];
 };
 
+/**
+ * Parseia um nome bruto de asteroide (ex.: "433 Eros (1898 DQ)") em suas partes componentes
+ * e produz displayName, subtitle e aliases normalizados para exibição consistente na interface.
+ */
 export function normalizeAsteroidIdentity(rawName: string): AsteroidIdentity {
     const raw = rawName.trim() || 'Objeto monitorado';
     let permanentNumber: string | null = null;
@@ -84,6 +88,10 @@ export function normalizeAsteroidIdentity(rawName: string): AsteroidIdentity {
     };
 }
 
+/**
+ * Resolve a identidade de uma aproximação: usa campos pré-resolvidos pela API se disponíveis,
+ * caso contrário parseia o nome bruto via normalizeAsteroidIdentity.
+ */
 export function resolveApproachIdentity(approach: UnifiedApproach): AsteroidIdentity {
     if (approach.displayName || approach.subtitle || approach.aliases?.length) {
         return {

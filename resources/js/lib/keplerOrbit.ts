@@ -1,30 +1,30 @@
 /**
- * Kepler-orbit math for propagating an asteroid's instantaneous heliocentric position from its
- * osculating elements. The frontend uses this in the "orbit solar" mode of the 3D radar so that
- * the rendered asteroid lands EXACTLY on the drawn ellipse — by construction.
+ * Responsabilidade: propagação orbital Kepleriana para posicionar um asteroide em seu ponto
+ * instantâneo a partir dos elementos osculadores. Usado pelo modo "órbita solar" do radar 3D
+ * para garantir que o asteroide renderizado caia EXATAMENTE sobre a elipse desenhada.
  *
- * Frame: outputs are in ecliptic J2000 (AU). The same 3-1-3 rotation as buildHeliocentricOrbit is
- * applied (shared via perifocalToEclipticAU), so the propagated point and the orbit curve use the
- * same orientation — no risk of a drift between the two.
+ * Saídas em eclíptico J2000 (UA). A mesma rotação 3-1-3 de buildHeliocentricOrbit é aplicada
+ * (via perifocalToEclipticAU compartilhado), eliminando qualquer deriva entre o ponto propagado
+ * e a curva da órbita.
  */
 import type { OrbitalElements } from '@/types';
 import { perifocalToEclipticAU } from '@/lib/sceneEphemeris';
 
 /**
- * Gaussian gravitational constant: k = √(GM_sun) in AU^1.5 / day. Defining GM_sun this way avoids
- * unit-conversion drift between km/s and AU/day. n = k · a^(-3/2) gives the mean motion in rad/day.
+ * Constante gravitacional gaussiana: k = √(GM_sol) em UA^1.5/dia. Expressar GM_sol assim evita
+ * deriva de conversão de unidade entre km/s e UA/dia. n = k · a^(-3/2) dá o movimento médio em rad/dia.
  */
 export const GAUSS_K = 0.01720209895;
 export const GM_SUN_AU3_PER_DAY2 = GAUSS_K * GAUSS_K;
 
-/** Julian Date (UT) from a JS Date — exact, no calendar branches needed past 1970. */
+/** Data Juliana (UT) a partir de um JS Date. Exato para qualquer data após 1970 sem ramificações de calendário. */
 export function julianDayUtc(date: Date): number {
     return date.getTime() / 86_400_000 + 2440587.5;
 }
 
 /**
- * Newton iteration on E − e·sin(E) = M. Six iterations land below machine epsilon for any e < 1
- * we'll see from Horizons (NEOs sit at e ≲ 0.9). Seed with M, which is already the right ballpark.
+ * Iteração de Newton em E − e·sin(E) = M. Seis iterações ficam abaixo do epsilon de máquina para
+ * qualquer e < 1 retornado pelo Horizons (NEOs têm e ≲ 0,9). Semente em M, já no intervalo correto.
  */
 export function solveKeplerEquation(meanAnomaly: number, eccentricity: number, iterations = 6): number {
     let E = meanAnomaly;
@@ -38,12 +38,12 @@ export function solveKeplerEquation(meanAnomaly: number, eccentricity: number, i
 export type HelioPositionAU = { x: number; y: number; z: number };
 
 /**
- * Heliocentric ecliptic-J2000 position (AU) of an object at `date`, from its osculating elements.
+ * Posição heliocêntrica eclíptico-J2000 (UA) de um objeto em `date`, a partir dos elementos osculadores.
  *
- * Returns null when the elements can't anchor a position in time:
- *  - non-elliptical (e ≥ 1), zero/negative perihelion, missing tpJd, etc.
- * The orbit *shape* can still be drawn in those cases (see buildHeliocentricOrbit), but we refuse
- * to place a fake "current" point when we don't have the perihelion epoch.
+ * Retorna null quando os elementos não permitem ancorar uma posição no tempo:
+ * órbita não-elíptica (e ≥ 1), periélio zero/negativo, tpJd ausente, etc.
+ * A *forma* da órbita ainda pode ser desenhada nesses casos (ver buildHeliocentricOrbit),
+ * mas recusamos inventar um ponto "agora" sem época de periélio.
  */
 export function heliocentricPositionAU(
     elements: OrbitalElements,
@@ -69,14 +69,14 @@ export function heliocentricPositionAU(
 }
 
 /**
- * A short arc of heliocentric positions (AU) around an anchor date — `pastDays` before to
- * `futureDays` after, sampled at `samples` points. Same Kepler propagation as the single-position
- * helper, so every point lies on the orbit by construction.
+ * Arco curto de posições heliocentricas (UA) em torno de uma data âncora — `pastDays` antes até
+ * `futureDays` depois, amostrado em `samples` pontos. Usa a mesma propagação de Kepler do helper
+ * de posição única, então cada ponto está na órbita por construção.
  *
- * Use for visualising "where the object is heading on its orbit over the next N days" in the
- * Sun-centred view — semantically distinct from the geocentric ±h trajectory shown in radar mode.
+ * Usado para visualizar "para onde o objeto está se movendo em sua órbita nos próximos N dias"
+ * na vista solar — semanticamente distinto da trajetória geocêntrica ±h do modo radar.
  *
- * Returns null when the elements can't anchor positions in time.
+ * Retorna null quando os elementos não permitem ancorar posições no tempo.
  */
 export function heliocentricArcAU(
     elements: OrbitalElements,
@@ -112,9 +112,10 @@ export function heliocentricArcAU(
 }
 
 /**
- * Scientific self-consistency assertions for the Kepler layer. Pure math, no I/O. Throws on the
- * first failure. The orbit-mode promise is that the propagated asteroid lies ON the drawn ellipse:
- * these checks enforce that, plus rejection of non-elliptical inputs and a perihelion sanity test.
+ * Verificações de autoconsistência científica da camada Kepler. Matemática pura, sem I/O.
+ * Lança na primeira falha. A promessa do modo orbital é que o asteroide propagado está NA
+ * elipse desenhada — essas verificações garantem isso, além de rejeitar entradas não-elípticas
+ * e realizar um teste de sanidade do periélio.
  */
 export function runKeplerOrbitAssertions(): void {
     const approx = (actual: number, expected: number, tol: number, label: string): void => {

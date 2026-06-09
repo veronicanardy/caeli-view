@@ -9,6 +9,7 @@ import { averageDiameterMeters } from '@/lib/approachAttention';
 
 export type DistanceBand = 'inside' | 'near' | 'beyond' | 'farBeyond' | 'unknown';
 
+/** Mapeia uma distância lunar para uma faixa textual usada nos textos de interpretação. */
 export function distanceBand(lunarDistance: number | null): DistanceBand {
     if (lunarDistance === null) return 'unknown';
     if (lunarDistance < 1) return 'inside';
@@ -19,6 +20,10 @@ export function distanceBand(lunarDistance: number | null): DistanceBand {
 
 export type FocusReason = 'closest' | 'fastest' | 'largest' | 'next' | 'flagged' | 'attention';
 
+/**
+ * Determina por quais razões uma aproximação merece foco na interface, comparando-a com todas
+ * as outras do mesmo recorte (mais próxima, mais rápida, maior, próxima no tempo, sinalizada).
+ */
 export function pickFocusReasons(approach: UnifiedApproach, all: UnifiedApproach[]): FocusReason[] {
     const reasons: FocusReason[] = [];
     if (approach.hazardFlag) reasons.push('flagged');
@@ -65,6 +70,7 @@ export type HumanSizeComparison = {
 
 const FOOTBALL_FIELD_METERS = 105;
 
+/** Converte um diâmetro em metros para uma comparação humana (ônibus, prédio, campo de futebol…). */
 export function humanizeSize(meters: number | null, locale: 'pt-BR' | 'en'): HumanSizeComparison | null {
     if (meters === null || meters <= 0) return null;
     const en = locale === 'en';
@@ -92,6 +98,7 @@ export type HumanVelocity = {
     label: string;
 };
 
+/** Converte uma velocidade em km/h para uma comparação em voltas ao redor da Terra por hora. */
 export function humanizeVelocity(kph: number | null, locale: 'pt-BR' | 'en'): HumanVelocity | null {
     if (kph === null || kph <= 0) return null;
     const en = locale === 'en';
@@ -114,6 +121,7 @@ export type TimelineGroup = {
     isToday: boolean;
 };
 
+/** Agrupa aproximações por data de aproximação, ordenadas cronologicamente, com rótulos localizados. */
 export function groupApproachesByDay(approaches: UnifiedApproach[], locale: 'pt-BR' | 'en'): TimelineGroup[] {
     const today = localDateIso(new Date());
     const buckets = new Map<string, UnifiedApproach[]>();
@@ -130,7 +138,7 @@ export function groupApproachesByDay(approaches: UnifiedApproach[], locale: 'pt-
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([date, items]) => ({
             date,
-            dateLabel: formatTimelineDay(formatter, date),
+            dateLabel: formatDateLabel(formatter, date),
             items,
             isPast: date < today,
             isToday: date === today,
@@ -146,6 +154,7 @@ export type DaySummary = {
     isPast: boolean;
 };
 
+/** Produz um resumo por dia (total de aproximações, se é pico, hoje, passado) para a barra de timeline. */
 export function buildDailySummary(approaches: UnifiedApproach[], locale: 'pt-BR' | 'en'): DaySummary[] {
     const groups = groupApproachesByDay(approaches, locale);
     if (!groups.length) return [];
@@ -153,7 +162,7 @@ export function buildDailySummary(approaches: UnifiedApproach[], locale: 'pt-BR'
     const formatter = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short' });
     return groups.map((group) => ({
         date: group.date,
-        label: formatDayLabel(formatter, group.date),
+        label: formatDateLabel(formatter, group.date),
         total: group.items.length,
         isPeak: group.items.length === peakTotal,
         isToday: group.isToday,
@@ -161,13 +170,7 @@ export function buildDailySummary(approaches: UnifiedApproach[], locale: 'pt-BR'
     }));
 }
 
-function formatDayLabel(formatter: Intl.DateTimeFormat, value: string): string {
-    const parsed = new Date(`${value}T00:00:00`);
-    if (Number.isNaN(parsed.getTime())) return value;
-    return formatter.format(parsed);
-}
-
-function formatTimelineDay(formatter: Intl.DateTimeFormat, value: string): string {
+function formatDateLabel(formatter: Intl.DateTimeFormat, value: string): string {
     const parsed = new Date(`${value}T00:00:00`);
     if (Number.isNaN(parsed.getTime())) return value;
     return formatter.format(parsed);

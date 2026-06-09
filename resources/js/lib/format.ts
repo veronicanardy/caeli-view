@@ -5,6 +5,7 @@
  */
 export const LUNAR_DISTANCE_KM = 384400;
 
+/** Retorna o locale ativo da aplicação. Cai em pt-BR em ambiente Node (testes, SSR). */
 function currentLocale(): 'pt-BR' | 'en' {
     if (typeof window === 'undefined') {
         return 'pt-BR';
@@ -21,6 +22,7 @@ export function formatNumber(value: number | null | undefined, maximumFractionDi
     return new Intl.NumberFormat(currentLocale(), { maximumFractionDigits }).format(value);
 }
 
+/** Formata uma data ISO (YYYY-MM-DD) no estilo médio do locale ativo (ex.: "15 de mar. de 2026"). */
 export function formatDate(value: string | null | undefined): string {
     if (!value) {
         return currentLocale() === 'en' ? 'No date' : 'Sem data';
@@ -29,6 +31,7 @@ export function formatDate(value: string | null | undefined): string {
     return new Intl.DateTimeFormat(currentLocale(), { dateStyle: 'medium' }).format(new Date(`${value}T00:00:00`));
 }
 
+/** Formata um valor em km com separador de milhar e sufixo "km". */
 export function compactKm(value: number | null | undefined): string {
     if (value === null || value === undefined) {
         return currentLocale() === 'en' ? 'Unavailable' : 'Indisponível';
@@ -55,6 +58,7 @@ export function lunarDistanceFromKm(value: number | null | undefined): number | 
     return value / LUNAR_DISTANCE_KM;
 }
 
+/** Formata um valor em metros: exibe em m abaixo de 1 000, converte para km acima disso. */
 export function compactMeters(value: number | null | undefined): string {
     if (value === null || value === undefined) {
         return currentLocale() === 'en' ? 'Unavailable' : 'Indisponível';
