@@ -54,7 +54,7 @@ final class ClosestNowSelector
     private const TOP_RESULT_LIMIT = 5;
 
     /** Modos de seleção válidos — o critério que define quais objetos são priorizados */
-    private const VALID_MODES = ['nearest', 'upcoming', 'attention'];
+    private const VALID_MODES = ['nearest', 'upcoming'];
 
     /** Janela retrospectiva para objetos mais próximos: 30 dias, resolução de 6h. */
     private const HORIZONS_WINDOW_NEAR = [
@@ -83,12 +83,11 @@ final class ClosestNowSelector
     /**
      * Janelas de busca por modo — fonte única de verdade sobre quantos dias cada modo abrange.
      * Mudar um valor aqui reflete automaticamente tanto na query ao CAD/NeoWs quanto no filtro
-     * interno de pickUpcomingCandidates/pickAttentionCandidates.
+     * interno de pickUpcomingCandidates.
      */
     private const MODE_WINDOW_DAYS = [
-        'nearest'   => ['past' => 3,  'future' => 3],
-        'upcoming'  => ['past' => 0,  'future' => 30],
-        'attention' => ['past' => 90, 'future' => 90],
+        'nearest'  => ['past' => 3, 'future' => 3],
+        'upcoming' => ['past' => 0, 'future' => 30],
     ];
 
     /**
@@ -123,7 +122,7 @@ final class ClosestNowSelector
      * @param  string  $dateMin   Data inicial ISO (Y-m-d), inclusive (já pode estar alargada pelo controller)
      * @param  string  $dateMax   Data final ISO (Y-m-d), inclusive (já pode estar alargada pelo controller)
      * @param  int     $limit     Quantos objetos retornar (padrão 5, máx 30)
-     * @param  string  $mode      Critério de seleção: 'nearest' | 'upcoming' | 'attention'
+     * @param  string  $mode      Critério de seleção: 'nearest' | 'upcoming'
      * @param  string  $anchorMin Data âncora original (antes do alargamento) — usada pelo modo 'upcoming'
      */
     public function select(string $dateMin, string $dateMax, int $limit = self::TOP_RESULT_LIMIT, string $mode = 'nearest', string $anchorMin = '', bool $forceRefresh = false): array
@@ -193,24 +192,14 @@ final class ClosestNowSelector
         $anchorDate = $anchor !== '' ? $anchor : $dateMin;
 
         // Passo 1: candidatos do CAD + NeoWs.
-        // 'attention' usa janela de ± 90 dias sem dist_max para garantir que PHAs sejam
-        // encontrados mesmo fora da janela diária.
-        // 'upcoming' usa janela alargada para capturar os próximos 10 dias.
-        $anchor    = CarbonImmutable::parse($anchorDate, 'UTC');
+        // 'upcoming' usa janela alargada para capturar os próximos 30 dias.
+        $anchor        = CarbonImmutable::parse($anchorDate, 'UTC');
         $observeParams = match ($mode) {
-            'attention' => [
-                'date_min'      => $anchor->subDays(self::MODE_WINDOW_DAYS['attention']['past'])->toDateString(),
-                'date_max'      => $anchor->addDays(self::MODE_WINDOW_DAYS['attention']['future'])->toDateString(),
-                'type'          => 'comet', // pula NeoWs (só asteroides) — CAD basta e evita crash com janela ±90d
-                'dist_max'      => '1.0',   // até 1 UA — inclui objetos famosos distantes
-                'sort'          => 'dist',
-                'distance_unit' => 'km',
-            ],
             'upcoming' => [
                 'date_min'      => $anchorDate,
                 'date_max'      => $anchor->addDays(self::MODE_WINDOW_DAYS['upcoming']['future'])->toDateString(),
                 'type'          => 'all',
-                'dist_max'      => '0.05',  // mesmo critério do Eyes on Asteroids
+                'dist_max'      => '0.05',
                 'sort'          => 'dist',
                 'distance_unit' => 'km',
             ],
@@ -244,7 +233,7 @@ final class ClosestNowSelector
         // "prioritários" (recebem Horizons) e "reserva" (ficam com fallback nominal).
         //
         // Para modos que não são 'nearest', o Horizons é consultado para todos porque
-        // o conjunto já é pequeno e fixo (objetos featured, PHAs, upcoming do dia).
+        // o conjunto já é pequeno e fixo (objetos do modo upcoming).
         [$priorityCandidates, $reserveCandidates] = $this->splitCandidatesByPriority($candidates, $mode, $limit);
 
         Log::info('[ClosestNow] pipeline iniciado', [
@@ -278,7 +267,7 @@ final class ClosestNowSelector
         if ($mode !== 'upcoming') {
             usort($objects, $this->compareByCurrentDistance(...));
         } else {
-            usort($objects, $this->compareByUpcomingApproachDate(...));
+            usort($objects, $this->compareByUpcomingApproach(...));
         }
 
         // Remove duplicatas por nome canônico mantendo apenas a entrada mais próxima (já é a primeira após sort).
@@ -311,12 +300,8 @@ final class ClosestNowSelector
     /**
      * Filtra e seleciona os candidatos de acordo com o modo de seleção.
      *
-     * Cada modo aplica critérios distintos sobre o pool de aproximações:
-     *
-     *   nearest   — top-N por miss_distance + todos os PHAs (comportamento original)
-     *   upcoming  — somente objetos cuja data de aproximação cai no dia $dateMin
-     *   featured  — somente objetos com modelo 3D real disponível (nomes próprios conhecidos)
-     *   attention — somente objetos com hazardFlag = true (monitorados pela NASA/JPL)
+     *   nearest  — top-N por miss_distance + todos os PHAs
+     *   upcoming — objetos cuja data de aproximação cai nos próximos 30 dias a partir de $dateMin
      *
      * @param  array<int, array<string, mixed>>  $approaches
      * @param  string                            $mode
@@ -326,9 +311,8 @@ final class ClosestNowSelector
     private function pickCandidates(array $approaches, string $mode, string $dateMin): array
     {
         return match ($mode) {
-            'upcoming'  => $this->pickUpcomingCandidates($approaches, $dateMin),
-            'attention' => $this->pickAttentionCandidates($approaches),
-            default     => $this->pickNearestCandidates($approaches),
+            'upcoming' => $this->pickUpcomingCandidates($approaches, $dateMin),
+            default    => $this->pickNearestCandidates($approaches),
         };
     }
 
@@ -414,20 +398,6 @@ final class ClosestNowSelector
     }
 
     /**
-     * Modo 'attention': somente objetos monitorados pela NASA/JPL (hazardFlag = true).
-     *
-     * @param  array<int, array<string, mixed>>  $approaches
-     * @return array<int, array<string, mixed>>
-     */
-    private function pickAttentionCandidates(array $approaches): array
-    {
-        return array_values(array_filter(
-            $approaches,
-            static fn (array $a): bool => (bool) ($a['hazardFlag'] ?? false),
-        ));
-    }
-
-    /**
      * Divide os candidatos em dois grupos: prioritários (recebem Horizons) e reserva (fallback nominal).
      *
      * Para o modo 'nearest', pré-ordena por nominalDistanceKm e consulta o Horizons apenas
@@ -438,8 +408,8 @@ final class ClosestNowSelector
      * O cache individual por objectId no HorizonsTrajectoryService garante que, ao expandir
      * de 5→15, os 5 já processados sejam reaproveitados sem nova chamada à API.
      *
-     * Para modos não-nearest (featured, attention, upcoming), consulta todos os candidatos
-     * pois o conjunto já é pequeno e fixo — não faz sentido aplicar lazy-loading.
+     * Para o modo 'upcoming', consulta todos os candidatos pois o conjunto já é pequeno
+     * e fixo — não faz sentido aplicar lazy-loading.
      *
      * @param  array<int, array<string, mixed>>  $candidates
      * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>}
@@ -618,43 +588,14 @@ final class ClosestNowSelector
     }
 
     /**
-     * Comparador para modo 'upcoming': prioriza objetos cuja data de aproximação é mais próxima
-     * do instante atual (passado imediato ou futuro próximo). Ordena por |approachDate - now|.
-     * Objetos sem data de aproximação vão para o final.
+     * Comparador para modo 'upcoming': futuras primeiro, depois passado recente.
+     * Aceita tanto shapes planos (['approachDate' => ...]) quanto aninhados (['approach' => ['approachDate' => ...]]).
      */
     private function compareByUpcomingApproach(array $a, array $b): int
     {
         $now   = CarbonImmutable::now('UTC');
-        $aDate = isset($a['approachDate'])
-            ? CarbonImmutable::parse($a['approachDate'], 'UTC')
-            : null;
-        $bDate = isset($b['approachDate'])
-            ? CarbonImmutable::parse($b['approachDate'], 'UTC')
-            : null;
-
-        if ($aDate === null && $bDate === null) return 0;
-        if ($aDate === null) return 1;
-        if ($bDate === null) return -1;
-
-        // Prioriza datas no futuro; para datas passadas usa distância absoluta
-        $aFuture = $aDate->greaterThan($now);
-        $bFuture = $bDate->greaterThan($now);
-
-        if ($aFuture && ! $bFuture) return -1;
-        if (! $aFuture && $bFuture) return 1;
-
-        return abs($aDate->diffInSeconds($now)) <=> abs($bDate->diffInSeconds($now));
-    }
-
-    /**
-     * Comparador para modo 'upcoming' aplicado sobre os objects já construídos (com 'approach' aninhado).
-     * Ordena pela approachDate mais próxima de agora: futuras primeiro, depois passado recente.
-     */
-    private function compareByUpcomingApproachDate(array $a, array $b): int
-    {
-        $now   = CarbonImmutable::now('UTC');
-        $aRaw  = (string) ($a['approach']['approachDate'] ?? '');
-        $bRaw  = (string) ($b['approach']['approachDate'] ?? '');
+        $aRaw  = (string) ($a['approachDate'] ?? $a['approach']['approachDate'] ?? '');
+        $bRaw  = (string) ($b['approachDate'] ?? $b['approach']['approachDate'] ?? '');
         $aDate = $aRaw !== '' ? CarbonImmutable::parse($aRaw, 'UTC') : null;
         $bDate = $bRaw !== '' ? CarbonImmutable::parse($bRaw, 'UTC') : null;
 
