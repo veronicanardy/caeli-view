@@ -16,6 +16,7 @@ import type { FocusFraming } from './cameraFraming';
 import type { PlanetId } from './planetConfig';
 import type { CameraIntent } from './cameraIntent';
 import { RadarScene } from './RadarScene';
+import { preloadRealAsteroidModels } from '../Bodies/Asteroid/asteroidModelRegistry';
 
 type Props = {
     noGoRects: NoGoRect[];
@@ -108,7 +109,12 @@ export function RadarSceneCanvas({
                         fallbackSunDirection={fallbackSunDirection}
                         locale={locale}
                         showLabels={showLabels}
-                        onFirstFrame={() => setSceneReady(true)}
+                        onFirstFrame={() => {
+                            setSceneReady(true);
+                            // Adia o preload dos modelos reais para depois do primeiro frame:
+                            // evita competição com recursos críticos durante o carregamento inicial.
+                            setTimeout(preloadRealAsteroidModels, 2000);
+                        }}
                         onFocusSun={onFocusSun}
                         isSunFocused={bodyCardOpen === 'sun'}
                         onFocusMercury={() => onFocusPlanet('mercury')}

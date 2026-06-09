@@ -38,15 +38,22 @@ export const REAL_ASTEROID_MODELS: AsteroidModelAsset[] = [
     { key: 'vesta', url: '/models/asteroids/vesta.glb', rotation: [-0.06, 0.3, -0.04], aliases: ['vesta'], numbers: ['4'] },
 ];
 
-// Inicia o download e parse dos GLBs imediatamente ao importar o módulo,
-// antes de qualquer Canvas ou componente montar. Quando useGLTF for chamado
-// dentro da cena os arquivos já estarão no cache do drei — elimina o travamento
-// em cadeia no primeiro render.
-const ALL_ASTEROID_URLS = [
-    GENERIC_ASTEROID_MODEL.url,
-    ...REAL_ASTEROID_MODELS.map((a) => a.url),
-];
-ALL_ASTEROID_URLS.forEach((url) => useGLTF.preload(url));
+// O modelo genérico (17 MB) é preloaded imediatamente: é o fallback de todos os asteroides
+// sem identidade conhecida e precisa estar no cache antes da primeira seleção.
+useGLTF.preload(GENERIC_ASTEROID_MODEL.url);
+
+/**
+ * Dispara o preload dos modelos reais (~18 MB no total) após a cena estar visível.
+ * Chamado por RadarSceneCanvas no onFirstFrame — o canvas já pintou o primeiro frame,
+ * então os downloads não competem com os recursos críticos de carregamento inicial.
+ *
+ * Se o usuário selecionar um asteroide com modelo real antes deste preload completar,
+ * o useGLTF resolve via Suspense normalmente: o marker fica invisível por um instante
+ * e renderiza assim que o GLB chega — comportamento aceitável dado que é um caso raro.
+ */
+export function preloadRealAsteroidModels(): void {
+    REAL_ASTEROID_MODELS.forEach((a) => useGLTF.preload(a.url));
+}
 
 /**
  * Seleciona o modelo GLB para um objeto próximo.
