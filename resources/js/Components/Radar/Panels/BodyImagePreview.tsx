@@ -30,7 +30,6 @@ const BODY_IMAGE: Record<BodyId, ImageConfig> = {
     mars:    { src: '/images/bodies/mars.jpg',    credit: 'NASA/JPL · Viking',    fit: 'contain', scale: 0.68   },
     mercury: { src: '/images/bodies/mercury.jpg', credit: 'NASA/MESSENGER',       fit: 'contain', scale: 0.62   },
     moon:    { src: '/images/bodies/moon.jpg',    credit: 'NASA/JPL · Galileo',   fit: 'contain', scale: 0.58   },
-    pluto:   { src: '/images/bodies/pluto.jpg',  credit: 'NASA/JHUAPL · New Horizons', fit: 'contain', scale: 0.55 },
 };
 
 export function BodyImagePreview({ body }: { body: BodyId }) {

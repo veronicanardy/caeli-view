@@ -10,7 +10,7 @@
  * (BodyId) e são sempre lidos juntos pelo UnifiedFocusCard.
  */
 
-export type BodyId = 'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune' | 'pluto';
+export type BodyId = 'earth' | 'moon' | 'sun' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune';
 
 export interface BodyFact {
     labelPt: string;
@@ -220,24 +220,5 @@ export const BODIES: Record<BodyId, BodyConfig> = {
         ],
         historyPt: 'Netuno foi o primeiro planeta descoberto pela matemática antes de ser visto pelo telescópio, uma façanha que ainda impressiona. Em 1846, perturbações na órbita de Urano levaram Urbain Le Verrier e John Couch Adams, trabalhando de forma independente, a calcular onde deveria haver um planeta desconhecido. Na mesma noite em que Le Verrier enviou suas coordenadas a Johann Galle, em Berlim, Galle apontou o telescópio e encontrou Netuno exatamente onde as equações disseram que ele estaria. Foi batizado em homenagem ao deus romano do mar por seu azul profundo. Sua maior lua, Tritão, orbita na direção contrária à rotação do planeta, um comportamento que sugere que ela não nasceu ali, mas foi capturada pelo campo gravitacional de Netuno em algum momento remoto da história do sistema solar.',
         historyEn: 'Neptune was the first planet discovered through mathematics before being seen through a telescope, a feat that still impresses. In 1846, perturbations in the orbit of Uranus led Urbain Le Verrier and John Couch Adams, working independently, to calculate where an unknown planet must lie. The very night Le Verrier sent his coordinates to Johann Galle in Berlin, Galle pointed the telescope and found Neptune exactly where the equations said it would be. It was named after the Roman god of the sea for its deep blue color. Its largest moon, Triton, orbits in the opposite direction to the planet\'s rotation, a behavior suggesting it was not born there, but was captured by Neptune\'s gravitational field at some remote point in the solar system\'s history.',
-    },
-    pluto: {
-        namePt: 'Plutão',
-        nameEn: 'Pluto',
-        subtitlePt: 'Planeta anão · Cinturão de Kuiper',
-        subtitleEn: 'Dwarf planet · Kuiper Belt',
-        contextPt: 'O mundo gelado que redefiniu o que é um planeta. Plutão orbita o Sol a cerca de 39 UA de distância, numa região chamada Cinturão de Kuiper, repleta de outros pequenos corpos congelados além de Netuno.',
-        contextEn: 'The icy world that redefined what a planet is. Pluto orbits the Sun at about 39 AU, in a region called the Kuiper Belt, filled with other small frozen bodies beyond Neptune.',
-        dotColor: '#c8b89a',
-        facts: [
-            { labelPt: 'Distância do Sol',    labelEn: 'Distance from Sun',    value: '~5.906 mi km (39,5 UA) / ~5.906B km (39.5 AU)' },
-            { labelPt: 'Diâmetro',            labelEn: 'Diameter',             value: '2.376 km (18,5% da Terra)' },
-            { labelPt: 'Período orbital',     labelEn: 'Orbital period',       value: '247,9 anos / 247.9 years' },
-            { labelPt: 'Período de rotação',  labelEn: 'Rotation period',      value: '6,387 dias (retrógrado) / 6.387 days (retrograde)' },
-            { labelPt: 'Satélites naturais',  labelEn: 'Natural satellites',   value: '5 (Caronte, Nix, Hidra, Cérbero, Estige)' },
-            { labelPt: 'Temperatura média',   labelEn: 'Temperature (avg.)',   value: '−232 °C (−386 °F)' },
-        ],
-        historyPt: 'Plutão foi descoberto em 18 de fevereiro de 1930 pelo astrônomo americano Clyde Tombaugh, que tinha 24 anos na época. Foi o primeiro objeto identificado no que hoje chamamos de Cinturão de Kuiper, e por 76 anos foi considerado o nono planeta do Sistema Solar. Em 2006, a União Astronômica Internacional redefiniu o conceito de planeta, e Plutão foi rebaixado à categoria de planeta anão — uma decisão que gerou mais debate público do que qualquer outra na história da astronomia moderna. Muita gente nunca aceitou. Em 2015, a sonda New Horizons realizou o primeiro flyby de Plutão e revelou um mundo muito mais complexo do que qualquer modelo previa: montanhas de água gelada tão altas quanto os Alpes, planícies de nitrogênio em convecção ativa e uma região brilhante em forma de coração chamada Sputnik Planitia, batizada em homenagem ao primeiro satélite artificial da história. O coração de Plutão existe de verdade.',
-        historyEn: 'Pluto was discovered on February 18, 1930 by American astronomer Clyde Tombaugh, who was 24 years old at the time. It was the first object identified in what we now call the Kuiper Belt, and for 76 years it was considered the ninth planet of the Solar System. In 2006, the International Astronomical Union redefined the concept of a planet, and Pluto was reclassified as a dwarf planet — a decision that generated more public debate than any other in the history of modern astronomy. Many people never accepted it. In 2015, the New Horizons probe performed the first flyby of Pluto and revealed a world far more complex than any model had predicted: mountains of water ice as tall as the Alps, plains of nitrogen in active convection, and a bright heart-shaped region called Sputnik Planitia, named after the first artificial satellite in history. Pluto\'s heart is real.',
     },
 };

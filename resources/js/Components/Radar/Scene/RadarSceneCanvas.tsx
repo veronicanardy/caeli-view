@@ -40,7 +40,6 @@ type Props = {
     onFocusSun: () => void;
     onFocusPlanet: (id: PlanetId) => void;
     onFocusBody: (body: 'earth' | 'moon') => void;
-
 };
 
 /**
@@ -132,8 +131,6 @@ export function RadarSceneCanvas({
                         isUranusFocused={bodyCardOpen === 'uranus'}
                         onFocusNeptune={() => onFocusPlanet('neptune')}
                         isNeptuneFocused={bodyCardOpen === 'neptune'}
-                        onFocusPluto={() => onFocusPlanet('pluto')}
-                        isPlutoFocused={bodyCardOpen === 'pluto'}
                         onFocusBody={onFocusBody}
                     />
                 </Suspense>

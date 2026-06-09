@@ -9,7 +9,6 @@ import { Jupiter } from '../Bodies/Jupiter/Jupiter';
 import { Mars } from '../Bodies/Mars/Mars';
 import { Mercury } from '../Bodies/Mercury/Mercury';
 import { Neptune } from '../Bodies/Neptune/Neptune';
-import { Pluto } from '../Bodies/Pluto/Pluto';
 import { Saturn } from '../Bodies/Saturn/Saturn';
 import { Uranus } from '../Bodies/Uranus/Uranus';
 import { Venus } from '../Bodies/Venus/Venus';
@@ -35,8 +34,6 @@ type PlanetLayerProps = PlanetScenePositions & {
     isUranusFocused: boolean;
     onFocusNeptune: () => void;
     isNeptuneFocused: boolean;
-    onFocusPluto: () => void;
-    isPlutoFocused: boolean;
 };
 
 export function PlanetLayer({
@@ -47,7 +44,6 @@ export function PlanetLayer({
     saturnPos,
     uranusPos,
     neptunePos,
-    plutoPos,
     locale,
     showLabels,
     onFocusMercury,
@@ -64,8 +60,6 @@ export function PlanetLayer({
     isUranusFocused,
     onFocusNeptune,
     isNeptuneFocused,
-    onFocusPluto,
-    isPlutoFocused,
 }: PlanetLayerProps) {
     return (
         <>
@@ -76,7 +70,6 @@ export function PlanetLayer({
             {saturnPos ? <Saturn position={saturnPos} locale={locale} onFocus={onFocusSaturn} isFocused={isSaturnFocused} showLabel={showLabels} /> : null}
             {uranusPos ? <Uranus position={uranusPos} locale={locale} onFocus={onFocusUranus} isFocused={isUranusFocused} showLabel={showLabels} /> : null}
             {neptunePos ? <Neptune position={neptunePos} locale={locale} onFocus={onFocusNeptune} isFocused={isNeptuneFocused} showLabel={showLabels} /> : null}
-            {plutoPos ? <Pluto position={plutoPos} locale={locale} onFocus={onFocusPluto} isFocused={isPlutoFocused} showLabel={showLabels} /> : null}
         </>
     );
 }

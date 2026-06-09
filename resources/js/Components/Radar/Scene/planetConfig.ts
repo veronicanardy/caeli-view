@@ -10,13 +10,12 @@ import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 /**
  * Mapeia cada planeta focalizável para sua posição de efeméride e raio de enquadramento.
  */
-export type PlanetId = 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune' | 'pluto';
+export type PlanetId = 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn' | 'uranus' | 'neptune';
 
 type PlanetCfg = {
     ephemerisKey: keyof Pick<SceneEphemeris,
         'mercuryScenePosition' | 'venusScenePosition' | 'marsScenePosition' |
-        'jupiterScenePosition' | 'saturnScenePosition' | 'uranusScenePosition' | 'neptuneScenePosition' |
-        'plutoScenePosition'>;
+        'jupiterScenePosition' | 'saturnScenePosition' | 'uranusScenePosition' | 'neptuneScenePosition'>;
     framingRadius: number;
 };
 
@@ -28,5 +27,4 @@ export const PLANET_CONFIG: Record<PlanetId, PlanetCfg> = {
     saturn: { ephemerisKey: 'saturnScenePosition', framingRadius: 0.16 },
     uranus: { ephemerisKey: 'uranusScenePosition', framingRadius: 0.13 },
     neptune: { ephemerisKey: 'neptuneScenePosition', framingRadius: 0.12 },
-    pluto: { ephemerisKey: 'plutoScenePosition', framingRadius: 0.022 },
 };
