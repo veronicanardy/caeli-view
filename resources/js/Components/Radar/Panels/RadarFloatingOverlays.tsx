@@ -86,8 +86,10 @@ export function RadarFloatingOverlays({
     lunarReference,
 }: Props) {
     // Registra quando o radar terminou de carregar pela última vez.
+    // O estado inicial é sempre null: o timestamp só é confiável após observar
+    // a transição real loading true→false, nunca no momento do mount.
     const prevLoading = useRef(radarLoading);
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(() => radarLoading ? null : new Date());
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     useEffect(() => {
         if (prevLoading.current && !radarLoading) setLastUpdated(new Date());
         prevLoading.current = radarLoading;
