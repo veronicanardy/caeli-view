@@ -1,0 +1,156 @@
+<?php
+
+namespace Tests\Feature;
+
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Tests\Fixtures\JplResponses;
+use Tests\Fixtures\NasaResponses;
+use Tests\TestCase;
+
+class RadarClosestNowTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Cache::flush();
+    }
+
+    // -------------------------------------------------------------------------
+    // Validação de parâmetros
+    // -------------------------------------------------------------------------
+
+    public function test_rejects_invalid_limit(): void
+    {
+        $this->getJson('/radar/closest-now?limit=99')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['limit']);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_rejects_invalid_mode(): void
+    {
+        $this->getJson('/radar/closest-now?mode=random')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['mode']);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_rejects_invalid_date_format(): void
+    {
+        $this->getJson('/radar/closest-now?date_min=20-05-2026')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['date_min']);
+
+        Http::assertNothingSent();
+    }
+
+    // -------------------------------------------------------------------------
+    // Modo upcoming
+    // -------------------------------------------------------------------------
+
+    public function test_upcoming_mode_returns_objects_sorted_by_proximity_to_now(): void
+    {
+        Http::fake([
+            'api.nasa.gov/neo/rest/v1/feed*'     => Http::response(NasaResponses::neoWsFeed()),
+            'ssd-api.jpl.nasa.gov/cad.api*'      => Http::response(JplResponses::cadApproaches()),
+            'ssd.jpl.nasa.gov/api/horizons.api*' => Http::response(JplResponses::horizonsVectorsText()),
+        ]);
+
+        $response = $this->getJson('/radar/closest-now?date_min=2026-05-20&date_max=2026-05-21&limit=5&mode=upcoming')
+            ->assertOk()
+            ->assertJsonPath('selectionMode', 'upcoming')
+            ->assertJsonPath('mode', 'closest_now');
+
+        $this->assertIsArray($response->json('objects'));
+    }
+
+    public function test_upcoming_mode_contract_matches_nearest(): void
+    {
+        Http::fake([
+            'api.nasa.gov/neo/rest/v1/feed*'     => Http::response(NasaResponses::neoWsFeed()),
+            'ssd-api.jpl.nasa.gov/cad.api*'      => Http::response(JplResponses::cadApproaches()),
+            'ssd.jpl.nasa.gov/api/horizons.api*' => Http::response(JplResponses::horizonsVectorsText()),
+        ]);
+
+        // Ambos os modos devem obedecer ao mesmo contrato JSON de campos obrigatórios
+        $this->getJson('/radar/closest-now?date_min=2026-05-20&date_max=2026-05-21&limit=5&mode=upcoming')
+            ->assertOk()
+            ->assertJsonStructure([
+                'mode',
+                'selectionMode',
+                'generatedAt',
+                'window'     => ['dateMin', 'dateMax'],
+                'requestedLimit',
+                'candidatesEvaluated',
+                'objects',
+                'lunarReference' => ['distanceKm'],
+            ]);
+    }
+
+    public function test_upcoming_mode_respects_limit(): void
+    {
+        Http::fake([
+            'api.nasa.gov/neo/rest/v1/feed*'     => Http::response(NasaResponses::neoWsFeed()),
+            'ssd-api.jpl.nasa.gov/cad.api*'      => Http::response(JplResponses::cadApproaches()),
+            'ssd.jpl.nasa.gov/api/horizons.api*' => Http::response(JplResponses::horizonsVectorsText()),
+        ]);
+
+        $response = $this->getJson('/radar/closest-now?date_min=2026-05-20&date_max=2026-05-21&limit=2&mode=upcoming')
+            ->assertOk();
+
+        $this->assertLessThanOrEqual(2, count($response->json('objects')));
+    }
+
+    // -------------------------------------------------------------------------
+    // force_refresh ignora cache
+    // -------------------------------------------------------------------------
+
+    public function test_force_refresh_bypasses_pipeline_cache(): void
+    {
+        $callCount = 0;
+
+        Http::fake([
+            'api.nasa.gov/neo/rest/v1/feed*' => Http::response(NasaResponses::neoWsFeed()),
+            'ssd-api.jpl.nasa.gov/cad.api*'  => function () use (&$callCount) {
+                $callCount++;
+                return Http::response(JplResponses::cadApproaches());
+            },
+            'ssd.jpl.nasa.gov/api/horizons.api*' => Http::response(JplResponses::horizonsVectorsText()),
+        ]);
+
+        $url = '/radar/closest-now?date_min=2026-05-20&date_max=2026-05-21&limit=5&mode=nearest';
+
+        // Primeira chamada preenche o cache
+        $this->getJson($url)->assertOk();
+        $afterFirst = $callCount;
+
+        // Segunda chamada sem force_refresh deve usar cache (sem nova chamada ao CAD)
+        $this->getJson($url)->assertOk();
+        $this->assertEquals($afterFirst, $callCount, 'Segunda chamada sem force_refresh deveria usar cache.');
+
+        // Terceira com force_refresh deve bater na API novamente
+        $this->getJson($url . '&force_refresh=1')->assertOk();
+        $this->assertGreaterThan($afterFirst, $callCount, 'force_refresh deveria ignorar o cache e chamar o CAD novamente.');
+    }
+
+    // -------------------------------------------------------------------------
+    // Fallback quando CAD e NeoWs falham simultaneamente
+    // -------------------------------------------------------------------------
+
+    public function test_returns_empty_objects_when_both_sources_fail(): void
+    {
+        Http::fake([
+            'api.nasa.gov/neo/rest/v1/feed*'  => Http::response(['error' => 'busy'], 503),
+            'ssd-api.jpl.nasa.gov/cad.api*'   => Http::response(['error' => 'busy'], 503),
+            'ssd.jpl.nasa.gov/api/horizons.api*' => Http::response('', 503),
+        ]);
+
+        $response = $this->getJson('/radar/closest-now?date_min=2026-05-20&date_max=2026-05-21&limit=5')
+            ->assertOk();
+
+        $this->assertEmpty($response->json('objects'));
+    }
+}
