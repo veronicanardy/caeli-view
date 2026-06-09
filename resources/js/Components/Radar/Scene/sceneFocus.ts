@@ -7,8 +7,8 @@
 
 import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
-import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
-import { currentPositionInScene } from '@/lib/observatory/trajectorySampling';
+import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/radar/bodyScale';
+import { currentPositionInScene } from '@/lib/radar/trajectorySampling';
 import type { LabelOccluder } from '../Overlays/SceneLabels';
 import type { FocusFraming } from './cameraFraming';
 import type { SceneVector } from './scenePositions';

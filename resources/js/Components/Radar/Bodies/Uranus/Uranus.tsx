@@ -13,8 +13,8 @@
  */
 
 import * as THREE from 'three';
-import { URANUS } from '@/lib/observatory/planetData';
-import { URANUS_FRAG, URANUS_VERT } from '@/lib/observatory/shaders/uranus.glsl';
+import { URANUS } from '@/lib/radar/planetData';
+import { URANUS_FRAG, URANUS_VERT } from '@/lib/radar/shaders/uranus.glsl';
 import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 

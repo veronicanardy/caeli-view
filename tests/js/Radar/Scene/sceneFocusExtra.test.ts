@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { computeLabelOccluder, focusedObjectScenePosition } from '@/Components/Radar/Scene/sceneFocus';
-import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
+import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/radar/bodyScale';
 import type { ClosestNowObject } from '@/types';
 
 /**

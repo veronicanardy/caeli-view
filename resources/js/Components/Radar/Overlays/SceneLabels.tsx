@@ -7,7 +7,7 @@
  */
 
 import { Html } from '@react-three/drei';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/radar/cursor';
 import { useFrame, useThree } from '@react-three/fiber';
 import { createContext, useContext, useRef, useState } from 'react';
 import * as THREE from 'three';

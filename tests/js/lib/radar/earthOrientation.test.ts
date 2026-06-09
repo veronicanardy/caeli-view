@@ -6,7 +6,7 @@ import {
     geoToModelDir,
     orientEarth,
     orientMoonTidal,
-} from '@/lib/observatory/earthOrientation';
+} from '@/lib/radar/earthOrientation';
 
 /**
  * Esta suíte valida contratos geométricos das orientações da Terra e da Lua.

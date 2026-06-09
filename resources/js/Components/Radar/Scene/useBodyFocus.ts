@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
-import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
+import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/radar/bodyScale';
 import { framingForBody } from './cameraFraming';
 import type { FocusFraming } from './cameraFraming';
 import type { CameraIntent } from './cameraIntent';

@@ -13,8 +13,8 @@
  */
 
 import * as THREE from 'three';
-import { JUPITER } from '@/lib/observatory/planetData';
-import { JUPITER_FRAG, JUPITER_VERT } from '@/lib/observatory/shaders/jupiter.glsl';
+import { JUPITER } from '@/lib/radar/planetData';
+import { JUPITER_FRAG, JUPITER_VERT } from '@/lib/radar/shaders/jupiter.glsl';
 import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 

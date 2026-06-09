@@ -1,8 +1,7 @@
 /**
- * Physical and visual constants for "ambient" planets rendered in the Radar scene.
- *
- * These planets are not the focus of the observatory (that's Earth + NEOs + Sun), but
- * they enrich the scientific and visual context. Each entry carries:
+ * Responsabilidade: constantes físicas e visuais dos planetas "ambientes" renderizados na cena 3D
+ * do radar. Esses planetas não são o foco central do radar (esse é Terra + NEOs + Sol), mas
+ * enriquecem o contexto científico e visual da cena 3D. Cada entrada carrega:
  *   physicalRadiusDl  — true radius in lunar-distance units (for science/scale reference)
  *   visualRadiusDl    — exaggerated radius actually rendered (same exaggeration factor as
  *                       Earth ~47× and Moon ~10×, so relative proportions feel familiar)

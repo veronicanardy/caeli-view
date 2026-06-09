@@ -14,9 +14,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { orientEarth } from '@/lib/observatory/earthOrientation';
-import { CLOUDS_FRAG, EARTH_FRAG, EARTH_VERT } from '@/lib/observatory/shaders/earth.glsl';
-import { EARTH_HITBOX_DL, EARTH_RADIUS_DL } from '@/lib/observatory/bodyScale';
+import { orientEarth } from '@/lib/radar/earthOrientation';
+import { CLOUDS_FRAG, EARTH_FRAG, EARTH_VERT } from '@/lib/radar/shaders/earth.glsl';
+import { EARTH_HITBOX_DL, EARTH_RADIUS_DL } from '@/lib/radar/bodyScale';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import { useBodyTexture } from '../useBodyTexture';

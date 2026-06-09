@@ -1,3 +1,8 @@
+/**
+ * Responsabilidade: formatar números, datas e distâncias astronômicas para exibição na interface.
+ * Todas as funções respeitam o locale ativo (pt-BR ou en) via localStorage. Não depende de DOM
+ * além da leitura do localStorage — pode ser usada em qualquer componente ou helper.
+ */
 export const LUNAR_DISTANCE_KM = 384400;
 
 function currentLocale(): 'pt-BR' | 'en' {

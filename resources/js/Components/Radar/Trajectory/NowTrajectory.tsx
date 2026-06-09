@@ -6,7 +6,7 @@
  */
 
 import type { AsteroidTrajectory } from '@/types';
-import type { Palette } from '@/lib/observatory/palette';
+import type { Palette } from '@/lib/radar/palette';
 import { DirectionCone } from './DirectionCone';
 import { GradientTrajectoryLine } from './GradientTrajectoryLine';
 import { ClosestApproachMarker, TimeTickGroup } from './TrajectoryMarkers';

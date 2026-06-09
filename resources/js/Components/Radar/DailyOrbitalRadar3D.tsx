@@ -21,7 +21,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { usePanelBias } from './Scene/usePanelBias';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
-import { sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
+import { sunDirectionFromIncoming } from '@/lib/radar/coordinates';
 import type { SceneMode } from './Controls/Manual/manualTypes';
 import { SceneToolbar } from './Controls/SceneToolbar';
 import type { MobilePanelSection } from './Panels/MobilePanelControls';

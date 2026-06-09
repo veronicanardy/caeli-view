@@ -8,7 +8,7 @@ import {
     collectTimeTicks,
     currentPositionInScene,
     findClosestApproachPoint,
-} from '@/lib/observatory/trajectorySampling';
+} from '@/lib/radar/trajectorySampling';
 import { KM_PER_LD } from '@/lib/sceneEphemeris';
 
 function makePoint(over: Partial<TrajectoryPoint> = {}): TrajectoryPoint {

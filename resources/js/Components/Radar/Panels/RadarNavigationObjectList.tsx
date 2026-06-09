@@ -7,7 +7,7 @@
 
 import { RefreshCw } from 'lucide-react';
 import type { ClosestNowObject, ObjectLimit, SelectionMode, UnifiedApproach } from '@/types';
-import { OBJECT_PALETTE } from '@/lib/observatory/palette';
+import { OBJECT_PALETTE } from '@/lib/radar/palette';
 import { ObjectListItem } from '../Lists/RadarSceneObjectListItem';
 import { EmptyModeMessage } from './MobilePanelControls';
 

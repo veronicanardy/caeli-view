@@ -1,5 +1,7 @@
 /**
- * Display formatters used by the observatory UI. Pure (Intl is deterministic per locale).
+ * Responsabilidade: formatadores de exibição específicos da cena 3D do radar.
+ * Formatação de timestamps UTC e distâncias em UA para os painéis e marcadores da cena.
+ * Puro: Intl é determinístico por locale — não depende de DOM nem de estado global.
  */
 
 import { KM_PER_AU } from '@/lib/sceneEphemeris';

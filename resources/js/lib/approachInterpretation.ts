@@ -1,6 +1,11 @@
-import { compactKm, formatNumber, lunarDistanceFromKm } from '@/lib/format';
-import { ApproachObservatorySummary, UnifiedApproach } from '@/types';
-import { averageDiameterMeters, classifyApproachAttention } from '@/lib/approachAttention';
+/**
+ * Responsabilidade: derivar interpretações humanas dos dados brutos de aproximação.
+ * Produz faixas de distância, razões de foco, comparações de tamanho e velocidade em linguagem
+ * natural (pt-BR / en), agrupamentos por dia e resumos diários — tudo sem depender de DOM ou React.
+ */
+import { formatNumber } from '@/lib/format';
+import type { UnifiedApproach } from '@/types';
+import { averageDiameterMeters } from '@/lib/approachAttention';
 
 export type DistanceBand = 'inside' | 'near' | 'beyond' | 'farBeyond' | 'unknown';
 
@@ -148,7 +153,7 @@ export function buildDailySummary(approaches: UnifiedApproach[], locale: 'pt-BR'
     const formatter = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short' });
     return groups.map((group) => ({
         date: group.date,
-        label: formatDayLabel(group.date, locale) || formatter.format(new Date(`${group.date}T00:00:00`)),
+        label: formatDayLabel(formatter, group.date),
         total: group.items.length,
         isPeak: group.items.length === peakTotal,
         isToday: group.isToday,
@@ -156,10 +161,10 @@ export function buildDailySummary(approaches: UnifiedApproach[], locale: 'pt-BR'
     }));
 }
 
-function formatDayLabel(value: string, locale: 'pt-BR' | 'en'): string {
+function formatDayLabel(formatter: Intl.DateTimeFormat, value: string): string {
     const parsed = new Date(`${value}T00:00:00`);
     if (Number.isNaN(parsed.getTime())) return value;
-    return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short' }).format(parsed);
+    return formatter.format(parsed);
 }
 
 function formatTimelineDay(formatter: Intl.DateTimeFormat, value: string): string {

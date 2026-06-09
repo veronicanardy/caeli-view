@@ -9,8 +9,8 @@ import * as THREE from 'three';
 import { useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { compactKm } from '@/lib/format';
-import { formatTimestamp } from '@/lib/observatory/format';
-import type { ClosestApproachSample } from '@/lib/observatory/trajectorySampling';
+import { formatTimestamp } from '@/lib/radar/format';
+import type { ClosestApproachSample } from '@/lib/radar/trajectorySampling';
 import { Html } from '@react-three/drei';
 import { FocusProtectedHtml } from '../Overlays/SceneLabels';
 

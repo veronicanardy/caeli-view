@@ -1,3 +1,9 @@
+/**
+ * Responsabilidade: construir e classificar os objetos exibidos no radar de aproximações.
+ * Transforma listas de UnifiedApproach + resultados do Horizons em RadarObject prontos para
+ * renderização — incluindo classificação por faixa de distância lunar, melhor distância disponível
+ * e posição geocêntrica para o posicionamento no radar 2D e na cena 3D.
+ */
 import { HorizonsFailureKind, HorizonsPositionResult, UnifiedApproach } from '@/types';
 import { LUNAR_DISTANCE_KM, lunarDistanceFromKm } from '@/lib/format';
 

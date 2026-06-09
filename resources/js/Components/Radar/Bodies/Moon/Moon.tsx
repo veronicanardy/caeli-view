@@ -1,9 +1,9 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { orientMoonTidal } from '@/lib/observatory/earthOrientation';
-import { MOON_HITBOX_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
-import { MOON_FRAG, MOON_VERT } from '@/lib/observatory/shaders/moon.glsl';
+import { orientMoonTidal } from '@/lib/radar/earthOrientation';
+import { MOON_HITBOX_DL, MOON_RADIUS_DL } from '@/lib/radar/bodyScale';
+import { MOON_FRAG, MOON_VERT } from '@/lib/radar/shaders/moon.glsl';
 import { DistanceCulledScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import { directionFromBodyToSceneSun } from '../bodyLighting';

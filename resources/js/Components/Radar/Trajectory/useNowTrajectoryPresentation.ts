@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react';
 import type { AsteroidTrajectory } from '@/types';
-import { collectTimeTicks, findClosestApproachPoint, toVec3 } from '@/lib/observatory/trajectorySampling';
+import { collectTimeTicks, findClosestApproachPoint, toVec3 } from '@/lib/radar/trajectorySampling';
 import {
     getMovementDirection,
     getTrajectoryOpacities,

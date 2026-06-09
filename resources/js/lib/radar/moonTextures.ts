@@ -1,6 +1,7 @@
 /**
- * Procedural Moon bump map. Touches the DOM (offscreen canvas) so it cannot be unit-tested without
- * a JSDOM environment — kept here so the rest of the observatory pure helpers stay node-runnable.
+ * Responsabilidade: gerar a textura procedural de relevo (bump map) da Lua para a cena 3D do radar.
+ * Usa canvas offscreen — depende de DOM, por isso não é testável sem JSDOM. Isolado aqui para que
+ * os demais helpers da pasta continuem executáveis em Node (testes unitários puros).
  */
 
 import * as THREE from 'three';

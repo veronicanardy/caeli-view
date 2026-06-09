@@ -8,7 +8,7 @@
 
 import { type ThreeEvent } from '@react-three/fiber';
 import { useEffect } from 'react';
-import { cursorPointerEnter, cursorPointerLeave } from '@/lib/observatory/cursor';
+import { cursorPointerEnter, cursorPointerLeave } from '@/lib/radar/cursor';
 import { BODY_HITBOX_MATERIAL } from './bodyRenderConstants';
 
 interface BodyHitboxProps {

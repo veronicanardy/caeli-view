@@ -1,3 +1,8 @@
+/**
+ * Responsabilidade: normalizar e resolver a identidade de um asteroide a partir do nome bruto
+ * retornado pela API. Separa número permanente, nome próprio e designação provisória; produz
+ * displayName, subtitle e lista de aliases para uso consistente na interface.
+ */
 import type { UnifiedApproach } from '@/types';
 
 export type AsteroidIdentity = {

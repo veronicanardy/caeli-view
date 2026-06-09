@@ -13,8 +13,8 @@
  */
 
 import * as THREE from 'three';
-import { VENUS } from '@/lib/observatory/planetData';
-import { VENUS_FRAG, VENUS_VERT } from '@/lib/observatory/shaders/venus.glsl';
+import { VENUS } from '@/lib/radar/planetData';
+import { VENUS_FRAG, VENUS_VERT } from '@/lib/radar/shaders/venus.glsl';
 import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 

@@ -12,7 +12,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type Ref 
 import { ChevronDown } from 'lucide-react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { compactKm } from '@/lib/format';
-import { formatDistanceAU, formatTimestamp } from '@/lib/observatory/format';
+import { formatDistanceAU, formatTimestamp } from '@/lib/radar/format';
 import { humanSummary, motionLabel, objectTypeEyebrow, riskAssessment, sizeComparison, trajectoryStatusBadge } from './focusCardPresentation';
 import { BODIES, type BodyId } from './bodyData';
 import { PanelShell } from './PanelShell';

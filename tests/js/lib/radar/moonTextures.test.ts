@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mulberry32 } from '@/lib/observatory/moonTextures';
+import { mulberry32 } from '@/lib/radar/moonTextures';
 
 describe('mulberry32', () => {
     it('é determinístico para a mesma seed', () => {

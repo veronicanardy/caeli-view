@@ -13,8 +13,8 @@
  */
 
 import * as THREE from 'three';
-import { NEPTUNE } from '@/lib/observatory/planetData';
-import { NEPTUNE_FRAG, NEPTUNE_VERT } from '@/lib/observatory/shaders/neptune.glsl';
+import { NEPTUNE } from '@/lib/radar/planetData';
+import { NEPTUNE_FRAG, NEPTUNE_VERT } from '@/lib/radar/shaders/neptune.glsl';
 import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 

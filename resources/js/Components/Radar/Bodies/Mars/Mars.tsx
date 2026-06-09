@@ -13,8 +13,8 @@
  */
 
 import * as THREE from 'three';
-import { MARS } from '@/lib/observatory/planetData';
-import { MARS_FRAG, MARS_VERT } from '@/lib/observatory/shaders/mars.glsl';
+import { MARS } from '@/lib/radar/planetData';
+import { MARS_FRAG, MARS_VERT } from '@/lib/radar/shaders/mars.glsl';
 import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 

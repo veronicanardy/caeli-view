@@ -13,7 +13,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { SUN_GLOW_FRAG, SUN_GLOW_VERT } from '@/lib/observatory/shaders/sun.glsl';
+import { SUN_GLOW_FRAG, SUN_GLOW_VERT } from '@/lib/radar/shaders/sun.glsl';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import { useBodyTexture } from '../useBodyTexture';

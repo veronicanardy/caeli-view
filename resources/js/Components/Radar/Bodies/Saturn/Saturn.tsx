@@ -15,8 +15,8 @@
 
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { SATURN } from '@/lib/observatory/planetData';
-import { SATURN_FRAG, SATURN_VERT } from '@/lib/observatory/shaders/saturn.glsl';
+import { SATURN } from '@/lib/radar/planetData';
+import { SATURN_FRAG, SATURN_VERT } from '@/lib/radar/shaders/saturn.glsl';
 import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 import { useBodyTexture } from '../useBodyTexture';

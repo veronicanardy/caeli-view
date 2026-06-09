@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { horizonsToScene, normalize3, sunDirectionFromIncoming } from '@/lib/observatory/coordinates';
+import { horizonsToScene, normalize3, sunDirectionFromIncoming } from '@/lib/radar/coordinates';
 import { compressDistanceDl, KM_PER_LD } from '@/lib/sceneEphemeris';
 
 describe('horizonsToScene', () => {

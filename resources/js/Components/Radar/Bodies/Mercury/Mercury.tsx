@@ -13,8 +13,8 @@
  */
 
 import * as THREE from 'three';
-import { MERCURY } from '@/lib/observatory/planetData';
-import { MERCURY_FRAG, MERCURY_VERT } from '@/lib/observatory/shaders/mercury.glsl';
+import { MERCURY } from '@/lib/radar/planetData';
+import { MERCURY_FRAG, MERCURY_VERT } from '@/lib/radar/shaders/mercury.glsl';
 import { PlanetBody, type PlanetVisualConfig } from '../PlanetBody';
 import type { PlanetBodyProps } from '../planetBodyTypes';
 

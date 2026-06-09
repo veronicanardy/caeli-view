@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeSceneObjectOccluders } from '@/Components/Radar/Scene/sceneOcclusion';
-import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/observatory/bodyScale';
+import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/radar/bodyScale';
 import { SUN_RADIUS_SCENE } from '@/Components/Radar/Bodies/bodyRenderConstants';
 import type { PlanetScenePositions } from '@/Components/Radar/Scene/scenePositions';
 

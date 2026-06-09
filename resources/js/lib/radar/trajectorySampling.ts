@@ -12,6 +12,7 @@ export type EarthHelioAU = { x: number; y: number; z: number };
 
 /** Limite de snap (em unidades de cena) usado por closestApproachNearPosition. */
 export const CLOSEST_APPROACH_MERGE_DISTANCE_SCENE = 0.45;
+const CLOSEST_APPROACH_MERGE_DISTANCE_SQ = CLOSEST_APPROACH_MERGE_DISTANCE_SCENE * CLOSEST_APPROACH_MERGE_DISTANCE_SCENE;
 
 // NEOs podem chegar a algo perto de ~5 UA geocêntricas.
 // Acima de 750 milhões de km, o vetor do Horizons quase certamente está incorreto
@@ -79,7 +80,7 @@ export function findClosestApproachPoint(trajectory: AsteroidTrajectory): Closes
     for (const point of candidates) {
         const km = typeof point.distanceKm === 'number'
             ? point.distanceKm
-            : Math.sqrt(point.x ** 2 + point.y ** 2 + (point.z ?? 0) ** 2);
+            : Math.hypot(point.x, point.y, point.z ?? 0);
         if (km < bestKm) {
             bestKm = km;
             best = point;
@@ -103,7 +104,7 @@ export function closestApproachNearPosition(
     const closest = findClosestApproachPoint(trajectory);
     if (!closest) return null;
 
-    return closest.vec.distanceToSquared(position) <= CLOSEST_APPROACH_MERGE_DISTANCE_SCENE * CLOSEST_APPROACH_MERGE_DISTANCE_SCENE
+    return closest.vec.distanceToSquared(position) <= CLOSEST_APPROACH_MERGE_DISTANCE_SQ
         ? closest
         : null;
 }

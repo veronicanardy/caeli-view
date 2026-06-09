@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import type { ClosestApproachSample } from '@/lib/observatory/trajectorySampling';
+import type { ClosestApproachSample } from '@/lib/radar/trajectorySampling';
 import type { TrajectoryPoint } from '@/types';
 import { TRAJECTORY_MARKER_THRESHOLDS } from './trajectoryConstants';
 

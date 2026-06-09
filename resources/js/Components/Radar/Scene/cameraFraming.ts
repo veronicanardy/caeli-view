@@ -9,8 +9,8 @@ import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
 import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
-import { currentPositionInScene } from '@/lib/observatory/trajectorySampling';
-import type { EarthHelioAU } from '@/lib/observatory/trajectorySampling';
+import { currentPositionInScene } from '@/lib/radar/trajectorySampling';
+import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
 import { CAMERA_FOV_DEG, CAMERA_VIEWS, MAX_CAMERA_DISTANCE } from './cameraConstants';
 
 /**

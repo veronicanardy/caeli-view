@@ -9,11 +9,11 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, UnifiedApproach } from '@/types';
-import { OBJECT_PALETTE } from '@/lib/observatory/palette';
+import { OBJECT_PALETTE } from '@/lib/radar/palette';
 import {
     closestApproachNearPosition,
     currentPositionInScene,
-} from '@/lib/observatory/trajectorySampling';
+} from '@/lib/radar/trajectorySampling';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { NowTrajectory } from '../Trajectory/NowTrajectory';
 import type { SceneVector } from './scenePositions';

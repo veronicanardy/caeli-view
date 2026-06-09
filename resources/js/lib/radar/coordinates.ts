@@ -58,9 +58,10 @@ export function horizonsGeoToHelioScene(
     ];
 }
 
-/** Returns the input vector rescaled to unit length, or [1, 0, 0] if the input is degenerate. */
+/** Retorna o vetor redimensionado para comprimento unitário, ou [0, 0, 0] se degenerado. */
 export function normalize3(v: [number, number, number]): [number, number, number] {
-    const len = Math.hypot(v[0], v[1], v[2]) || 1;
+    const len = Math.hypot(v[0], v[1], v[2]);
+    if (len < 1e-12) return [0, 0, 0];
     return [v[0] / len, v[1] / len, v[2] / len];
 }
 

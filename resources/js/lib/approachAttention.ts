@@ -1,3 +1,9 @@
+/**
+ * Responsabilidade: classificar o nível de destaque visual de uma aproximação de asteroide.
+ * Produz um score composto (distância lunar, velocidade, tamanho, flag de hazard) e o mapeia
+ * para um dos quatro níveis de atenção exibidos na interface do radar de aproximações.
+ * Não implica risco de impacto — é um critério de saliência visual.
+ */
 import { formatNumber } from '@/lib/format';
 import { UnifiedApproach } from '@/types';
 
