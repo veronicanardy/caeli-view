@@ -98,7 +98,7 @@ final class ClosestNowSelector
     private const RESULT_CACHE_TTL_SECONDS = 900; // 15 minutos
 
     public function __construct(
-        private readonly RadarService $observatory,
+        private readonly RadarService $radar,
         private readonly HorizonsTrajectoryService  $horizons,
     ) {
     }
@@ -213,7 +213,7 @@ final class ClosestNowSelector
             ],
         };
 
-        $data = $this->observatory->observe($observeParams);
+        $data = $this->radar->observe($observeParams);
 
         $approaches = is_array($data['approaches'] ?? null) ? $data['approaches'] : [];
 

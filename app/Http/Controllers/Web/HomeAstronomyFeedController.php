@@ -13,7 +13,7 @@ class HomeAstronomyFeedController
 {
     public function __construct(
         private readonly ApodService $apod,
-        private readonly RadarService $observatory,
+        private readonly RadarService $radar,
         private readonly SpaceNewsService $spaceNews,
     ) {
     }
@@ -33,7 +33,7 @@ class HomeAstronomyFeedController
         if ((bool) Config::get('features.home_observatory_feed', true)) {
             try {
                 $today = now()->toDateString();
-                $nextApproach = $this->observatory->nextApproach([
+                $nextApproach = $this->radar->nextApproach([
                     'date_min' => $today,
                     'date_max' => now()->addDays(7)->toDateString(),
                     'dist_max' => '0.2',

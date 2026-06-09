@@ -11,13 +11,14 @@ use App\Support\SunDirectionCalculator;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RadarController
 {
     public function __construct(
-        private readonly RadarService $observatory,
+        private readonly RadarService $radar,
         private readonly AsteroidModelResolverService $asteroidModels,
         private readonly HorizonsTrajectoryService $horizons,
         private readonly ClosestNowSelector $closestNow,
@@ -33,7 +34,7 @@ class RadarController
      */
     public function index(RadarIndexRequest $request): Response
     {
-        $defaults = $this->observatory->defaultFilters();
+        $defaults = $this->radar->defaultFilters();
         $filters = $request->filters($defaults);
 
         $initialSunDirection = SunDirectionCalculator::eclipticDirectionAt(
@@ -65,7 +66,7 @@ class RadarController
             'force_refresh' => ['nullable', 'boolean'],
         ]);
 
-        $defaults     = $this->observatory->defaultFilters();
+        $defaults     = $this->radar->defaultFilters();
         $anchorMin    = (string) ($validated['date_min'] ?? $defaults['date_min']);
         $anchorMax    = (string) ($validated['date_max'] ?? $defaults['date_max']);
         $limit        = (int) ($validated['limit'] ?? 5);
@@ -88,7 +89,7 @@ class RadarController
             $dateMax = $anchorMax;
         }
 
-        \Illuminate\Support\Facades\Log::info('[closestNow] request', compact('anchorMin', 'anchorMax', 'dateMin', 'dateMax', 'limit', 'mode'));
+        Log::info('[closestNow] request', compact('anchorMin', 'anchorMax', 'dateMin', 'dateMax', 'limit', 'mode'));
 
         try {
             $payload = $this->closestNow->select($dateMin, $dateMax, $limit, $mode, $anchorMin, $forceRefresh);
