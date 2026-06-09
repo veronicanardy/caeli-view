@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Web\AboutController;
 use App\Http\Controllers\Web\ApodController;
-use App\Http\Controllers\Web\ApproachObservatoryController;
+use App\Http\Controllers\Web\RadarController;
 use App\Http\Controllers\Web\AsteroidController;
 use App\Http\Controllers\Web\EpicController;
 use App\Http\Controllers\Web\HomeAstronomyFeedController;
@@ -19,12 +19,12 @@ Route::get('/home/astronomy-feed', HomeAstronomyFeedController::class)->middlewa
 Route::get('/sobre', AboutController::class)->name('about');
 
 Route::middleware('throttle:nasa')->group(function (): void {
-    Route::get('/radar', [ApproachObservatoryController::class, 'index'])->name('radar.index');
-    Route::get('/radar/data', [ApproachObservatoryController::class, 'data'])->name('radar.data');
-    Route::get('/radar/positions', [ApproachObservatoryController::class, 'positions'])->name('radar.positions');
-    Route::get('/radar/closest-now', [ApproachObservatoryController::class, 'closestNow'])->name('radar.closest-now');
-    Route::get('/radar/trajectory', [ApproachObservatoryController::class, 'trajectory'])->name('radar.trajectory');
-    Route::get('/radar/asteroid-model', [ApproachObservatoryController::class, 'asteroidModel'])->name('radar.asteroid-model');
+    Route::get('/radar', [RadarController::class, 'index'])->name('radar.index');
+    Route::get('/radar/data', [RadarController::class, 'data'])->name('radar.data');
+    Route::get('/radar/positions', [RadarController::class, 'positions'])->name('radar.positions');
+    Route::get('/radar/closest-now', [RadarController::class, 'closestNow'])->name('radar.closest-now');
+    Route::get('/radar/trajectory', [RadarController::class, 'trajectory'])->name('radar.trajectory');
+    Route::get('/radar/asteroid-model', [RadarController::class, 'asteroidModel'])->name('radar.asteroid-model');
     Route::get('/radar/objetos/{identifier}', [SmallBodiesController::class, 'show'])
         ->where('identifier', '[A-Za-z0-9%._ -]+')
         ->name('radar.objects.show');

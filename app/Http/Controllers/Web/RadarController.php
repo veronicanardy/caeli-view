@@ -16,7 +16,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class ApproachObservatoryController
+class RadarController
 {
     public function __construct(
         private readonly ApproachObservatoryService $observatory,
