@@ -94,23 +94,29 @@ Todas as integrações com APIs externas ficam no backend Laravel. As páginas R
 ### Observatório de Aproximações
 
 ```
-  Painel 2D                          Radar Heliocêntrico 3D
-  ┌─────────────────────────┐        ┌──────────────────────────────┐
-  │  OBJETO      DIST MIN   │        │   ♃         ★ 2024 YR4      │
-  │  2024 YR4    0,02 UA ●  │        │        ·  ·   ·              │
-  │  2020 SW     0,08 UA    │        │   ♂ ·    ⊕    · 2020 SW     │
-  │  2019 OK     0,13 UA    │        │        ·   ·                 │
-  │  ────────────────────── │        │   ♀    ☿       ♄            │
-  │  [Filtro] [Ord] [3D ↗]  │        │              ☀              │
-  └─────────────────────────┘        └──────────────────────────────┘
-  NASA NeoWs + JPL CAD (mesclados)   Three.js + react-three/fiber
+  Painel de Navegação               Radar Heliocêntrico 3D
+  ┌─────────────────────────┐       ┌──────────────────────────────┐
+  │ ○ Sol  ⊕ Terra  ☽ Lua  │       │   ♃         ★ 2026 LX       │
+  │ ─────────────────────   │       │        ·  ·   ·              │
+  │ 5 MAIS PRÓXIMOS AGORA   │       │   ♂ ·    ⊕    · 2026 LB1   │
+  │  2026 LB1    287.834 km │       │        ·   ·                 │
+  │  2026 LD   1.603.590 km │       │   ♀    ☿       ♄            │
+  │  2026 LT   2.089.967 km │       │              ☀              │
+  │  2026 LX   2.098.544 km │       └──────────────────────────────┘
+  │  2026 KM3  2.578.161 km │       escala log. visual apenas
+  └─────────────────────────┘
+  NASA NeoWs + JPL CAD (mesclados)
 ```
 
 - Combina **NASA NeoWs** e **JPL CAD** em paralelo, deduplica e mescla por identidade
-- **Cena heliocêntrica 3D** com planetas renderizados proceduralmente (Mercúrio → Netuno), Sol e Lua
-- Posições dos asteroides via consultas de efemérides à **API JPL Horizons**
-- Linhas de trajetória, escala de distâncias, modo de foco por objeto
-- Fallback 2D com filtros completos, ordenação e painéis de análise
+- Visão padrão com zoom na vizinhança da Terra; painel de referências permite alternar para Sol, Lua ou visão completa com planetas
+- Posições dos asteroides via consultas de efemérides à **API JPL Horizons** com vetores de estado reais
+- Linhas de trajetória com gradiente, cones de direção, marcadores de aproximação e compressão logarítmica de distâncias
+- Rodapé da cena sempre exibe "escala log. visual apenas" para deixar a convenção de escala explícita
+- Modo de foco trava a câmera em qualquer corpo; pan e zoom por teclado e toque
+- Painel de navegação com lista de objetos, card de qualidade de dados e abas de dados técnicos
+- Legenda de escala (1 DL / 1 UA) no canto; guia interativo (manual) explica a representação
+- Toast de boas-vindas na primeira visita
 - Referência visual da Terra via **NASA EPIC** com fallback CSS
 
 ### Painel de Asteroides
@@ -264,8 +270,17 @@ resources/js/
 ├── Pages/                 # Componentes de página Inertia de nível superior
 ├── Components/
 │   ├── Home/              # CinematicEarthScene, LiveSkyDashboard
-│   ├── ApproachObservatory/ # DailyOrbitalRadar, DailyOrbitalRadar3D, painéis
-│   ├── Dossie/            # Elementos orbitais, linhas do tempo de aproximação
+│   ├── Radar/             # Módulo completo do radar 3D
+│   │   ├── Scene/         # Canvas, rig de câmera, camadas de planetas/órbitas, hook de efemérides
+│   │   ├── Bodies/        # Planetas texturizados, Sol, Lua, modelos de asteroides
+│   │   ├── Trajectory/    # Linhas de trajetória com gradiente, cones de direção, marcadores
+│   │   ├── Overlays/      # Labels da cena, camada de anéis, campo de estrelas
+│   │   ├── Panels/        # Painel de navegação, card de foco, qualidade de dados, dados técnicos
+│   │   ├── Controls/      # Barra de ferramentas, console, toast de boas-vindas, manual interativo
+│   │   ├── Lists/         # Lista de proximidade, tabela de aproximações
+│   │   ├── Charts/        # Gráficos de aproximação, indicador de velocidade, linha do tempo
+│   │   └── Presenters/    # Régua Terra-Lua, badge de tipo de objeto
+│   ├── Dossie/            # Elementos orbitais, linhas do tempo, comparações de escala
 │   ├── Nasa/              # EarthGlobe, componentes reutilizáveis da NASA
 │   └── Charts/            # Wrappers de Recharts
 ├── hooks/                 # Hooks React customizados
@@ -409,7 +424,7 @@ docker compose exec app php artisan test
 
 ## Status
 
-Desenvolvimento ativo. As funcionalidades principais estão operando. Próximos passos planejados: testes end-to-end (Playwright), workflow de CI/CD, documentação de deploy, bookmarks de usuário.
+Desenvolvimento ativo. As funcionalidades principais estão operando. Próximos passos planejados: workflow de CI/CD, documentação de deploy, bookmarks de usuário.
 
 ---
 

@@ -88,12 +88,6 @@ export function Moon({
 
     const labelName = en ? 'Moon' : 'Lua';
 
-    const labelStatus = isApproximate ? (
-        <span className="ml-1 text-[10px] font-normal text-amber-200/80">
-            {en ? '· loading' : '· carregando'}
-        </span>
-    ) : null;
-
     return (
         <group position={position}>
             <mesh ref={meshRef}>
@@ -125,8 +119,7 @@ export function Moon({
                     onClick={isFocused ? undefined : onFocus}
                     title={isFocused ? undefined : title}
                 >
-                    <span className="font-semibold">{labelName}</span>
-                    {labelStatus}
+                    {labelName}
                 </DistanceCulledScreenLabel>
             ) : null}
         </group>

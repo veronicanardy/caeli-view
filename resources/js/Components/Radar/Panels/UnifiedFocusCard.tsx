@@ -152,6 +152,12 @@ function AsteroidCard({
     const risk = riskAssessment(a, en);
     const summary = humanSummary(object, en);
     const trajectoryStatus = trajectoryStatusBadge(object.trajectory, en);
+    const approachDaysAway = a.approachDate
+        ? (new Date(a.approachDate).getTime() - Date.now()) / 86_400_000
+        : null;
+    const isNearClosest =
+        object.trajectory?.motionState === 'near_closest' ||
+        (approachDaysAway !== null && approachDaysAway >= 0 && approachDaysAway <= 3);
     const velocity = a.relativeVelocityKph ?? object.trajectory?.currentVelocityKph ?? null;
 
     const typeInfo = objectTypeEyebrow(a.objectType, en);
@@ -194,6 +200,24 @@ function AsteroidCard({
             panelRef={panelRef}
         >
             <AsteroidModelPreview object={object} locale={locale} />
+
+            {isNearClosest ? (
+                <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-signal-cyan/40 bg-signal-cyan/10 px-3 py-2 lg:mx-5 lg:mt-3">
+                    <span className="shrink-0 text-base leading-none">🎯</span>
+                    <div className="min-w-0">
+                        <div className="text-[11.5px] font-semibold text-signal-cyan lg:text-[13px]">
+                            {object.trajectory?.motionState === 'near_closest'
+                                ? (en ? 'Closest approach' : 'Máxima Aproximação')
+                                : (en ? 'Closest approach coming up' : 'Máxima Aproximação em breve')}
+                        </div>
+                        <div className="text-[10px] text-signal-cyan/70 lg:text-[11px]">
+                            {a.approachDate
+                                ? (en ? `Passes closest on ${formatTimestamp(a.approachDate, locale)}` : `Ponto mais próximo em ${formatTimestamp(a.approachDate, locale)}`)
+                                : (en ? 'The closest it will get on this pass.' : 'O ponto mais próximo desta passagem.')}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
 
             {/* Bloco de risco — sempre visível em ambas as plataformas */}
             <div className="mt-1.5 px-3 lg:mt-4 lg:px-5">

@@ -94,23 +94,29 @@ All external API integrations live in the Laravel backend. React pages receive c
 ### Approach Observatory
 
 ```
-  2D Panel                         3D Heliocentric Radar
+  Navigation Panel                 3D Heliocentric Radar
   ┌─────────────────────────┐      ┌──────────────────────────────┐
-  │  OBJECT      MISS DIST  │      │   ♃         ★ 2024 YR4      │
-  │  2024 YR4    0.02 AU ●  │      │        ·  ·   ·              │
-  │  2020 SW     0.08 AU    │      │   ♂ ·    ⊕    · 2020 SW     │
-  │  2019 OK     0.13 AU    │      │        ·   ·                 │
-  │  ────────────────────── │      │   ♀    ☿       ♄            │
-  │  [Filter] [Sort] [3D ↗] │      │              ☀              │
-  └─────────────────────────┘      └──────────────────────────────┘
-  NASA NeoWs + JPL CAD (merged)    Three.js + react-three/fiber
+  │ ○ Sun  ⊕ Earth  ☽ Moon │      │   ♃         ★ 2026 LX       │
+  │ ──────────────────────  │      │        ·  ·   ·              │
+  │ 5 CLOSEST RIGHT NOW     │      │   ♂ ·    ⊕    · 2026 LB1   │
+  │  2026 LB1   287,834 km  │      │        ·   ·                 │
+  │  2026 LD  1,603,590 km  │      │   ♀    ☿       ♄            │
+  │  2026 LT  2,089,967 km  │      │              ☀              │
+  │  2026 LX  2,098,544 km  │      └──────────────────────────────┘
+  │  2026 KM3 2,578,161 km  │      log. scale · visual only
+  └─────────────────────────┘
+  NASA NeoWs + JPL CAD (merged)
 ```
 
 - Combines **NASA NeoWs** and **JPL CAD** in parallel, deduplicates and merges by identity
-- **3D heliocentric scene** with procedurally rendered planets (Mercury → Neptune), Sun, Moon
-- Asteroid positions from **JPL Horizons API** ephemeris queries
-- Trajectory lines, distance scaling, focus mode for individual objects
-- 2D fallback with full filtering, sorting, and analytics panels
+- Default view zooms in on Earth's neighborhood; reference panel lets you switch to Sun, Moon, or full planet view
+- Asteroid positions from **JPL Horizons API** ephemeris queries with real state vectors
+- Gradient trajectory lines, direction cones, approach markers, and logarithmic distance compression
+- Scene footer always shows "escala log. visual apenas" to make the scale convention explicit
+- Focus mode locks camera to any body; keyboard and touch pan/zoom
+- Navigation panel with object list, data quality card, and technical data tabs
+- Scale legend (1 LD / 1 AU) in the corner; interactive guide (manual) explains the representation
+- Welcome toast on first visit
 - Earth reference imagery from **NASA EPIC** with CSS fallback
 
 ### Asteroid Dashboard
@@ -264,8 +270,17 @@ resources/js/
 ├── Pages/                 # Top-level Inertia page components
 ├── Components/
 │   ├── Home/              # CinematicEarthScene, LiveSkyDashboard
-│   ├── ApproachObservatory/ # DailyOrbitalRadar, DailyOrbitalRadar3D, panels
-│   ├── Dossie/            # Orbital elements, approach timelines
+│   ├── Radar/             # Full 3D radar module
+│   │   ├── Scene/         # Canvas, camera rig, planet/orbit layers, ephemeris hook
+│   │   ├── Bodies/        # Textured planets, Sun, Moon, asteroid models
+│   │   ├── Trajectory/    # Gradient trajectory lines, direction cones, markers
+│   │   ├── Overlays/      # Scene labels, ring layer, starfield
+│   │   ├── Panels/        # Navigation panel, focus card, data quality, technical data
+│   │   ├── Controls/      # Toolbar, console bar, welcome toast, interactive manual
+│   │   ├── Lists/         # Proximity list, approach table
+│   │   ├── Charts/        # Approach charts, velocity indicator, timeline
+│   │   └── Presenters/    # Earth–Moon ruler, object type badge
+│   ├── Dossie/            # Orbital elements, approach timelines, scale comparisons
 │   ├── Nasa/              # EarthGlobe, reusable NASA components
 │   └── Charts/            # Recharts wrappers
 ├── hooks/                 # Custom React hooks
@@ -409,7 +424,7 @@ docker compose exec app php artisan test
 
 ## Status
 
-Active development. Core features are working. Planned next steps: end-to-end tests (Playwright), CI/CD workflow, deployment documentation, user bookmarks.
+Active development. Core features are working. Planned next steps: CI/CD workflow, deployment documentation, user bookmarks.
 
 ---
 
