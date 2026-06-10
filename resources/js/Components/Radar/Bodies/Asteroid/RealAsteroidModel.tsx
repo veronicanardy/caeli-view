@@ -114,7 +114,7 @@ const OUTLINE_VERTEX = `
     void main() {
         vec3 n = normalize(normalMatrix * normal);
         vec4 pos = modelViewMatrix * vec4(position, 1.0);
-        pos.xyz += n * 0.0009;
+        pos.xyz += n * 0.0002;
         gl_Position = projectionMatrix * pos;
     }
 `;

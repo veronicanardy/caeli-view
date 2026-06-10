@@ -11,11 +11,12 @@
  */
 
 import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
+import { useContext, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { CAMERA_FOV_DEG, CAMERA_VIEWS } from './cameraConstants';
 import type { CameraViewKey } from './cameraConstants';
 import type { FocusFraming } from './cameraFraming';
+import { CameraTweenContext } from './CameraTweenContext';
 
 type Controls = {
     target: THREE.Vector3;
@@ -37,6 +38,7 @@ export function CameraRig({
     sunDir,
     panelBiasX = 0,
     panelBiasY = 0,
+    onUserInteraction,
 }: {
     view: CameraViewKey;
     viewNonce: number;
@@ -49,6 +51,7 @@ export function CameraRig({
     panelBiasX?: number;
     /** Fração [0..1] da altura do canvas coberta pela UI inferior (bottom sheet). Empurra o foco para a área livre acima. */
     panelBiasY?: number;
+    onUserInteraction?: () => void;
 }) {
     const camera = useThree((s) => s.camera);
     const controls = useThree((s) => s.controls) as unknown as Controls | null;
@@ -93,9 +96,16 @@ export function CameraRig({
     /* effectiveDesired é resolvido no momento em que o tween começa (no useFrame),
        quando camera.position já tem o valor real atual — não num useMemo obsoleto. */
     const effectiveDesired = useRef(desired);
+
+    // Tween avulso — move câmera sem alterar focusTarget global.
+    const adHocTweening = useRef(false);
+    const adHocDesired = useRef<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
+
     const mounted = useRef(false);
     useEffect(() => {
         if (!mounted.current) { mounted.current = true; return; }
+        // Não sobrescreve um tween avulso em andamento — a câmera fica onde o usuário a deixou.
+        if (adHocTweening.current) return;
         tweening.current = true;
         /* Resolve o desired no momento da mudança, preservando o ângulo atual da câmera
            sem forçar virada — o usuário chega ao asteroide pelo heading que já tem. */
@@ -114,10 +124,27 @@ export function CameraRig({
         effectiveDesired.current = desired;
     }, [desired]);
 
+    const onUserInteractionRef = useRef(onUserInteraction);
+    useEffect(() => { onUserInteractionRef.current = onUserInteraction; }, [onUserInteraction]);
+
+    const tweenCtxRef = useContext(CameraTweenContext);
+    useEffect(() => {
+        if (!tweenCtxRef) return;
+        tweenCtxRef.current = (position, target) => {
+            adHocDesired.current = { position: position.clone(), target: target.clone() };
+            adHocTweening.current = true;
+            tweening.current = false;
+        };
+    }, [tweenCtxRef]);
+
     // Interação do usuário cancela o tween imediatamente.
     useEffect(() => {
         if (!controls?.addEventListener) return undefined;
-        const cancel = () => { tweening.current = false; };
+        const cancel = () => {
+            if (tweening.current) onUserInteractionRef.current?.();
+            tweening.current = false;
+            adHocTweening.current = false;
+        };
         controls.addEventListener('start', cancel);
         return () => controls.removeEventListener('start', cancel);
     }, [controls]);
@@ -132,6 +159,20 @@ export function CameraRig({
             fc.position.copy(earth).add(initOffset);
             controls.target.copy(earth);
             controls.update();
+            return;
+        }
+
+        // Tween avulso tem prioridade — não altera focusTarget global.
+        if (adHocTweening.current && adHocDesired.current) {
+            const ad = adHocDesired.current;
+            fc.position.lerp(ad.position, 0.055);
+            if (controls?.target) {
+                controls.target.lerp(ad.target, 0.055);
+                controls.update();
+            }
+            const posClose = fc.position.distanceToSquared(ad.position) < 1e-4;
+            const tgtClose = !controls?.target || controls.target.distanceToSquared(ad.target) < 1e-4;
+            if (posClose && tgtClose) adHocTweening.current = false;
             return;
         }
 

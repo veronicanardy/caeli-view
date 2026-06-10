@@ -107,7 +107,7 @@ export function computeFocusFraming(
         earthScenePosition[1] + geoPos[1],
         earthScenePosition[2] + geoPos[2],
     );
-    const distance = 0.35;
+    const distance = 0.1;
     const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
     const position = target.clone().add(dir.multiplyScalar(distance));
     return { target, position, transition: 'preserve_heading' };

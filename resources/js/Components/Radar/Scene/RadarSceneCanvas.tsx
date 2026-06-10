@@ -6,17 +6,21 @@
  */
 
 import { Canvas } from '@react-three/fiber';
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import { LabelNoGoContext } from '../Overlays/SceneLabels';
 import type { NoGoRect } from '../Overlays/SceneLabels';
 import { CAMERA_FOV_DEG, CAMERA_VIEWS, MAX_CAMERA_DISTANCE } from './cameraConstants';
+import { CameraTweenContext } from './CameraTweenContext';
+import type { TweenTo } from './CameraTweenContext';
 import type { FocusFraming } from './cameraFraming';
 import type { PlanetId } from './planetConfig';
 import type { CameraIntent } from './cameraIntent';
 import { RadarScene } from './RadarScene';
 import { preloadRealAsteroidModels } from '../Bodies/Asteroid/asteroidModelRegistry';
+import { ZoomHintContext, type ZoomHintState } from '../Bodies/Asteroid/ZoomHintContext';
+import { ZoomHintOverlay } from '../Bodies/Asteroid/ZoomHintOverlay';
 
 type Props = {
     noGoRects: NoGoRect[];
@@ -77,8 +81,12 @@ export function RadarSceneCanvas({
     // Garante que a câmera siga a seleção do usuário antes de qualquer alvo secundário.
     const activeFocusTarget = focusTarget ?? sunFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
     const [sceneReady, setSceneReady] = useState(false);
+    const tweenToRef = useRef<TweenTo>(() => {});
+    const [zoomHintState, setZoomHintState] = useState<ZoomHintState | null>(null);
 
     return (
+        <ZoomHintContext.Provider value={{ state: zoomHintState, setState: setZoomHintState }}>
+        <CameraTweenContext.Provider value={tweenToRef}>
         <LabelNoGoContext.Provider value={noGoRects}>
             {!sceneReady && (
                 <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
@@ -139,5 +147,8 @@ export function RadarSceneCanvas({
                 </Suspense>
             </Canvas>
         </LabelNoGoContext.Provider>
+        </CameraTweenContext.Provider>
+        <ZoomHintOverlay />
+        </ZoomHintContext.Provider>
     );
 }

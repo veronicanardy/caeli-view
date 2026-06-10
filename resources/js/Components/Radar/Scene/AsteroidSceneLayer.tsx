@@ -10,7 +10,7 @@ import { useMemo, useCallback } from 'react';
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, UnifiedApproach } from '@/types';
 import { OBJECT_PALETTE } from '@/lib/radar/palette';
-import { currentPositionInScene } from '@/lib/radar/trajectorySampling';
+import { collectTimeTicks, currentPositionInScene } from '@/lib/radar/trajectorySampling';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { NowTrajectory } from '../Trajectory/NowTrajectory';
 import { framingForBody } from './cameraFraming';
@@ -49,6 +49,16 @@ export function AsteroidSceneLayer({
         onFocusTrajectoryPoint({ ...framing, transition: 'preserve_heading' });
     }, [earthPos, onFocusTrajectoryPoint]);
 
+    const makeZoomProps = useCallback((position: SceneVector, object: ClosestNowObject) => {
+        const trajectory = object.trajectory?.status === 'available' ? object.trajectory as AsteroidTrajectory : null;
+        const firstTick = trajectory ? collectTimeTicks(trajectory)[0] ?? null : null;
+        const worldPos = new THREE.Vector3(earthPos[0] + position[0], earthPos[1] + position[1], earthPos[2] + position[2]);
+        const zoomOutTarget = firstTick
+            ? new THREE.Vector3(earthPos[0] + firstTick.vec.x, earthPos[1] + firstTick.vec.y, earthPos[2] + firstTick.vec.z)
+            : worldPos.clone();
+        return { zoomOutTarget, zoomOutDistance: 3.0, zoomWorldPosition: worldPos };
+    }, [earthPos]);
+
     const renderableAsteroids = useMemo(() => {
         return closestNowObjects
             .map((object) => {
@@ -61,20 +71,25 @@ export function AsteroidSceneLayer({
 
     return (
         <group position={earthPos}>
-            {renderableAsteroids.map(({ object, position }, index) => (
-                <AsteroidMarker
-                    key={object.approach.id}
-                    object={object}
-                    position={position}
-                    isSelected={object.approach.id === selectedId}
-                    dimmed={hasSelection && object.approach.id !== selectedId}
-                    onSelect={onSelect}
-                    showLabel={showLabelForObject(object.approach.id)}
-                    protectLabelFromFocus={object.approach.id !== selectedId}
-                    paletteColor={OBJECT_PALETTE[index % OBJECT_PALETTE.length].future}
-                    showLabels={showLabels}
-                />
-            ))}
+            {renderableAsteroids.map(({ object, position }, index) => {
+                const isSelected = object.approach.id === selectedId;
+                const zoomCallbacks = isSelected ? makeZoomProps(position, object) : {};
+                return (
+                    <AsteroidMarker
+                        key={object.approach.id}
+                        object={object}
+                        position={position}
+                        isSelected={isSelected}
+                        dimmed={hasSelection && !isSelected}
+                        onSelect={onSelect}
+                        showLabel={showLabelForObject(object.approach.id)}
+                        protectLabelFromFocus={!isSelected}
+                        paletteColor={OBJECT_PALETTE[index % OBJECT_PALETTE.length].future}
+                        showLabels={showLabels}
+                        {...zoomCallbacks}
+                    />
+                );
+            })}
 
             {showLabels && closestNowObjects
                 .map((object, index) => ({ object, palette: OBJECT_PALETTE[index % OBJECT_PALETTE.length] }))

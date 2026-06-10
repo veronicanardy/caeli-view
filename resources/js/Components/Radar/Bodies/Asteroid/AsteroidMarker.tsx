@@ -7,11 +7,13 @@
  */
 
 import { useMemo, useState } from 'react';
+import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import RealAsteroidModel from './RealAsteroidModel';
 import { asteroidRenderableModelFor } from './asteroidModelRegistry';
+import { ZoomHint } from './ZoomHint';
 
 const DIMMED_OPACITY = 0.4;
 const FULL_OPACITY = 1;
@@ -49,6 +51,9 @@ type AsteroidMarkerProps = {
     protectLabelFromFocus: boolean;
     paletteColor: string;
     showLabels: boolean;
+    zoomOutTarget?: THREE.Vector3;
+    zoomOutDistance?: number;
+    zoomWorldPosition?: THREE.Vector3;
 };
 
 /**
@@ -74,6 +79,9 @@ export function AsteroidMarker({
     protectLabelFromFocus,
     paletteColor,
     showLabels,
+    zoomOutTarget,
+    zoomOutDistance,
+    zoomWorldPosition,
 }: AsteroidMarkerProps) {
     const [hovered, setHovered] = useState(false);
     const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
@@ -99,6 +107,10 @@ export function AsteroidMarker({
             {/* Mostra label quando: (a) sempre visível por config, ou (b) hover — mesmo com labels suprimidos.
                 Apenas o nome: identificação rápida. Detalhes (posição estimada, máxima aproximação)
                 pertencem ao card do painel lateral, não à cena 3D. */}
+            {isSelected && showLabels && zoomOutTarget && zoomOutDistance && zoomWorldPosition ? (
+                <ZoomHint worldPosition={zoomWorldPosition} zoomOutTarget={zoomOutTarget} zoomOutDistance={zoomOutDistance} />
+            ) : null}
+
             {(showLabel || hovered) ? (
                 <ScreenLabel
                     position={LABEL_POSITION}
@@ -106,7 +118,6 @@ export function AsteroidMarker({
                     protectFromFocus={protectLabelFromFocus}
                     allowSceneOverlap={isSelected}
                     onClick={() => onSelect(object.approach)}
-                    title={`Focar ${object.approach.displayName ?? object.approach.name}`}
                     tooltip={isSelected && object.currentDistanceKm != null ? (
                         <><span>O asteroide está aqui agora</span><br /><span className="text-white/50">{new Intl.NumberFormat('pt-BR').format(Math.round(object.currentDistanceKm))} km da Terra</span></>
                     ) : undefined}
