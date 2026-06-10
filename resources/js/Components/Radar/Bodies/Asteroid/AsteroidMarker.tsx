@@ -100,6 +100,17 @@ export function AsteroidMarker({
                         {object.approach.displayName ?? object.approach.name}
                     </div>
 
+                    {!object.hasRealCurrentDistance ? (
+                        <div
+                            className="mt-1 rounded border border-yellow-400/30 bg-yellow-400/8 px-2 py-1 text-[11px] text-yellow-300/70"
+                            title={en
+                                ? 'Real-time position not available. Placed at recorded approach distance — angle has no physical meaning.'
+                                : 'Posição em tempo real indisponível. Posicionado pela distância registrada da aproximação — o ângulo não tem significado físico.'}
+                        >
+                            {en ? '~ estimated position' : '~ posição estimada'}
+                        </div>
+                    ) : null}
+
                     {nearbyClosestApproach ? (
                         <div className="mt-1 rounded border border-signal-cyan/35 bg-signal-cyan/10 px-2 py-1 text-[12px] font-semibold text-signal-cyan">
                             {en ? 'Near closest approach' : 'Perto da máxima aproximação'}

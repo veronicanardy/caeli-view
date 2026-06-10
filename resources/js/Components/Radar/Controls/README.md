@@ -42,7 +42,18 @@ Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógi
 - `Manual/TechnicalManual.tsx`: explicações técnicas, fórmulas e limitações.
 - `Manual/ManualParts.tsx`: blocos visuais reutilizáveis do manual.
 - `Manual/ManualDiagrams.tsx`: diagramas SVG usados pelo manual.
-- `Manual/manualCuriosities.ts`: conteúdo textual das curiosidades e FAQ.
+- `Manual/manualCuriosities.tsx`: curiosidades e FAQ com respostas em ReactNode (SVGs inline, PT-BR e EN).
+
+### Rigor Científico No Manual
+
+`FriendlyManual.tsx` e `TechnicalManual.tsx` cobrem avisos científicos obrigatórios:
+
+- **Órbita osculadora**: a elipse exibida no modo órbita é calculada a partir dos elementos atuais; não é simulação dinâmica nem previsão futura. Perturbações planetárias não são integradas localmente.
+- **Escala logarítmica**: distâncias são comprimidas radialmente (modo radar). Avisos inline na cena reforçam isso.
+- **Posições simbólicas**: objetos sem trajetória Horizons têm posição estimada pela distância da aproximação máxima; o ângulo na cena não tem significado físico.
+- **Tamanho dos corpos**: raios visuais amplificados ~10.000–100.000× para legibilidade.
+
+Qualquer mudança de linguagem nesses manuais deve preservar esses quatro avisos.
 - `Manual/manualTypes.ts`: tipos locais compartilhados pelo manual e por controles relacionados.
 
 ### Controles Principais Da Cena

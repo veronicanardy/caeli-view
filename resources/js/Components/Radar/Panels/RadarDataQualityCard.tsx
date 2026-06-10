@@ -89,6 +89,9 @@ function ClosestObject({ closest, locale, en, t }: { closest: RadarObject; local
                     <span className="text-[13px] font-semibold text-signal-cyan/80">{lunarDistanceLabel(lunar)}</span>
                 ) : null}
             </div>
+            <p className="text-[10.5px] text-white/30">
+                {en ? 'current distance (not closest approach)' : 'distância atual (não é a máxima aproximação)'}
+            </p>
             <div className="space-y-1 text-[11px]">
                 <p className="text-white/45">{t('observatory.radar.quality.closestTimeLabel')}: <span className="text-white/65">{approachTime}</span></p>
                 {velocity !== null ? (
@@ -200,25 +203,27 @@ function RadarCoverageBlock({
                     label={t('observatory.radar.quality.withHorizons')}
                     value={withHorizons}
                     highlight
+                    title={en ? 'Real position from JPL Horizons state vectors — calculated for right now.' : 'Posição real via vetores de estado JPL Horizons — calculada para agora.'}
                 />
                 <CoverageRow
                     label={t('observatory.radar.quality.symbolic')}
                     value={symbolic}
+                    title={en ? 'Closest-approach distance only — no real-time spatial position available.' : 'Apenas distância da aproximação máxima — sem posição espacial em tempo real.'}
                 />
             </dl>
 
             {/* Nota interpretativa sobre simbólicos. */}
             {symbolic > 0 ? (
-                <p className="text-[10.5px] leading-relaxed text-white/22">{t('observatory.radar.quality.sourceFooter')}</p>
+                <p className="text-[10.5px] leading-relaxed text-white/50">{t('observatory.radar.quality.sourceFooter')}</p>
             ) : null}
         </div>
     );
 }
 
-function CoverageRow({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
+function CoverageRow({ label, value, highlight = false, title }: { label: string; value: number; highlight?: boolean; title?: string }) {
     return (
-        <div className="flex items-center justify-between gap-2">
-            <dt className={`text-white/${highlight ? '45' : '30'}`}>{label}</dt>
+        <div className="flex items-center justify-between gap-2" title={title}>
+            <dt className={`cursor-help text-white/${highlight ? '45' : '30'}`}>{label}</dt>
             <dd className={`tabular-nums font-semibold ${highlight ? 'text-white/75' : 'text-white/45'}`}>{value}</dd>
         </div>
     );

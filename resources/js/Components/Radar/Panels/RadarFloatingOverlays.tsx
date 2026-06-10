@@ -34,6 +34,7 @@ type Props = {
     manualOpen: boolean;
     onManualOpenChange: (open: boolean) => void;
     lunarReference: LunarReference;
+    ephemerisAvailable: boolean;
 };
 
 /** Formata o tempo decorrido desde `since` em texto curto (ex: "há 2 min", "just now"). */
@@ -84,6 +85,7 @@ export function RadarFloatingOverlays({
     manualOpen,
     onManualOpenChange,
     lunarReference,
+    ephemerisAvailable,
 }: Props) {
     // Registra quando o radar terminou de carregar pela última vez.
     // O estado inicial é sempre null: o timestamp só é confiável após observar
@@ -126,12 +128,13 @@ export function RadarFloatingOverlays({
                 />
             ) : null}
 
-            <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
-                <h2 className="text-[11px] font-medium text-white/40">
-                    {en ? 'Orbital radar · 3D' : 'Radar orbital · 3D'}
-                </h2>
-                {/* Pill dinâmico: pulsa enquanto carrega, mostra tempo decorrido quando estável. */}
-                {radarLoading ? (
+            <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-1.5">
+                <div className="flex items-center gap-2">
+                    <h2 className="text-[11px] font-medium text-white/40">
+                        {en ? 'Orbital radar · 3D' : 'Radar orbital · 3D'}
+                    </h2>
+                    {/* Pill dinâmico: pulsa enquanto carrega, mostra tempo decorrido quando estável. */}
+                    {radarLoading ? (
                     <span className="inline-flex items-center gap-1 rounded-full border border-signal-cyan/30 bg-signal-cyan/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-signal-cyan/70">
                         <span className="size-1.5 animate-pulse rounded-full bg-signal-cyan/70" aria-hidden />
                         {en ? 'Updating…' : 'Atualizando…'}
@@ -142,6 +145,27 @@ export function RadarFloatingOverlays({
                         {elapsedLabel}
                     </span>
                 ) : null}
+                </div>
+                {/* Badge de modo órbita: aparece apenas quando a cena muda para escala linear UA. */}
+                {activeMode === 'orbit' ? (
+                    <span
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/8 px-2 py-0.5 text-[9px] font-medium text-amber-300/65"
+                        title={en
+                            ? 'Osculating orbit — best-fit Keplerian ellipse at current epoch. Does not include planetary perturbations. Not a long-term prediction.'
+                            : 'Órbita osculadora — elipse kepleriana ajustada na época atual. Não inclui perturbações planetárias. Não é previsão de longo prazo.'}
+                    >
+                        {en ? '⬡ osculating orbit · linear AU scale' : '⬡ órbita osculadora · escala linear UA'}
+                    </span>
+                ) : (
+                    <span
+                        className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/4 px-2 py-0.5 text-[9px] font-medium text-white/28"
+                        title={en
+                            ? 'Distances are radially compressed (logarithmic scale). Visual separation does not reflect real distance. Read numbers in the data panel.'
+                            : 'Distâncias comprimidas radialmente (escala logarítmica). A separação visual não reflete distância real. Leia os números no painel de dados.'}
+                    >
+                        {en ? '~ log scale · visual only' : '~ escala log · visual apenas'}
+                    </span>
+                )}
             </div>
 
             {(sceneTransitioning || radarLoading) ? (
@@ -166,6 +190,7 @@ export function RadarFloatingOverlays({
                 manualOpen={manualOpen}
                 onManualOpenChange={onManualOpenChange}
                 cardOpen={Boolean(visibleFocusedObject) || Boolean(bodyCardOpen)}
+                ephemerisAvailable={ephemerisAvailable}
             />
         </>
     );
