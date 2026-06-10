@@ -330,8 +330,8 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
  * na origem.
  *
  * Crucialmente esta é uma escala LINEAR, então o SHAPE da órbita é exato: o Sol está no foco real da
- * elipse, excentricidade/periélio/afélio são todos fiéis. A camada geocêntrica próxima à Terra
- * (Lua, asteroides próximos) é a que usa a compressão log — as duas camadas se encontram no Sol.
+ * elipse, excentricidade/periélio/afélio são todos fiéis. A camada do modo radar (Lua, asteroides
+ * próximos) é a que usa a compressão log — as duas camadas se encontram no Sol.
  */
 export const ORBIT_AU_SCALE = SUN_DISPLAY_DL;
 
@@ -410,7 +410,7 @@ export function buildHeliocentricOrbit(
 
 /**
  * Converte uma posição eclíptica heliocêntrica (UA, J2000) em unidades de cena, com o Sol na origem.
- * Convenção consistente com o modo geocêntrico: eclíptico (x, y, z) → cena (x, z, −y).
+ * Convenção de eixos: eclíptico (x, y, z) → cena (x, z, −y).
  * Norte eclíptico (z > 0) aponta para +Y da cena; plano XZ da cena é o plano eclíptico.
  */
 export function helioAUToSunCenteredScene(p: { x: number; y: number; z: number }): [number, number, number] {

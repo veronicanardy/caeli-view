@@ -1,7 +1,7 @@
 /**
  * Compositor principal da cena radar.
  *
- * Responsabilidade: arbitrar entre cena geocêntrica e heliocêntrica, montar corpos,
+ * Responsabilidade: arbitrar entre modo radar e modo órbita, montar corpos,
  * camadas, labels, oclusores e câmera a partir de dados já preparados. Não busca
  * APIs, não calcula ranking e não transforma dados orbitais em nova verdade física.
  */
@@ -168,7 +168,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
 
     // Arbitragem de modo: a cena solar-orbital toma conta quando (a) o usuário pediu modo órbita
     // E (b) o objeto selecionado tem elementos osculadores com época utilizável (tpJd ≠ 0).
-    // Caso contrário permanece na camada de radar geocêntrico. Misturar ambas as camadas no mesmo
+    // Caso contrário permanece no modo radar. Misturar ambas as camadas no mesmo
     // frame era o bug corrigido pela separação de modos: o asteroide nunca ficava sobre sua elipse
     // desenhada pois viviam em regras de escala diferentes.
     const focusedElements = focusedObject?.trajectory?.orbitalElements ?? null;
@@ -250,7 +250,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     {/* Elipses orbitais — longitude do periélio calculada dinamicamente da efeméride. */}
                     <PlanetOrbitLayer ephemeris={ephemeris} show={showLabels && !orbitLabelsOnly} />
 
-                    {/* Asteroides e trajetórias: geocêntricos log-comprimidos, offsetados pela Terra. */}
+                    {/* Asteroides e trajetórias: vetores Horizons log-comprimidos, offsetados pela Terra na cena. */}
                     <AsteroidSceneLayer
                         closestNowObjects={closestNowObjects}
                         selectedId={selectedId}

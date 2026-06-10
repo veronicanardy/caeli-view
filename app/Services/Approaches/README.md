@@ -1,0 +1,130 @@
+# Services/Approaches — Orquestração do Radar
+
+Este diretório contém os serviços responsáveis pela lógica de negócio do radar de aproximações. Cada classe tem uma responsabilidade única e bem delimitada; o controller não contém regras de negócio.
+
+## Visão geral do fluxo
+
+```
+RadarController
+  ├─ index()        → RadarService@observe()         → payload da página do observatório
+  ├─ closestNow()   → ClosestNowSelector@select()    → N objetos mais próximos agora
+  ├─ trajectory()   → HorizonsTrajectoryService      → trajetória vetorial geocêntrica
+  └─ asteroidModel() → AsteroidModelResolverService  → modelo 3D com nível de fidelidade
+```
+
+## Responsabilidades por classe
+
+### RadarService
+
+Orquestrador principal da página do observatório.
+
+- Normaliza filtros via `ApproachFilterNormalizer`
+- Dispara NeoWs + CAD em paralelo via `Concurrency::run()`
+- Delega merge e dedup a `ApproachMerger`
+- Delega sumário e gráficos a `ApproachSummarizer`
+- Cache com stale-while-revalidate (TTL 6h + margem 1h)
+
+**O que não pertence aqui:** parsing de resposta das APIs, conversão de unidades, lógica de identidade de objetos.
+
+### ClosestNowSelector
+
+Pipeline para determinar quais objetos estão fisicamente mais próximos da Terra *agora*.
+
+O CAD registra a distância no pico de máxima aproximação (um instante fixo). Este serviço corrige isso consultando o JPL Horizons para obter vetores reais e reordena os candidatos pela distância atual real.
+
+**Modos de seleção:**
+- `nearest` — top-N por miss_distance nominal + todos os PHAs; janela ±3 dias em torno de agora
+- `upcoming` — próximas 30 dias a partir da data âncora; ordenados por proximidade temporal com agora
+
+**Estratégia lazy-loading do Horizons:**
+- Apenas os `limit + HORIZONS_MARGIN` candidatos mais próximos consultam o Horizons
+- Demais candidatos usam `nominalDistanceKm` como fallback (`hasRealCurrentDistance: false`)
+- Cache individual por objectId no `HorizonsTrajectoryService` é reutilizado entre expansões de limit
+
+**Constantes importantes:**
+| Constante | Valor | Significado |
+|-----------|-------|-------------|
+| `TOP_CANDIDATES` | 45 | Máximo de candidatos buscados no CAD antes de qualquer corte |
+| `HORIZONS_MARGIN` | 5 | Extras consultados no Horizons além do limit (reserva de falha) |
+| `HORIZONS_BATCH_SIZE` | 8 | Objetos por lote paralelo (acima disso os timeouts explodem) |
+| `RESULT_CACHE_TTL_SECONDS` | 900 | TTL do resultado resolvido (15 min) |
+
+### AsteroidModelResolverService
+
+Determina qual modelo 3D usar para representar um asteroide, aplicando uma hierarquia de fidelidade:
+
+| Nível | Tipo | Condição |
+|-------|------|----------|
+| N1 | `real_shape` | GLB de missão científica (Bennu, Ryugu, Eros) disponível |
+| N2 | `catalog_reference` | Objeto no catálogo, mas sem GLB configurado |
+| N3 | `procedural` | Diâmetro medido + identidade orbital (SPK-ID ou designação) |
+| N4 | `procedural` | Apenas intervalo de diâmetro estimado |
+| N5 | `size_placeholder` | Sem dados físicos |
+
+O `shapeSeed` é determinístico por objeto: o mesmo asteroide sempre recebe a mesma semente, garantindo aparência consistente entre sessões.
+
+### ApproachFilterNormalizer
+
+Fonte única de verdade para os filtros padrão do observatório: `date_min/date_max` (hoje), `type=all`, `dist_max=0.2`, `sort=dist`, `distance_unit=km`.
+
+### ApproachMerger
+
+Combina resultados do NeoWs e do CAD em uma coleção única, removendo duplicatas por chave semântica (`designation:data`) e ordenando conforme o critério selecionado.
+
+### ApproachSummarizer
+
+Gera projeções estatísticas puras (sem persistência) para o frontend:
+- `summary()` — totais, destaques (mais próximo, mais rápido), PHAs
+- `charts()` — séries por dia, por tipo, por fonte, top-6 próximos e rápidos
+
+---
+
+## Limites entre camadas
+
+```
+Controller        — recebe request, delega, retorna JSON. Sem regras de negócio.
+FormRequest       — validação de entrada. Sem transformações de negócio.
+Service           — orquestração, cache, regras de negócio.
+DTO               — conversão e normalização de dados externos. Imutáveis.
+Support           — helpers stateless reutilizáveis (DistancePresenter, AsteroidIdentityNormalizer).
+```
+
+O controller não deve:
+- Calcular distâncias ou converter unidades
+- Montar chaves de cache
+- Conter lógica de dedup ou ordenação
+- Conhecer o formato interno das APIs externas
+
+---
+
+## Testes
+
+Os testes de feature cobrem o comportamento externo dos endpoints:
+
+| Arquivo | Cobre |
+|---------|-------|
+| `RadarPageTest` | Renderização Inertia, contrato JSON do observe, validação de formulário, fallback de fontes |
+| `RadarClosestNowTest` | Validações, modos nearest/upcoming, force_refresh, fallback nominal do Horizons, fallback total |
+| `RadarTrajectoryAndModelTest` | Âncoras, validações, graceful fallback do Horizons, hierarquia N1–N5, seed determinístico |
+
+Os testes de unidade relevantes:
+
+| Arquivo | Cobre |
+|---------|-------|
+| `UnifiedApproachDataTest` | Normalização NeoWs e CAD para o observatório |
+| `CloseApproachDataTest` | Parse de registro CAD e inferência de tipo |
+| `AsteroidIdentityNormalizerTest` | Parsing de nomes MPC (formatos variados) |
+
+---
+
+## Cache
+
+| Camada | Chave | TTL |
+|--------|-------|-----|
+| RadarService@observe | `approach-observatory:{md5(filtros)}` | 6h + 1h stale |
+| ClosestNowSelector | `closest-now:v12:{md5(params)}` | 15min + 15min stale |
+| HorizonsTrajectoryService (current) | por objectId + bucket de 15min | 15min |
+| HorizonsTrajectoryService (around-now) | por objectId + âncora | 30min |
+| AsteroidModelResolverService | `asteroid-model:v1:{md5(objeto)}` | 7 dias + 1 dia stale |
+
+Incrementar a versão na chave de cache (`v12`, `v1`) quando o formato de saída mudar.

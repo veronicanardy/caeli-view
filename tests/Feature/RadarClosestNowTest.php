@@ -129,6 +129,35 @@ class RadarClosestNowTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // Fallback nominal quando Horizons falha por objeto individual
+    // -------------------------------------------------------------------------
+
+    public function test_objects_use_nominal_distance_fallback_when_horizons_fails_per_object(): void
+    {
+        // CAD e NeoWs retornam candidatos válidos, mas o Horizons rejeita todos.
+        // O pipeline deve usar nominalDistanceKm como fallback e sinalizar hasRealCurrentDistance=false.
+        Http::fake([
+            'api.nasa.gov/neo/rest/v1/feed*'      => Http::response(NasaResponses::neoWsFeed()),
+            'ssd-api.jpl.nasa.gov/cad.api*'        => Http::response(JplResponses::cadApproaches()),
+            'ssd.jpl.nasa.gov/api/horizons.api*'   => Http::response('No ephemeris for target.', 200),
+        ]);
+
+        $response = $this->getJson('/radar/closest-now?date_min=2026-05-20&date_max=2026-05-21&limit=5&mode=nearest')
+            ->assertOk()
+            ->assertJsonPath('mode', 'closest_now');
+
+        $objects = $response->json('objects');
+        $this->assertNotEmpty($objects, 'Deve retornar objetos mesmo sem Horizons, usando fallback nominal.');
+
+        foreach ($objects as $object) {
+            // Horizons falhou: hasRealCurrentDistance deve ser false
+            $this->assertFalse($object['hasRealCurrentDistance'], 'hasRealCurrentDistance deve ser false quando Horizons não responde.');
+            // Mas currentDistanceKm ainda deve existir, populado pela distância nominal do CAD/NeoWs
+            $this->assertNotNull($object['currentDistanceKm'], 'currentDistanceKm deve usar fallback nominal quando Horizons falha.');
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Fallback quando CAD e NeoWs falham simultaneamente
     // -------------------------------------------------------------------------
 

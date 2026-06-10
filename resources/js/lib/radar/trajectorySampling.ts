@@ -1,5 +1,5 @@
 /**
- * Helpers puros para amostrar e recortar trajetórias geocêntricas antes de entregá-las para a
+ * Helpers puros para amostrar e recortar pontos de trajetória do Horizons antes de entregá-los para a
  * cena. Tudo aqui opera sobre dados simples + THREE.Vector3, sem R3F nem React.
  */
 
@@ -28,7 +28,7 @@ export function currentPositionInScene(object: ClosestNowObject): [number, numbe
     return horizonsToScene(point.x, point.y, point.z ?? 0);
 }
 
-/** Converte um ponto de trajetória (km, geocêntrico eclíptico) para THREE.Vector3 na cena. */
+/** Converte um ponto de trajetória (km, eclíptico J2000, Terra como origem de medição) para THREE.Vector3 na cena. */
 export function toVec3(point: { x: number; y: number; z?: number | null }): THREE.Vector3 {
     const [x, y, z] = horizonsToScene(point.x, point.y, point.z ?? 0);
     return new THREE.Vector3(x, y, z);

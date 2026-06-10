@@ -52,7 +52,7 @@ export function framingForOverview(): FocusFraming {
 
 /**
  * Enquadramento de câmera para um asteroide selecionado.
- *   - orbitMode = false: close-up geocêntrico na rocha, cena de radar com escala logarítmica.
+ *   - orbitMode = false: close-up no asteroide, modo radar com escala logarítmica.
  *   - orbitMode = true: enquadra a órbita Kepleriana completa ao redor do Sol na cena heliocêntrica.
  */
 export function computeFocusFraming(
@@ -99,7 +99,7 @@ export function computeFocusFraming(
         // Elementos rejeitados pelo construtor de órbita. Cai para o close-up para mostrar algo.
     }
 
-    // Close-up na rocha: posição geocêntrica log-comprimida offsetada pela Terra na cena.
+    // Close-up na rocha: vetor Horizons log-comprimido, offsetado pela Terra na cena.
     const geoPos = currentPositionInScene(object);
     if (!geoPos) return null;
     const target = new THREE.Vector3(

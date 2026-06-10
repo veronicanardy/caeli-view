@@ -19,7 +19,7 @@ import { NowTrajectory } from '../Trajectory/NowTrajectory';
 import type { SceneVector } from './scenePositions';
 
 /**
- * Asteroides e trajetórias geocêntricas log-comprimidas, offsetadas pela Terra.
+ * Asteroides e trajetórias log-comprimidas, offsetadas pela Terra na cena.
  *
  * Esta camada prepara posição atual e estados derivados de trajetória antes de
  * enviar os dados para `Bodies/Asteroid`, mantendo os corpos apenas renderizando.

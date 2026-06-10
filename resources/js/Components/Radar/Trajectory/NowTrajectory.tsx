@@ -1,5 +1,5 @@
 /**
- * Compositor da trajetória geocêntrica atual.
+ * Compositor da trilha de trajetória atual no modo radar.
  *
  * Responsabilidade: montar linha, cone de direção, ticks temporais e marcador de
  * máxima aproximação a partir de dados de apresentação já derivados por hook local.

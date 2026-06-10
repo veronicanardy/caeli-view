@@ -1,13 +1,12 @@
 /**
- * Transformações de coordenadas compartilhadas entre as cenas geocêntrica (radar) e heliocêntrica (órbita).
+ * Transformações de coordenadas compartilhadas entre o modo radar e o modo órbita.
  *
  * Convenções:
- * - O JPL Horizons retorna vetores geocêntricos eclípticos em km.
+ * - O JPL Horizons retorna vetores eclípticos em km, com a Terra como origem de medição.
  * - Eixos da cena: eclíptico X → cena X, eclíptico Z → cena Y, eclíptico −Y → cena Z.
  *   Isso coloca o plano eclíptico em XZ (onde ficam os anéis de DL) e o norte eclíptico em +Y da cena.
- * - "Unidades de cena" na camada geocêntrica significa "1 unidade = 1 DL", comprimido
- *   radialmente via compressSceneVector (em sceneEphemeris.ts) — a direção é preservada, só a
- *   magnitude é reescalonada.
+ * - No modo radar, "1 unidade de cena = 1 DL", comprimido radialmente via compressSceneVector
+ *   (em sceneEphemeris.ts) — a direção é preservada, só a magnitude é reescalonada.
  *
  * Tudo neste arquivo é puro: mesma entrada → mesma saída, sem I/O nem DOM.
  */

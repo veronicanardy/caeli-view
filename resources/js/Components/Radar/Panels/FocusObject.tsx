@@ -70,11 +70,17 @@ export function FocusObject({ approach, pool, locale, t }: Props) {
                         <Sparkles className="size-3.5" aria-hidden="true" />
                         {t('observatory.focus.eyebrow')}
                         <ObjectTypeBadge type={approach.objectType} />
-                        <span className="rounded-full border border-signal-violet/30 bg-signal-violet/10 px-2 py-0.5 text-[10px] font-medium text-signal-violet">
-                            {attention.label}
+                        <span
+                            className="rounded-full border border-signal-violet/30 bg-signal-violet/10 px-2 py-0.5 text-[10px] font-medium text-signal-violet"
+                            title={locale === 'en' ? 'Attention level — scored by size, velocity and close-approach distance.' : 'Nível de atenção — pontuado por tamanho, velocidade e distância de aproximação.'}
+                        >
+                            <span className="opacity-60">{locale === 'en' ? 'attn: ' : 'atençao: '}</span>{attention.label}
                         </span>
-                        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${BAND_TONE[band]}`}>
-                            {t(BAND_KEY[band])}
+                        <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${BAND_TONE[band]}`}
+                            title={locale === 'en' ? 'Distance band at closest approach — independent from attention level.' : 'Faixa de distância na máxima aproximação — independente do nível de atenção.'}
+                        >
+                            <span className="opacity-60">{locale === 'en' ? 'dist: ' : 'dist: '}</span>{t(BAND_KEY[band])}
                         </span>
                     </div>
                     <h2 className="mt-3 break-words text-2xl font-semibold text-white sm:text-3xl">{identity.displayName}</h2>
@@ -111,7 +117,7 @@ export function FocusObject({ approach, pool, locale, t }: Props) {
             <dl className="relative mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Metric icon={<Target className="size-4" />} label={t('observatory.focus.distance')} value={compactKm(approach.nominalDistanceKm)} />
                 <Metric icon={<span className="text-base leading-none">☾</span>} label={t('observatory.focus.lunar')} value={lunarDistanceLabel(lunarDistance)} />
-                <Metric icon={<Gauge className="size-4" />} label={t('observatory.focus.velocity')} value={approach.relativeVelocityKph !== null ? `${formatNumber(approach.relativeVelocityKph, 0)} km/h` : '—'} helper={velocityHuman?.label} />
+                <Metric icon={<Gauge className="size-4" />} label={t('observatory.focus.velocity')} value={approach.relativeVelocityKph !== null ? `${formatNumber(approach.relativeVelocityKph, 0)} km/h` : '—'} helper={velocityHuman?.label} title={en ? 'Relative velocity at closest approach, from the JPL Close Approach Database.' : 'Velocidade relativa na máxima aproximação, da base JPL Close Approach.'} />
                 <Metric icon={<CalendarClock className="size-4" />} label={t('observatory.focus.date')} value={approach.approachDate ?? '—'} />
             </dl>
 
@@ -153,9 +159,9 @@ export function FocusObject({ approach, pool, locale, t }: Props) {
     );
 }
 
-function Metric({ icon, label, value, helper }: { icon: ReactNode; label: string; value: string; helper?: string }) {
+function Metric({ icon, label, value, helper, title }: { icon: ReactNode; label: string; value: string; helper?: string; title?: string }) {
     return (
-        <div className="rounded-lg border border-white/10 bg-space-950/55 p-3">
+        <div className="rounded-lg border border-white/10 bg-space-950/55 p-3" title={title}>
             <dt className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-white/50">
                 <span className="text-signal-cyan">{icon}</span>
                 {label}

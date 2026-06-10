@@ -10,6 +10,7 @@ use App\Services\Approaches\AsteroidModelResolverService;
 use App\Services\Approaches\ClosestNowSelector;
 use App\Services\Approaches\RadarService;
 use App\Services\Jpl\Horizons\HorizonsTrajectoryService;
+use App\Support\DistancePresenter;
 use App\Support\SunDirectionCalculator;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -84,7 +85,7 @@ class RadarController
     }
 
     /**
-     * Responsabilidade: retorna a trajetória geocêntrica de um objeto via JPL Horizons.
+     * Responsabilidade: retorna vetores de trajetória do JPL Horizons (eclíptico J2000, km, Terra como origem de medição).
      * Âncoras: 'approach' (centrada no pico) ou 'now' (centrada no instante atual).
      */
     public function trajectory(RadarTrajectoryRequest $request): JsonResponse
@@ -137,7 +138,7 @@ class RadarController
             'candidatesEvaluated' => 0,
             'objects'             => [],
             'lunarReference'      => [
-                'distanceKm'           => 384400,
+                'distanceKm'           => DistancePresenter::LUNAR_DISTANCE_KM,
                 'earthDiametersApprox' => 30.0,
                 'label'                => 'Distância média Terra-Lua',
                 'description'          => 'A Lua é referência visual: cerca de 384.400 km, aproximadamente 30 Terras.',

@@ -1,5 +1,5 @@
 /**
- * Responsabilidade: raios visuais e hitboxes dos corpos celestes principais do radar geocêntrico.
+ * Responsabilidade: raios visuais e hitboxes dos corpos celestes principais da cena radar.
  *
  * Os raios são EXAGERADOS para legibilidade — o diâmetro real da Terra nessa escala seria
  * sub-pixel. As distâncias entre os corpos permanecem fiéis à escala em DL; apenas os tamanhos

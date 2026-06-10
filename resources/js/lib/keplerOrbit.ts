@@ -74,7 +74,7 @@ export function heliocentricPositionAU(
  * de posição única, então cada ponto está na órbita por construção.
  *
  * Usado para visualizar "para onde o objeto está se movendo em sua órbita nos próximos N dias"
- * na vista solar — semanticamente distinto da trajetória geocêntrica ±h do modo radar.
+ * na vista solar — semanticamente distinto da trilha de trajetória ±h do modo radar.
  *
  * Retorna null quando os elementos não permitem ancorar posições no tempo.
  */

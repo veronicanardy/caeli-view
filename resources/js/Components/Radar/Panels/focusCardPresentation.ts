@@ -28,7 +28,7 @@ export function riskAssessment(a: UnifiedApproach, en: boolean): { icon: string;
         return {
             icon: '⚠️',
             title: en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL',
-            subtitle: en ? 'Classified “potentially hazardous” — watched, not on impact course.' : 'Classificado “potencialmente perigoso” — vigiado, sem rota de impacto.',
+            subtitle: en ? 'Classified “potentially hazardous”, closely monitored, not on impact course.' : 'Classificado “potencialmente perigoso”, monitorado de perto, sem rota de impacto.',
             className: 'border-amber-400/40 bg-amber-500/10 text-amber-100',
         };
     }

@@ -264,10 +264,10 @@ final class ClosestNowSelector
         $allCandidates = array_merge($priorityCandidates, $reserveCandidates);
         $objects       = $this->buildObjects($allCandidates, $trajectories);
 
+        // Modo 'upcoming' já vem pré-ordenado por compareByUpcomingApproach de pickUpcomingCandidates.
+        // Só reordenamos para 'nearest', onde a distância real do Horizons pode mudar o ranking nominal.
         if ($mode !== 'upcoming') {
             usort($objects, $this->compareByCurrentDistance(...));
-        } else {
-            usort($objects, $this->compareByUpcomingApproach(...));
         }
 
         // Remove duplicatas por nome canônico mantendo apenas a entrada mais próxima (já é a primeira após sort).

@@ -2,6 +2,26 @@
 
 namespace Tests\Fixtures;
 
+/**
+ * Responsabilidade: respostas simuladas da API NASA para uso nos testes.
+ *
+ * ATENÇÃO — dois shapes distintos coexistem neste arquivo:
+ *
+ *   Shape RAW (usado em Http::fake):
+ *     Os métodos públicos (neoWsFeed, asteroidLookup) retornam o formato exato
+ *     da API da NASA, com campos aninhados como `estimated_diameter.kilometers`.
+ *     O Http::fake intercepta a requisição HTTP e devolve esse JSON bruto;
+ *     o NeoWsService o processa normalmente via AsteroidData::fromArray().
+ *
+ *   Shape NORMALIZADO (usado em testes unitários de DTO):
+ *     Quando um teste de UnifiedApproachData ou similar precisa de um asteroide
+ *     já processado, monta o array manualmente com campos flat como
+ *     `estimatedDiameterMinKm` — que é o que AsteroidData::toArray() retorna
+ *     depois de normalizar a resposta bruta.
+ *
+ * Não misture os dois contextos: Http::fake sempre usa o shape raw;
+ * chamadas diretas a fromNeoWs() nos testes unitários usam o shape normalizado.
+ */
 final class NasaResponses
 {
     public static function neoWsFeed(): array

@@ -1,5 +1,5 @@
 /**
- * Hook de apresentação da trajetória geocêntrica atual.
+ * Hook de apresentação da trilha de trajetória atual no modo radar.
  *
  * Responsabilidade: derivar vetores, marcador de direção, ticks temporais,
  * máxima aproximação e opacidades para `NowTrajectory`. Não busca dados externos,

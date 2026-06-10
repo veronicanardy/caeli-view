@@ -6,6 +6,7 @@
  * nem altera dados — apenas apresenta as opções disponíveis.
  */
 
+import type { CSSProperties } from 'react';
 import { OBJECT_LIMITS } from '@/types';
 import type { ObjectLimit, SelectionMode } from '@/types';
 import { Tooltip } from './Tooltip';
@@ -31,7 +32,9 @@ const MODE_OPTIONS: Array<{ value: SelectionMode; labelPt: string; labelEn: stri
  * Controles principais do radar no topo da pagina.
  *
  * Critério e quantidade precisam conversar visualmente; por isso este
- * componente usa controles baixos, alinhados e compactos.
+ * componente usa controles baixos, alinhados e compactos. A altura dos grupos
+ * e o tamanho do texto escalam proporcionalmente à altura da viewport via
+ * clamp() com 100dvh como unidade fluida.
  */
 export function RadarObjectControls({
     objectLimit,
@@ -52,67 +55,109 @@ export function RadarObjectControls({
             : 'Mostra os objetos que vão passar mais perto da Terra nos próximos dias, em ordem de chegada.',
     };
 
+    // Interpolação contínua baseada em 100dvh:
+    // altura do grupo:  clamp(1.5rem, 3.2dvh, 2.25rem)  → 24px..36px
+    // padding botão:    clamp(0px,    0.5dvh, 4px)
+    // px botão modo:    clamp(0.4rem, 1.2dvh, 0.75rem)
+    // px botão limite:  clamp(0.3rem, 1dvh,   0.625rem)
+    // tamanho do texto: clamp(10px,   1.2dvh, 13px)
+    // texto label:      clamp(9px,    1dvh,   11px)
+    const fluidVars = {
+        '--ctrl-h':         'clamp(1.5rem, 3.2dvh, 2.25rem)',
+        '--ctrl-fs':        'clamp(10px, 1.2dvh, 13px)',
+        '--ctrl-fs-label':  'clamp(9px, 1dvh, 11px)',
+        '--ctrl-py':        'clamp(0px, 0.5dvh, 4px)',
+        '--ctrl-px-mode':   'clamp(0.4rem, 1.2dvh, 0.75rem)',
+        '--ctrl-px-limit':  'clamp(0.3rem, 1dvh, 0.625rem)',
+        '--ctrl-gap':       'clamp(0.125rem, 0.4dvh, 0.25rem)',
+        '--ctrl-px-group':  'clamp(0.25rem, 0.6dvh, 0.5rem)',
+    } as CSSProperties;
+
     return (
-        <div className="grid gap-2.5 md:inline-flex md:flex-wrap md:items-end md:gap-3">
-            <div className="flex min-w-0 flex-col gap-1">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85">
+        <div className="grid gap-2 md:inline-flex md:flex-wrap md:items-center md:gap-2.5" style={fluidVars}>
+            <div
+                className="flex min-w-0 items-center rounded-xl border border-white/10 bg-space-950/70"
+                style={{ height: 'var(--ctrl-h)', gap: 'var(--ctrl-gap)', paddingInline: 'var(--ctrl-px-group)' }}
+                role="group"
+                aria-label={en ? 'Selection criterion' : 'Critério de seleção'}
+            >
+                <span
+                    className="font-medium uppercase tracking-wide text-signal-cyan/70 whitespace-nowrap"
+                    style={{ fontSize: 'var(--ctrl-fs-label)', marginRight: 'var(--ctrl-gap)' }}
+                >
                     {en ? 'Criterion' : 'Critério'}
                 </span>
-                <div className="flex h-10 items-center gap-1 rounded-xl border border-white/10 bg-space-950/70 px-1.5" role="group" aria-label={en ? 'Selection criterion' : 'Critério de seleção'}>
-                    {MODE_OPTIONS.map((option) => (
-                        <Tooltip
-                            key={option.value}
-                            content={<span className="block w-52 leading-relaxed">{modeDescriptions[option.value]}</span>}
-                            wrap
-                        >
-                            <button
-                                type="button"
-                                disabled={loading || criterionLocked}
-                                onClick={() => onModeChange(option.value)}
-                                aria-pressed={selectionMode === option.value}
-                                aria-label={`${en ? option.labelEn : option.labelPt} — ${modeDescriptions[option.value]}`}
-                                className={[
-                                    'rounded-lg px-3 py-1.5 text-[13px] font-medium transition outline-none whitespace-nowrap',
-                                    'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-not-allowed disabled:opacity-50',
-                                    selectionMode === option.value
-                                        ? 'bg-signal-cyan/20 text-signal-cyan ring-1 ring-signal-cyan/40'
-                                        : 'text-white/65 hover:bg-white/[0.05] hover:text-white',
-                                ].join(' ')}
-                            >
-                                {en ? option.labelEn : option.labelPt}
-                            </button>
-                        </Tooltip>
-                    ))}
-                </div>
-            </div>
-
-            <div className="flex min-w-0 flex-col gap-1">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-signal-cyan/85">
-                    {en ? 'Show up to' : 'Exibir até'}
-                </span>
-                <div className="flex h-10 flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-space-950/70 px-1.5 md:flex-nowrap">
-                    {LIMITS.map((limit) => (
+                {MODE_OPTIONS.map((option) => (
+                    <Tooltip
+                        key={option.value}
+                        content={<span className="block w-52 leading-relaxed">{modeDescriptions[option.value]}</span>}
+                        wrap
+                    >
                         <button
-                            key={limit}
                             type="button"
-                            disabled={loading}
-                            onClick={() => onLimitChange(limit)}
-                            aria-pressed={objectLimit === limit}
+                            disabled={loading || criterionLocked}
+                            onClick={() => onModeChange(option.value)}
+                            aria-pressed={selectionMode === option.value}
+                            aria-label={`${en ? option.labelEn : option.labelPt} — ${modeDescriptions[option.value]}`}
                             className={[
-                                'min-w-[2.6rem] rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition outline-none',
-                                'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait',
-                                objectLimit === limit
+                                'rounded-lg font-medium transition outline-none whitespace-nowrap',
+                                'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-not-allowed disabled:opacity-50',
+                                selectionMode === option.value
                                     ? 'bg-signal-cyan/20 text-signal-cyan ring-1 ring-signal-cyan/40'
                                     : 'text-white/65 hover:bg-white/[0.05] hover:text-white',
                             ].join(' ')}
+                            style={{
+                                fontSize:      'var(--ctrl-fs)',
+                                paddingBlock:  'var(--ctrl-py)',
+                                paddingInline: 'var(--ctrl-px-mode)',
+                            }}
                         >
-                            {limit}
+                            {en ? option.labelEn : option.labelPt}
                         </button>
-                    ))}
-                    <span className="pl-1 text-[11px] uppercase tracking-wide text-white/40 md:ml-1">
-                        {en ? 'Objects' : 'Objetos'}
-                    </span>
-                </div>
+                    </Tooltip>
+                ))}
+            </div>
+
+            <div
+                className="flex min-w-0 flex-wrap items-center rounded-xl border border-white/10 bg-space-950/70 md:flex-nowrap"
+                style={{ height: 'var(--ctrl-h)', gap: 'var(--ctrl-gap)', paddingInline: 'var(--ctrl-px-group)' }}
+            >
+                <span
+                    className="font-medium uppercase tracking-wide text-signal-cyan/70 whitespace-nowrap"
+                    style={{ fontSize: 'var(--ctrl-fs-label)', marginRight: 'var(--ctrl-gap)' }}
+                >
+                    {en ? 'Show up to' : 'Exibir até'}
+                </span>
+                {LIMITS.map((limit) => (
+                    <button
+                        key={limit}
+                        type="button"
+                        disabled={loading}
+                        onClick={() => onLimitChange(limit)}
+                        aria-pressed={objectLimit === limit}
+                        className={[
+                            'rounded-lg font-medium transition outline-none',
+                            'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait',
+                            objectLimit === limit
+                                ? 'bg-signal-cyan/20 text-signal-cyan ring-1 ring-signal-cyan/40'
+                                : 'text-white/65 hover:bg-white/[0.05] hover:text-white',
+                        ].join(' ')}
+                        style={{
+                            fontSize:      'var(--ctrl-fs)',
+                            paddingBlock:  'var(--ctrl-py)',
+                            paddingInline: 'var(--ctrl-px-limit)',
+                            minWidth:      'clamp(1.8rem, 3dvh, 2.6rem)',
+                        }}
+                    >
+                        {limit}
+                    </button>
+                ))}
+                <span
+                    className="uppercase tracking-wide text-white/40"
+                    style={{ fontSize: 'var(--ctrl-fs-label)', paddingLeft: 'var(--ctrl-gap)' }}
+                >
+                    {en ? 'Objects' : 'Objetos'}
+                </span>
             </div>
         </div>
     );
