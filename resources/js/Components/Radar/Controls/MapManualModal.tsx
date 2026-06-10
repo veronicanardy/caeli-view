@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BookOpen, Calculator, GripHorizontal, Orbit, Radar, X } from 'lucide-react';
+import { BookOpen, Calculator, GripHorizontal, X } from 'lucide-react';
 import { FriendlyManual } from './Manual/FriendlyManual';
 import { TechnicalManual } from './Manual/TechnicalManual';
 import type { SceneMode } from './Manual/manualTypes';
@@ -113,17 +113,13 @@ export function MapManualModal({
         setResizing(true);
     };
 
-    const modeLabel = mode === 'radar'
-        ? (en ? 'Radar mode' : 'Modo radar')
-        : (en ? 'Orbit mode' : 'Modo órbita');
-
-    const modeSubtitle = mode === 'radar'
-        ? (en ? 'Earth-centred · geocentric view' : 'Centrado na Terra · vista geocêntrica')
-        : (en ? 'Sun-centred · heliocentric view' : 'Centrado no Sol · vista heliocêntrica');
+    const modalTitle = mode === 'radar'
+        ? (en ? 'Radar guide' : 'Guia do radar')
+        : (en ? 'Orbit guide' : 'Guia da órbita');
 
     return (
         <div
-            className="pointer-events-none fixed inset-0 z-50"
+            className="pointer-events-none fixed inset-0 z-[110]"
             role="dialog"
             aria-modal="false"
             aria-labelledby="map-manual-title"
@@ -138,53 +134,39 @@ export function MapManualModal({
                     userSelect: dragging || resizing ? 'none' : undefined,
                 }}
             >
+                {/* Barra única: grip + título + abas + fechar */}
                 <header
                     onPointerDown={startDrag}
                     className={[
-                        'flex shrink-0 flex-col gap-3 border-b border-white/10 bg-white/[0.03] px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5',
+                        'flex shrink-0 items-center gap-3 border-b border-white/[0.08] bg-white/[0.03] px-4 py-2.5 sm:px-5',
                         dragging ? 'cursor-grabbing' : 'cursor-grab',
                     ].join(' ')}
                 >
-                    <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-signal-cyan/25 bg-signal-cyan/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-signal-cyan">
-                                {mode === 'radar' ? <Radar className="size-3.5" aria-hidden /> : <Orbit className="size-3.5" aria-hidden />}
-                                {modeLabel}
-                            </div>
-                            <span
-                                className="inline-flex items-center gap-1 text-[11px] text-white/40"
-                                title={en ? 'Drag to move' : 'Arraste para mover'}
-                            >
-                                <GripHorizontal className="size-3.5" aria-hidden />
-                                {en ? 'drag' : 'arraste'}
-                            </span>
-                        </div>
-                        <h2 id="map-manual-title" className="mt-2 text-xl font-semibold text-white sm:text-2xl">
-                            {en ? 'Map manual' : 'Manual do mapa'}
-                        </h2>
-                        <p className="mt-0.5 text-sm text-white/45">{modeSubtitle}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2 self-end sm:self-start">
-                        <button
-                            type="button"
-                            onPointerDown={(e) => e.stopPropagation()}
-                            onClick={onClose}
-                            className="inline-flex size-9 items-center justify-center rounded-full border border-white/12 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
-                            aria-label={en ? 'Close manual' : 'Fechar manual'}
-                        >
-                            <X className="size-4" aria-hidden />
-                        </button>
-                    </div>
-                </header>
+                    <GripHorizontal className="size-3.5 shrink-0 text-white/20" aria-hidden />
 
-                <div className="flex shrink-0 gap-1 border-b border-white/10 bg-black/16 px-3 py-2 sm:px-5">
-                    <ManualTabButton active={tab === 'guide'} onClick={() => setTab('guide')} icon="guide">
-                        {en ? 'Reading guide' : 'Guia de leitura'}
-                    </ManualTabButton>
-                    <ManualTabButton active={tab === 'technical'} onClick={() => setTab('technical')} icon="technical">
-                        {en ? 'Under the hood' : 'Por dentro'}
-                    </ManualTabButton>
-                </div>
+                    <h2 id="map-manual-title" className="shrink-0 text-[13px] font-semibold text-white/70">
+                        {modalTitle}
+                    </h2>
+
+                    <div className="flex min-w-0 flex-1 gap-1">
+                        <ManualTabButton active={tab === 'guide'} onClick={() => setTab('guide')} icon="guide">
+                            {en ? 'Reading guide' : 'Guia de leitura'}
+                        </ManualTabButton>
+                        <ManualTabButton active={tab === 'technical'} onClick={() => setTab('technical')} icon="technical">
+                            {en ? 'Data & methods' : 'Dados e métodos'}
+                        </ManualTabButton>
+                    </div>
+
+                    <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={onClose}
+                        className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-full text-white/35 transition hover:bg-white/[0.08] hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                        aria-label={en ? 'Close guide' : 'Fechar guia'}
+                    >
+                        <X className="size-3.5" aria-hidden />
+                    </button>
+                </header>
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
                     {tab === 'guide'
@@ -197,10 +179,10 @@ export function MapManualModal({
                     onPointerDown={startResize}
                     aria-label={en ? 'Resize manual' : 'Redimensionar manual'}
                     title={en ? 'Drag to resize' : 'Arraste para redimensionar'}
-                    className="absolute bottom-0 right-0 z-10 flex size-5 cursor-se-resize items-end justify-end p-0.5 text-white/40 outline-none hover:text-white/80 focus-visible:text-white"
+                    className="absolute bottom-0 right-0 z-10 flex size-8 cursor-se-resize items-end justify-end rounded-tl-md bg-[#07101d]/80 p-1.5 text-white/30 outline-none transition hover:text-white/70 focus-visible:text-white"
                 >
-                    <svg viewBox="0 0 10 10" className="size-3" aria-hidden>
-                        <path d="M9 1 L1 9 M9 5 L5 9 M9 9 L9 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+                    <svg viewBox="0 0 10 10" className="size-3.5" aria-hidden>
+                        <path d="M9 1 L1 9 M9 5 L5 9 M9 9 L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
                     </svg>
                 </button>
             </div>
