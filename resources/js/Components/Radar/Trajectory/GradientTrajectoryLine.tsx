@@ -5,7 +5,7 @@
  * sem interpretar órbita, ranking ou fallback de dados.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
 /**
@@ -65,17 +65,23 @@ export function GradientTrajectoryLine({
         return { positions: positionsArray, colors: colorsArray };
     }, [points, color, peakOpacity, peakAtEnd, exclusionRadius]);
 
-    const count = positions.length / 3;
+    // Construída imperativamente e renderizada via <primitive>, como as demais linhas da cena
+    // (ver HeliocentricLines). Evita o conflito de tipo entre o <line> do Three.js e o <line> SVG
+    // do DOM em JSX, e centraliza o cleanup da geometria/material no unmount.
+    const lineObject = useMemo(() => {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+        const material = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, depthTest: true });
+        const line = new THREE.Line(geometry, material);
+        line.renderOrder = 2;
+        return line;
+    }, [positions, colors]);
 
-    const version = `${count}-${peakOpacity}`;
+    useEffect(() => () => {
+        lineObject.geometry.dispose();
+        (lineObject.material as THREE.Material).dispose();
+    }, [lineObject]);
 
-    return (
-        <line key={version} renderOrder={2}>
-            <bufferGeometry attach="geometry">
-                <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-                <bufferAttribute attach="attributes-color" args={[colors, 4]} />
-            </bufferGeometry>
-            <lineBasicMaterial vertexColors transparent depthWrite={false} depthTest />
-        </line>
-    );
+    return <primitive object={lineObject} />;
 }

@@ -26,39 +26,48 @@ describe('sizeComparison', () => {
         expect(sizeComparison(0, false)).toBe('—');
     });
 
-    it('retorna comparação de casa para objetos menores de 25 m', () => {
-        expect(sizeComparison(10, false)).toBe('uma casa');
-        expect(sizeComparison(10, true)).toBe('a house');
-        expect(sizeComparison(24, false)).toBe('uma casa');
+    it('retorna pessoa para objetos de até 2 m', () => {
+        expect(sizeComparison(1, false)).toBe('uma pessoa');
+        expect(sizeComparison(2, true)).toBe('a person');
     });
 
-    it('retorna quadra de basquete para 25–59 m', () => {
-        expect(sizeComparison(25, false)).toBe('uma quadra de basquete');
-        expect(sizeComparison(59, true)).toBe('a basketball court');
+    it('retorna carro para 3–6 m', () => {
+        expect(sizeComparison(3, false)).toBe('um carro');
+        expect(sizeComparison(6, true)).toBe('a car');
     });
 
-    it('retorna campo de futebol para 60–119 m', () => {
-        expect(sizeComparison(60, false)).toBe('um campo de futebol');
-        expect(sizeComparison(119, true)).toBe('a football pitch');
+    it('retorna ônibus para 7–14 m', () => {
+        expect(sizeComparison(7, false)).toBe('um ônibus');
+        expect(sizeComparison(14, true)).toBe('a bus');
     });
 
-    it('retorna quarteirão para 120–249 m', () => {
-        expect(sizeComparison(120, false)).toBe('um quarteirão');
-        expect(sizeComparison(249, true)).toBe('a city block');
+    it('retorna casa para 15–30 m', () => {
+        expect(sizeComparison(15, false)).toBe('uma casa');
+        expect(sizeComparison(30, true)).toBe('a house');
     });
 
-    it('retorna navio de cruzeiro para 250–499 m', () => {
-        expect(sizeComparison(250, false)).toBe('um navio de cruzeiro');
-        expect(sizeComparison(499, true)).toBe('a cruise ship');
+    it('retorna Cristo Redentor para 31–60 m', () => {
+        expect(sizeComparison(31, false)).toBe('o Cristo Redentor');
+        expect(sizeComparison(60, true)).toBe('the Christ the Redeemer statue');
     });
 
-    it('retorna pequena montanha para 500–999 m', () => {
-        expect(sizeComparison(500, false)).toBe('uma pequena montanha');
-        expect(sizeComparison(999, true)).toBe('a small mountain');
+    it('retorna campo de futebol para 61–120 m', () => {
+        expect(sizeComparison(61, false)).toBe('um campo de futebol');
+        expect(sizeComparison(120, true)).toBe('a football pitch');
+    });
+
+    it('retorna Estátua da Liberdade para 121–300 m', () => {
+        expect(sizeComparison(121, false)).toBe('a Estátua da Liberdade');
+        expect(sizeComparison(300, true)).toBe('the Statue of Liberty');
+    });
+
+    it('retorna Torre Eiffel para 301–1000 m', () => {
+        expect(sizeComparison(301, false)).toBe('a Torre Eiffel');
+        expect(sizeComparison(1000, true)).toBe('the Eiffel Tower');
     });
 
     it('retorna maior que um quilômetro para 1000 m+', () => {
-        expect(sizeComparison(1000, false)).toBe('maior que um quilômetro');
+        expect(sizeComparison(1001, false)).toBe('maior que um quilômetro');
         expect(sizeComparison(5000, true)).toBe('larger than a kilometer');
     });
 });

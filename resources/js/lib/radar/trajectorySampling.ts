@@ -116,7 +116,7 @@ export function closestApproachNearPosition(
  * o instante ao qual o Horizons ancorou a trajetória. Só emitimos marcadores quando existe uma
  * amostra real dentro de ~6h do instante alvo.
  */
-export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: THREE.Vector3; label: string; zOrder: number }> {
+export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: THREE.Vector3; label: string; tooltip: string; zOrder: number }> {
     const now = trajectory.currentPoint?.timestamp ? new Date(trajectory.currentPoint.timestamp).getTime() : NaN;
     if (Number.isNaN(now)) return [];
 

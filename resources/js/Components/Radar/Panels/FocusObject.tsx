@@ -117,7 +117,7 @@ export function FocusObject({ approach, pool, locale, t }: Props) {
             <dl className="relative mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Metric icon={<Target className="size-4" />} label={t('observatory.focus.distance')} value={compactKm(approach.nominalDistanceKm)} />
                 <Metric icon={<span className="text-base leading-none">☾</span>} label={t('observatory.focus.lunar')} value={lunarDistanceLabel(lunarDistance)} />
-                <Metric icon={<Gauge className="size-4" />} label={t('observatory.focus.velocity')} value={approach.relativeVelocityKph !== null ? `${formatNumber(approach.relativeVelocityKph, 0)} km/h` : '—'} helper={velocityHuman?.label} title={en ? 'Relative velocity at closest approach, from the JPL Close Approach Database.' : 'Velocidade relativa na máxima aproximação, da base JPL Close Approach.'} />
+                <Metric icon={<Gauge className="size-4" />} label={t('observatory.focus.velocity')} value={approach.relativeVelocityKph !== null ? `${formatNumber(approach.relativeVelocityKph, 0)} km/h` : '—'} helper={velocityHuman?.label} title={locale === 'en' ? 'Relative velocity at closest approach, from the JPL Close Approach Database.' : 'Velocidade relativa na máxima aproximação, da base JPL Close Approach.'} />
                 <Metric icon={<CalendarClock className="size-4" />} label={t('observatory.focus.date')} value={approach.approachDate ?? '—'} />
             </dl>
 

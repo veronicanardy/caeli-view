@@ -105,7 +105,7 @@ describe('getTrajectoryOpacities', () => {
 
     it('retorna opacidades neutras quando nenhum flag está ativo', () => {
         const { pastPeakOpacity, coneOpacity } = getTrajectoryOpacities(false, false);
-        expect(pastPeakOpacity).toBe(0.32);
+        expect(pastPeakOpacity).toBe(0.38);
         expect(coneOpacity).toBe(0.92);
     });
 
