@@ -1,8 +1,8 @@
 /**
  * Card de foco unificado — asteroides e corpos celestes com o mesmo shell.
  *
- * kind: 'asteroid' → tabs Resumo | Físico | Aproximação
- * kind: 'body'     → tabs Resumo | Físico | História
+ * kind: 'asteroid' → tabs Resumo | Perfil Físico | Aproximação
+ * kind: 'body'     → tabs Resumo | Perfil Físico | História
  *
  * Mobile: bottom sheet com abas diretas, sem menu de seções intermediário.
  * Desktop: card lateral, altura estável entre abas via min-h fixo no conteúdo.
@@ -23,14 +23,14 @@ type Tab = 'summary' | 'physical' | 'approach' | 'history';
 
 const TAB_LABELS_PT: Record<Tab, string> = {
     summary: 'Resumo',
-    physical: 'Físico',
+    physical: 'Perfil Físico',
     approach: 'Aproximação',
     history: 'História',
 };
 
 const TAB_LABELS_EN: Record<Tab, string> = {
     summary: 'Summary',
-    physical: 'Physical',
+    physical: 'Physical Profile',
     approach: 'Approach',
     history: 'History',
 };
@@ -270,14 +270,27 @@ function AsteroidCard({
                                         title={en
                                             ? 'Object is beyond 750 million km from Earth. The scene does not render its position — it would appear in an implausible location due to Horizons vector precision limits at this range.'
                                             : 'Objeto está além de 750 milhões de km da Terra. A cena não renderiza sua posição — apareceria em local implausível por limitações de precisão do Horizons a essa distância.'}>
-                                        {en ? '⚠ Position not shown — too far for reliable rendering' : '⚠ Posição não exibida — distância além do limite de renderização'}
+                                        {en ? '⚠ Position not shown. too far for reliable rendering' : '⚠ Posição não exibida. distância além do limite de renderização'}
                                     </p>
                                 );
                             })()}
                         </div>
                     ) : null}
 
-                    {tab === 'physical' ? (
+                    {tab === 'physical' ? (() => {
+const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters == null && a.absoluteMagnitude != null
+                            ? Math.round((1329 / Math.sqrt(0.25)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000)
+                            : null;
+                        const hFallbackMax = a.diameterMeters == null && a.estimatedDiameterMinMeters == null && a.absoluteMagnitude != null
+                            ? Math.round((1329 / Math.sqrt(0.05)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000)
+                            : null;
+                        const hFallbackMid = hFallbackMin != null && hFallbackMax != null
+                            ? Math.round((hFallbackMin + hFallbackMax) / 2)
+                            : null;
+                        const estimatedMid = a.estimatedDiameterMinMeters != null && a.estimatedDiameterMaxMeters != null
+                            ? Math.round((a.estimatedDiameterMinMeters + a.estimatedDiameterMaxMeters) / 2)
+                            : null;
+                        return (
                         <dl className="space-y-2.5 text-[13px]">
                             <Row label={en ? 'Diameter' : 'Diâmetro'}>
                                 <span className="flex flex-col gap-0.5">
@@ -286,29 +299,39 @@ function AsteroidCard({
                                             ? `${Math.round(a.diameterMeters)} m`
                                             : a.estimatedDiameterMinMeters != null
                                               ? `${Math.round(a.estimatedDiameterMinMeters)}–${Math.round(a.estimatedDiameterMaxMeters ?? 0)} m`
-                                              : '—'}
-                                        {a.diameterMeters == null && a.estimatedDiameterMinMeters != null
+                                              : hFallbackMin != null
+                                                ? `${hFallbackMin}–${hFallbackMax} m`
+                                                : '—'}
+                                        {a.diameterMeters == null && (a.estimatedDiameterMinMeters != null || hFallbackMin != null)
                                             ? <span className="text-white/40"> · {en ? 'est.' : 'est.'}</span>
                                             : null}
                                     </span>
                                     {a.diameterMeters == null && a.estimatedDiameterMinMeters != null ? (
                                         <span className="text-[11px] text-white/35">
-                                            {en ? 'from H mag — uncertainty ×2–5' : 'da magnitude H — incerteza ×2 a 5'}
+                                            {en ? 'estimated range, uncertainty ×2–5' : 'intervalo estimado, incerteza ×2 a 5'}
+                                        </span>
+                                    ) : null}
+                                    {hFallbackMin != null ? (
+                                        <span className="text-[11px] text-white/35">
+                                            {en ? 'estimated from H mag, no size on record' : 'estimado pela magnitude H, sem tamanho catalogado'}
                                         </span>
                                     ) : null}
                                 </span>
                             </Row>
                             <Row label={en ? 'Size compared to' : 'Tamanho comparável a'}>
-                                {sizeComparison(a.diameterMeters ?? a.estimatedDiameterMaxMeters, en)}
+                                {sizeComparison(
+                                    a.diameterMeters != null ? a.diameterMeters
+                                    : a.estimatedDiameterMinMeters != null ? estimatedMid
+                                    : hFallbackMid,
+                                    en,
+                                )}
                             </Row>
                             <Row label={en ? 'Absolute magnitude (H)' : 'Magnitude absoluta (H)'}>
                                 {a.absoluteMagnitude != null ? a.absoluteMagnitude.toFixed(1) : '—'}
                             </Row>
-                            <Row label={en ? 'Type' : 'Tipo'}>
-                                {a.objectType === 'comet' ? (en ? 'Comet' : 'Cometa') : (en ? 'Asteroid' : 'Asteroide')}
-                            </Row>
                         </dl>
-                    ) : null}
+                        );
+                    })() : null}
 
                     {tab === 'approach' ? (
                         <dl className="space-y-2.5 text-[13px]">
@@ -335,23 +358,17 @@ function AsteroidCard({
                                 const ageDays = ageMs / 86_400_000;
                                 const stale = ageDays > 60;
                                 return (
-                                    <Row label={en ? 'Orbital elements' : 'Elementos orbitais'}>
+                                    <Row label={en ? 'Orbital data from' : 'Dados orbitais de'}>
                                         <span className="flex flex-col gap-0.5">
-                                            <span
-                                                className={stale ? 'text-yellow-400/70' : 'text-white/50'}
-                                                title={stale
-                                                    ? (en ? `Elements from ${Math.round(ageDays)} days ago. For close-approaching objects, the Keplerian propagation may diverge from the real trajectory — consult JPL Horizons for precise ephemeris.` : `Elementos de ${Math.round(ageDays)} dias atrás. Para objetos em aproximação próxima, a propagação kepleriana pode divergir da trajetória real — consulte o JPL Horizons para efemérides precisas.`)
-                                                    : (en ? 'Osculating elements valid at this epoch. Propagated as a two-body Keplerian orbit — does not include planetary perturbations.' : 'Elementos osculadores válidos nesta época. Propagados como órbita kepleriana de dois corpos — não inclui perturbações planetárias.')
-                                                }
-                                            >
+                                            <span className={stale ? 'text-yellow-400/70' : 'text-white/50'}>
                                                 {epochDate.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })}
                                                 {stale ? <span className="ml-1">⚠</span> : null}
                                             </span>
                                             {stale ? (
                                                 <span className="text-[11px] text-yellow-400/55">
                                                     {en
-                                                        ? `${Math.round(ageDays)}d old — orbit position estimated`
-                                                        : `${Math.round(ageDays)}d atrás — posição orbital estimada`}
+                                                        ? 'old data. position in the radar may be imprecise'
+                                                        : 'dado antigo. posição no radar pode ser imprecisa'}
                                                 </span>
                                             ) : null}
                                         </span>
@@ -363,8 +380,8 @@ function AsteroidCard({
                                     <span className="text-white/50">{a.sourceLabel}</span>
                                     <span className="text-[11px] text-white/35">
                                         {a.source === 'cad'
-                                            ? (en ? 'orbitally integrated — high precision' : 'órbita integrada — alta precisão')
-                                            : (en ? 'broader coverage — lower precision' : 'cobertura ampla — menor precisão')}
+                                            ? (en ? 'orbitally integrated, high precision' : 'órbita integrada, alta precisão')
+                                            : (en ? 'broader coverage, lower precision' : 'cobertura ampla, menor precisão')}
                                     </span>
                                 </span>
                             </Row>
@@ -415,7 +432,6 @@ function AsteroidCard({
 function BodyCard({
     body,
     onClose,
-    locale,
     mobileTopAlign,
     panelRef,
     en,

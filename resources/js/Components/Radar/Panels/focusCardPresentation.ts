@@ -67,12 +67,14 @@ export function humanSummary(object: ClosestNowObject, en: boolean): string {
 
 export function sizeComparison(meters: number | null, en: boolean): string {
     if (!meters) return '—';
-    if (meters < 25) return en ? 'a house' : 'uma casa';
-    if (meters < 60) return en ? 'a basketball court' : 'uma quadra de basquete';
-    if (meters < 120) return en ? 'a football pitch' : 'um campo de futebol';
-    if (meters < 250) return en ? 'a city block' : 'um quarteirão';
-    if (meters < 500) return en ? 'a cruise ship' : 'um navio de cruzeiro';
-    if (meters < 1000) return en ? 'a small mountain' : 'uma pequena montanha';
+    if (meters <= 2)    return en ? 'a person' : 'uma pessoa';
+    if (meters <= 6)    return en ? 'a car' : 'um carro';
+    if (meters <= 14)   return en ? 'a bus' : 'um ônibus';
+    if (meters <= 30)   return en ? 'a house' : 'uma casa';
+    if (meters <= 60)   return en ? 'the Christ the Redeemer statue' : 'o Cristo Redentor';
+    if (meters <= 120)  return en ? 'a football pitch' : 'um campo de futebol';
+    if (meters <= 300)  return en ? 'the Statue of Liberty' : 'a Estátua da Liberdade';
+    if (meters <= 1000) return en ? 'the Eiffel Tower' : 'a Torre Eiffel';
     return en ? 'larger than a kilometer' : 'maior que um quilômetro';
 }
 

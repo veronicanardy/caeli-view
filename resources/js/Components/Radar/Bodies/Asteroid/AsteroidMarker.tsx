@@ -13,12 +13,26 @@ import { BodyHitbox } from '../BodyHitbox';
 import RealAsteroidModel from './RealAsteroidModel';
 import { asteroidRenderableModelFor } from './asteroidModelRegistry';
 
-const ASTEROID_ROCK_SCALE = 0.026;
 const DIMMED_OPACITY = 0.4;
 const FULL_OPACITY = 1;
 const HITBOX_RADIUS = 0.14;
 const HITBOX_SEGMENTS = 16;
 const LABEL_POSITION: [number, number, number] = [0, 0.09, 0];
+
+function rockScaleFromDiameter(a: UnifiedApproach): number {
+    const d = a.diameterMeters
+        ?? a.estimatedDiameterMaxMeters
+        ?? (a.absoluteMagnitude != null
+            ? Math.round((1329 / Math.sqrt(0.05)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000)
+            : null);
+    if (d == null) return 0.026;
+    if (d < 10)   return 0.012;
+    if (d < 50)   return 0.016;
+    if (d < 150)  return 0.020;
+    if (d < 500)  return 0.026;
+    if (d < 1000) return 0.034;
+    return 0.044;
+}
 
 /**
  * Propriedades usadas para renderizar um marcador de asteroide no radar 3D.
@@ -66,7 +80,7 @@ export function AsteroidMarker({
     const [hovered, setHovered] = useState(false);
     const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
 
-    const rockScale = ASTEROID_ROCK_SCALE;
+    const rockScale = rockScaleFromDiameter(object.approach);
     const opacity = dimmed ? DIMMED_OPACITY : FULL_OPACITY;
     const en = locale === 'en';
 
