@@ -59,3 +59,49 @@ export function computeSceneObjectOccluders({
         ...planetOccluders,
     ];
 }
+
+/** Retângulo em pixels de tela (origem no canto superior esquerdo). */
+export type RectPx = { left: number; top: number; right: number; bottom: number };
+
+/**
+ * Decide se um corpo projetado (círculo de raio `radiusPx` centrado em `cx,cy`) sobrepõe o
+ * retângulo de um label, com folga `paddingPx`.
+ *
+ * É o núcleo geométrico do teste de oclusão por corpos rodado por frame em SceneLabels: encontra
+ * o ponto do retângulo mais próximo do centro do círculo e compara a distância com `radiusPx +
+ * paddingPx`. Mantido puro aqui (sem câmera, sem DOM) para ser testável e reutilizável. Corpos com
+ * raio projetado abaixo de `minRadiusPx` são pequenos demais para esconder um label e não ocluem.
+ */
+export function circleOverlapsRect(
+    cx: number,
+    cy: number,
+    radiusPx: number,
+    rect: RectPx,
+    paddingPx: number,
+    minRadiusPx: number,
+): boolean {
+    if (radiusPx < minRadiusPx) return false;
+    const nearestX = Math.max(rect.left, Math.min(cx, rect.right));
+    const nearestY = Math.max(rect.top, Math.min(cy, rect.bottom));
+    return Math.hypot(cx - nearestX, cy - nearestY) < radiusPx + paddingPx;
+}
+
+/**
+ * Decide se um label deve sumir por estar dentro da silhueta projetada do corpo em foco.
+ *
+ * O raio de esconder cresce com o corpo (`bodyRadiusPx + bodyPaddingPx`) mas nunca cai abaixo de
+ * `minRadiusPx`, garantindo uma zona limpa mesmo quando o corpo é pequeno na tela. Puro: recebe
+ * pixels já projetados, sem câmera nem DOM.
+ */
+export function labelHiddenByFocusCircle(
+    labelX: number,
+    labelY: number,
+    centerX: number,
+    centerY: number,
+    bodyRadiusPx: number,
+    minRadiusPx: number,
+    bodyPaddingPx: number,
+): boolean {
+    const hideRadiusPx = Math.max(minRadiusPx, bodyRadiusPx + bodyPaddingPx);
+    return Math.hypot(labelX - centerX, labelY - centerY) < hideRadiusPx;
+}

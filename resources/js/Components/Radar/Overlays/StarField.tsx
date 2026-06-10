@@ -1,7 +1,7 @@
 /**
  * Campo estelar procedural da cena 3D.
  *
- * ~1800 partículas em duas camadas (fundo difuso + primeiro plano) que seguem
+ * ~1200 partículas em duas camadas (fundo difuso + primeiro plano) que seguem
  * a câmera para evitar que o limite da esfera apareça durante zoom out extremo.
  * Puramente decorativo — não afeta cálculos orbitais.
  *
@@ -19,7 +19,7 @@ export function StarField() {
     const geo = useMemo(() => {
         /* Duas camadas: fundo distante (tênue) e primeiro plano (ligeiramente maior).
            Resultado: campo estelar com mais profundidade percebida sem aumentar o ruído. */
-        const count = 1800;
+        const count = 1200;
         const positions = new Float32Array(count * 3);
         const colors = new Float32Array(count * 3);
         const rng = (() => { let s = 42; return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; }; })();

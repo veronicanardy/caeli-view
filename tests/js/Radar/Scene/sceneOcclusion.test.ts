@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { computeSceneObjectOccluders } from '@/Components/Radar/Scene/sceneOcclusion';
+import { circleOverlapsRect, computeSceneObjectOccluders, labelHiddenByFocusCircle } from '@/Components/Radar/Scene/sceneOcclusion';
+import type { RectPx } from '@/Components/Radar/Scene/sceneOcclusion';
 import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/radar/bodyScale';
 import { SUN_RADIUS_SCENE } from '@/Components/Radar/Bodies/bodyRenderConstants';
 import type { PlanetScenePositions } from '@/Components/Radar/Scene/scenePositions';
@@ -105,5 +106,60 @@ describe('computeSceneObjectOccluders', () => {
             planetPositions: allPlanets,
         });
         expect(occluders).toHaveLength(10);
+    });
+});
+
+/**
+ * `circleOverlapsRect` é o núcleo geométrico do teste de oclusão por corpos rodado por frame em
+ * SceneLabels. Os testes cobrem: dentro, fora, tangência, efeito do padding e o corte por
+ * raio mínimo (corpos pequenos demais não ocluem).
+ */
+describe('circleOverlapsRect', () => {
+    const RECT: RectPx = { left: 100, top: 100, right: 140, bottom: 120 };
+
+    it('detecta sobreposição quando o centro do corpo está dentro do retângulo', () => {
+        expect(circleOverlapsRect(120, 110, 20, RECT, 0, 5)).toBe(true);
+    });
+
+    it('não detecta sobreposição quando o corpo está claramente afastado', () => {
+        expect(circleOverlapsRect(300, 300, 20, RECT, 0, 5)).toBe(false);
+    });
+
+    it('o padding amplia o alcance de oclusão', () => {
+        // Centro a 30px à direita da borda direita (x=140), raio 20: sem padding não toca (30 > 20),
+        // com padding 15 passa a tocar (30 < 20+15).
+        expect(circleOverlapsRect(170, 110, 20, RECT, 0, 5)).toBe(false);
+        expect(circleOverlapsRect(170, 110, 20, RECT, 15, 5)).toBe(true);
+    });
+
+    it('corpos com raio projetado abaixo do mínimo nunca ocluem', () => {
+        // Centro dentro do retângulo, mas raio (3) abaixo do mínimo (5): não oclui.
+        expect(circleOverlapsRect(120, 110, 3, RECT, 0, 5)).toBe(false);
+    });
+
+    it('é estritamente menor que (tangência exata não oclui)', () => {
+        // Centro a 20px da borda direita, raio 20, padding 0: distância == raio, não oclui.
+        expect(circleOverlapsRect(160, 110, 20, RECT, 0, 5)).toBe(false);
+    });
+});
+
+/**
+ * `labelHiddenByFocusCircle` esconde labels dentro da silhueta do corpo em foco. O raio de
+ * esconder cresce com o corpo mas nunca cai abaixo do mínimo.
+ */
+describe('labelHiddenByFocusCircle', () => {
+    it('esconde o label quando está dentro do raio de esconder (corpo + padding)', () => {
+        // Corpo raio 50 + padding 20 = 70; label a 60px do centro: escondido.
+        expect(labelHiddenByFocusCircle(60, 0, 0, 0, 50, 30, 20)).toBe(true);
+    });
+
+    it('mostra o label fora do raio de esconder', () => {
+        // Raio de esconder 70; label a 80px: visível.
+        expect(labelHiddenByFocusCircle(80, 0, 0, 0, 50, 30, 20)).toBe(false);
+    });
+
+    it('o raio mínimo garante zona limpa mesmo para corpos minúsculos', () => {
+        // Corpo raio 1 + padding 5 = 6, mas mínimo 30; label a 20px: ainda escondido pelo mínimo.
+        expect(labelHiddenByFocusCircle(20, 0, 0, 0, 1, 30, 5)).toBe(true);
     });
 });

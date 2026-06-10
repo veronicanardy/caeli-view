@@ -10,8 +10,9 @@ import { Html } from '@react-three/drei';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/radar/cursor';
 import { Tooltip } from '../Controls/Tooltip';
 import { useFrame, useThree } from '@react-three/fiber';
-import { createContext, useContext, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { circleOverlapsRect, labelHiddenByFocusCircle } from '../Scene/sceneOcclusion';
 
 /**
  * Primitivas de labels HTML sobre a cena 3D.
@@ -85,9 +86,9 @@ export function SceneLabel({
     const labelRef = useRef<THREE.Group>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const focusOccluder = useContext(LabelOccluderContext);
-    const hiddenByFocus = useLabelHiddenByFocusRef(labelRef, protectFromFocus ? focusOccluder : null);
-    const hiddenByNoGo = useLabelInNoGoZone(labelRef);
-    const hiddenByObjects = useLabelOverlapsSceneObjects(buttonRef, allowSceneOverlap);
+    const { hiddenByFocus, hiddenByNoGo, hiddenByObjects } = useLabelFrameState(
+        labelRef, buttonRef, protectFromFocus ? focusOccluder : null, allowSceneOverlap,
+    );
     const cls =
         tier === 'primary'
             ? [
@@ -155,9 +156,9 @@ export function ScreenLabel({
     const labelRef = useRef<THREE.Group>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const focusOccluder = useContext(LabelOccluderContext);
-    const hiddenByFocus = useLabelHiddenByFocusRef(labelRef, protectFromFocus ? focusOccluder : null);
-    const hiddenByNoGo = useLabelInNoGoZone(labelRef);
-    const hiddenByObjects = useLabelOverlapsSceneObjects(buttonRef, allowSceneOverlap);
+    const { hiddenByFocus, hiddenByNoGo, hiddenByObjects } = useLabelFrameState(
+        labelRef, buttonRef, protectFromFocus ? focusOccluder : null, allowSceneOverlap,
+    );
 
     return (
         <group ref={labelRef} position={position}>
@@ -236,7 +237,8 @@ export function FocusProtectedHtml({
 }) {
     const labelRef = useRef<THREE.Group>(null);
     const focusOccluder = useContext(LabelOccluderContext);
-    const hiddenByFocus = useLabelHiddenByFocusRef(labelRef, focusOccluder);
+    // Sem elemento DOM: este wrapper só respeita oclusão de foco, não a oclusão por corpos.
+    const { hiddenByFocus } = useLabelFrameState(labelRef, null, focusOccluder, true);
 
     return (
         <group ref={labelRef} position={position}>
@@ -258,22 +260,31 @@ export function FocusProtectedHtml({
  * Hook base compartilhado: projeta o raio orbital da Lua (1 DL) em pixels uma única vez por frame.
  * useCompactLabelMode e useHideAsteroidLabelsMode consomem o resultado sem duplicar a projeção.
  */
+// Recalcula o raio lunar projetado a cada N frames em vez de todo frame. O valor só alimenta
+// limiares de modo de label (compacto / esconder), que toleram um atraso de poucos frames; isso
+// corta 3/4 do custo desta projeção sem efeito visível.
+const LUNAR_RADIUS_FRAME_INTERVAL = 4;
+
 function useLunarRadiusPx(): number {
     const { camera, size } = useThree();
     const controls = useThree((s) => s.controls) as unknown as { target?: THREE.Vector3 } | null;
     const [radiusPx, setRadiusPx] = useState(0);
     const radiusPxRef = useRef(0);
-    const _fallbackTarget = useRef(new THREE.Vector3());
+    const frameCount = useRef(0);
+    const _target = useRef(new THREE.Vector3());
+    const _center = useRef(new THREE.Vector3());
     const _oneDl = useRef(new THREE.Vector3());
 
     useFrame(() => {
-        const target = controls?.target ?? _fallbackTarget.current.set(0, 0, 0);
-        const center = target.clone().project(camera);
-        _oneDl.current.copy(target).x += 1;
-        const oneDl = _oneDl.current.project(camera);
+        if (frameCount.current++ % LUNAR_RADIUS_FRAME_INTERVAL !== 0) return;
+        const target = controls?.target ?? _target.current.set(0, 0, 0);
+        _center.current.copy(target).project(camera);
+        _oneDl.current.copy(target);
+        _oneDl.current.x += 1;
+        _oneDl.current.project(camera);
         const next = Math.hypot(
-            (oneDl.x - center.x) * size.width * 0.5,
-            (oneDl.y - center.y) * size.height * 0.5,
+            (_oneDl.current.x - _center.current.x) * size.width * 0.5,
+            (_oneDl.current.y - _center.current.y) * size.height * 0.5,
         );
         if (Math.abs(next - radiusPxRef.current) > 0.5) {
             radiusPxRef.current = next;
@@ -299,162 +310,146 @@ export function useHideAsteroidLabelsMode(): boolean {
 }
 
 /**
- * Retorna true quando a posição projetada deste label cai dentro de qualquer NoGoRect do contexto.
- * Roda a cada frame mas só dispara re-render quando o estado muda.
+ * Estados de visibilidade de um label, derivados da câmera a cada frame.
+ *
+ * - hiddenByFocus: dentro da silhueta projetada do corpo em foco (LabelOccluderContext);
+ * - hiddenByNoGo: sobre uma zona proibida de UI (LabelNoGoContext);
+ * - hiddenByObjects: sobrepondo um corpo de cena (SceneObjectOccludersContext).
  */
-function useLabelInNoGoZone(labelRef: React.RefObject<THREE.Object3D | null>): boolean {
-    const { camera, size } = useThree();
-    const noGoRects = useContext(LabelNoGoContext);
-    const [blocked, setBlocked] = useState(false);
-    const blockedRef = useRef(false);
-    const pos = useRef(new THREE.Vector3());
+type LabelFrameState = { hiddenByFocus: boolean; hiddenByNoGo: boolean; hiddenByObjects: boolean };
 
-    useFrame(() => {
-        if (!labelRef.current || noGoRects.length === 0) {
-            if (blockedRef.current) { blockedRef.current = false; setBlocked(false); }
-            return;
-        }
-        labelRef.current.getWorldPosition(pos.current);
-        const projected = pos.current.clone().project(camera);
-        if (projected.z > 1) {
-            if (blockedRef.current) { blockedRef.current = false; setBlocked(false); }
-            return;
-        }
-        const px = (projected.x * 0.5 + 0.5) * size.width;
-        const py = (-projected.y * 0.5 + 0.5) * size.height;
-        const next = noGoRects.some((noGo) =>
-            px >= noGo.left && px <= noGo.right && py >= noGo.top && py <= noGo.bottom,
-        );
-        if (next !== blockedRef.current) { blockedRef.current = next; setBlocked(next); }
-    });
-
-    return blocked;
+/**
+ * Mede o tamanho em pixels de um elemento de label e atualiza quando ele muda.
+ *
+ * Substitui o `getBoundingClientRect()` por frame: o retângulo de um label só muda quando
+ * o conteúdo/CSS muda, não a cada frame. Um ResizeObserver captura essas mudanças raras e
+ * mantém um ref com largura/altura estáveis que o loop de oclusão consome sem tocar o DOM.
+ */
+function useLabelSizePx(elementRef: React.RefObject<HTMLElement | null>): React.RefObject<{ w: number; h: number }> {
+    const sizeRef = useRef({ w: 0, h: 0 });
+    useEffect(() => {
+        const element = elementRef.current;
+        if (!element) return;
+        const measure = () => {
+            const rect = element.getBoundingClientRect();
+            sizeRef.current.w = rect.width;
+            sizeRef.current.h = rect.height;
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [elementRef]);
+    return sizeRef;
 }
 
 /**
- * Observa a câmera a cada frame e retorna true quando este label está dentro da silhueta projetada
- * do corpo atual do LabelOccluderContext (com margem). Usado por SceneLabel/ScreenLabel/
- * FocusProtectedHtml para manter o corpo em foco livre de labels sobrepostos.
+ * Hook único de visibilidade de label: um `useFrame` por label em vez de três.
+ *
+ * Projeta a posição de mundo do label uma única vez por frame e reaproveita esse pixel
+ * para os três testes (foco, zona proibida, oclusão por corpos). Antes cada teste tinha seu
+ * próprio `useFrame`, sua própria projeção e, no caso da oclusão, dois `getBoundingClientRect()`
+ * por frame, o que força reflow de layout. Com dezenas de labels visíveis isso dominava o custo
+ * por frame e causava os travamentos. Todos os Vector3 são refs reutilizáveis (sem `.clone()`,
+ * sem lixo de GC no loop).
  */
-function useLabelHiddenByFocusRef(
+function useLabelFrameState(
     labelRef: React.RefObject<THREE.Object3D | null>,
-    occluder: LabelOccluder,
-): boolean {
-    const { camera, size } = useThree();
-    const [hidden, setHidden] = useState(false);
-    const hiddenRef = useRef(false);
-    const labelPosition = useRef(new THREE.Vector3());
+    elementRef: React.RefObject<HTMLElement | null> | null,
+    focusOccluder: LabelOccluder,
+    allowSceneOverlap: boolean,
+): LabelFrameState {
+    const { camera, gl, size } = useThree();
+    const noGoRects = useContext(LabelNoGoContext);
+    const sceneOccluders = useContext(SceneObjectOccludersContext);
+    const labelSize = useLabelSizePx(elementRef ?? { current: null });
 
+    const [state, setState] = useState<LabelFrameState>({ hiddenByFocus: false, hiddenByNoGo: false, hiddenByObjects: false });
+    const stateRef = useRef(state);
+
+    // Buffers reutilizáveis — alocados uma vez, nunca dentro do loop.
+    const _labelWorld = useRef(new THREE.Vector3());
+    const _labelProj = useRef(new THREE.Vector3());
     const _cameraRight = useRef(new THREE.Vector3());
+    const _center = useRef(new THREE.Vector3());
     const _edge = useRef(new THREE.Vector3());
 
     useFrame(() => {
-        if (!labelRef.current || !occluder) {
-            if (hiddenRef.current) {
-                hiddenRef.current = false;
-                setHidden(false);
-            }
-            return;
-        }
+        const obj = labelRef.current;
+        if (!obj) return;
 
-        labelRef.current.getWorldPosition(labelPosition.current);
-        const center = occluder.center.clone().project(camera);
-        if (center.z < -1 || center.z > 1) {
-            if (hiddenRef.current) {
-                hiddenRef.current = false;
-                setHidden(false);
-            }
-            return;
-        }
+        // Projeção única da posição do label, em pixels do canvas.
+        obj.getWorldPosition(_labelWorld.current);
+        _labelProj.current.copy(_labelWorld.current).project(camera);
+        const labelBehind = _labelProj.current.z > 1;
+        const labelPxX = (_labelProj.current.x * 0.5 + 0.5) * size.width;
+        const labelPxY = (-_labelProj.current.y * 0.5 + 0.5) * size.height;
 
-        const label = labelPosition.current.clone().project(camera);
         _cameraRight.current.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
-        const edge = _edge.current.copy(occluder.center).addScaledVector(_cameraRight.current, occluder.radius).project(camera);
 
-        const centerPx = {
-            x: (center.x * 0.5 + 0.5) * size.width,
-            y: (-center.y * 0.5 + 0.5) * size.height,
-        };
-        const labelPx = {
-            x: (label.x * 0.5 + 0.5) * size.width,
-            y: (-label.y * 0.5 + 0.5) * size.height,
-        };
-        const edgePx = {
-            x: (edge.x * 0.5 + 0.5) * size.width,
-            y: (-edge.y * 0.5 + 0.5) * size.height,
-        };
+        // --- Foco: dentro da silhueta projetada do corpo em foco? ---
+        let hiddenByFocus = false;
+        if (focusOccluder && !labelBehind) {
+            _center.current.copy(focusOccluder.center).project(camera);
+            if (_center.current.z >= -1 && _center.current.z <= 1) {
+                _edge.current.copy(focusOccluder.center).addScaledVector(_cameraRight.current, focusOccluder.radius).project(camera);
+                const centerPxX = (_center.current.x * 0.5 + 0.5) * size.width;
+                const centerPxY = (-_center.current.y * 0.5 + 0.5) * size.height;
+                const edgePxX = (_edge.current.x * 0.5 + 0.5) * size.width;
+                const edgePxY = (-_edge.current.y * 0.5 + 0.5) * size.height;
+                const bodyRadiusPx = Math.hypot(edgePxX - centerPxX, edgePxY - centerPxY);
+                hiddenByFocus = labelHiddenByFocusCircle(
+                    labelPxX, labelPxY, centerPxX, centerPxY,
+                    bodyRadiusPx, LABEL_HIDE_MIN_RADIUS_PX, LABEL_HIDE_BODY_PADDING_PX,
+                );
+            }
+        }
 
-        const bodyRadiusPx = Math.hypot(edgePx.x - centerPx.x, edgePx.y - centerPx.y);
-        const hideRadiusPx = Math.max(LABEL_HIDE_MIN_RADIUS_PX, bodyRadiusPx + LABEL_HIDE_BODY_PADDING_PX);
-        const nextHidden = Math.hypot(labelPx.x - centerPx.x, labelPx.y - centerPx.y) < hideRadiusPx;
+        // --- Zona proibida de UI ---
+        let hiddenByNoGo = false;
+        if (noGoRects.length > 0 && !labelBehind) {
+            hiddenByNoGo = noGoRects.some((noGo) =>
+                labelPxX >= noGo.left && labelPxX <= noGo.right && labelPxY >= noGo.top && labelPxY <= noGo.bottom,
+            );
+        }
 
-        if (nextHidden !== hiddenRef.current) {
-            hiddenRef.current = nextHidden;
-            setHidden(nextHidden);
+        // --- Oclusão por corpos de cena ---
+        // Usa o centro projetado do label + tamanho medido (cacheado), em coordenadas de página
+        // para casar com a origem dos oclusores de cena (que o código original lia do canvasRect).
+        let hiddenByObjects = false;
+        if (!allowSceneOverlap && sceneOccluders.length > 0 && !labelBehind && labelSize.current.w >= 1) {
+            const canvasLeft = gl.domElement.offsetLeft;
+            const canvasTop = gl.domElement.offsetTop;
+            // O label é renderizado centralizado na sua âncora (Html center); o retângulo é
+            // centrado no pixel projetado.
+            const rect = {
+                left: canvasLeft + labelPxX - labelSize.current.w * 0.5,
+                right: canvasLeft + labelPxX + labelSize.current.w * 0.5,
+                top: canvasTop + labelPxY - labelSize.current.h * 0.5,
+                bottom: canvasTop + labelPxY + labelSize.current.h * 0.5,
+            };
+            const paddingPx = stateRef.current.hiddenByObjects ? LABEL_OBJECT_SHOW_PADDING_PX : LABEL_OBJECT_HIDE_PADDING_PX;
+
+            hiddenByObjects = sceneOccluders.some((occluder) => {
+                _center.current.copy(occluder.center).project(camera);
+                if (_center.current.z < -1 || _center.current.z > 1) return false;
+                _edge.current.copy(occluder.center).addScaledVector(_cameraRight.current, occluder.radius).project(camera);
+                const centerPxX = canvasLeft + (_center.current.x * 0.5 + 0.5) * size.width;
+                const centerPxY = canvasTop + (-_center.current.y * 0.5 + 0.5) * size.height;
+                const edgePxX = canvasLeft + (_edge.current.x * 0.5 + 0.5) * size.width;
+                const edgePxY = canvasTop + (-_edge.current.y * 0.5 + 0.5) * size.height;
+                const radiusPx = Math.hypot(edgePxX - centerPxX, edgePxY - centerPxY);
+                return circleOverlapsRect(centerPxX, centerPxY, radiusPx, rect, paddingPx, LABEL_OBJECT_MIN_OCCLUDER_RADIUS_PX);
+            });
+        }
+
+        const prev = stateRef.current;
+        if (prev.hiddenByFocus !== hiddenByFocus || prev.hiddenByNoGo !== hiddenByNoGo || prev.hiddenByObjects !== hiddenByObjects) {
+            const next = { hiddenByFocus, hiddenByNoGo, hiddenByObjects };
+            stateRef.current = next;
+            setState(next);
         }
     });
 
-    return hidden;
-}
-
-function useLabelOverlapsSceneObjects(
-    labelElementRef: React.RefObject<HTMLElement | null>,
-    allowSceneOverlap: boolean,
-): boolean {
-    const { camera, gl, size } = useThree();
-    const occluders = useContext(SceneObjectOccludersContext);
-    const [hidden, setHidden] = useState(false);
-    const hiddenRef = useRef(false);
-    const cameraRight = useRef(new THREE.Vector3());
-    const _occluderEdge = useRef(new THREE.Vector3());
-
-    useFrame(() => {
-        const element = labelElementRef.current;
-        if (allowSceneOverlap || !element || occluders.length === 0) {
-            if (hiddenRef.current) {
-                hiddenRef.current = false;
-                setHidden(false);
-            }
-            return;
-        }
-
-        const canvasRect = gl.domElement.getBoundingClientRect();
-        const labelRect = element.getBoundingClientRect();
-        if (labelRect.width < 1 || labelRect.height < 1) {
-            if (hiddenRef.current) {
-                hiddenRef.current = false;
-                setHidden(false);
-            }
-            return;
-        }
-        cameraRight.current.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
-        const paddingPx = hiddenRef.current ? LABEL_OBJECT_SHOW_PADDING_PX : LABEL_OBJECT_HIDE_PADDING_PX;
-
-        const nextHidden = occluders.some((occluder) => {
-            const center = occluder.center.clone().project(camera);
-            if (center.z < -1 || center.z > 1) return false;
-
-            const edge = _occluderEdge.current.copy(occluder.center).addScaledVector(cameraRight.current, occluder.radius).project(camera);
-            const centerPx = {
-                x: canvasRect.left + (center.x * 0.5 + 0.5) * size.width,
-                y: canvasRect.top + (-center.y * 0.5 + 0.5) * size.height,
-            };
-            const edgePx = {
-                x: canvasRect.left + (edge.x * 0.5 + 0.5) * size.width,
-                y: canvasRect.top + (-edge.y * 0.5 + 0.5) * size.height,
-            };
-            const radiusPx = Math.hypot(edgePx.x - centerPx.x, edgePx.y - centerPx.y);
-            if (radiusPx < LABEL_OBJECT_MIN_OCCLUDER_RADIUS_PX) return false;
-            const nearestX = Math.max(labelRect.left, Math.min(centerPx.x, labelRect.right));
-            const nearestY = Math.max(labelRect.top, Math.min(centerPx.y, labelRect.bottom));
-            return Math.hypot(centerPx.x - nearestX, centerPx.y - nearestY) < radiusPx + paddingPx;
-        });
-
-        if (nextHidden !== hiddenRef.current) {
-            hiddenRef.current = nextHidden;
-            setHidden(nextHidden);
-        }
-    });
-
-    return hidden;
+    return state;
 }

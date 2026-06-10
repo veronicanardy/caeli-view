@@ -37,13 +37,15 @@ Overlays/
 
 [`SceneLabels.tsx`](./SceneLabels.tsx) concentra labels HTML sobre a cena 3D, além de regras locais de oclusão visual e proteção contra zonas ocupadas por cards. Ele interpreta posições de cena já fornecidas pelos componentes consumidores.
 
+Por performance, cada label resolve seus três estados de visibilidade (foco, zona proibida, oclusão por corpos) em um único `useFrame` via `useLabelFrameState`, com uma única projeção de posição reaproveitada e buffers `Vector3` reutilizáveis (sem `.clone()` no loop). O tamanho do label é medido por `ResizeObserver`, não por `getBoundingClientRect()` a cada frame, evitando reflow de layout com dezenas de labels visíveis.
+
 ## Guias 3D
 
 [`SceneRingsLayer.tsx`](./SceneRingsLayer.tsx) contém guias visuais 3D da cena `three.js`.
 
 ## Campo Estelar
 
-[`StarField.tsx`](./StarField.tsx) gera ~1800 partículas procedurais que seguem a câmera, criando profundidade visual sem afetar cálculos orbitais. O RNG usa seed fixo (42) para resultado determinístico entre sessões.
+[`StarField.tsx`](./StarField.tsx) gera ~1200 partículas procedurais que seguem a câmera, criando profundidade visual sem afetar cálculos orbitais. O RNG usa seed fixo (42) para resultado determinístico entre sessões.
 
 ## Regra Para IA
 
