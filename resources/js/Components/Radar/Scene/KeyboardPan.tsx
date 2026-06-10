@@ -11,6 +11,7 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { MAX_CAMERA_DISTANCE } from '@/Components/Radar/Scene/cameraConstants';
 
 const PAN_SPEED = 0.9;
 const KEYS: Record<string, [number, number]> = {
@@ -46,11 +47,14 @@ export function KeyboardPan() {
             if (KEYS[e.key]) { e.preventDefault(); pressed.current.add(e.key); }
         };
         const onUp = (e: KeyboardEvent) => pressed.current.delete(e.key);
+        const onBlur = () => pressed.current.clear();
         window.addEventListener('keydown', onDown);
         window.addEventListener('keyup', onUp);
+        window.addEventListener('blur', onBlur);
         return () => {
             window.removeEventListener('keydown', onDown);
             window.removeEventListener('keyup', onUp);
+            window.removeEventListener('blur', onBlur);
         };
     }, []);
 
@@ -81,6 +85,15 @@ export function KeyboardPan() {
 
         camera.position.add(delta.current);
         controls.target.add(delta.current);
+
+        // Impede pan infinito: se o target saiu da esfera da cena, recua ambos.
+        const excess = controls.target.length() - MAX_CAMERA_DISTANCE;
+        if (excess > 0) {
+            const correction = controls.target.clone().normalize().multiplyScalar(excess);
+            controls.target.sub(correction);
+            camera.position.sub(correction);
+        }
+
         controls.update();
     });
 
