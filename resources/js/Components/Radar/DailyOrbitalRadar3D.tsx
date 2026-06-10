@@ -12,8 +12,8 @@
  * RadarFloatingOverlays.
  *
  * Dois modos de visualização coexistem:
- *   - 'radar'  : geocêntrico, escala logarítmica comprimida (Terra na origem).
- *   - 'orbit'  : heliocêntrico, escala linear em UA (Sol na origem).
+ *   - 'radar'  : escala logarítmica comprimida em DL, Sol na origem, Terra posicionada em ~1 UA.
+ *   - 'orbit'  : escala linear em UA, Sol na origem, órbita Kepleriana completa visível.
  * A troca só ocorre quando um objeto selecionado tem elementos orbitais com época de
  * periélio válida (tpJd ≠ 0), sem isso a posição Kepleriana não é computável.
  */
@@ -275,6 +275,7 @@ export function DailyOrbitalRadar3D({
                     manualOpen={manualOpen}
                     onManualOpenChange={setManualOpen}
                     lunarReference={lunarReference}
+                    ephemerisAvailable={ephemeris !== null}
                 />
             </div>
         </section>

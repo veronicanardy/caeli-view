@@ -236,8 +236,22 @@ function AsteroidCard({
                             <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">{summary}</p>
                             <dl className="space-y-2.5 text-[13px]">
                                 <Row label={en ? 'Distance from Earth' : 'Distância da Terra'}>
-                                    <span className="font-semibold text-white">{compactKm(object.currentDistanceKm)}</span>
-                                    <span className="text-white/50"> · {ldText} · {auText}</span>
+                                    <span className="flex flex-col items-end gap-0.5">
+                                        <span>
+                                            <span className="font-semibold text-white">{compactKm(object.currentDistanceKm)}</span>
+                                            <span className="text-white/50"> · {ldText} · {auText}</span>
+                                        </span>
+                                        <span
+                                            className={`text-[10px] cursor-help ${object.hasRealCurrentDistance ? 'text-white/30' : 'text-yellow-400/50'}`}
+                                            title={object.hasRealCurrentDistance
+                                                ? (en ? 'Current position from JPL Horizons ephemeris — calculated for right now.' : 'Posição atual via efeméride JPL Horizons — calculada para agora.')
+                                                : (en ? 'Real-time position unavailable. This is the recorded miss distance at closest approach — not the current position.' : 'Posição em tempo real indisponível. Esta é a distância registrada na máxima aproximação, não a posição atual.')}
+                                        >
+                                            {object.hasRealCurrentDistance
+                                                ? (en ? 'live · Horizons' : 'ao vivo · Horizons')
+                                                : (en ? '⚠ approach distance' : '⚠ dist. da aproximação')}
+                                        </span>
+                                    </span>
                                 </Row>
                                 {motion ? (
                                     <Row label={en ? 'Status' : 'Status'}>
@@ -245,17 +259,44 @@ function AsteroidCard({
                                     </Row>
                                 ) : null}
                             </dl>
+                            {(() => {
+                                const pt = object.trajectory?.currentPoint;
+                                if (!pt || typeof pt.x !== 'number' || typeof pt.y !== 'number') return null;
+                                // 750M km — mesmo limite de trajectorySampling.ts; pontos além disso são descartados da cena
+                                const distKm = Math.hypot(pt.x, pt.y, typeof pt.z === 'number' ? pt.z : 0);
+                                if (distKm <= 750_000_000) return null;
+                                return (
+                                    <p className="text-[11px] leading-4 text-amber-400/50"
+                                        title={en
+                                            ? 'Object is beyond 750 million km from Earth. The scene does not render its position — it would appear in an implausible location due to Horizons vector precision limits at this range.'
+                                            : 'Objeto está além de 750 milhões de km da Terra. A cena não renderiza sua posição — apareceria em local implausível por limitações de precisão do Horizons a essa distância.'}>
+                                        {en ? '⚠ Position not shown — too far for reliable rendering' : '⚠ Posição não exibida — distância além do limite de renderização'}
+                                    </p>
+                                );
+                            })()}
                         </div>
                     ) : null}
 
                     {tab === 'physical' ? (
                         <dl className="space-y-2.5 text-[13px]">
                             <Row label={en ? 'Diameter' : 'Diâmetro'}>
-                                {a.diameterMeters != null
-                                    ? `${Math.round(a.diameterMeters)} m`
-                                    : a.estimatedDiameterMinMeters != null
-                                      ? `${Math.round(a.estimatedDiameterMinMeters)}–${Math.round(a.estimatedDiameterMaxMeters ?? 0)} m`
-                                      : '—'}
+                                <span className="flex flex-col gap-0.5">
+                                    <span>
+                                        {a.diameterMeters != null
+                                            ? `${Math.round(a.diameterMeters)} m`
+                                            : a.estimatedDiameterMinMeters != null
+                                              ? `${Math.round(a.estimatedDiameterMinMeters)}–${Math.round(a.estimatedDiameterMaxMeters ?? 0)} m`
+                                              : '—'}
+                                        {a.diameterMeters == null && a.estimatedDiameterMinMeters != null
+                                            ? <span className="text-white/40"> · {en ? 'est.' : 'est.'}</span>
+                                            : null}
+                                    </span>
+                                    {a.diameterMeters == null && a.estimatedDiameterMinMeters != null ? (
+                                        <span className="text-[11px] text-white/35">
+                                            {en ? 'from H mag — uncertainty ×2–5' : 'da magnitude H — incerteza ×2 a 5'}
+                                        </span>
+                                    ) : null}
+                                </span>
                             </Row>
                             <Row label={en ? 'Size compared to' : 'Tamanho comparável a'}>
                                 {sizeComparison(a.diameterMeters ?? a.estimatedDiameterMaxMeters, en)}
@@ -272,9 +313,11 @@ function AsteroidCard({
                     {tab === 'approach' ? (
                         <dl className="space-y-2.5 text-[13px]">
                             {velocity != null ? (
-                                <Row label={en ? 'Velocity' : 'Velocidade'}>
+                                <Row label={en ? 'Velocity rel. to Earth' : 'Vel. relativa à Terra'}>
                                     {new Intl.NumberFormat(locale).format(Math.round(velocity))} km/h
-                                    {a.relativeVelocityKph == null ? <span className="text-white/45"> · {en ? 'from vectors' : 'dos vetores'}</span> : null}
+                                    {a.relativeVelocityKph == null
+                                        ? <span className="text-white/40" title={en ? 'Derived from current JPL Horizons position vectors — this is the instantaneous speed relative to Earth, not the speed at closest approach.' : 'Derivado dos vetores de posição JPL Horizons atuais — é a velocidade instantânea relativa à Terra, não a velocidade no momento da máxima aproximação.'}> · {en ? 'from vectors' : 'dos vetores'}</span>
+                                        : <span className="text-white/40" title={en ? 'Relative velocity at closest approach, from the JPL Close Approach Database.' : 'Velocidade relativa na máxima aproximação, da base JPL Close Approach.'}> · {en ? 'at closest approach' : 'na máx. aprox.'}</span>}
                                 </Row>
                             ) : null}
                             {a.approachDate ? (
@@ -285,6 +328,45 @@ function AsteroidCard({
                             <Row label={en ? 'Min. distance' : 'Distância mínima'}>
                                 {a.nominalDistanceKm != null ? compactKm(a.nominalDistanceKm) : '—'}
                                 {a.lunarDistance != null ? <span className="text-white/50"> · {a.lunarDistance.toFixed(2)} DL</span> : null}
+                            </Row>
+                            {object.trajectory?.orbitalElements?.epochJd ? (() => {
+                                const epochDate = new Date((object.trajectory.orbitalElements.epochJd - 2440587.5) * 86_400_000);
+                                const ageMs = Date.now() - epochDate.getTime();
+                                const ageDays = ageMs / 86_400_000;
+                                const stale = ageDays > 60;
+                                return (
+                                    <Row label={en ? 'Orbital elements' : 'Elementos orbitais'}>
+                                        <span className="flex flex-col gap-0.5">
+                                            <span
+                                                className={stale ? 'text-yellow-400/70' : 'text-white/50'}
+                                                title={stale
+                                                    ? (en ? `Elements from ${Math.round(ageDays)} days ago. For close-approaching objects, the Keplerian propagation may diverge from the real trajectory — consult JPL Horizons for precise ephemeris.` : `Elementos de ${Math.round(ageDays)} dias atrás. Para objetos em aproximação próxima, a propagação kepleriana pode divergir da trajetória real — consulte o JPL Horizons para efemérides precisas.`)
+                                                    : (en ? 'Osculating elements valid at this epoch. Propagated as a two-body Keplerian orbit — does not include planetary perturbations.' : 'Elementos osculadores válidos nesta época. Propagados como órbita kepleriana de dois corpos — não inclui perturbações planetárias.')
+                                                }
+                                            >
+                                                {epochDate.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                {stale ? <span className="ml-1">⚠</span> : null}
+                                            </span>
+                                            {stale ? (
+                                                <span className="text-[11px] text-yellow-400/55">
+                                                    {en
+                                                        ? `${Math.round(ageDays)}d old — orbit position estimated`
+                                                        : `${Math.round(ageDays)}d atrás — posição orbital estimada`}
+                                                </span>
+                                            ) : null}
+                                        </span>
+                                    </Row>
+                                );
+                            })() : null}
+                            <Row label={en ? 'Data source' : 'Fonte dos dados'}>
+                                <span className="flex flex-col gap-0.5">
+                                    <span className="text-white/50">{a.sourceLabel}</span>
+                                    <span className="text-[11px] text-white/35">
+                                        {a.source === 'cad'
+                                            ? (en ? 'orbitally integrated — high precision' : 'órbita integrada — alta precisão')
+                                            : (en ? 'broader coverage — lower precision' : 'cobertura ampla — menor precisão')}
+                                    </span>
+                                </span>
                             </Row>
                         </dl>
                     ) : null}
@@ -440,9 +522,6 @@ function OrbitToggleButton({ orbitMode, canShowOrbitPosition, onShowOrbit, onSho
     en: boolean;
 }) {
     const disabled = !orbitMode && !canShowOrbitPosition;
-    const disabledTitle = en
-        ? 'Heliocentric orbit elements incomplete for this object (missing perihelion epoch).'
-        : 'Elementos da órbita heliocêntrica incompletos para este objeto (sem época de periélio).';
     const baseClass = 'inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-semibold tracking-tight transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan lg:py-2.5';
     const stateClass = disabled
         ? 'cursor-not-allowed border border-white/8 bg-white/4 text-white/30'
@@ -450,17 +529,23 @@ function OrbitToggleButton({ orbitMode, canShowOrbitPosition, onShowOrbit, onSho
             ? 'border border-white/12 bg-white/5 text-white/75 hover:bg-white/8 hover:text-white/90'
             : 'border border-signal-cyan/35 bg-signal-cyan/8 text-signal-cyan shadow-[0_0_20px_rgba(34,211,238,0.14)] hover:border-signal-cyan/50 hover:bg-signal-cyan/12 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]';
     return (
-        <button
-            type="button"
-            onClick={orbitMode ? onShowCloseUp : onShowOrbit}
-            disabled={disabled}
-            title={disabled ? disabledTitle : undefined}
-            className={`${baseClass} ${stateClass}`}
-        >
-            {orbitMode
-                ? (en ? '↩ Back to the asteroid' : '↩ Voltar ao asteroide')
-                : (en ? '🛰 See its orbit around the Sun' : '🛰 Ver a órbita ao redor do Sol')}
-        </button>
+        <div className="space-y-1">
+            <button
+                type="button"
+                onClick={orbitMode ? onShowCloseUp : onShowOrbit}
+                disabled={disabled}
+                className={`${baseClass} ${stateClass}`}
+            >
+                {orbitMode
+                    ? (en ? '↩ Back to the asteroid' : '↩ Voltar ao asteroide')
+                    : (en ? '🛰 See its orbit around the Sun' : '🛰 Ver a órbita ao redor do Sol')}
+            </button>
+            {disabled ? (
+                <p className="text-center text-[10px] text-white/30">
+                    {en ? 'Orbit unavailable — perihelion epoch missing' : 'Órbita indisponível — época de periélio ausente'}
+                </p>
+            ) : null}
+        </div>
     );
 }
 
