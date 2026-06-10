@@ -74,6 +74,7 @@ type RadarSceneProps = {
     showLabels?: boolean;
     /** Chamado uma única vez após o primeiro frame da cena ser renderizado na GPU. */
     onFirstFrame?: () => void;
+    onFocusTrajectoryPoint?: (framing: FocusFraming) => void;
 };
 
 function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
@@ -86,7 +87,7 @@ function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
     return null;
 }
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, onFirstFrame }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -257,9 +258,9 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         hasSelection={hasSelection}
                         earthPos={earthPos}
                         onSelect={onSelect}
-                        locale={locale}
                         showLabels={showLabels}
                         showLabelForObject={showLabelForObject}
+                        onFocusTrajectoryPoint={onFocusTrajectoryPoint}
                     />
                 </>
             )}

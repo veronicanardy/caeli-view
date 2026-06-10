@@ -7,10 +7,10 @@
  */
 
 /** Distância do centro do asteroide onde o cone começa (frente). */
-export const ASTEROID_MARKER_RADIUS = 0.015;
+export const ASTEROID_MARKER_RADIUS = 0.008;
 
 /** Distância do centro do asteroide onde a linha de passado termina (trás). */
-export const ASTEROID_TRAIL_END_RADIUS = 0.03;
+export const ASTEROID_TRAIL_END_RADIUS = 0.01;
 export const ORBIT_LINE_SEGMENTS = 192;
 export const DEFAULT_ORBIT_LINE_OPACITY = 0.85;
 

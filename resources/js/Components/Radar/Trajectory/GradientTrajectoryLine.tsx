@@ -51,9 +51,10 @@ export function GradientTrajectoryLine({
             const t = peakAtEnd ? index / (count - 1) : 1 - index / (count - 1);
             /* Entrada suave nos primeiros 45%: presença crescente próximo ao asteroide.
                Fade longo a partir de 65%: dissolve organicamente no espaço. */
-            const rampIn = t < 0.45 ? (t / 0.45) * (t / 0.45) : 1;
-            const fadeOut = t > 0.65 ? 1 - ((t - 0.65) / 0.35) * ((t - 0.65) / 0.35) : 1;
-            const alpha = peakOpacity * rampIn * fadeOut;
+            const rampIn = 1;
+            const nearRock = t > 0.99 ? 0 : t > 0.94 ? 1 - ((t - 0.94) / 0.05) * ((t - 0.94) / 0.05) : 1;
+            const fadeOut = t > 0.99 ? 0 : 1;
+            const alpha = peakOpacity * rampIn * fadeOut * nearRock;
 
             colorsArray[index * 4] = base.r;
             colorsArray[index * 4 + 1] = base.g;

@@ -29,6 +29,8 @@ type TooltipProps = {
     hideDelay?: number;
     /** Permite quebra de linha no conteúdo. Padrão: false (whitespace-nowrap). */
     wrap?: boolean;
+    /** Offset adicional em px entre o trigger e o balão. */
+    offset?: number;
     className?: string;
 };
 
@@ -39,6 +41,7 @@ export function Tooltip({
     align = 'center',
     hideDelay = 1000,
     wrap = false,
+    offset,
     className = '',
 }: TooltipProps) {
     const [visible, setVisible] = useState(false);
@@ -72,8 +75,8 @@ export function Tooltip({
     };
 
     const posY = side === 'top'
-        ? 'bottom-full mb-2'
-        : 'top-full mt-2';
+        ? 'bottom-full'
+        : 'top-full';
 
     const posX = align === 'left'
         ? 'left-0'
@@ -102,9 +105,11 @@ export function Tooltip({
             {children}
             <span
                 role="tooltip"
+                style={offset != null ? (side === 'top' ? { marginBottom: offset } : { marginTop: offset }) : undefined}
                 className={[
                     `pointer-events-none absolute z-[120] hidden ${wrap ? 'whitespace-normal' : 'whitespace-nowrap'} rounded-md border border-signal-cyan/35 bg-[#07111f]`,
                     'px-2.5 py-1.5 text-[11px] font-medium text-white/80',
+                    side === 'top' ? 'mb-2' : 'mt-2',
                     'shadow-[0_8px_28px_rgba(0,0,0,0.55),0_0_18px_rgba(34,211,238,0.14)]',
                     'transition-[opacity,transform] duration-150 sm:block',
                     posY,

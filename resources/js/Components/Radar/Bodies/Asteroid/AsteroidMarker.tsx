@@ -17,21 +17,23 @@ const DIMMED_OPACITY = 0.4;
 const FULL_OPACITY = 1;
 const HITBOX_RADIUS = 0.14;
 const HITBOX_SEGMENTS = 16;
-const LABEL_POSITION: [number, number, number] = [0, 0.09, 0];
+const LABEL_POSITION: [number, number, number] = [0, 0.04, 0];
 
 function rockScaleFromDiameter(a: UnifiedApproach): number {
+    const dMin = a.estimatedDiameterMinMeters
+        ?? (a.absoluteMagnitude != null ? (1329 / Math.sqrt(0.25)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000 : null);
+    const dMax = a.estimatedDiameterMaxMeters
+        ?? (a.absoluteMagnitude != null ? (1329 / Math.sqrt(0.05)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000 : null);
     const d = a.diameterMeters
-        ?? a.estimatedDiameterMaxMeters
-        ?? (a.absoluteMagnitude != null
-            ? Math.round((1329 / Math.sqrt(0.05)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000)
-            : null);
-    if (d == null) return 0.026;
-    if (d < 10)   return 0.012;
-    if (d < 50)   return 0.016;
-    if (d < 150)  return 0.020;
-    if (d < 500)  return 0.026;
-    if (d < 1000) return 0.034;
-    return 0.044;
+        ?? (dMin != null && dMax != null ? Math.round((dMin + dMax) / 2) : dMax ?? dMin)
+        ?? null;
+    if (d == null) return 0.013;
+    if (d < 10)   return 0.006;
+    if (d < 50)   return 0.008;
+    if (d < 150)  return 0.010;
+    if (d < 500)  return 0.013;
+    if (d < 1000) return 0.017;
+    return 0.022;
 }
 
 /**
@@ -40,13 +42,11 @@ function rockScaleFromDiameter(a: UnifiedApproach): number {
 type AsteroidMarkerProps = {
     object: ClosestNowObject;
     position: [number, number, number];
-    nearbyClosestApproach: boolean;
     isSelected: boolean;
     dimmed: boolean;
     onSelect: (approach: UnifiedApproach) => void;
     showLabel: boolean;
     protectLabelFromFocus: boolean;
-    locale: 'pt-BR' | 'en';
     paletteColor: string;
     showLabels: boolean;
 };
@@ -67,13 +67,11 @@ type AsteroidMarkerProps = {
 export function AsteroidMarker({
     object,
     position,
-    nearbyClosestApproach,
     isSelected,
     dimmed,
     onSelect,
     showLabel,
     protectLabelFromFocus,
-    locale,
     paletteColor,
     showLabels,
 }: AsteroidMarkerProps) {
@@ -82,7 +80,6 @@ export function AsteroidMarker({
 
     const rockScale = rockScaleFromDiameter(object.approach);
     const opacity = dimmed ? DIMMED_OPACITY : FULL_OPACITY;
-    const en = locale === 'en';
 
     return (
         <group position={position}>
@@ -100,36 +97,21 @@ export function AsteroidMarker({
             ) : null}
 
             {/* Mostra label quando: (a) sempre visível por config, ou (b) hover — mesmo com labels suprimidos.
-                Isso garante destaque visual em qualquer objectLimit sem poluir a cena em repouso. */}
+                Apenas o nome: identificação rápida. Detalhes (posição estimada, máxima aproximação)
+                pertencem ao card do painel lateral, não à cena 3D. */}
             {(showLabel || hovered) ? (
                 <ScreenLabel
                     position={LABEL_POSITION}
                     emphasized={isSelected || hovered}
                     protectFromFocus={protectLabelFromFocus}
                     allowSceneOverlap={isSelected}
-                    onClick={isSelected ? undefined : () => onSelect(object.approach)}
-                    title={isSelected ? undefined : `Focar ${object.approach.displayName ?? object.approach.name}`}
+                    onClick={() => onSelect(object.approach)}
+                    title={`Focar ${object.approach.displayName ?? object.approach.name}`}
+                    tooltip={isSelected && object.currentDistanceKm != null ? (
+                        <><span>O asteroide está aqui agora</span><br /><span className="text-white/50">{new Intl.NumberFormat('pt-BR').format(Math.round(object.currentDistanceKm))} km da Terra</span></>
+                    ) : undefined}
                 >
-                    <div className="font-semibold">
-                        {object.approach.displayName ?? object.approach.name}
-                    </div>
-
-                    {!object.hasRealCurrentDistance ? (
-                        <div
-                            className="mt-1 rounded border border-yellow-400/30 bg-yellow-400/8 px-2 py-1 text-[11px] text-yellow-300/70"
-                            title={en
-                                ? 'Real-time position not available. Placed at recorded approach distance — angle has no physical meaning.'
-                                : 'Posição em tempo real indisponível. Posicionado pela distância registrada da aproximação — o ângulo não tem significado físico.'}
-                        >
-                            {en ? '~ estimated position' : '~ posição estimada'}
-                        </div>
-                    ) : null}
-
-                    {nearbyClosestApproach ? (
-                        <div className="mt-1 rounded border border-signal-cyan/35 bg-signal-cyan/10 px-2 py-1 text-[12px] font-semibold text-signal-cyan">
-                            {en ? 'Near closest approach' : 'Perto da máxima aproximação'}
-                        </div>
-                    ) : null}
+                    {object.approach.displayName ?? object.approach.name}
                 </ScreenLabel>
             ) : null}
         </group>

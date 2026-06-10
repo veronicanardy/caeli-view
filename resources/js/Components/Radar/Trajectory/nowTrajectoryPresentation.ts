@@ -68,7 +68,7 @@ export function getMovementDirection(
 
 export function getTrajectoryOpacities(emphasized: boolean, dimmed: boolean) {
     return {
-        pastPeakOpacity: emphasized ? 0.55 : dimmed ? 0.12 : 0.32,
+        pastPeakOpacity: emphasized ? 0.55 : dimmed ? 0.12 : 0.38,
         coneOpacity: emphasized ? 1.0 : dimmed ? 0.58 : 0.92,
     };
 }

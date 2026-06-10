@@ -5,6 +5,7 @@
  * máxima aproximação a partir de dados de apresentação já derivados por hook local.
  */
 
+import type * as THREE from 'three';
 import type { AsteroidTrajectory } from '@/types';
 import type { Palette } from '@/lib/radar/palette';
 import { DirectionCone } from './DirectionCone';
@@ -18,12 +19,12 @@ type NowTrajectoryProps = {
     palette: Palette;
     emphasized: boolean;
     dimmed: boolean;
-    locale: 'pt-BR' | 'en';
     /** Quando `true`, renderiza apenas o cone de direção, sem linhas de trajetória. */
     coneOnly?: boolean;
+    onFocusPoint?: (vec: THREE.Vector3) => void;
 };
 
-export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale, coneOnly = false }: NowTrajectoryProps) {
+export function NowTrajectory({ trajectory, palette, emphasized, dimmed, coneOnly = false, onFocusPoint }: NowTrajectoryProps) {
     const {
         fullPast,
         closestApproach,
@@ -57,14 +58,13 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, locale,
             ) : null}
 
             {!coneOnly && emphasized && timeTicks.length > 0 ? (
-                <TimeTickGroup ticks={timeTicks} color={palette.future} />
+                <TimeTickGroup ticks={timeTicks} color={palette.future} onFocusPoint={onFocusPoint} />
             ) : null}
 
             {!coneOnly && closestApproach && closestApproachOnPath ? (
                 <ClosestApproachMarker
                     point={closestApproach}
                     emphasized={emphasized}
-                    locale={locale}
                     showLabel={false}
                 />
             ) : null}

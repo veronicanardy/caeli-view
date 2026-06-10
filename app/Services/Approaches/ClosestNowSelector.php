@@ -56,7 +56,7 @@ final class ClosestNowSelector
     /** Modos de seleção válidos — o critério que define quais objetos são priorizados */
     private const VALID_MODES = ['nearest', 'upcoming'];
 
-    /** Janela retrospectiva para objetos mais próximos: 30 dias, resolução de 6h. */
+    /** Janela retrospectiva para objetos mais próximos: 3 dias, resolução de 1h. */
     private const HORIZONS_WINDOW_NEAR = [
         'startOffsetHours' => -72,
         'stopOffsetHours'  => 0,

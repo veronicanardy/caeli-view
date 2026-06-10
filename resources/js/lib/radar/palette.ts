@@ -9,11 +9,11 @@
  * do material, não da string de cor.
  */
 export const OBJECT_PALETTE = [
-    { future: '#76e4b5', current: '#a6f0d4', past: '#9fb4ad' },  // mint
-    { future: '#7cc4f5', current: '#a8d8fa', past: '#9fb0bf' },  // sky
-    { future: '#f5b676', current: '#fad19c', past: '#bfae9c' },  // amber
-    { future: '#e88ab8', current: '#f1afcc', past: '#bfa6b2' },  // rose
-    { future: '#c7a8f0', current: '#dac4f5', past: '#b3a6bf' },  // lavender
+    { future: '#00e896', current: '#00e896', past: '#00804f' },  // mint
+    { future: '#00aaff', current: '#00aaff', past: '#005c99' },  // sky
+    { future: '#ff9900', current: '#ff9900', past: '#995400' },  // amber
+    { future: '#ff3d8a', current: '#ff3d8a', past: '#991040' },  // rose
+    { future: '#a855f7', current: '#a855f7', past: '#5c1fa6' },  // lavender
 ] as const;
 
 export type Palette = (typeof OBJECT_PALETTE)[number];

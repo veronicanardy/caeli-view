@@ -32,6 +32,7 @@ import { deriveActiveMode } from './Scene/sceneMode';
 import { useLabelNoGoRects } from './Scene/useLabelNoGoRects';
 import { useSceneEphemeris } from './Scene/useSceneEphemeris';
 import { useSelectionFocusFraming } from './Scene/useSelectionFocusFraming';
+import type { FocusFraming } from './Scene/cameraFraming';
 import { useRadar3DFocusActions } from './useRadar3DFocusActions';
 import { useRadar3DTransition } from './useRadar3DTransition';
 
@@ -145,6 +146,11 @@ export function DailyOrbitalRadar3D({
         ephemeris?.earthScenePosition ?? null,
     );
 
+    const [trajectoryPointFocus, setTrajectoryPointFocus] = useState<FocusFraming | null>(null);
+
+    // Limpa o foco de trajetória quando o usuário interage com outra coisa.
+    useEffect(() => { setTrajectoryPointFocus(null); }, [focusTarget, bodyCardOpen]);
+
     const activeMode: SceneMode = deriveActiveMode(orbitMode, focusedObject);
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const planetFlyoutRef = useRef<HTMLDivElement>(null);
@@ -204,7 +210,7 @@ export function DailyOrbitalRadar3D({
                     orbitMode={orbitMode}
                     onSelect={selectObject}
                     cameraIntent={cameraIntent}
-                    focusTarget={focusTarget}
+                    focusTarget={trajectoryPointFocus ?? focusTarget}
                     sunFocusTarget={sunFocusTarget}
                     planetFocusTargets={planetFocusTargets}
                     ephemeris={ephemeris}
@@ -217,6 +223,7 @@ export function DailyOrbitalRadar3D({
                     onFocusSun={focusSun}
                     onFocusPlanet={focusPlanet}
                     onFocusBody={focusBody}
+                    onFocusTrajectoryPoint={setTrajectoryPointFocus}
                 />
                 <RadarNavigationPanel
                     en={en}

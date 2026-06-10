@@ -9,10 +9,10 @@ import * as THREE from 'three';
 import { useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { compactKm } from '@/lib/format';
-import { formatTimestamp } from '@/lib/radar/format';
 import type { ClosestApproachSample } from '@/lib/radar/trajectorySampling';
 import { Html } from '@react-three/drei';
 import { FocusProtectedHtml } from '../Overlays/SceneLabels';
+import { Tooltip } from '../Controls/Tooltip';
 
 /**
  * Contém marcadores visuais ligados à trajetória.
@@ -21,39 +21,50 @@ import { FocusProtectedHtml } from '../Overlays/SceneLabels';
  * aproximação, decidir ranking ou corrigir fallback.
  */
 // Limiar da órbita lunar em px abaixo do qual os ticks temporais somem (zoom out extremo ≈ Júpiter).
-const TICK_HIDE_LUNAR_PX = 28;
+const TICK_HIDE_LUNAR_PX = 5;
 
 function TimeTick({
     vec,
     label,
+    tooltip,
     color,
     zOrder,
     visible,
+    onClick,
 }: {
     vec: THREE.Vector3;
     label: string;
+    tooltip: string;
     color: string;
     zOrder: number;
     visible: boolean;
+    onClick?: () => void;
 }) {
     const zTop = Math.max(6 - zOrder, 1);
     return (
         <group position={vec}>
             <mesh>
                 <sphereGeometry args={[0.007, 8, 8]} />
-                <meshBasicMaterial color={color} transparent opacity={visible ? (zOrder === 0 ? 0.45 : zOrder === 1 ? 0.3 : 0.2) : 0} />
+                <meshBasicMaterial color={color} transparent opacity={visible ? 0.45 : 0} />
             </mesh>
             {visible ? (
                 <Html position={[0, 0.038, 0]} center zIndexRange={[zTop, 0]}>
-                    <span
-                        className="pointer-events-none select-none -translate-y-1/2 whitespace-nowrap rounded border border-white/10 bg-space-950/85 px-2 py-0.5 text-sm font-medium backdrop-blur"
-                        style={{
-                            color: `rgba(190, 210, 220, ${zOrder === 0 ? 0.65 : zOrder === 1 ? 0.45 : 0.32})`,
-                            opacity: zOrder === 0 ? 1 : zOrder === 1 ? 0.85 : 0.7,
-                        }}
-                    >
-                        {label}
-                    </span>
+                    <Tooltip content={(() => { const [line1, line2] = tooltip.split('|'); return line2 ? <><span>{line1}</span><br /><span className="text-white/50">{line2}</span></> : <span>{line1}</span>; })()} side="top" offset={28} hideDelay={200}>
+                        <span
+                            onClick={onClick}
+                            className={[
+                                'select-none -translate-y-1/2 whitespace-nowrap rounded border border-white/10 bg-space-950/85 px-1.5 py-0.5 text-[11px] font-medium backdrop-blur',
+                                onClick ? 'cursor-pointer transition hover:border-signal-cyan/50 hover:text-signal-cyan hover:bg-space-950' : 'cursor-default',
+                            ].join(' ')}
+                            style={{
+                                color: 'rgba(190, 210, 220, 0.65)',
+                                opacity: 1,
+                                pointerEvents: 'auto',
+                            }}
+                        >
+                            {label}
+                        </span>
+                    </Tooltip>
                 </Html>
             ) : null}
         </group>
@@ -69,9 +80,11 @@ type Controls = {
 export function TimeTickGroup({
     ticks,
     color,
+    onFocusPoint,
 }: {
-    ticks: Array<{ vec: THREE.Vector3; label: string; zOrder: number }>;
+    ticks: Array<{ vec: THREE.Vector3; label: string; tooltip: string; zOrder: number }>;
     color: string;
+    onFocusPoint?: (vec: THREE.Vector3) => void;
 }) {
     const { camera, size } = useThree();
     const controls = useThree((s) => s.controls) as unknown as Controls | null;
@@ -111,9 +124,11 @@ export function TimeTickGroup({
                     key={tick.label}
                     vec={tick.vec}
                     label={tick.label}
+                    tooltip={tick.tooltip}
                     color={color}
                     zOrder={tick.zOrder}
                     visible={visible[i] ?? true}
+                    onClick={onFocusPoint ? () => onFocusPoint(tick.vec) : undefined}
                 />
             ))}
         </>
@@ -124,29 +139,21 @@ export function TimeTickGroup({
 export function ClosestApproachMarker({
     point,
     emphasized,
-    locale,
     showLabel = true,
 }: {
     point: ClosestApproachSample;
     emphasized: boolean;
-    locale: 'pt-BR' | 'en';
     showLabel?: boolean;
 }) {
-    const en = locale === 'en';
-
     return (
         <group position={point.vec}>
             {emphasized && showLabel ? (
                 <FocusProtectedHtml position={[0, 0.09, 0]} center distanceFactor={5} zIndexRange={[8, 0]}>
-                    <div className="pointer-events-none whitespace-nowrap rounded-md border border-white/10 bg-space-950/90 px-2 py-1 text-[11px] text-white/90 shadow-glow backdrop-blur">
-                        <div className="text-[9px] uppercase tracking-wide text-white/60">
-                            {en ? 'Closest approach' : 'Máxima aproximação'}
-                        </div>
-                        <div className="font-semibold">
-                            {point.distanceLD !== null ? `${point.distanceLD.toFixed(2)} DL` : '—'}{' '}
-                            <span className="font-normal text-white/60">· {compactKm(point.distanceKm)}</span>
-                        </div>
-                        <div className="text-[9px] text-white/50">{formatTimestamp(point.timestamp, locale)}</div>
+                    {/* Apenas distância: identificação compacta. Timestamp e rótulo textual ficam no card. */}
+                    <div className="pointer-events-none whitespace-nowrap rounded-md border border-white/10 bg-space-950/90 px-2 py-0.5 text-[11px] font-semibold text-white/90 backdrop-blur">
+                        {point.distanceLD !== null ? `${point.distanceLD.toFixed(2)} DL` : '—'}
+                        {' '}
+                        <span className="font-normal text-white/55">· {compactKm(point.distanceKm)}</span>
                     </div>
                 </FocusProtectedHtml>
             ) : null}

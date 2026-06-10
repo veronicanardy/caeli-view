@@ -8,6 +8,7 @@
 
 import { Html } from '@react-three/drei';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/radar/cursor';
+import { Tooltip } from '../Controls/Tooltip';
 import { useFrame, useThree } from '@react-three/fiber';
 import { createContext, useContext, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -140,6 +141,7 @@ export function ScreenLabel({
     children,
     onClick,
     title,
+    tooltip,
 }: {
     position: [number, number, number];
     emphasized?: boolean;
@@ -148,6 +150,7 @@ export function ScreenLabel({
     children: React.ReactNode;
     onClick?: () => void;
     title?: string;
+    tooltip?: React.ReactNode;
 }) {
     const labelRef = useRef<THREE.Group>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -159,31 +162,35 @@ export function ScreenLabel({
     return (
         <group ref={labelRef} position={position}>
             {!hiddenByFocus && !hiddenByNoGo ? (
-                <Html position={[0, 0, 0]} center zIndexRange={[12, 0]} style={{ pointerEvents: onClick ? 'auto' : 'none' }}>
-                    <button
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            onClick?.();
-                        }}
-                        onPointerEnter={() => { if (onClick) cursorPointerEnter(); }}
-                        onPointerLeave={() => { if (onClick) cursorPointerLeave(); }}
-                        title={title}
-                        aria-label={title}
-                        disabled={!onClick}
-                        ref={buttonRef}
-                        style={hiddenByObjects ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
-                        className={[
-                            /* Label do objeto selecionado: próximo ao asteroide, presença clara. */
-                            '-translate-y-[55%] whitespace-nowrap rounded-lg border px-2 py-0.5 text-[12px] font-semibold leading-snug backdrop-blur lg:px-3 lg:py-1.5 lg:text-[15px]',
-                            emphasized
-                                ? 'border-signal-cyan/55 bg-space-950/95 text-white shadow-[0_0_16px_rgba(34,211,238,0.18)]'
-                                : 'border-white/10 bg-space-950/85 text-white/80',
-                            onClick ? 'pointer-events-auto cursor-pointer text-left transition hover:border-signal-cyan/50 hover:bg-space-950' : 'pointer-events-none',
-                        ].join(' ')}
-                    >
-                        {children}
-                    </button>
+                <Html position={[0, 0, 0]} center zIndexRange={[12, 0]} style={{ pointerEvents: onClick || tooltip ? 'auto' : 'none' }}>
+                    {(() => {
+                        const btn = (
+                            <button
+                                type="button"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onClick?.();
+                                }}
+                                onPointerEnter={() => { if (onClick) cursorPointerEnter(); }}
+                                onPointerLeave={() => { if (onClick) cursorPointerLeave(); }}
+                                title={title}
+                                aria-label={title}
+                                disabled={!onClick}
+                                ref={buttonRef}
+                                style={hiddenByObjects ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+                                className={[
+                                    '-translate-y-[55%] max-w-[18ch] truncate rounded-lg border px-2 py-0.5 text-[12px] font-semibold leading-snug backdrop-blur',
+                                    emphasized
+                                        ? 'border-signal-cyan/55 bg-space-950/95 text-white shadow-[0_0_16px_rgba(34,211,238,0.18)]'
+                                        : 'border-white/10 bg-space-950/85 text-white/80',
+                                    onClick ? 'pointer-events-auto cursor-pointer text-left transition hover:border-signal-cyan/50 hover:bg-space-950' : 'pointer-events-none',
+                                ].join(' ')}
+                            >
+                                {children}
+                            </button>
+                        );
+                        return tooltip ? <Tooltip content={tooltip} side="top" hideDelay={200} offset={28}>{btn}</Tooltip> : btn;
+                    })()}
                 </Html>
             ) : null}
         </group>

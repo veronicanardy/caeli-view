@@ -40,6 +40,7 @@ type Props = {
     onFocusSun: () => void;
     onFocusPlanet: (id: PlanetId) => void;
     onFocusBody: (body: 'earth' | 'moon') => void;
+    onFocusTrajectoryPoint?: (framing: FocusFraming) => void;
 };
 
 /**
@@ -70,6 +71,7 @@ export function RadarSceneCanvas({
     onFocusSun,
     onFocusPlanet,
     onFocusBody,
+    onFocusTrajectoryPoint,
 }: Props) {
     // Prioridade de foco: seleção de objeto > foco no Sol > foco em planeta.
     // Garante que a câmera siga a seleção do usuário antes de qualquer alvo secundário.
@@ -132,6 +134,7 @@ export function RadarSceneCanvas({
                         onFocusNeptune={() => onFocusPlanet('neptune')}
                         isNeptuneFocused={bodyCardOpen === 'neptune'}
                         onFocusBody={onFocusBody}
+                        onFocusTrajectoryPoint={onFocusTrajectoryPoint}
                     />
                 </Suspense>
             </Canvas>
