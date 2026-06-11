@@ -21,6 +21,7 @@ import { RadarScene } from './RadarScene';
 import { preloadRealAsteroidModels } from '../Bodies/Asteroid/asteroidModelRegistry';
 import { ZoomHintContext, type ZoomHintState } from '../Bodies/Asteroid/ZoomHintContext';
 import { ZoomHintOverlay } from '../Bodies/Asteroid/ZoomHintOverlay';
+import { PerfProbe, isPerfProbeEnabled } from '../Dev/PerfProbe';
 
 type Props = {
     noGoRects: NoGoRect[];
@@ -101,6 +102,8 @@ export function RadarSceneCanvas({
                 dpr={[1, 1.6]}
                 gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
             >
+                {/* Sonda de performance dev-only (?perf na URL). Remoção: apagar a pasta Dev/ e estas linhas. */}
+                {isPerfProbeEnabled() ? <PerfProbe /> : null}
                 <Suspense fallback={null}>
                     <RadarScene
                         closestNowObjects={closestNowObjects}
