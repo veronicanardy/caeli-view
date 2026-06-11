@@ -63,7 +63,18 @@ final class RadarService
         $key        = 'approach-observatory:' . md5(json_encode($normalized, JSON_THROW_ON_ERROR));
         $ttl        = (int) config('services.jpl.cad_cache_ttl', 21600);
 
-        return Cache::flexible($key, [$ttl, $ttl + 3600], fn () => $this->fetch($normalized));
+        $result = Cache::flexible($key, [$ttl, $ttl + 3600], fn () => $this->fetch($normalized));
+
+        // Falha total das fontes não pode ficar presa no cache de 6h: uma indisponibilidade
+        // transitória (DNS/NASA fora do ar) deixaria o radar vazio até o TTL expirar.
+        // O resultado vazio ainda é retornado para ESTA requisição, mas não é persistido,
+        // então a próxima tentativa consulta as APIs novamente.
+        if (($result['approaches'] ?? []) === [] && ($result['errorsBySource'] ?? []) !== []) {
+            Cache::forget($key);
+            Cache::forget("illuminate:cache:flexible:created:{$key}");
+        }
+
+        return $result;
     }
 
     /**

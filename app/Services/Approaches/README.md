@@ -128,3 +128,5 @@ Os testes de unidade relevantes:
 | AsteroidModelResolverService | `asteroid-model:v1:{md5(objeto)}` | 7 dias + 1 dia stale |
 
 Incrementar a versão na chave de cache (`v12`, `v1`) quando o formato de saída mudar.
+
+**Proteção contra cache envenenado:** resultado vazio causado por falha das fontes (CAD/NeoWs indisponíveis) não é persistido. `RadarService@observe` descarta a entrada quando `approaches` está vazio e `errorsBySource` está preenchido; `ClosestNowSelector@select` faz o mesmo quando `objects` está vazio e `sourcesFailed` é `true`. O vazio ainda é retornado para a requisição corrente, mas a próxima tentativa consulta as APIs novamente. Sem isso, uma indisponibilidade transitória (ex: DNS do Docker logo após o container subir) deixaria o radar vazio por até 6 horas. Cobertura: `ClosestNowSelectorTest::test_resultado_vazio_por_falha_das_fontes_nao_fica_preso_no_cache`.

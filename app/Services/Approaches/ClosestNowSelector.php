@@ -159,6 +159,13 @@ final class ClosestNowSelector
             fn (): array => $this->resolve($dateMin, $dateMax, $mode, $limit, $anchor),
         );
 
+        // Resultado vazio causado por falha das fontes (não por ausência real de objetos)
+        // não pode ficar preso no cache: a próxima requisição deve tentar as APIs de novo.
+        if (($full['objects'] ?? []) === [] && ($full['sourcesFailed'] ?? false) === true) {
+            Cache::forget($cacheKey);
+            Cache::forget("illuminate:cache:flexible:created:{$cacheKey}");
+        }
+
         // Fatia o resultado já ordenado para o limite solicitado (todos os modos).
         if (is_array($full['objects'] ?? null)) {
             $full['objects']        = array_slice($full['objects'], 0, $limit);
@@ -218,7 +225,11 @@ final class ClosestNowSelector
         $approaches = is_array($data['approaches'] ?? null) ? $data['approaches'] : [];
 
         if ($approaches === []) {
-            return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato encontrado no período.');
+            // Distingue "fontes falharam" de "janela realmente sem objetos": o primeiro caso
+            // marca sourcesFailed para que select() não persista o vazio no cache.
+            $sourcesFailed = is_array($data['errorsBySource'] ?? null) && $data['errorsBySource'] !== [];
+
+            return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato encontrado no período.', $sourcesFailed);
         }
 
         // Passo 2: filtra e seleciona candidatos de acordo com o modo.
@@ -614,8 +625,12 @@ final class ClosestNowSelector
 
     /**
      * Resultado vazio padronizado para quando não há candidatos viáveis.
+     *
+     * `$sourcesFailed = true` indica que o vazio veio de falha das fontes (CAD/NeoWs
+     * indisponíveis), não de uma janela legitimamente sem objetos. select() usa essa
+     * flag para não persistir o resultado no cache.
      */
-    private function emptyResult(string $dateMin, string $dateMax, int $limit, string $mode, string $note): array
+    private function emptyResult(string $dateMin, string $dateMax, int $limit, string $mode, string $note, bool $sourcesFailed = false): array
     {
         return [
             'mode'                => 'closest_now',
@@ -626,6 +641,7 @@ final class ClosestNowSelector
             'candidatesEvaluated' => 0,
             'objects'             => [],
             'note'                => $note,
+            'sourcesFailed'       => $sourcesFailed,
             'lunarReference'      => [
                 'distanceKm'           => DistancePresenter::LUNAR_DISTANCE_KM,
                 'earthDiametersApprox' => 30.0,
