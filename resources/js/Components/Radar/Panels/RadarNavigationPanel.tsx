@@ -51,6 +51,7 @@ export function RadarNavigationPanel({
                     <button
                         type="button"
                         onClick={onShowNavigationPanel}
+                        data-tutorial="object-list-toggle"
                         aria-label={en ? 'Show navigation panel' : 'Mostrar painel de navegação'}
                         /* py-2 e px-3.5 garantem área de toque mínima de 44px no mobile */
                         className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-space-950/92 px-3.5 py-2 text-[12px] font-medium text-white/80 shadow-glow backdrop-blur transition hover:border-white/30 hover:text-white lg:hidden"
@@ -62,6 +63,7 @@ export function RadarNavigationPanel({
 
                 <div
                     ref={sidePanelRef}
+                    data-tutorial="object-list"
                         className={[
                             /* Painel lateral: navegação secundária — mais discreto que o card dossiê. */
                             'flex flex-col overflow-visible rounded-2xl border border-white/[0.08] bg-space-950/88 backdrop-blur-xl',
@@ -130,6 +132,7 @@ export function RadarNavigationPanel({
                 {planetsOpen && !orbitMode ? (
                     <div
                         ref={planetFlyoutRef}
+                        data-tutorial="planet-flyout"
                         className="flex flex-col overflow-y-auto rounded-2xl border border-white/[0.08] bg-space-950/88 backdrop-blur-xl
                                    shadow-[0_2px_16px_rgba(0,0,0,0.4)]
                                    h-[min(15rem,36vh)] w-[min(17rem,calc(100vw-4rem))]

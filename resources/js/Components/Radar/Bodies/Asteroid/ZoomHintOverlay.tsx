@@ -58,6 +58,7 @@ export function ZoomHintOverlay() {
             <Tooltip content="Afastar para ver a trajetória" side="top" hideDelay={200}>
                 <button
                     onClick={s.onZoomOut}
+                    data-tutorial="zoom-trajectory"
                     style={{
                         background: 'rgba(255,255,255,0.11)',
                         border: '1px solid rgba(255,255,255,0.28)',

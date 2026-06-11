@@ -19,7 +19,7 @@ que precise do mesmo pipeline gráfico.
 - Constantes físicas e visuais dos planetas ambientes (`planetData.ts`)
 - Paleta de cores dos objetos rastreados (`palette.ts`)
 - Gerenciamento do cursor da cena 3D (`cursor.ts`)
-- Formatadores específicos da cena (timestamp UTC, distância em UA)
+- Formatadores específicos da cena (timestamp UTC, distância em UA, rótulo relativo de dias)
 - Geração procedural da bump map da Lua (`moonTextures.ts`)
 
 ## O que NÃO fica aqui
@@ -59,7 +59,7 @@ Os testes unitários ficam em `tests/js/lib/radar/` e seguem o padrão Vitest do
 | `earthOrientation.ts` | `earthOrientation.test.ts`              | Orientação da Terra, tidal lock da Lua, degenerados    |
 | `trajectorySampling.ts` | `trajectorySampling.test.ts`          | clipPolyline, findClosest, toVec3, collectTimeTicks    |
 | `moonTextures.ts`     | `moonTextures.test.ts`                  | PRNG mulberry32 (buildMoonBump requer DOM)              |
-| `format.ts`           | `format.test.ts`                        | Dígitos dinâmicos, locales, fallbacks nulos            |
+| `format.ts`           | `format.test.ts`                        | Dígitos dinâmicos, locales, fallbacks nulos, dias relativos |
 | `cursor.ts`           | `cursor.test.ts`                        | Contagem de referência, reset, leaves extras           |
 | `bodyScale.ts`        | `bodyScale.test.ts`                     | Invariantes hitbox > raio visual                       |
 

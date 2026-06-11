@@ -9,11 +9,12 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { Tooltip } from '../Controls/Tooltip';
+import { ArrowRight, Check, ChevronDown, Circle, Clock, Minus, Orbit, Target, TriangleAlert, Undo2, Zap } from 'lucide-react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
-import { compactKm } from '@/lib/format';
-import { formatDistanceAU, formatTimestamp } from '@/lib/radar/format';
-import { humanSummary, motionLabel, objectTypeEyebrow, riskAssessment, sizeComparison, trajectoryStatusBadge } from './focusCardPresentation';
+import { approxKm, compactKm } from '@/lib/format';
+import { formatDistanceAU, formatRelativeDayLabel, formatTimestamp } from '@/lib/radar/format';
+import { motionLabel, objectTypeEyebrow, riskAssessment, sizeComparison, trajectoryStatusBadge, type StatusBadgeIcon } from './focusCardPresentation';
 import { BODIES, type BodyId } from './bodyData';
 import { PanelShell } from './PanelShell';
 import { AsteroidModelPreview } from './AsteroidModelPreview';
@@ -23,7 +24,7 @@ type Tab = 'summary' | 'physical' | 'approach' | 'history';
 
 const TAB_LABELS_PT: Record<Tab, string> = {
     summary: 'Resumo',
-    physical: 'Perfil Físico',
+    physical: 'Perfil físico',
     approach: 'Aproximação',
     history: 'História',
 };
@@ -33,6 +34,14 @@ const TAB_LABELS_EN: Record<Tab, string> = {
     physical: 'Physical Profile',
     approach: 'Approach',
     history: 'History',
+};
+
+/** Mapeia nomes semânticos de ícones dos helpers de apresentação para componentes lucide. */
+const STATUS_BADGE_ICONS: Record<StatusBadgeIcon, typeof Zap> = {
+    zap: Zap,
+    clock: Clock,
+    minus: Minus,
+    circle: Circle,
 };
 
 // ─── Props discriminadas ───────────────────────────────────────────────────────
@@ -146,11 +155,9 @@ function AsteroidCard({
     enterStyle,
 }: Omit<AsteroidProps, 'kind'> & TabState) {
     const a = object.approach;
-    const ldText = object.currentDistanceLD !== null ? `${object.currentDistanceLD.toFixed(2)} DL` : '—';
-    const auText = formatDistanceAU(object.currentDistanceKm, locale);
+const auText = formatDistanceAU(object.currentDistanceKm, locale);
     const motion = motionLabel(object.trajectory?.motionState, en);
     const risk = riskAssessment(a, en);
-    const summary = humanSummary(object, en);
     const trajectoryStatus = trajectoryStatusBadge(object.trajectory, en);
     const approachDaysAway = a.approachDate
         ? (new Date(a.approachDate).getTime() - Date.now()) / 86_400_000
@@ -158,7 +165,10 @@ function AsteroidCard({
     const isNearClosest =
         object.trajectory?.motionState === 'near_closest' ||
         (approachDaysAway !== null && approachDaysAway >= 0 && approachDaysAway <= 3);
-    const velocity = a.relativeVelocityKph ?? object.trajectory?.currentVelocityKph ?? null;
+    const currentVelocity = object.trajectory?.currentVelocityKph ?? null;
+    const velocity = currentVelocity ?? a.relativeVelocityKph ?? null;
+    const approachRelative = a.approachDate ? formatRelativeDayLabel(a.approachDate, Date.now(), locale) : null;
+    const TrajectoryStatusIcon = trajectoryStatus ? STATUS_BADGE_ICONS[trajectoryStatus.icon] : null;
 
     const typeInfo = objectTypeEyebrow(a.objectType, en);
     const eyebrowText = orbitMode
@@ -189,99 +199,119 @@ function AsteroidCard({
             eyebrow={eyebrowText}
             eyebrowPrefix={eyebrowPrefix}
             title={a.displayName ?? a.name}
-            subtitle={a.subtitle ?? undefined}
             dotColor={dotColor}
-            borderClass="border-signal-cyan/30"
+            borderClass="border-signal-cyan/25"
             /* Mobile: card inicia compacto (~38dvh), podendo crescer até 58dvh com scroll.
                Desktop: card lateral com largura e altura controladas. */
-            className="flex max-h-[50dvh] lg:max-h-[76%] w-full lg:w-[min(25rem,48%)] flex-col lg:top-[30%]"
+            className="flex max-h-[50dvh] lg:max-h-[76%] w-full lg:w-[min(22rem,48%)] flex-col lg:top-[30%]"
             style={enterStyle}
             mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
+            dataTutorial="selected-card"
         >
             <AsteroidModelPreview object={object} locale={locale} />
 
-            {isNearClosest ? (
-                <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-signal-cyan/40 bg-signal-cyan/10 px-3 py-2 lg:mx-5 lg:mt-3">
-                    <span className="shrink-0 text-base leading-none">🎯</span>
-                    <div className="min-w-0">
-                        <div className="text-[11.5px] font-semibold text-signal-cyan lg:text-[13px]">
-                            {object.trajectory?.motionState === 'near_closest'
-                                ? (en ? 'Closest approach' : 'Máxima Aproximação')
-                                : (en ? 'Closest approach coming up' : 'Máxima Aproximação em breve')}
-                        </div>
-                        <div className="text-[10px] text-signal-cyan/70 lg:text-[11px]">
-                            {a.approachDate
-                                ? (en ? `Passes closest on ${formatTimestamp(a.approachDate, locale)}` : `Ponto mais próximo em ${formatTimestamp(a.approachDate, locale)}`)
-                                : (en ? 'The closest it will get on this pass.' : 'O ponto mais próximo desta passagem.')}
-                        </div>
-                    </div>
-                </div>
-            ) : null}
-
-            {/* Bloco de risco — sempre visível em ambas as plataformas */}
-            <div className="mt-1.5 px-3 lg:mt-4 lg:px-5">
-                <div className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 lg:rounded-xl lg:gap-3 lg:px-4 lg:py-3 ${risk.className}`}>
-                    <span className="text-xs shrink-0 lg:text-xl">{risk.icon}</span>
-                    <div className="min-w-0">
-                        <div className="text-[11px] font-semibold tracking-tight lg:text-[13.5px]">{risk.title}</div>
-                        <div className="hidden text-[10px] leading-snug opacity-70 lg:block lg:text-[11.5px]">{risk.subtitle}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="mt-0.5 px-3 lg:mt-1.5 lg:min-h-[2rem] lg:px-4">
-                {trajectoryStatus ? (
-                    <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] ${trajectoryStatus.className}`}>
-                        <span aria-hidden="true">{trajectoryStatus.icon}</span>
-                        {trajectoryStatus.text}
-                    </div>
-                ) : null}
-            </div>
-
             {/* Abas — visíveis em mobile e desktop */}
-            <div className="flex gap-0 border-b border-white/10 px-3 lg:mt-1 lg:px-5">
-                {tabs.map((t) => (
-                    <FocusTabButton key={t} active={tab === t} onClick={() => setTab(t)}>
-                        {tabLabels[t]}
-                    </FocusTabButton>
-                ))}
-            </div>
+            <FocusTabBar
+                tabs={tabs}
+                tab={tab}
+                setTab={setTab}
+                labels={tabLabels}
+                ariaLabel={en ? 'Focus card sections' : 'Seções do painel de foco'}
+            />
 
             {/* Área de conteúdo com scroll interno; py reduzido no mobile para dar espaço */}
             <div
-                className="min-h-0 flex-1 overflow-y-auto px-3 py-2 lg:px-5 lg:py-4"
+                role="tabpanel"
+                id="focus-tabpanel"
+                aria-labelledby={`focus-tab-${tab}`}
+                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 lg:px-4 lg:py-3"
                 style={{ transition: 'opacity 0.12s ease', opacity: contentVisible ? 1 : 0 }}
             >
-                {/* min-h estabiliza o card ao trocar abas; menor no mobile para não forçar altura */}
-                <div className="min-h-[5rem] lg:min-h-[11rem]">
+                {/* min-h estabiliza o card ao trocar abas sem cortar a aba mais alta (Resumo) */}
+                <div className="min-h-[13rem]">
                     {tab === 'summary' ? (
-                        <div className="space-y-3">
-                            <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">{summary}</p>
-                            <dl className="space-y-2.5 text-[13px]">
-                                <Row label={en ? 'Distance from Earth' : 'Distância da Terra'}>
-                                    <span className="flex flex-col items-end gap-0.5">
-                                        <span>
-                                            <span className="font-semibold text-white">{compactKm(object.currentDistanceKm)}</span>
-                                            <span className="text-white/50"> · {ldText} · {auText}</span>
-                                        </span>
-                                        <span
-                                            className={`text-[10px] cursor-help ${object.hasRealCurrentDistance ? 'text-white/30' : 'text-yellow-400/50'}`}
-                                            title={object.hasRealCurrentDistance
-                                                ? (en ? 'Current position from JPL Horizons ephemeris — calculated for right now.' : 'Posição atual via efeméride JPL Horizons — calculada para agora.')
-                                                : (en ? 'Real-time position unavailable. This is the recorded miss distance at closest approach — not the current position.' : 'Posição em tempo real indisponível. Esta é a distância registrada na máxima aproximação, não a posição atual.')}
-                                        >
-                                            {object.hasRealCurrentDistance
-                                                ? (en ? 'live · Horizons' : 'ao vivo · Horizons')
-                                                : (en ? '⚠ approach distance' : '⚠ dist. da aproximação')}
-                                        </span>
+                        <div className="space-y-3.5">
+                            {isNearClosest ? (
+                                <div className="flex items-center justify-center gap-2 rounded-lg border border-signal-cyan/40 bg-signal-cyan/10 px-3 py-2">
+                                    <Target className="size-4 shrink-0 text-signal-cyan" aria-hidden="true" />
+                                    <div className="min-w-0">
+                                        <div className="text-[11.5px] font-semibold text-signal-cyan">
+                                            {object.trajectory?.motionState === 'near_closest'
+                                                ? (en ? 'Closest approach' : 'Máxima aproximação')
+                                                : (en ? 'Closest approach coming up' : 'Máxima aproximação em breve')}
+                                        </div>
+                                        <div className="text-[10px] text-signal-cyan/70">
+                                            {a.approachDate
+                                                ? approachRelative
+                                                    ? (en
+                                                        ? `Passes closest ${approachRelative} (${formatTimestamp(a.approachDate, locale)})`
+                                                        : `Ponto mais próximo ${approachRelative} (${formatTimestamp(a.approachDate, locale)})`)
+                                                    : (en
+                                                        ? `Passes closest on ${formatTimestamp(a.approachDate, locale)}`
+                                                        : `Ponto mais próximo em ${formatTimestamp(a.approachDate, locale)}`)
+                                                : (en ? 'The closest it will get on this pass.' : 'O ponto mais próximo desta passagem.')}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+                            {/* Distância da Terra: métrica principal do card, em bloco próprio.
+                               Rótulo e valor em linhas separadas — lado a lado não cabem na largura do card. */}
+                            <div>
+                                <div className="flex items-baseline justify-between gap-2">
+                                    <span className="text-[10.5px] font-normal uppercase tracking-wide text-white/50">
+                                        {en ? 'Distance from Earth' : 'Distância da Terra'}
                                     </span>
-                                </Row>
-                                {motion ? (
+                                    <span className={`flex items-center gap-1 text-[10px] ${object.hasRealCurrentDistance ? 'text-white/45' : 'text-yellow-400/75'}`}>
+                                        {!object.hasRealCurrentDistance ? <TriangleAlert className="size-2.5 shrink-0" aria-hidden="true" /> : null}
+                                        {object.hasRealCurrentDistance
+                                            ? (en ? 'live · Horizons' : 'ao vivo · Horizons')
+                                            : (en ? 'approach dist.' : 'dist. da aprox.')}
+                                    </span>
+                                </div>
+                                <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
+                                    {/* Valor aproximado: o dado muda ao vivo e precisão de 1 km seria falsa */}
+                                    <span className="text-lg font-semibold leading-tight text-white">{approxKm(object.currentDistanceKm)}</span>
+                                    <span className="text-[11px] text-white/50">· {auText}</span>
+                                </div>
+                            </div>
+                            <dl className="space-y-3 text-[13px]">
+                                {velocity != null ? (
+                                    <Row label={en ? 'Velocity' : 'Velocidade'}>
+                                        <span className="flex flex-col items-end gap-0.5">
+                                            <span className="whitespace-nowrap">{new Intl.NumberFormat(locale).format(Math.round(velocity))} km/h</span>
+                                            <span className="text-[10px] text-white/45">
+                                                {currentVelocity != null ? (en ? 'now' : 'agora') : (en ? 'at closest approach' : 'na máx. aprox.')}
+                                            </span>
+                                        </span>
+                                    </Row>
+                                ) : null}
+                                {trajectoryStatus ? (
+                                    <Row label={en ? 'Status' : 'Status'}>
+                                        <span className={`flex items-center gap-1 font-medium ${trajectoryStatus.className}`}>
+                                            {TrajectoryStatusIcon ? <TrajectoryStatusIcon className="size-3 shrink-0" aria-hidden="true" /> : null}
+                                            {trajectoryStatus.text}
+                                        </span>
+                                    </Row>
+                                ) : motion && !isNearClosest ? (
+                                    /* Com o banner de máxima aproximação visível, o status de movimento é redundante */
                                     <Row label={en ? 'Status' : 'Status'}>
                                         <span className={`font-medium ${motion.className}`}>{motion.text}</span>
                                     </Row>
                                 ) : null}
+                                <div>
+                                    <Row label={en ? 'Risk' : 'Risco'}>
+                                        <span className={`flex items-center justify-end gap-1 font-medium ${a.hazardFlag ? 'text-yellow-200/100' : 'text-emerald-300'}`}>
+                                            {!a.hazardFlag ? <Check className="size-3 shrink-0" aria-hidden="true" /> : null}
+                                            {risk.title}
+                                        </span>
+                                    </Row>
+                                    {a.hazardFlag ? (
+                                        <p className="mt-1 text-[10.5px] leading-relaxed text-white/40">
+                                            {risk.subtitle}
+                                        </p>
+                                    ) : null}
+                                </div>
                             </dl>
                             {(() => {
                                 const pt = object.trajectory?.currentPoint;
@@ -290,12 +320,12 @@ function AsteroidCard({
                                 const distKm = Math.hypot(pt.x, pt.y, typeof pt.z === 'number' ? pt.z : 0);
                                 if (distKm <= 750_000_000) return null;
                                 return (
-                                    <p className="text-[11px] leading-4 text-amber-400/50"
-                                        title={en
-                                            ? 'Object is beyond 750 million km from Earth. The scene does not render its position — it would appear in an implausible location due to Horizons vector precision limits at this range.'
-                                            : 'Objeto está além de 750 milhões de km da Terra. A cena não renderiza sua posição — apareceria em local implausível por limitações de precisão do Horizons a essa distância.'}>
-                                        {en ? '⚠ Position not shown. too far for reliable rendering' : '⚠ Posição não exibida. distância além do limite de renderização'}
-                                    </p>
+                                    <Tooltip side="right" wrap content={en ? 'Object is beyond 750 million km from Earth. Its position is not shown in the scene.' : 'Objeto está além de 750 milhões de km da Terra. A posição não é exibida na cena.'}>
+                                        <p className="flex items-start gap-1 text-[11px] leading-4 text-amber-400/70 cursor-help">
+                                            <TriangleAlert className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+                                            {en ? 'Position not shown, too far for reliable rendering' : 'Posição não exibida, distância além do limite de renderização'}
+                                        </p>
+                                    </Tooltip>
                                 );
                             })()}
                         </div>
@@ -315,7 +345,7 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                             ? Math.round((a.estimatedDiameterMinMeters + a.estimatedDiameterMaxMeters) / 2)
                             : null;
                         return (
-                        <dl className="space-y-2.5 text-[13px]">
+                        <dl className="space-y-3 text-[13px]">
                             <Row label={en ? 'Diameter' : 'Diâmetro'}>
                                 <span className="flex flex-col gap-0.5">
                                     <span>
@@ -327,16 +357,16 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                                                 ? `${hFallbackMin}–${hFallbackMax} m`
                                                 : '—'}
                                         {a.diameterMeters == null && (a.estimatedDiameterMinMeters != null || hFallbackMin != null)
-                                            ? <span className="text-white/40"> · {en ? 'est.' : 'est.'}</span>
+                                            ? <span className="text-white/50"> · {en ? 'est.' : 'est.'}</span>
                                             : null}
                                     </span>
                                     {a.diameterMeters == null && a.estimatedDiameterMinMeters != null ? (
-                                        <span className="text-[11px] text-white/35">
+                                        <span className="text-[11px] text-white/50">
                                             {en ? 'estimated range, uncertainty ×2–5' : 'intervalo estimado, incerteza ×2 a 5'}
                                         </span>
                                     ) : null}
                                     {hFallbackMin != null ? (
-                                        <span className="text-[11px] text-white/35">
+                                        <span className="text-[11px] text-white/50">
                                             {en ? 'estimated from H mag, no size on record' : 'estimado pela magnitude H, sem tamanho catalogado'}
                                         </span>
                                     ) : null}
@@ -358,18 +388,15 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                     })() : null}
 
                     {tab === 'approach' ? (
-                        <dl className="space-y-2.5 text-[13px]">
-                            {velocity != null ? (
-                                <Row label={en ? 'Velocity rel. to Earth' : 'Vel. relativa à Terra'}>
-                                    {new Intl.NumberFormat(locale).format(Math.round(velocity))} km/h
-                                    {a.relativeVelocityKph == null
-                                        ? <span className="text-white/40" title={en ? 'Derived from current JPL Horizons position vectors — this is the instantaneous speed relative to Earth, not the speed at closest approach.' : 'Derivado dos vetores de posição JPL Horizons atuais — é a velocidade instantânea relativa à Terra, não a velocidade no momento da máxima aproximação.'}> · {en ? 'from vectors' : 'dos vetores'}</span>
-                                        : <span className="text-white/40" title={en ? 'Relative velocity at closest approach, from the JPL Close Approach Database.' : 'Velocidade relativa na máxima aproximação, da base JPL Close Approach.'}> · {en ? 'at closest approach' : 'na máx. aprox.'}</span>}
-                                </Row>
-                            ) : null}
+                        <dl className="space-y-3 text-[13px]">
                             {a.approachDate ? (
                                 <Row label={en ? 'Closest approach' : 'Máxima aproximação'}>
-                                    {formatTimestamp(a.approachDate, locale)}
+                                    <span className="flex flex-col items-end gap-0.5">
+                                        <span>{formatTimestamp(a.approachDate, locale)}</span>
+                                        {approachRelative ? (
+                                            <span className="text-[11px] font-normal text-white/50">{approachRelative}</span>
+                                        ) : null}
+                                    </span>
                                 </Row>
                             ) : null}
                             <Row label={en ? 'Min. distance' : 'Distância mínima'}>
@@ -386,13 +413,13 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                                         <span className="flex flex-col gap-0.5">
                                             <span className={stale ? 'text-yellow-400/70' : 'text-white/50'}>
                                                 {epochDate.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                                {stale ? <span className="ml-1">⚠</span> : null}
+                                                {stale ? <TriangleAlert className="ml-1 inline size-3" aria-hidden="true" /> : null}
                                             </span>
                                             {stale ? (
-                                                <span className="text-[11px] text-yellow-400/55">
+                                                <span className="text-[11px] text-yellow-400/70">
                                                     {en
-                                                        ? 'old data. position in the radar may be imprecise'
-                                                        : 'dado antigo. posição no radar pode ser imprecisa'}
+                                                        ? 'old data, position in the radar may be imprecise'
+                                                        : 'dado antigo, posição no radar pode ser imprecisa'}
                                                 </span>
                                             ) : null}
                                         </span>
@@ -402,7 +429,7 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                             <Row label={en ? 'Data source' : 'Fonte dos dados'}>
                                 <span className="flex flex-col gap-0.5">
                                     <span className="text-white/50">{a.sourceLabel}</span>
-                                    <span className="text-[11px] text-white/35">
+                                    <span className="text-[11px] text-white/50">
                                         {a.source === 'cad'
                                             ? (en ? 'orbitally integrated, high precision' : 'órbita integrada, alta precisão')
                                             : (en ? 'broader coverage, lower precision' : 'cobertura ampla, menor precisão')}
@@ -414,8 +441,8 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                 </div>
             </div>
 
-            {/* Ações — footer unificado */}
-            <div className="shrink-0 border-t border-white/12 px-3 py-2 lg:px-5 lg:py-4">
+            {/* Ações — footer unificado. Separador neutro: só a moldura externa leva ciano */}
+            <div className="shrink-0 border-t border-white/10 px-3 py-2 lg:px-4 lg:py-3">
                 <div className="space-y-1.5 lg:space-y-2">
                     {hasOrbit ? (
                         <OrbitToggleButton
@@ -432,16 +459,18 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                             <button
                                 type="button"
                                 onClick={() => onOpenFocus(a)}
-                                className="hidden lg:inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-2.5 text-[12px] font-medium text-white/75 transition outline-none hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                                className="hidden lg:inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-2.5 text-[12px] font-medium text-white/60 transition outline-none hover:bg-white/5 hover:text-white/90 focus-visible:ring-2 focus-visible:ring-signal-cyan"
                             >
-                                {en ? 'Open full dossier →' : 'Abrir dossiê completo →'}
+                                {en ? 'Open full dossier' : 'Abrir dossiê completo'}
+                                <ArrowRight className="size-3.5" aria-hidden="true" />
                             </button>
                             <button
                                 type="button"
                                 onClick={() => onOpenFocus(a)}
-                                className="lg:hidden flex w-full items-center justify-center gap-1 py-1 text-[11.5px] text-white/40 transition outline-none hover:text-white/70 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                                className="lg:hidden flex w-full items-center justify-center gap-1 py-1 text-[11.5px] text-white/55 transition outline-none hover:text-white/85 focus-visible:ring-2 focus-visible:ring-signal-cyan"
                             >
-                                {en ? 'Full dossier →' : 'Dossiê completo →'}
+                                {en ? 'Full dossier' : 'Dossiê completo'}
+                                <ArrowRight className="size-3" aria-hidden="true" />
                             </button>
                         </>
                     ) : null}
@@ -485,8 +514,8 @@ function BodyCard({
             eyebrow={en ? cfg.subtitleEn : cfg.subtitlePt}
             title={en ? cfg.nameEn : cfg.namePt}
             dotColor={cfg.dotColor}
-            borderClass="border-signal-cyan/30"
-            className="flex max-h-[50dvh] lg:h-[30rem] lg:max-h-none w-full lg:w-[min(25rem,48%)] flex-col lg:top-[30%]"
+            borderClass="border-white/20"
+            className="flex max-h-[50dvh] lg:h-[30rem] lg:max-h-none w-full lg:w-[min(22rem,48%)] flex-col lg:top-[30%]"
             style={enterStyle}
             mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
@@ -494,26 +523,29 @@ function BodyCard({
             <BodyImagePreview body={body} />
 
             {/* Abas — visíveis em mobile e desktop */}
-            <div className="flex gap-0 border-b border-white/10 px-3 lg:mt-1 lg:px-5">
-                {tabs.map((t) => (
-                    <FocusTabButton key={t} active={tab === t} onClick={() => setTab(t)}>
-                        {tabLabels[t]}
-                    </FocusTabButton>
-                ))}
-            </div>
+            <FocusTabBar
+                tabs={tabs}
+                tab={tab}
+                setTab={setTab}
+                labels={tabLabels}
+                ariaLabel={en ? 'Focus card sections' : 'Seções do painel de foco'}
+            />
 
             <div
-                className="min-h-0 flex-1 overflow-y-auto px-3 py-2 lg:px-5 lg:py-4"
+                role="tabpanel"
+                id="focus-tabpanel"
+                aria-labelledby={`focus-tab-${tab}`}
+                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 lg:px-4 lg:py-3"
                 style={{ transition: 'opacity 0.12s ease', opacity: contentVisible ? 1 : 0 }}
             >
-                {/* min-h estabiliza o card ao trocar abas; menor no mobile para não forçar altura */}
-                <div className="min-h-[5rem] lg:min-h-[11rem]">
+                {/* min-h estabiliza o card ao trocar abas sem cortar a aba mais alta (Resumo) */}
+                <div className="min-h-[13rem]">
                     {tab === 'summary' ? (
-                        <div className="space-y-3">
+                        <div className="space-y-3.5">
                             <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">
                                 {en ? cfg.contextEn : cfg.contextPt}
                             </p>
-                            <dl className="space-y-2.5 text-[13px]">
+                            <dl className="space-y-3 text-[13px]">
                                 {cfg.facts.slice(0, 2).map((fact) => (
                                     <Row key={fact.labelEn} label={en ? fact.labelEn : fact.labelPt}>
                                         <span className="font-semibold text-white">{localizedFact(fact.value)}</span>
@@ -524,7 +556,7 @@ function BodyCard({
                     ) : null}
 
                     {tab === 'physical' ? (
-                        <dl className="space-y-2.5 text-[13px]">
+                        <dl className="space-y-3 text-[13px]">
                             {physicalFacts.map((fact) => (
                                 <Row key={fact.labelEn} label={en ? fact.labelEn : fact.labelPt}>
                                     <span className="font-semibold text-white">{localizedFact(fact.value)}</span>
@@ -564,7 +596,7 @@ function OrbitToggleButton({ orbitMode, canShowOrbitPosition, onShowOrbit, onSho
     const disabled = !orbitMode && !canShowOrbitPosition;
     const baseClass = 'inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-semibold tracking-tight transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan lg:py-2.5';
     const stateClass = disabled
-        ? 'cursor-not-allowed border border-white/8 bg-white/4 text-white/30'
+        ? 'cursor-not-allowed border border-white/8 bg-white/4 text-white/40'
         : orbitMode
             ? 'border border-white/12 bg-white/5 text-white/75 hover:bg-white/8 hover:text-white/90'
             : 'border border-signal-cyan/35 bg-signal-cyan/8 text-signal-cyan shadow-[0_0_20px_rgba(34,211,238,0.14)] hover:border-signal-cyan/50 hover:bg-signal-cyan/12 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)]';
@@ -574,32 +606,97 @@ function OrbitToggleButton({ orbitMode, canShowOrbitPosition, onShowOrbit, onSho
                 type="button"
                 onClick={orbitMode ? onShowCloseUp : onShowOrbit}
                 disabled={disabled}
+                data-tutorial="orbit-button"
                 className={`${baseClass} ${stateClass}`}
             >
-                {orbitMode
-                    ? (en ? '↩ Back to the asteroid' : '↩ Voltar ao asteroide')
-                    : (en ? '🛰 See its orbit around the Sun' : '🛰 Ver a órbita ao redor do Sol')}
+                {orbitMode ? (
+                    <>
+                        <Undo2 className="size-3.5 shrink-0" aria-hidden="true" />
+                        {en ? 'Back to the asteroid' : 'Voltar ao asteroide'}
+                    </>
+                ) : (
+                    <>
+                        <Orbit className="size-3.5 shrink-0" aria-hidden="true" />
+                        {en ? 'See its orbit around the Sun' : 'Ver a órbita ao redor do Sol'}
+                    </>
+                )}
             </button>
             {disabled ? (
-                <p className="text-center text-[10px] text-white/30">
-                    {en ? 'Orbit unavailable — perihelion epoch missing' : 'Órbita indisponível — época de periélio ausente'}
+                <p className="text-center text-[10px] text-white/45">
+                    {en ? 'Orbit unavailable, perihelion epoch missing' : 'Órbita indisponível, época de periélio ausente'}
                 </p>
             ) : null}
         </div>
     );
 }
 
-function FocusTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+/**
+ * Barra de abas com semântica ARIA de tablist: setas alternam e ativam as abas,
+ * Home/End saltam para as pontas, e só a aba ativa participa do tab order
+ * (roving tabindex). O painel de conteúdo correspondente usa id `focus-tabpanel`.
+ */
+function FocusTabBar({ tabs, tab, setTab, labels, ariaLabel }: {
+    tabs: Tab[];
+    tab: Tab;
+    setTab: (t: Tab) => void;
+    labels: Record<Tab, string>;
+    ariaLabel: string;
+}) {
+    const buttonRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+
+    const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        const idx = tabs.indexOf(tab);
+        let next: Tab | undefined;
+        if (e.key === 'ArrowRight') next = tabs[(idx + 1) % tabs.length];
+        else if (e.key === 'ArrowLeft') next = tabs[(idx - 1 + tabs.length) % tabs.length];
+        else if (e.key === 'Home') next = tabs[0];
+        else if (e.key === 'End') next = tabs[tabs.length - 1];
+        if (!next) return;
+        e.preventDefault();
+        setTab(next);
+        buttonRefs.current[next]?.focus();
+    };
+
+    return (
+        <div role="tablist" aria-label={ariaLabel} onKeyDown={onKeyDown} data-tutorial="card-tabs" className="flex gap-0 border-b border-white/10 px-3 lg:mt-1 lg:px-4">
+            {tabs.map((t) => (
+                <FocusTabButton
+                    key={t}
+                    id={`focus-tab-${t}`}
+                    active={tab === t}
+                    onClick={() => setTab(t)}
+                    buttonRef={(el) => { buttonRefs.current[t] = el; }}
+                >
+                    {labels[t]}
+                </FocusTabButton>
+            ))}
+        </div>
+    );
+}
+
+function FocusTabButton({ id, active, onClick, buttonRef, children }: {
+    id: string;
+    active: boolean;
+    onClick: () => void;
+    buttonRef: Ref<HTMLButtonElement>;
+    children: ReactNode;
+}) {
     return (
         <button
+            ref={buttonRef}
+            id={id}
             type="button"
+            role="tab"
+            aria-selected={active}
+            aria-controls="focus-tabpanel"
+            tabIndex={active ? 0 : -1}
             onClick={onClick}
             /* py-2 no mobile garante área de toque adequada com altura mais compacta */
             className={[
-                '-mb-px border-b-2 px-3 py-2 text-[11.5px] font-medium tracking-wide transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan lg:px-3.5 lg:py-2.5 lg:text-[12.5px]',
+                '-mb-px flex-1 rounded-t-md border-b-2 px-2.5 py-2 text-center text-[11px] font-medium tracking-wide transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan lg:px-3 lg:py-2 lg:text-[12px]',
                 active
                     ? 'border-signal-cyan text-white drop-shadow-[0_1px_12px_rgba(34,211,238,0.55)]'
-                    : 'border-transparent text-white/28 hover:text-white/60',
+                    : 'border-transparent text-white/55 hover:bg-white/[0.04] hover:text-white/80',
             ].join(' ')}
         >
             {children}
@@ -609,9 +706,9 @@ function FocusTabButton({ active, onClick, children }: { active: boolean; onClic
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
     return (
-        <div className="flex items-baseline justify-between gap-4">
-            <dt className="shrink-0 text-[11px] uppercase tracking-wide text-white/40">{label}</dt>
-            <dd className="text-right text-[13px] font-semibold text-white">{children}</dd>
+        <div className="flex items-baseline justify-between gap-2">
+            <dt className="shrink-0 text-[10.5px] font-normal uppercase tracking-wide text-white/50">{label}</dt>
+            <dd className="text-right text-[12px] font-semibold text-white">{children}</dd>
         </div>
     );
 }

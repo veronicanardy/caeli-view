@@ -194,6 +194,10 @@ export function DailyOrbitalRadar3D({
             )}
             <div
                 ref={canvasContainerRef}
+                data-tutorial="radar-canvas"
+                /* Sinaliza o modo tela cheia para o tutorial: com ele ativo, ESC sai
+                   do fullscreen (handler acima) e não deve encerrar o tutorial junto. */
+                data-fullscreen={fullscreen ? 'true' : undefined}
                 /* Gradiente radial: ponto focal levemente acima do centro cria profundidade
                    atmosférica sem competir com os objetos científicos da cena. */
                 className={fullscreen

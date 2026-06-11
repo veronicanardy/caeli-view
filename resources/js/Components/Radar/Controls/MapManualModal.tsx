@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { BookOpen, Calculator, GripHorizontal, X } from 'lucide-react';
+import { BookOpen, Calculator, GripHorizontal, RotateCcw, X } from 'lucide-react';
+import { findVisibleTarget } from '../Tutorial/radarTutorialDom';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 import { FriendlyManual } from './Manual/FriendlyManual';
 import { TechnicalManual } from './Manual/TechnicalManual';
 import type { SceneMode } from './Manual/manualTypes';
@@ -44,6 +46,23 @@ export function MapManualModal({
 }) {
     const en = locale === 'en';
     const [tab, setTab] = useState<ManualTab>('guide');
+    // Tutorial interativo: presente apenas nas páginas com RadarTutorialProvider.
+    const tutorial = useRadarTutorialOptional();
+
+    // Quando o tutorial que foi iniciado a partir do guia termina, fecha o guia.
+    // wasActivePrev rastreia a transição false→true (início) vs true→false (fim).
+    const wasActivePrev = useRef(tutorial?.active ?? false);
+    const startedFromHere = useRef(false);
+    useEffect(() => {
+        if (!tutorial) return;
+        const prev = wasActivePrev.current;
+        wasActivePrev.current = tutorial.active;
+        if (!prev && tutorial.active) { startedFromHere.current = true; return; }
+        if (prev && !tutorial.active && startedFromHere.current) {
+            startedFromHere.current = false;
+            onClose();
+        }
+    }, [tutorial?.active, onClose]);
 
     const [box, setBox] = useState(() => {
         const vw = typeof window === 'undefined' ? 1280 : window.innerWidth;
@@ -157,11 +176,32 @@ export function MapManualModal({
                         </ManualTabButton>
                     </div>
 
+                    {tutorial ? (
+                        <button
+                            type="button"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={() => {
+                                // Sai do fullscreen se estiver ativo
+                                const canvas = document.querySelector('[data-tutorial="radar-canvas"][data-fullscreen="true"]');
+                                if (canvas) findVisibleTarget(['[data-tutorial="toggle-fullscreen"]'], true)?.click();
+                                // Reseta a câmera para a origem
+                                findVisibleTarget(['[data-tutorial="reset-view"]'], true)?.click();
+                                onClose();
+                                tutorial.start();
+                            }}
+                            aria-label={en ? 'Replay interactive tutorial' : 'Rever tutorial interativo'}
+                            className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-[12px] font-semibold text-white/55 transition outline-none hover:border-signal-cyan/40 hover:text-signal-cyan focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                        >
+                            <RotateCcw className="size-3.5" aria-hidden />
+                            <span className="hidden sm:inline">{en ? 'Replay tutorial' : 'Rever tutorial'}</span>
+                        </button>
+                    ) : null}
+
                     <button
                         type="button"
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={onClose}
-                        className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded-full text-white/35 transition hover:bg-white/[0.08] hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                        className={`${tutorial ? '' : 'ml-auto '}inline-flex size-7 shrink-0 items-center justify-center rounded-full text-white/35 transition hover:bg-white/[0.08] hover:text-white focus-visible:ring-2 focus-visible:ring-signal-cyan`}
                         aria-label={en ? 'Close guide' : 'Fechar guia'}
                     >
                         <X className="size-3.5" aria-hidden />

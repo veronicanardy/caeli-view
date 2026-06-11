@@ -32,8 +32,8 @@ Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógi
 
 ### Shell E Ajuda
 
-- `MapManualModal.tsx`: shell do modal do manual, com arraste, resize, abas e fechamento.
-- `WelcomeToast.tsx`: toast de primeira visita para radar e órbita.
+- `MapManualModal.tsx`: shell do modal do manual, com arraste, resize, abas e fechamento. Quando a página tem o tutorial interativo (`Tutorial/RadarTutorialProvider`), o header exibe o botão "Rever tutorial", que fecha o guia e reinicia o tutorial.
+- `WelcomeToast.tsx`: toast de primeira visita para radar e órbita. Fica suprimido enquanto o tutorial interativo está ativo ou prestes a abrir; ao concluir/pular, o tutorial marca as chaves legadas para os toasts não reaparecerem de forma redundante.
 
 ### Manual
 
@@ -58,15 +58,15 @@ Qualquer mudança de linguagem nesses manuais deve preservar esses quatro avisos
 
 ### Controles Principais Da Cena
 
-- `SceneToolbar.tsx`: toolbar com Reset de vista, toggle de labels e fullscreen. Usa `Tooltip` para os três botões.
-- `ReferenceControls.tsx`: atalhos de foco para Sol, Terra, Lua e planetas, exibidos com símbolos astronômicos Unicode (☉ ♁ ☽ ✦).
+- `SceneToolbar.tsx`: toolbar com Reset de vista, toggle de labels e fullscreen. Usa `Tooltip` para os três botões. Carrega os marcadores `data-tutorial` `camera-controls`, `toggle-labels`, `toggle-fullscreen` e `reset-view` usados pelo tutorial interativo (contrato em `../Tutorial/README.md`).
+- `ReferenceControls.tsx`: atalhos de foco para Sol, Terra, Lua e planetas, exibidos com símbolos astronômicos Unicode (☉ ♁ ☽ ✦). O cluster de botões carrega `data-tutorial="reference-controls"` para o passo de referências do tutorial.
 - `Tooltip.tsx`: tooltip customizado do observatório — aparece imediatamente no hover e some após 2 s. Suporta `side` (bottom/top), `align` (center/left/right) e `hideDelay`.
 
 ### Filtros E Formulários
 
 - `ObservationControls.tsx`: formulário principal de data, tipo e busca.
-- `CompactConsoleBar.tsx`: versão condensada dos controles para espaços menores.
-- `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D.
+- `CompactConsoleBar.tsx`: versão condensada dos controles para espaços menores. Marcada com `data-tutorial="radar-filters"`.
+- `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D. Os grupos carregam `data-tutorial="radar-filter-criterion"` e `data-tutorial="radar-filter-limit"`; como o componente renderiza duas vezes (desktop e mobile), o tutorial resolve o alvo filtrando por visibilidade real.
 
 ## Remoção do radar 2D
 

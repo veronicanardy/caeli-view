@@ -7,35 +7,43 @@
 
 import type { AsteroidTrajectory, ClosestNowObject, HorizonsFailureKind, SmallBodyObjectType, UnifiedApproach } from '@/types';
 
+/**
+ * Nomes semânticos de ícones retornados pelos helpers. O componente que renderiza
+ * (UnifiedFocusCard) mapeia cada nome para um ícone lucide; emojis renderizam de
+ * forma inconsistente entre sistemas e são lidos em voz alta por leitores de tela.
+ */
+export type RiskIcon = 'alert' | 'check';
+export type StatusBadgeIcon = 'zap' | 'clock' | 'minus' | 'circle';
+
 export function objectTypeEyebrow(
     objectType: SmallBodyObjectType,
     en: boolean,
 ): { label: string; dotColor: string } {
     if (objectType === 'comet') {
         return {
-            label: en ? 'Comet · Near-Earth Object' : 'Cometa · Objeto Próximo da Terra',
+            label: en ? 'Comet · NEO' : 'Cometa · NEO',
             dotColor: '#f8c76b',
         };
     }
     return {
-        label: en ? 'Asteroid · Near-Earth Object' : 'Asteroide · Objeto Próximo da Terra',
+        label: en ? 'Asteroid · NEO' : 'Asteroide · NEO',
         dotColor: '#54d6d6',
     };
 }
 
-export function riskAssessment(a: UnifiedApproach, en: boolean): { icon: string; title: string; subtitle: string; className: string } {
+export function riskAssessment(a: UnifiedApproach, en: boolean): { icon: RiskIcon; title: string; subtitle: string; className: string } {
     if (a.hazardFlag) {
         return {
-            icon: '⚠️',
+            icon: 'alert',
             title: en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL',
-            subtitle: en ? 'Classified “potentially hazardous”, closely monitored, not on impact course.' : 'Classificado “potencialmente perigoso”, monitorado de perto, sem rota de impacto.',
+            subtitle: en ? 'Classified “potentially hazardous”, closely monitored, not on impact course.' : 'Classificado “potencialmente perigoso”, monitorado de perto, sem rota de impacto conhecida.',
             className: 'border-amber-400/40 bg-amber-500/10 text-amber-100',
         };
     }
     return {
-        icon: '✓',
+        icon: 'check',
         title: en ? 'No impact risk' : 'Sem risco de impacto',
-        subtitle: en ? 'A routine close pass — not flagged as hazardous.' : 'Passagem próxima rotineira — não sinalizado como perigoso.',
+        subtitle: en ? 'A routine close pass, not flagged as hazardous.' : 'Passagem próxima rotineira, não sinalizada como perigosa.',
         className: 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100',
     };
 }
@@ -81,7 +89,7 @@ export function sizeComparison(meters: number | null, en: boolean): string {
 export function trajectoryStatusBadge(
     trajectory: AsteroidTrajectory | null | undefined,
     en: boolean,
-): { icon: string; text: string; className: string } | null {
+): { icon: StatusBadgeIcon; text: string; className: string } | null {
     if (trajectory?.status === 'available') {
         return null;
     }
@@ -90,27 +98,27 @@ export function trajectoryStatusBadge(
 
     if (kind === 'horizons_transient') {
         return {
-            icon: '⚡',
+            icon: 'zap',
             text: en
-                ? 'Horizons temporarily unavailable — symbolic distance only.'
-                : 'Horizons temporariamente indisponível — apenas distância simbólica.',
+                ? 'Horizons temporarily unavailable, symbolic distance only.'
+                : 'Horizons temporariamente indisponível, apenas distância simbólica.',
             className: 'border-amber-400/30 bg-amber-500/10 text-amber-200/80',
         };
     }
 
     if (kind === 'no_ephemeris') {
         return {
-            icon: '🕐',
+            icon: 'clock',
             text: en
-                ? 'Recently discovered — ephemeris not yet in Horizons. Distance from catalog.'
-                : 'Descoberto recentemente — efeméride ainda não disponível no Horizons. Distância do catálogo.',
+                ? 'Recently discovered. Ephemeris not yet in Horizons, distance from catalog.'
+                : 'Descoberto recentemente. Efeméride ainda não disponível no Horizons, distância do catálogo.',
             className: 'border-sky-400/30 bg-sky-500/10 text-sky-200/80',
         };
     }
 
     if (kind === 'no_orbital_data') {
         return {
-            icon: '—',
+            icon: 'minus',
             text: en
                 ? 'No Horizons identifier available for this object.'
                 : 'Sem identificador Horizons disponível para este objeto.',
@@ -123,8 +131,8 @@ export function trajectoryStatusBadge(
     }
 
     return {
-        icon: '○',
-        text: en ? 'Symbolic placement — approach distance only.' : 'Posição simbólica — apenas distância da aproximação.',
+        icon: 'circle',
+        text: en ? 'Symbolic placement, approach distance only.' : 'Posição simbólica, apenas distância da aproximação.',
         className: 'border-white/15 bg-white/5 text-white/50',
     };
 }
@@ -135,9 +143,9 @@ export function motionLabel(
 ): { text: string; className: string } | null {
     switch (state) {
         case 'approaching':
-            return { text: en ? 'Approaching' : 'Aproximando', className: 'text-amber-200' };
+            return { text: en ? 'Approaching' : 'Aproximando', className: 'text-white/80' };
         case 'receding':
-            return { text: en ? 'Receding' : 'Afastando', className: 'text-emerald-200' };
+            return { text: en ? 'Receding' : 'Afastando', className: 'text-white/80' };
         case 'near_closest':
             return { text: en ? 'Near closest approach' : 'Perto da máxima aproximação', className: 'text-sky-200' };
         default:

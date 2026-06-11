@@ -41,6 +41,32 @@ export function compactKm(value: number | null | undefined): string {
     return `${formatNumber(value, 0)} km`;
 }
 
+/**
+ * Versão aproximada de `compactKm` para leituras que mudam ao vivo: arredonda para
+ * 3 algarismos significativos em notação por extenso ("1,09 milhão de km",
+ * "465 mil km"), evitando a falsa precisão de 1 km de um valor dinâmico.
+ * Abaixo de 10 000 km mantém o valor exato, nessa escala cada km importa.
+ */
+export function approxKm(value: number | null | undefined): string {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+        return currentLocale() === 'en' ? 'Unavailable' : 'Indisponível';
+    }
+
+    if (value < 10_000) {
+        return compactKm(value);
+    }
+
+    const formatted = new Intl.NumberFormat(currentLocale(), {
+        notation: 'compact',
+        compactDisplay: 'long',
+        maximumSignificantDigits: 3,
+    }).format(value);
+
+    // Em pt-BR, "milhão/bilhão" pede a preposição: "1,09 milhão de km".
+    const needsDe = currentLocale() === 'pt-BR' && /lh(ão|ões)/.test(formatted);
+    return `${formatted}${needsDe ? ' de' : ''} km`;
+}
+
 export function lunarDistanceLabel(value: number | null | undefined): string {
     if (value === null || value === undefined) {
         return currentLocale() === 'en' ? 'No lunar distance' : 'Sem distância lunar';

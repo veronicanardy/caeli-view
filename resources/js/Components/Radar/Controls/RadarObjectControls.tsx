@@ -9,6 +9,7 @@
 import type { CSSProperties } from 'react';
 import { OBJECT_LIMITS } from '@/types';
 import type { ObjectLimit, SelectionMode } from '@/types';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 import { Tooltip } from './Tooltip';
 
 type Props = {
@@ -46,6 +47,8 @@ export function RadarObjectControls({
     criterionLocked = false,
 }: Props) {
     const en = locale === 'en';
+    const tutorial = useRadarTutorialOptional();
+    const tutorialActive = tutorial?.active ?? false;
     const modeDescriptions: Record<SelectionMode, string> = {
         nearest: en
             ? 'Shows asteroids and comets that are closest to Earth right now — like a live distance ranking.'
@@ -80,6 +83,7 @@ export function RadarObjectControls({
                 style={{ height: 'var(--ctrl-h)', gap: 'var(--ctrl-gap)', paddingInline: 'var(--ctrl-px-group)' }}
                 role="group"
                 aria-label={en ? 'Selection criterion' : 'Critério de seleção'}
+                data-tutorial="radar-filter-criterion"
             >
                 <span
                     className="font-medium uppercase tracking-wide text-signal-cyan/70 whitespace-nowrap"
@@ -87,12 +91,8 @@ export function RadarObjectControls({
                 >
                     {en ? 'Criterion' : 'Critério'}
                 </span>
-                {MODE_OPTIONS.map((option) => (
-                    <Tooltip
-                        key={option.value}
-                        content={<span className="block w-52 leading-relaxed">{modeDescriptions[option.value]}</span>}
-                        wrap
-                    >
+                {MODE_OPTIONS.map((option) => {
+                    const btn = (
                         <button
                             type="button"
                             disabled={loading || criterionLocked}
@@ -114,13 +114,25 @@ export function RadarObjectControls({
                         >
                             {en ? option.labelEn : option.labelPt}
                         </button>
-                    </Tooltip>
-                ))}
+                    );
+                    if (tutorialActive) return <span key={option.value}>{btn}</span>;
+                    return (
+                        <Tooltip
+                            key={option.value}
+                            content={<span className="block w-52 leading-relaxed">{modeDescriptions[option.value]}</span>}
+                            wrap
+                            hideDelay={150}
+                        >
+                            {btn}
+                        </Tooltip>
+                    );
+                })}
             </div>
 
             <div
                 className="flex min-w-0 flex-wrap items-center rounded-xl border border-white/10 bg-space-950/70 md:flex-nowrap"
                 style={{ height: 'var(--ctrl-h)', gap: 'var(--ctrl-gap)', paddingInline: 'var(--ctrl-px-group)' }}
+                data-tutorial="radar-filter-limit"
             >
                 <span
                     className="font-medium uppercase tracking-wide text-signal-cyan/70 whitespace-nowrap"

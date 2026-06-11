@@ -4,10 +4,15 @@
  * Responsabilidade: exibir uma dica de primeiro acesso para o modo radar ou
  * orbital, persistindo a visita em localStorage para não repetir. Aparece uma
  * única vez por modo e não interfere com a cena ou com dados de aproximação.
+ *
+ * Quando o tutorial interativo está ativo (ou prestes a abrir sozinho), os
+ * toasts ficam suprimidos: o tutorial é a experiência de primeira visita e
+ * marca as chaves legadas ao terminar.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BookOpen, X } from 'lucide-react';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 
 const STORAGE_KEY_RADAR = 'caeli_radar_visited';
 const STORAGE_KEY_ORBIT = 'caeli_orbit_visited';
@@ -43,6 +48,19 @@ function useFirstVisit(key: string): [boolean, () => void] {
 }
 
 /**
+ * Suprime o toast enquanto o tutorial interativo roda (ou vai abrir sozinho) e
+ * também depois que ele rodou nesta sessão: o estado `isFirst` foi lido do
+ * localStorage antes de o tutorial gravar o desfecho, então sem esta trava o
+ * toast apareceria logo após a conclusão.
+ */
+function useTutorialSuppression(): boolean {
+    const tutorial = useRadarTutorialOptional();
+    const ranThisSession = useRef(false);
+    if (tutorial?.active) ranThisSession.current = true;
+    return Boolean(tutorial && (tutorial.active || tutorial.pendingAutoStart)) || ranThisSession.current;
+}
+
+/**
  * Boas-vindas contextual da vista radar.
  */
 export function RadarWelcomeToast({
@@ -53,9 +71,10 @@ export function RadarWelcomeToast({
     onOpenManual: () => void;
 }) {
     const [visible, dismiss] = useFirstVisit(STORAGE_KEY_RADAR);
+    const suppressed = useTutorialSuppression();
     return (
         <WelcomeToast
-            visible={visible}
+            visible={visible && !suppressed}
             variant="radar"
             locale={locale}
             onOpenManual={() => { dismiss(); onOpenManual(); }}
@@ -75,9 +94,10 @@ export function OrbitWelcomeToast({
     onOpenManual: () => void;
 }) {
     const [visible, dismiss] = useFirstVisit(STORAGE_KEY_ORBIT);
+    const suppressed = useTutorialSuppression();
     return (
         <WelcomeToast
-            visible={visible}
+            visible={visible && !suppressed}
             variant="orbit"
             locale={locale}
             onOpenManual={() => { dismiss(); onOpenManual(); }}

@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/Components/AppLayout';
 import { CompactConsoleBar } from '@/Components/Radar/Controls/CompactConsoleBar';
 import { RadarDataQualityCard } from '@/Components/Radar/Panels/RadarDataQualityCard';
+import { RadarTutorialProvider } from '@/Components/Radar/Tutorial/RadarTutorialProvider';
 import { ErrorMessage } from '@/Components/ErrorMessage';
 import { buildRadarObjects, trajectoryToPositionResult } from '@/lib/radarData';
 import { useTranslation } from '@/i18n';
@@ -155,6 +156,16 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
         <AppLayout hideHeader={radarFullscreen}>
             <Head title={t('observatory.title')} />
 
+            {/* Tutorial interativo de primeira visita: observa critério, limite e
+                seleção por props; o restante das interações é detectado via DOM. */}
+            <RadarTutorialProvider
+                locale={locale}
+                selectionMode={selectionMode}
+                objectLimit={objectLimit}
+                selectedId={focusApproach?.id ?? null}
+                radarReady={Boolean(closestNowData && lunarReference && !closestNowLoading)}
+                radarLoading={closestNowLoading}
+            >
             <section className="mx-auto max-w-[1800px] space-y-3 px-3 py-2 sm:px-6 sm:py-4 sm:space-y-4 lg:px-8">
                 <ErrorMessage message={closestNowError} />
 
@@ -207,6 +218,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
                     </>
                 )}
             </section>
+            </RadarTutorialProvider>
         </AppLayout>
     );
 }

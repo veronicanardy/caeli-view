@@ -35,8 +35,8 @@ export const BODIES: Record<BodyId, BodyConfig> = {
     sun: {
         namePt: 'Sol',
         nameEn: 'Sun',
-        subtitlePt: 'Estrela · Centro do Sistema Solar',
-        subtitleEn: 'Star · Center of the Solar System',
+        subtitlePt: 'Estrela',
+        subtitleEn: 'Star',
         contextPt: 'A estrela que ancora todo o sistema. Sua luz define o lado diurno dos corpos e sua gravidade mantém planetas, asteroides e cometas em movimento ao seu redor.',
         contextEn: 'The star that anchors the whole system. Its light defines the daylight side of bodies, and its gravity keeps planets, asteroids, and comets moving around it.',
         dotColor: '#f5c842',
@@ -72,8 +72,8 @@ export const BODIES: Record<BodyId, BodyConfig> = {
     moon: {
         namePt: 'Lua',
         nameEn: 'Moon',
-        subtitlePt: 'Satélite natural · Régua de escala',
-        subtitleEn: 'Natural satellite · Scale marker',
+        subtitlePt: 'Satélite natural',
+        subtitleEn: 'Natural satellite',
         contextPt: 'A régua mais intuitiva do espaço próximo. Quando um objeto aparece a 1 DL, ele está aproximadamente à distância média entre a Terra e a Lua.',
         contextEn: 'The most intuitive ruler for nearby space. When an object appears at 1 LD, it is roughly at the average distance between Earth and the Moon.',
         dotColor: '#c2c4c8',

@@ -38,7 +38,7 @@ export function BodyImagePreview({ body }: { body: BodyId }) {
     return (
         <div className="mx-3 mt-1.5 lg:mx-4 lg:mt-2.5">
             <div
-                className="relative h-14 overflow-hidden rounded-xl border border-white/6 lg:h-32"
+                className="relative h-14 overflow-hidden rounded-xl border border-white/6 lg:h-28"
                 style={{ background: '#000' }}
             >
                 <img

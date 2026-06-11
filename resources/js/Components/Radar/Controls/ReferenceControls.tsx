@@ -36,12 +36,12 @@ export function ReferenceSection({
                     {en ? 'References' : 'Referências'}
                 </div>
             ) : null}
-            <div className="flex items-center gap-px rounded-lg border border-white/[0.07] bg-white/[0.02] p-0.5">
-                <AstroButton symbol="☉" label={en ? 'Sun' : 'Sol'}   onClick={onFocusSun} />
+            <div className="flex items-center gap-px rounded-lg border border-white/[0.07] bg-white/[0.02] p-0.5" data-tutorial="reference-controls">
+                <AstroButton symbol="☉" label={en ? 'Sun' : 'Sol'}   onClick={onFocusSun} dataTutorial="reference-body" />
                 <Divider />
-                <AstroButton symbol="♁" label={en ? 'Earth' : 'Terra'} onClick={onFocusEarth} />
+                <AstroButton symbol="♁" label={en ? 'Earth' : 'Terra'} onClick={onFocusEarth} dataTutorial="reference-body" />
                 <Divider />
-                <AstroButton symbol="☽" label={en ? 'Moon' : 'Lua'}  onClick={onFocusMoon} />
+                <AstroButton symbol="☽" label={en ? 'Moon' : 'Lua'}  onClick={onFocusMoon} dataTutorial="reference-body" />
                 {!orbitMode ? (
                     <>
                         <Divider />
@@ -52,6 +52,7 @@ export function ReferenceSection({
                             active={planetsOpen}
                             chevron
                             chevronOpen={planetsOpen}
+                            dataTutorial="reference-planets"
                         />
                     </>
                 ) : null}
@@ -71,6 +72,7 @@ function AstroButton({
     active = false,
     chevron = false,
     chevronOpen = false,
+    dataTutorial,
 }: {
     symbol: string;
     label: string;
@@ -78,12 +80,14 @@ function AstroButton({
     active?: boolean;
     chevron?: boolean;
     chevronOpen?: boolean;
+    dataTutorial?: string;
 }) {
     return (
         <button
             type="button"
             onClick={onClick}
             aria-label={label}
+            data-tutorial={dataTutorial}
             className={[
                 'group flex flex-1 items-center justify-center gap-1 rounded-md px-1 py-1.5 text-[11px] transition-all outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                 active
@@ -143,6 +147,7 @@ export function PlanetFlyout({ en, focusedId, onFocus }: { en: boolean; focusedI
                     key={p.id}
                     type="button"
                     onClick={() => onFocus(p.id)}
+                    data-tutorial="planet-option"
                     className={[
                         'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                         p.id === focusedId

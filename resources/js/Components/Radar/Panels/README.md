@@ -29,7 +29,7 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 - `AsteroidModelPreview.tsx`: preview 3D do asteroide em foco.
 - `bodyData.ts`: fatos científicos, textos de contexto e narrativas históricas dos corpos celestes — unificado a partir dos antigos `bodyInfoContent.ts` e `bodyHistory.ts`, que compartilhavam a mesma chave `BodyId` e eram sempre lidos juntos.
 - `FocusObject.tsx`: conteúdo principal do objeto selecionado (usado fora do card unificado).
-- `focusCardPresentation.ts`: textos, badges e status de apresentação usados pelo `UnifiedFocusCard`.
+- `focusCardPresentation.ts`: textos, badges e status de apresentação usados pelo `UnifiedFocusCard`. Ícones são retornados como nomes semânticos (`'alert'`, `'zap'`, ...) e mapeados para componentes lucide no card; emojis não devem voltar a ser usados como ícone.
 - `MobilePanelControls.tsx`: controles de navegação mobile.
 - `RadarDataQualityCard.tsx`: resumo visual de qualidade dos dados.
 - `RadarFloatingOverlays.tsx`: overlays flutuantes da cena 3D.
@@ -51,6 +51,8 @@ Os painéis `ObservatoryFocusPanel.tsx`, `ObservatoryDetailOverlay.tsx` e o card
 
 `UnifiedFocusCard.tsx` recebe dados já resolvidos e monta a leitura visual: nome, distância, velocidade, tamanho, risco de monitoramento, ações disponíveis e, para corpos celestes, imagem real, fatos físicos e história. O preview visual é delegado para `AsteroidModelPreview` (asteroides) ou `BodyImagePreview` (corpos celestes).
 
+As abas usam semântica ARIA de tablist (`FocusTabBar`): navegação por setas e Home/End, roving tabindex e painel `tabpanel` vinculado por `aria-labelledby`. A distância atual é a métrica principal do card: bloco próprio com rótulo em cima e valor em corpo maior embaixo (lado a lado não cabem na largura do card), arredondado via `approxKm` porque o dado muda ao vivo e precisão de 1 km seria falsa.
+
 Helpers de texto e status devem ficar em arquivos locais de apresentação quando crescerem, sem calcular órbita, ranking ou fallback.
 
 ## Navegação
@@ -58,6 +60,10 @@ Helpers de texto e status devem ficar em arquivos locais de apresentação quand
 `RadarNavigationPanel.tsx` coordena a moldura visual e delega o conteúdo para componentes mobile, desktop e lista.
 
 Filtros, referências, abertura de planetas, seleção de objetos, modo orbital e colapso devem preservar os contratos recebidos por props.
+
+## Tutorial Interativo
+
+Alguns painéis carregam marcadores `data-tutorial` consumidos pelo tutorial de primeira visita (`../Tutorial/`): `selected-card` (via prop `dataTutorial` do `PanelShell`), `card-tabs` e `orbit-button` no `UnifiedFocusCard`, `object-list` e `object-list-toggle` no `RadarNavigationPanel`, e `radar-guide` no `SceneLegend`. São atributos passivos, sem lógica: ao renomear ou mover esses elementos, atualize o contrato em `../Tutorial/README.md` e `radarTutorialSteps.ts`.
 
 ## Padrões Locais
 
