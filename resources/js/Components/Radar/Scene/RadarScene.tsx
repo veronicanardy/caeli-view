@@ -35,6 +35,8 @@ import { PlanetOrbitLayer } from './PlanetOrbitLayer';
 import { computeLabelOccluder, focusedObjectScenePosition, shouldShowLabelForObject, shouldUseHelioScene } from './sceneFocus';
 import { SUN_RADIUS_SCENE } from '../Bodies/bodyRenderConstants';
 import { computeSceneObjectOccluders } from './sceneOcclusion';
+import { SceneWarmup } from './SceneWarmup';
+import { LabelBackdropGate } from './LabelBackdropGate';
 import { computeEarthPosition, computeMoonGeoPosition, computeMoonPosition, computeSunDirection, planetScenePositions } from './scenePositions';
 import { useBodyFocus } from './useBodyFocus';
 // --------------- Scene ---------------
@@ -266,6 +268,13 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
             )}
 
             {onFirstFrame && <FirstFrameNotifier onFirstFrame={onFirstFrame} />}
+
+            {/* Pré-compila shaders e sobe texturas em momentos ociosos para que revelar
+                objetos novos ao rotacionar a câmera não congele o main thread. */}
+            <SceneWarmup revision={`${closestNowObjects.length}:${useHelioScene ? 'helio' : 'geo'}`} />
+
+            {/* Suspende o backdrop-blur dos labels enquanto a câmera se move (caro de compor). */}
+            <LabelBackdropGate />
 
             <OrbitControls
                 makeDefault

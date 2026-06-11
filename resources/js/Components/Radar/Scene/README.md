@@ -39,6 +39,8 @@
 - `AsteroidSceneLayer.tsx`: renderização de asteroides e trajetórias atuais.
 - `HeliocentricScene.tsx`: cena heliocêntrica do objeto selecionado em modo órbita.
 - `KeyboardPan.tsx`: pan da câmera por WASD e setas do teclado, com velocidade proporcional à distância.
+- `SceneWarmup.tsx`: pré-compilação assíncrona de shaders (`compileAsync`) e upload escalonado de texturas (`initTexture`) em momentos ociosos, para que revelar objetos novos ao rotacionar a câmera não dispare compilação síncrona no meio do gesto.
+- `LabelBackdropGate.tsx`: suspende o backdrop-filter dos labels da cena enquanto a câmera se move (classe `radar-camera-moving`, regra em `resources/css/app.css`), restaurando-o ~250ms após parar. Compor o blur de dezenas de labels em movimento custa vários ms por frame.
 - `useBodyFocus.ts`, `useSceneEphemeris.ts`, `useSelectionFocusFraming.ts`, `useLabelNoGoRects.ts`: hooks de apoio da cena.
 
 ## Câmera e enquadramento
