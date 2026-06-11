@@ -68,7 +68,18 @@ export function useLabelNoGoRects({
                 bodyCardRef.current,
             ].filter((element): element is HTMLDivElement => Boolean(element));
 
-            setNoGoRects(elements.map((element) => toCanvasRect(element, canvasRect)));
+            const next = elements.map((element) => toCanvasRect(element, canvasRect));
+
+            // O listener de scroll (capture) dispara para qualquer scroll da página, inclusive
+            // de painéis internos que não movem os cards. Publicar um array novo idêntico
+            // re-renderizaria todos os labels consumidores do contexto; compara antes.
+            setNoGoRects((current) => {
+                const unchanged = current.length === next.length && current.every((rect, i) =>
+                    rect.left === next[i].left && rect.top === next[i].top
+                    && rect.right === next[i].right && rect.bottom === next[i].bottom,
+                );
+                return unchanged ? current : next;
+            });
         };
 
         update();

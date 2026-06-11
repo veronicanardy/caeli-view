@@ -27,6 +27,8 @@ type ZoomHintProps = {
 
 const _projected = new THREE.Vector3();
 const _prevCamPos = new THREE.Vector3();
+// Alvo de fallback quando os controls ainda não montaram — evita alocar Vector3 por frame.
+const _fallbackTarget = new THREE.Vector3();
 
 export function ZoomHint({ worldPosition, zoomOutTarget, zoomOutDistance }: ZoomHintProps) {
     const camera = useThree((s) => s.camera);
@@ -69,10 +71,28 @@ export function ZoomHint({ worldPosition, zoomOutTarget, zoomOutDistance }: Zoom
 
     useEffect(() => () => setState(null), [setState]);
 
+    // Cache do retângulo do canvas: getBoundingClientRect() por frame força reflow de layout.
+    // O retângulo só muda em resize/scroll, então é medido nesses eventos e lido do ref no loop.
+    const canvasRectRef = useRef<{ left: number; top: number } | null>(null);
+    useEffect(() => {
+        const el = gl.domElement;
+        const measure = () => {
+            const rect = el.getBoundingClientRect();
+            canvasRectRef.current = { left: rect.left, top: rect.top };
+        };
+        measure();
+        window.addEventListener('resize', measure);
+        window.addEventListener('scroll', measure, true);
+        return () => {
+            window.removeEventListener('resize', measure);
+            window.removeEventListener('scroll', measure, true);
+        };
+    }, [gl, size]);
+
     useFrame(() => {
         const cam = cameraRef.current;
         const ctrl = controlsRef.current;
-        const target = ctrl?.target ?? new THREE.Vector3();
+        const target = ctrl?.target ?? _fallbackTarget;
 
         const moving = prevInitialised.current &&
             cam.position.distanceToSquared(_prevCamPos) > MOVE_THRESHOLD_SQ;
@@ -92,7 +112,8 @@ export function ZoomHint({ worldPosition, zoomOutTarget, zoomOutDistance }: Zoom
 
         _projected.copy(worldPositionRef.current).project(cam);
 
-        const canvasRect = gl.domElement.getBoundingClientRect();
+        const canvasRect = canvasRectRef.current;
+        if (!canvasRect) return;
         const x = canvasRect.left + (_projected.x * 0.5 + 0.5) * size.width;
         const y = canvasRect.top + (-_projected.y * 0.5 + 0.5) * size.height;
 

@@ -142,7 +142,11 @@ const ROCK_TINT = new THREE.Color('#4e5258');
 // Fallback quando o GLB não tem textura alguma
 const ROCK_FALLBACK_COLOR = new THREE.Color('#34383e');
 
-function applyMaterialDefaults(obj: THREE.Object3D, opacity: number): void {
+/**
+ * Clona os materiais do GLB uma única vez e aplica os ajustes estáticos de superfície.
+ * Roda apenas quando o modelo muda — nunca em resposta a dimming/hover.
+ */
+function prepareMaterials(obj: THREE.Object3D): void {
     obj.traverse((child) => {
         const mesh = child as THREE.Mesh;
         if (!mesh.isMesh) return;
@@ -168,31 +172,47 @@ function applyMaterialDefaults(obj: THREE.Object3D, opacity: number): void {
             mat.emissive.set(0.06, 0.05, 0.04);
             mat.emissiveIntensity = 0.08;
 
-            if (mat.map) {
-                mat.color.copy(ROCK_TINT);
-            } else {
-                mat.color.copy(ROCK_FALLBACK_COLOR);
-            }
-
             /* Normal scale maior = ranhuras e volumes mais definidos. */
             if (mat.normalMap) {
                 mat.normalScale.set(0.75, 0.75);
             }
 
             mat.transparent = false;
-            mat.opacity = opacity;
             mat.depthWrite = true;
-            // Usa cor escurecida pra simular dimming sem virar transparente,
-            // o que quebraria a ordem de depth com as linhas de trajetória
-            if (opacity < 1) {
-                mat.color.multiplyScalar(opacity);
-            }
-            mat.needsUpdate = true;
 
             return mat;
         });
 
         mesh.material = Array.isArray(mesh.material) ? materials : materials[0];
+    });
+}
+
+/**
+ * Aplica o dimming atualizando a cor in-place, sem clonar materiais.
+ *
+ * A versão anterior re-clonava todos os materiais do GLB a cada mudança de opacity
+ * (hover/seleção dim de vizinhos) e marcava needsUpdate, vazando os clones antigos e
+ * forçando o renderer a reprocessar o material. Cor base é determinística (tint quando
+ * há textura, fallback quando não), então pode ser recomputada do zero a cada chamada.
+ */
+function applyDimming(obj: THREE.Object3D, opacity: number): void {
+    obj.traverse((child) => {
+        const mesh = child as THREE.Mesh;
+        if (!mesh.isMesh) return;
+
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const raw of materials) {
+            const mat = raw as THREE.MeshStandardMaterial;
+            if (!mat?.isMaterial) continue;
+
+            mat.color.copy(mat.map ? ROCK_TINT : ROCK_FALLBACK_COLOR);
+            mat.opacity = opacity;
+            // Usa cor escurecida pra simular dimming sem virar transparente,
+            // o que quebraria a ordem de depth com as linhas de trajetória
+            if (opacity < 1) {
+                mat.color.multiplyScalar(opacity);
+            }
+        }
     });
 }
 
@@ -261,8 +281,13 @@ export default function RealAsteroidModel({ asset, opacity, seed, selected = fal
         return clone;
     }, [model, selected, outlineColor, showOutline]);
 
+    // Clone e ajustes estáticos uma vez por modelo; dimming separado, in-place, sem novos clones.
     useEffect(() => {
-        applyMaterialDefaults(model, opacity);
+        prepareMaterials(model);
+    }, [model]);
+
+    useEffect(() => {
+        applyDimming(model, opacity);
     }, [model, opacity]);
 
     useEffect(() => {

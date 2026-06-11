@@ -67,6 +67,16 @@ Exemplos:
 * `RealAsteroidModel` descarta apenas os materiais clonados pelo próprio componente, sem descartar geometrias ou texturas compartilhadas do GLTF.
 * Texturas carregadas por `useBodyTexture` devem ser descartadas pelo hook.
 
+## Performance por frame
+
+Os corpos só devem manter em `useFrame` o que realmente muda a cada frame (ex: o spin visual dos planetas em `PlanetBody`). Tudo que deriva apenas da efeméride (posição, vetor Terra→Lua, fase, direção do Sol) muda por tick de dados e deve ser atualizado em `useEffect`, in-place, sobre uniforms/orientação existentes:
+
+* `Moon` mantém o `ShaderMaterial` estável por textura e atualiza `sunDir`/`earthDir`/`phaseFraction` e a orientação tidal por efeito. Antes, `orientMoonTidal` + `directionFromBodyToSceneSun` em `useFrame` alocavam ~12 `Vector3`/`Matrix4` por frame.
+* `PlanetBody` atualiza `sunDir` por efeito; apenas o spin roda por frame.
+* `RealAsteroidModel` clona os materiais do GLB uma única vez (`prepareMaterials`) e aplica dimming in-place (`applyDimming`), sem re-clonar materiais nem marcar `needsUpdate` a cada mudança de opacidade.
+
+Helpers chamados por frame não devem alocar objetos Three; use buffers módulo-escopo ou refs (ver `InertialZoom`/`TouchGestures` em `Scene/`).
+
 ## Casos especiais
 
 `Earth`, `Moon`, `Sun`, `Asteroid` e `MoonOrbit` não são obrigados a usar `PlanetBody`, porque têm responsabilidades visuais diferentes.

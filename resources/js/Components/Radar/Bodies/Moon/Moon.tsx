@@ -1,4 +1,3 @@
-import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { orientMoonTidal } from '@/lib/radar/earthOrientation';
@@ -51,26 +50,31 @@ export function Moon({
 
     const meshRef = useRef<THREE.Mesh>(null);
 
+    // Material estável por textura: os uniforms são atualizados in-place no efeito abaixo.
+    // Recriar o ShaderMaterial a cada tick de efeméride forçava recompilação/relink no renderer.
     const material = useMemo(() => {
         if (!texture) return null;
 
         return new THREE.ShaderMaterial({
             uniforms: {
                 surfaceMap: { value: texture },
-                sunDir: { value: directionFromBodyToSceneSun(position) },
-                earthDir: { value: new THREE.Vector3(-earthToMoonVector[0], -earthToMoonVector[1], -earthToMoonVector[2]).normalize() },
-                phaseFraction: { value: illuminatedFraction },
+                sunDir: { value: new THREE.Vector3(0, 0, 1) },
+                earthDir: { value: new THREE.Vector3(0, 0, 1) },
+                phaseFraction: { value: 0.5 },
             },
             vertexShader: MOON_VERT,
             fragmentShader: MOON_FRAG,
         });
-    }, [earthToMoonVector, illuminatedFraction, position, texture]);
+    }, [texture]);
 
     useEffect(() => () => {
         material?.dispose();
     }, [material]);
 
-    useFrame(() => {
+    // Orientação tidal e uniforms dependem só da efeméride (posição, vetor Terra→Lua, fase),
+    // que muda por tick de dados e não por frame. Em useFrame isso alocava ~12 Vector3/Matrix4
+    // por frame via orientMoonTidal + directionFromBodyToSceneSun, gerando pressão de GC.
+    useEffect(() => {
         if (meshRef.current) orientMoonTidal(meshRef.current, earthToMoonVector);
 
         if (material) {
@@ -80,7 +84,7 @@ export function Moon({
                 .normalize();
             material.uniforms.phaseFraction.value = illuminatedFraction;
         }
-    });
+    }, [material, position, earthToMoonVector, illuminatedFraction]);
 
     const title = isApproximate
         ? (en ? 'Lunar position loading (server fallback)' : 'Posição lunar carregando (estimativa do servidor)')

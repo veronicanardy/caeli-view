@@ -11,6 +11,10 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 
+// Buffers reutilizáveis do loop de zoom — alocar Vector3 por frame gera pressão de GC.
+const _zoomFallbackTarget = new THREE.Vector3();
+const _zoomToTarget = new THREE.Vector3();
+
 /**
  * Zoom inercial e ajustes opcionais do alvo orbital dos controles da cena.
  */
@@ -51,11 +55,11 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
             return;
         }
 
-        const target = controls?.target ?? new THREE.Vector3();
+        const target = controls?.target ?? _zoomFallbackTarget;
 
         // Dolly ao longo do raio câmera → alvo. Passo exponencial para sensação uniforme em
         // qualquer escala (um clique amplia a mesma % independente de estar perto ou longe).
-        const toTarget = camera.position.clone().sub(target);
+        const toTarget = _zoomToTarget.copy(camera.position).sub(target);
         const dist = toTarget.length();
         const newDist = THREE.MathUtils.clamp(dist * Math.exp(velocity.current), minDistance, maxDistance);
         if (dist > 1e-6) {
