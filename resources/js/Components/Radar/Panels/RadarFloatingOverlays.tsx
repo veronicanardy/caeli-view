@@ -169,7 +169,7 @@ export function RadarFloatingOverlays({
             </div>
 
             {(sceneTransitioning || radarLoading) ? (
-                <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#171b22]/55 backdrop-blur-sm">
+                <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
                     <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-space-950/90 px-4 py-2.5 text-[13px] text-white/70 shadow-glow">
                         <span className="size-2 animate-pulse rounded-full bg-signal-cyan" aria-hidden />
                         {en ? 'Loading…' : 'Carregando…'}

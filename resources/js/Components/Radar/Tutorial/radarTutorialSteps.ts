@@ -63,6 +63,8 @@ export type TutorialStep = {
     advanceDelayMs?: number;
     /** Remove o escurecimento enquanto espera o avanço (câmera viajando, cena carregando). */
     settleWhileAdvancing?: boolean;
+    /** Mantém a cena sem escurecimento quando o alvo do spotlight é o canvas inteiro. */
+    keepSceneBright?: boolean;
     /** Quantos cliques distintos no alvo são necessários (padrão 1). */
     requiredClicks?: number;
     /** Ao entrar no passo, aciona o botão de resetar vista para devolver a câmera ao ponto de partida. */
@@ -323,6 +325,7 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         advance: { kind: 'manual' },
         optional: true,
         requiresSelection: true,
+        keepSceneBright: true,
         titlePt: 'O que você está vendo',
         titleEn: 'What you are seeing',
         bodyPt: 'A linha é a trajetória estimada da rocha e a seta indica para onde ela está indo. Os marcadores [[−24h]], [[−48h]] e [[−72h]] marcam onde ela estava antes. Sinta-se à vontade para rotacionar a tela, explorar a cena e ter uma noção do trajeto do objeto ao longo do tempo.',

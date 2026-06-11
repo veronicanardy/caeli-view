@@ -134,7 +134,7 @@ function OverlayForStep({ tutorial, step }: { tutorial: RadarTutorialContextValu
             {/* Em settling o escurecimento sai de cena: o usuário vê a câmera viajar ou o radar carregar. */}
             {!tutorial.settling ? (
                 spotlightRect
-                    ? <TutorialSpotlight rect={spotlightRect} />
+                    ? <TutorialSpotlight rect={spotlightRect} dim={!step.keepSceneBright} />
                     : step.targets.length === 0
                         ? <TutorialBackdrop />
                         : null
