@@ -182,7 +182,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     return (
         <SceneObjectOccludersContext.Provider value={sceneObjectOccluders}>
             <LabelOccluderContext.Provider value={labelOccluder}>
-                <color attach="background" args={['#03060d']} />
+                <color attach="background" args={['#102235']} />
                 {/* Campo estelar estático — contexto visual de profundidade espacial. */}
                 <StarField />
                 {/* Iluminação global compartilhada por todos os asteroides da cena.
