@@ -17,18 +17,18 @@ import { useEffect, useRef } from 'react';
 const TUNING = {
     nebula: {
         colorVoid: 0x02050d,
-        colorBase: 0x0a1a3a,
-        colorAccent: 0x1b4470,
-        colorHighlight: 0x2c6e9a,
-        cloudIntensity: 0.38,
+        colorBase: 0x0b1b38,
+        colorAccent: 0x1a426c,
+        colorHighlight: 0x31799f,
+        cloudIntensity: 0.34,
         noiseScale: 1.4,
     },
     stars: {
         // Três profundidades leem como espaço real. Mais longe = mais
         // numerosas + menores + mais fracas.
-        farCount: 4200,          // poeira distante — preenche o vazio
-        midCount: 1500,          // campo médio
-        nearCount: 360,          // estrelas de primeiro plano
+        farCount: 3900,          // poeira distante — preenche o vazio
+        midCount: 1320,          // campo médio
+        nearCount: 300,          // estrelas de primeiro plano
         baseRadius: 22,
     },
     parallax: {
@@ -38,8 +38,8 @@ const TUNING = {
     },
     comet: {
         // Evento cinematográfico raro — um risco cruza o céu de tempos em tempos.
-        minIntervalSec: 25,      // intervalo mínimo até o próximo cometa
-        maxIntervalSec: 60,      // espera máxima
+        minIntervalSec: 45,      // intervalo mínimo até o próximo cometa
+        maxIntervalSec: 90,      // espera máxima
         durationSec: 2.2,        // segundos do spawn ao desaparecimento
         headSizePx: 3.5,         // ponto brilhante da cabeça
         trailLengthPx: 220,      // comprimento da cauda

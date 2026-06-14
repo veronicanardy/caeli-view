@@ -206,12 +206,14 @@ body {
    texto. text-shadow não funciona com texto transparente, então a separação
    do fundo vem de um drop-shadow aplicado à forma renderizada dos glifos. */
 .hero-headline {
-    letter-spacing: -0.018em;
-    background: linear-gradient(180deg, #ffffff 52%, rgba(196, 233, 240, 0.86) 100%);
+    letter-spacing: 0;
+    background: linear-gradient(180deg, #ffffff 36%, rgba(232, 251, 255, 0.94) 70%, rgba(144, 205, 224, 0.78) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    filter: drop-shadow(0 2px 22px rgba(3, 8, 18, 0.65));
+    filter:
+        drop-shadow(0 1px 20px rgba(3, 8, 18, 0.82))
+        drop-shadow(0 0 34px rgba(84, 214, 214, 0.13));
 }
 
 /* ─── Entrada em cascata do hero (badge → título → descrição → CTA) ──── */
@@ -276,7 +278,7 @@ body {
     isolation: isolate;
     border: 0;
     background: transparent;
-    padding: 0.85rem 0.85rem 0.85rem 0.85rem;
+    padding: 0.88rem;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
 }
@@ -286,8 +288,8 @@ body {
     position: absolute;
     inset: 0;
     border-radius: 9999px;
-    border: 1px dashed rgba(84, 214, 214, 0.4);
-    opacity: 0.55;
+    border: 1px solid rgba(84, 214, 214, 0.28);
+    opacity: 0.50;
     pointer-events: none;
     animation: ctaRingSpin 28s linear infinite;
 }
@@ -296,12 +298,12 @@ body {
     inset: 6px;
     border: 1px solid rgba(118, 228, 181, 0.16);
     border-style: solid;
-    border-top-color: rgba(84, 214, 214, 0.4);
-    border-right-color: rgba(84, 214, 214, 0.12);
+    border-top-color: rgba(84, 214, 214, 0.34);
+    border-right-color: rgba(84, 214, 214, 0.08);
     border-bottom-color: rgba(255, 255, 255, 0.06);
     border-left-color: rgba(167, 139, 250, 0.24);
     animation: ctaRingSpin 18s linear infinite reverse;
-    opacity: 0.7;
+    opacity: 0.54;
 }
 
 /* Soft outer glow that pulses — kept subtle on idle */
@@ -310,8 +312,8 @@ body {
     inset: -22%;
     z-index: -1;
     border-radius: 9999px;
-    background: radial-gradient(circle, rgba(84, 214, 214, 0.32) 0%, rgba(84, 214, 214, 0.12) 38%, rgba(84, 214, 214, 0) 70%);
-    opacity: 0.4;
+    background: radial-gradient(circle, rgba(84, 214, 214, 0.24) 0%, rgba(118, 228, 181, 0.10) 36%, rgba(84, 214, 214, 0) 70%);
+    opacity: 0.38;
     transform: scale(0.92);
     transition: opacity 360ms ease, transform 480ms cubic-bezier(0.16, 1, 0.3, 1);
     animation: ctaGlowPulse 5.5s ease-in-out infinite;
@@ -327,11 +329,12 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 0.95rem;
-    padding: 0.95rem 1.4rem 0.95rem 1.6rem;
+    padding: 0.98rem 1.48rem 0.98rem 1.68rem;
     border-radius: 9999px;
     background:
-        linear-gradient(135deg, rgba(84, 214, 214, 0.26) 0%, rgba(118, 228, 181, 0.14) 100%),
-        rgba(6, 12, 24, 0.6);
+        radial-gradient(circle at 28% 0%, rgba(255, 255, 255, 0.14), transparent 34%),
+        linear-gradient(135deg, rgba(84, 214, 214, 0.24) 0%, rgba(118, 228, 181, 0.10) 100%),
+        rgba(4, 10, 20, 0.78);
     color: rgba(228, 252, 252, 1);
     font-size: 0.95rem;
     font-weight: 600;
@@ -340,10 +343,10 @@ body {
     -webkit-backdrop-filter: blur(14px);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.12),
-        inset 0 0 0 1px rgba(84, 214, 214, 0.58),
+        inset 0 0 0 1px rgba(84, 214, 214, 0.62),
         0 0 0 1px rgba(84, 214, 214, 0.24),
-        0 8px 28px rgba(84, 214, 214, 0.24),
-        0 0 44px rgba(84, 214, 214, 0.16);
+        0 14px 34px rgba(0, 0, 0, 0.38),
+        0 0 36px rgba(84, 214, 214, 0.14);
     overflow: hidden;
     transition:
         transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -369,7 +372,7 @@ body {
     position: relative;
     z-index: 1;
     text-transform: uppercase;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.11em;
     font-size: 0.78rem;
 }
 
@@ -393,14 +396,14 @@ body {
 
 /* Hover state */
 .home-cta:hover .home-cta-body {
-    transform: translateY(-0.16rem);
+    transform: translateY(-0.18rem);
     color: rgba(240, 255, 255, 1);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.16),
         inset 0 0 0 1px rgba(84, 214, 214, 0.72),
         0 0 0 1px rgba(84, 214, 214, 0.36),
-        0 14px 38px rgba(84, 214, 214, 0.34),
-        0 0 60px rgba(84, 214, 214, 0.24);
+        0 18px 42px rgba(0, 0, 0, 0.42),
+        0 0 56px rgba(84, 214, 214, 0.26);
 }
 
 .home-cta:hover .home-cta-arrow {
@@ -507,11 +510,178 @@ body {
     box-shadow: 0 0 0 2px rgba(84, 214, 214, 0.7);
 }
 
-/* Glint quente acima do lado iluminado do horizonte. Ultra sutil: só
-   aquece o preto na direção do sol, não compete com o planeta. */
+/* Glint quente desligado: cena recomeçada sem cores quentes. */
 .home-warm-glint {
-    background: radial-gradient(ellipse 42% 24% at 80% 62%, rgba(248, 199, 107, 0.06), transparent 70%);
+    display: none;
+}
+
+/* Sol NO TOPO da curvatura (referência): brilho dourado nascendo atrás do
+   limbo superior, centro-x. O disco abaixo é noturno com cidades acesas. */
+.home-cinematic-sunrise {
+    --sun-x: 50%;
+    --sun-y: 60.5%;
+    z-index: 8;
     mix-blend-mode: screen;
+    opacity: 1;
+    overflow: hidden;
+}
+
+.home-cinematic-sunrise::before {
+    content: '';
+    position: absolute;
+    left: var(--sun-x);
+    /* Centro do brilho logo ACIMA do limbo: a luz nasce atrás da borda da Terra
+       e decai suave. Mais concentrado (não sobe até o CTA), espalhando menos. */
+    top: calc(var(--sun-y) - 3.5%);
+    width: min(40rem, 42vw);
+    height: min(20rem, 24vh);
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background:
+        radial-gradient(ellipse at center, rgba(255, 248, 214, 0.95) 0%, rgba(255, 198, 92, 0.64) 16%, rgba(255, 132, 40, 0.3) 40%, rgba(150, 50, 16, 0.1) 62%, transparent 78%);
+    filter: blur(32px);
+    opacity: 1;
+}
+
+.home-cinematic-sunrise::after {
+    content: '';
+    position: absolute;
+    left: var(--sun-x);
+    top: calc(var(--sun-y) - 0.15%);
+    width: min(14rem, 15vw);
+    height: min(4rem, 6vh);
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background:
+        radial-gradient(ellipse at center, rgba(255, 255, 250, 1) 0%, rgba(255, 234, 148, 0.70) 20%, rgba(255, 151, 45, 0.30) 54%, transparent 78%);
+    filter: blur(6px);
+    opacity: 0.92;
+}
+
+.home-cinematic-sunrise-corona,
+.home-cinematic-sunrise-bloom,
+.home-cinematic-sunrise-atmosphere,
+.home-cinematic-sunrise-core {
+    position: absolute;
+    pointer-events: none;
+}
+
+.home-cinematic-sunrise-bloom {
+    left: var(--sun-x);
+    top: calc(var(--sun-y) + 0.4%);
+    width: min(26rem, 28vw);
+    height: min(11rem, 13vh);
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background:
+        radial-gradient(ellipse at center, rgba(255, 158, 44, 0.30) 0%, rgba(211, 74, 18, 0.18) 36%, rgba(83, 20, 8, 0.06) 64%, transparent 82%);
+    filter: blur(34px);
+    opacity: 0.9;
+}
+
+.home-cinematic-sunrise-atmosphere {
+    left: 50%;
+    top: calc(var(--sun-y) + 0.05%);
+    width: 38vw;
+    height: 4.4rem;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background:
+        radial-gradient(ellipse at 50% 42%, rgba(255, 255, 240, 1) 0%, rgba(255, 220, 112, 0.82) 9%, rgba(255, 130, 34, 0.42) 20%, transparent 40%),
+        linear-gradient(90deg, transparent 0%, rgba(55, 152, 226, 0.08) 26%, rgba(255, 235, 170, 0.66) 46%, rgba(255, 143, 36, 0.6) 50%, rgba(126, 36, 12, 0.12) 70%, transparent 88%);
+    filter:
+        blur(2.4px)
+        drop-shadow(0 -6px 20px rgba(255, 149, 45, 0.26));
+    opacity: 1;
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 32%, #000 52%, transparent 100%);
+}
+
+.home-cinematic-sunrise-corona {
+    left: var(--sun-x);
+    /* Acompanha o core (acima do limbo) para emoldurar a bolinha, sem virar um
+       borrão sobre ela. */
+    top: calc(var(--sun-y) - 3%);
+    width: min(20rem, 21vw);
+    height: min(10rem, 12vh);
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background:
+        radial-gradient(ellipse at center, rgba(255, 240, 175, 0.6) 0%, rgba(255, 158, 46, 0.36) 24%, rgba(212, 70, 19, 0.12) 52%, transparent 78%);
+    filter: blur(22px);
+    opacity: 1;
+}
+
+.home-cinematic-sunrise-core {
+    left: var(--sun-x);
+    /* Disco do sol emergindo na borda superior da Terra: sobe o suficiente para
+       a "bolinha" ficar visível acima do limbo, com contorno branco nítido. */
+    top: calc(var(--sun-y) - 3%);
+    width: clamp(2rem, 2.8vw, 3.2rem);
+    height: clamp(2rem, 2.8vw, 3.2rem);
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    /* Disco branco PURO e nítido: é a "bolinha" do sol que precisa saltar acima
+       do glow difuso. Núcleo branco sólido até 55%, decaindo rápido. */
+    background: radial-gradient(circle, #fff 0%, #fff 45%, rgba(255, 250, 232, 1) 62%, rgba(255, 210, 130, 0.9) 80%, transparent 100%);
+    box-shadow:
+        0 0 1rem rgba(255, 255, 255, 1),
+        0 0 2.6rem rgba(255, 252, 240, 1),
+        0 0 6rem rgba(255, 220, 140, 0.92),
+        0 0 12rem rgba(255, 170, 70, 0.6);
+    filter: blur(0.1px);
+    opacity: 1;
+}
+
+.home-cinematic-sunrise-core::before,
+.home-cinematic-sunrise-core::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14rem;
+    height: 1px;
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent, rgba(255, 254, 238, 0.84), transparent);
+    filter: blur(0.8px);
+}
+
+.home-cinematic-sunrise-core::after {
+    width: 1px;
+    height: 6.5rem;
+    background: linear-gradient(180deg, transparent, rgba(255, 251, 226, 0.42), transparent);
+}
+
+.home-earth-cinematic-grade {
+    background:
+        linear-gradient(
+            to bottom,
+            transparent 0%,
+            transparent 43%,
+            rgba(0, 0, 0, 0.035) 54%,
+            rgba(0, 0, 0, 0.42) 75%,
+            rgba(0, 0, 0, 0.34) 100%
+        ),
+        radial-gradient(ellipse 34% 11% at 50% 58%, rgba(120, 170, 210, 0.05) 0%, rgba(84, 214, 214, 0.025) 44%, transparent 82%),
+        radial-gradient(ellipse 78% 36% at 50% 90%, rgba(0, 0, 0, 0.24), transparent 70%);
+}
+
+.home-hero-badge {
+    background:
+        radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.12), transparent 46%),
+        linear-gradient(180deg, rgba(84, 214, 214, 0.14), rgba(84, 214, 214, 0.045)),
+        rgba(2, 8, 18, 0.66) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 0 30px rgba(84, 214, 214, 0.13);
+}
+
+.home-hero-description {
+    text-shadow: 0 1px 18px rgba(3, 8, 18, 0.78);
+}
+
+.home-hero-source {
+    text-shadow: 0 0 20px rgba(3, 8, 18, 0.9);
 }
 
 .orbiting-dot {
@@ -537,6 +707,71 @@ body {
 
 .language-fade {
     animation: languageFade 220ms ease;
+}
+
+.app-header {
+    background:
+        linear-gradient(180deg, rgba(4, 8, 18, 0.86), rgba(4, 8, 18, 0.72)),
+        rgba(9, 11, 16, 0.82) !important;
+    box-shadow:
+        0 10px 42px rgba(0, 0, 0, 0.22),
+        inset 0 -1px 0 rgba(84, 214, 214, 0.035);
+}
+
+.app-brand {
+    border-radius: 0.75rem;
+    transition: opacity 200ms ease, transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-brand:hover {
+    transform: translateY(-0.05rem);
+}
+
+.app-brand-mark {
+    box-shadow:
+        0 12px 34px rgba(84, 214, 214, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.34);
+    transition: filter 220ms ease, box-shadow 260ms ease;
+}
+
+.app-brand:hover .app-brand-mark {
+    filter: saturate(1.08) brightness(1.04);
+    box-shadow:
+        0 14px 42px rgba(84, 214, 214, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.app-nav-shell {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.026);
+    padding: 0.2rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.app-nav-link {
+    min-height: 2.25rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.app-nav-link:hover {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        0 0 20px rgba(84, 214, 214, 0.06);
+}
+
+.app-nav-link-active {
+    background:
+        radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.11), transparent 44%),
+        rgba(84, 214, 214, 0.14) !important;
+}
+
+.app-locale-switch {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.app-icon-button {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .app-navigation-loader {
@@ -1151,6 +1386,7 @@ body {
 /* O wrapper recebe as transitions do estado expandido (a entrada anima no
    filho interno, ver .hero-rise-5). */
 .home-console-wrap {
+    transform: translateY(0.9rem);
     transition:
         opacity 820ms cubic-bezier(0.16, 1, 0.3, 1),
         transform 1100ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -1161,15 +1397,19 @@ body {
    atravessa o blur nas bordas, mas legibilidade vem primeiro. */
 .observatory-console {
     position: relative;
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    border-radius: 1.1rem;
-    background: linear-gradient(165deg, rgba(9, 16, 29, 0.82), rgba(6, 10, 20, 0.7));
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(125, 226, 240, 0.18);
+    border-radius: 0.85rem;
+    background:
+        radial-gradient(circle at 50% -24%, rgba(84, 214, 214, 0.13), transparent 25rem),
+        radial-gradient(circle at 100% 115%, rgba(248, 199, 107, 0.055), transparent 19rem),
+        linear-gradient(165deg, rgba(5, 10, 20, 0.92), rgba(3, 7, 15, 0.84));
+    backdrop-filter: blur(22px) saturate(1.12);
+    -webkit-backdrop-filter: blur(22px) saturate(1.12);
     box-shadow:
-        0 1.2rem 3.5rem rgba(0, 0, 0, 0.45),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(84, 214, 214, 0.05);
+        0 1.9rem 5.2rem rgba(0, 0, 0, 0.58),
+        0 0 70px rgba(84, 214, 214, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.09),
+        inset 0 -1px 0 rgba(84, 214, 214, 0.055);
     overflow: hidden;
 }
 
@@ -1179,8 +1419,27 @@ body {
     position: absolute;
     inset: 0 0 auto;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(84, 214, 214, 0.4) 18%, rgba(84, 214, 214, 0.12) 55%, transparent 85%);
+    background: linear-gradient(90deg, transparent, rgba(84, 214, 214, 0.62) 20%, rgba(255, 255, 255, 0.20) 48%, rgba(248, 199, 107, 0.20) 70%, transparent 90%);
     pointer-events: none;
+}
+
+.observatory-console::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+    background-size: 4.6rem 4.6rem;
+    opacity: 0.16;
+    mask-image: linear-gradient(to bottom, #000, transparent 82%);
+}
+
+.console-header,
+.console-grid {
+    position: relative;
+    z-index: 1;
 }
 
 .console-header {
@@ -1189,16 +1448,19 @@ body {
     justify-content: space-between;
     gap: 0.75rem;
     flex-wrap: wrap;
-    padding: 0.55rem 1.15rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 0.62rem 1.05rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035), transparent 62%),
+        rgba(255, 255, 255, 0.012);
 }
 
 .console-header-title {
     font-size: 0.66rem;
     font-weight: 700;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.62);
+    color: rgba(220, 250, 252, 0.80);
 }
 
 .console-header-location {
@@ -1241,9 +1503,12 @@ body {
     position: relative;
     display: flex;
     align-items: flex-start;
-    gap: 0.85rem;
-    padding: 1rem 1.15rem 1.1rem;
-    transition: background-color 260ms ease;
+    gap: 0.78rem;
+    min-height: 9.1rem;
+    padding: 1.05rem 1.08rem 1.18rem;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 72%);
+    transition: background-color 260ms ease, box-shadow 260ms ease, transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .console-cell-observe {
@@ -1259,7 +1524,7 @@ body {
 }
 
 .console-cell + .console-cell {
-    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    border-left: 1px solid rgba(255, 255, 255, 0.052);
 }
 
 /* Linha de acento no topo da célula — "canal" selecionado no hover */
@@ -1278,7 +1543,11 @@ body {
 }
 
 .console-cell:hover {
-    background-color: rgba(255, 255, 255, 0.035);
+    background-color: rgba(255, 255, 255, 0.026);
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(var(--card-accent), 0.12),
+        0 0 32px rgba(var(--card-accent), 0.035);
 }
 
 .console-cell:hover::after {
@@ -1289,8 +1558,8 @@ body {
 
 /* Notas longas não estouram a barra: no console clampam em 3 linhas */
 .console-cell .editorial-card-title-note {
-    font-size: 0.88rem;
-    line-height: 1.45;
+    font-size: 0.84rem;
+    line-height: 1.42;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -1316,6 +1585,21 @@ body {
 }
 
 @media (max-width: 639px) {
+    .observatory-console {
+        border-radius: 0.78rem;
+    }
+
+    .console-header {
+        align-items: flex-start;
+        gap: 0.45rem;
+        padding: 0.68rem 0.9rem;
+    }
+
+    .console-header-location {
+        width: 100%;
+        font-size: 0.68rem;
+    }
+
     .console-grid {
         grid-template-columns: 1fr;
     }
@@ -1327,6 +1611,11 @@ body {
     .console-cell:nth-child(n + 2) {
         border-top: 1px solid rgba(255, 255, 255, 0.06);
     }
+
+    .console-cell {
+        min-height: 7.4rem;
+        padding: 0.95rem 0.92rem 1rem;
+    }
 }
 
 /* Spotlight que segue o ponteiro (vars setadas por useCardSpotlight) */
@@ -1337,7 +1626,7 @@ body {
     pointer-events: none;
     background: radial-gradient(
         11rem circle at var(--spot-x, 50%) var(--spot-y, 130%),
-        rgba(var(--card-accent), 0.09),
+        rgba(var(--card-accent), 0.095),
         transparent 65%
     );
     opacity: 0;
@@ -1388,12 +1677,12 @@ body {
 
 .editorial-card-label {
     color: rgba(255, 255, 255, 0.68);
-    letter-spacing: 0.14em;
+    letter-spacing: 0.10em;
 }
 
 .editorial-card-title-note {
-    font-size: 1.0rem;
-    line-height: 1.5;
+    font-size: 0.92rem;
+    line-height: 1.46;
     color: rgba(255, 255, 255, 0.94);
     display: block;
     overflow: visible;
@@ -1404,7 +1693,7 @@ body {
 .editorial-card-main-value {
     display: block;
     overflow: visible;
-    font-size: 1.18rem;
+    font-size: 1.12rem;
     line-height: 1.18;
     font-weight: 750;
     color: rgba(255, 255, 255, 0.98);
@@ -1415,7 +1704,7 @@ body {
     display: grid;
     gap: 0.26rem;
     margin-top: 0.18rem;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     line-height: 1.35;
     color: rgba(255, 255, 255, 0.75);
 }
@@ -1428,7 +1717,7 @@ body {
 }
 
 .editorial-approach-date {
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     font-weight: 650;
     color: rgba(255, 255, 255, 0.86);
     white-space: nowrap;
@@ -1846,9 +2135,9 @@ body {
 .cinematic-earth-shell {
     position: absolute;
     inset: auto 0 0 0;
-    height: 82%;
-    transform: translateY(2.5%);
-    opacity: 0.92;
+    height: 78%;
+    transform: translateY(8%);
+    opacity: 0.94;
     transition:
         transform 1800ms cubic-bezier(0.16, 1, 0.3, 1),
         opacity 1400ms ease;
@@ -1856,7 +2145,7 @@ body {
 }
 
 .cinematic-earth-shell-ready {
-    transform: translateY(0);
+    transform: translateY(5.5%);
     opacity: 1;
 }
 
@@ -2161,13 +2450,71 @@ body {
 @media (max-width: 767px) {
     /* No mobile o horizonte fica um pouco mais baixo e discreto para a
        coluna de copy e o console respirarem. */
+    .home-hero-scene {
+        min-height: 760px;
+    }
+
+    .home-hero-copy {
+        padding-top: clamp(2.8rem, 6vh, 3.8rem);
+    }
+
     .cinematic-earth-shell {
-        height: 60%;
-        opacity: 0.85;
+        height: 66%;
+        opacity: 0.90;
+    }
+
+    .home-cinematic-sunrise {
+        opacity: 0.66;
+    }
+
+    .home-cinematic-sunrise::before,
+    .home-cinematic-sunrise::after,
+    .home-cinematic-sunrise-bloom,
+    .home-cinematic-sunrise-atmosphere,
+    .home-cinematic-sunrise-corona,
+    .home-cinematic-sunrise-core {
+        left: 50%;
+        top: 58%;
+    }
+
+    .home-cinematic-sunrise-atmosphere {
+        width: 72vw;
+        height: 4.4rem;
+    }
+
+    .home-cinematic-sunrise-core {
+        width: 2.6rem;
+        height: 2.6rem;
+    }
+
+    .home-hero-source {
+        display: none;
     }
 
     .cinematic-earth-shell-ready {
-        opacity: 0.95;
+        opacity: 1;
+    }
+
+    .home-cta {
+        padding: 0.72rem;
+    }
+
+    .home-cta-body {
+        padding: 0.9rem 1.12rem 0.9rem 1.28rem;
+    }
+
+    .home-cta-label {
+        font-size: 0.72rem;
+        letter-spacing: 0.09em;
+    }
+
+    .home-cta-arrow {
+        width: 1.7rem;
+        height: 1.7rem;
+    }
+
+    .home-console-wrap {
+        padding-top: 1rem;
     }
 
     .console-header-location strong {

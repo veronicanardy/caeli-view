@@ -59,7 +59,7 @@ describe('buildObservationNote', () => {
 
     it('céu encoberto (>=85%) com Lua iluminada cita a fase em brechas', () => {
         const note = buildObservationNote('', 90, null, [], 40, false);
-        expect(note).toContain('muitas nuvens');
+        expect(note).toContain('encoberto');
         expect(note).toContain('Lua crescente');
     });
 
@@ -122,8 +122,8 @@ describe('formatObservingVisibility', () => {
 
 describe('formatVisiblePlanetsLine', () => {
     it('lista vazia: nenhum planeta', () => {
-        expect(formatVisiblePlanetsLine([], false)).toBe('Nenhum planeta visível agora');
-        expect(formatVisiblePlanetsLine([], true)).toBe('No planets visible right now');
+        expect(formatVisiblePlanetsLine([], false)).toBe('Sem planetas brilhantes no horizonte');
+        expect(formatVisiblePlanetsLine([], true)).toBe('No bright planets above the horizon');
     });
 
     it('um planeta usa singular', () => {
@@ -188,27 +188,36 @@ describe('formatApproachDate', () => {
 // ─── moonPhaseLabel ───────────────────────────────────────────────────────────
 
 describe('moonPhaseLabel', () => {
+    // moonPhaseLabel usa espaço não separável (U+00A0) antes do "(%)" de
+    // propósito, para o percentual nunca quebrar sozinho em outra linha nos
+    // cards. Normalizamos para espaço comum nos asserts de texto.
+    const label = (illumination: number, en: boolean) => moonPhaseLabel(illumination, en).replace(/ /g, ' ');
+
     it('0-2%: Lua nova', () => {
-        expect(moonPhaseLabel(1, false)).toBe('Lua nova (1%)');
+        expect(label(1, false)).toBe('Lua nova (1%)');
     });
 
     it('3-48%: Lua crescente', () => {
-        expect(moonPhaseLabel(9, false)).toBe('Lua crescente (9%)');
+        expect(label(9, false)).toBe('Lua crescente (9%)');
     });
 
     it('49-52%: Quarto de Lua', () => {
-        expect(moonPhaseLabel(50, false)).toBe('Quarto de Lua (50%)');
+        expect(label(50, false)).toBe('Quarto de Lua (50%)');
     });
 
     it('53-97%: Lua gibosa', () => {
-        expect(moonPhaseLabel(80, false)).toBe('Lua gibosa (80%)');
+        expect(label(80, false)).toBe('Lua gibosa (80%)');
     });
 
     it('98-100%: Lua cheia', () => {
-        expect(moonPhaseLabel(99.6, false)).toBe('Lua cheia (100%)');
+        expect(label(99.6, false)).toBe('Lua cheia (100%)');
+    });
+
+    it('usa espaço não separável antes do percentual', () => {
+        expect(moonPhaseLabel(1, false)).toBe('Lua nova (1%)');
     });
 
     it('arredonda o percentual exibido', () => {
-        expect(moonPhaseLabel(8.6, true)).toBe('Crescent Moon (9%)');
+        expect(label(8.6, true)).toBe('Crescent Moon (9%)');
     });
 });

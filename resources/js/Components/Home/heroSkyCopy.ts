@@ -48,12 +48,12 @@ export function buildObservationNote(
         const phase = moonPhaseLabel(moonIllumination, en);
         if (en) {
             return moonVisible
-                ? `Heavy cloud cover. The ${phase} may still appear through gaps, but planets and faint objects will be hard to see.`
-                : 'Heavy cloud cover expected. Conditions are unfavorable for observation tonight.';
+                ? `Heavy cloud cover. The ${phase} may show through gaps, but fainter objects will be hard to see.`
+                : 'Heavy cloud cover. Conditions are unfavorable for observation tonight.';
         }
         return moonVisible
-            ? `Céu com muitas nuvens. A ${phase} pode aparecer em brechas, mas planetas e objetos fracos tendem a ficar ocultos.`
-            : 'Cobertura de nuvens densa. Condições pouco favoráveis para observação esta noite.';
+            ? `Céu encoberto. A ${phase} pode aparecer em brechas, mas objetos fracos tendem a ficar ocultos.`
+            : 'Céu encoberto. Condições pouco favoráveis para observação esta noite.';
     }
     if (cloudCover !== null && cloudCover >= 50) {
         const planetNames = visiblePlanets.map((p) => en ? p.nameEn : p.namePt);
@@ -107,7 +107,7 @@ export function formatObservingVisibility(cloudCover: number | null, seeing: str
  */
 export function formatVisiblePlanetsLine(names: string[], en: boolean): string {
     if (names.length === 0) {
-        return en ? 'No planets visible right now' : 'Nenhum planeta visível agora';
+        return en ? 'No bright planets above the horizon' : 'Sem planetas brilhantes no horizonte';
     }
 
     const list = joinReadableList(names, en);

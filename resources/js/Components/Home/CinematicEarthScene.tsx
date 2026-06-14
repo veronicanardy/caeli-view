@@ -31,11 +31,10 @@ const EARTH_DEBUG_MINIMAL = false;
 // chega com ~1.26x de superamostragem: nítido em monitores 2560px, com o
 // limbo curvo inteiro no quadro e flancos de céu menores (menos "bola",
 // mais "horizonte"). Não descer de ~0.65 sem reavaliar essa conta.
-// HORIZON_NDC_Y alto de propósito: o topo do arco fica logo abaixo do CTA
-// (~52% do viewport), travando conteúdo e planeta numa composição única,
-// sem faixa morta de céu vazio entre eles.
+// HORIZON_NDC_Y moderado: o topo do arco fica abaixo do CTA, deixando o
+// nascer do sol respirar como fundo cinematografico em vez de competir com a UI.
 const ORBIT_ALTITUDE = 0.7;
-const HORIZON_NDC_Y = 0.42;
+const HORIZON_NDC_Y = 0.30;
 const CAMERA_FOV = 38;
 
 // Cascade of Earth daymap textures, tried in order. First success wins.
@@ -80,14 +79,22 @@ const CLOUD_FRAGMENT_SHADER = `
     void main() {
         vec4 c = texture2D(cloudsMap, vUv);
         float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
-        float softLum = smoothstep(0.04, 0.92, lum);
+        // Faixa mais estreita = nuvens mais definidas/contrastadas (mais evidentes).
+        float softLum = smoothstep(0.10, 0.80, lum);
         float baseAlpha = mix(softLum, c.a, alphaFromAlpha);
         float ndot = dot(normalize(vWorldNormal), normalize(sunDirection));
         float lit = max(ndot, 0.0);
         float terminator = smoothstep(-0.18, 0.22, ndot);
         float lightFactor = lit * 0.82 + terminator * terminatorBoost;
-        vec3 cloudColor = vec3(1.0, 0.985, 0.97) * (0.22 + lightFactor * 0.88);
-        gl_FragColor = vec4(cloudColor, baseAlpha * cloudOpacity * (0.32 + lightFactor * 0.78));
+        // Lado dia: nuvens brancas brilhantes. Lado noite: um resíduo azulado de
+        // luar (não some de todo), dando textura à penumbra noturna.
+        vec3 dayCloud = vec3(1.0, 0.985, 0.97) * (0.30 + lightFactor * 0.92);
+        vec3 nightCloud = vec3(0.16, 0.22, 0.34);
+        float nightAmount = 1.0 - smoothstep(-0.05, 0.20, ndot);
+        vec3 cloudColor = mix(dayCloud, nightCloud, nightAmount);
+        float dayAlpha = baseAlpha * cloudOpacity * (0.40 + lightFactor * 0.80);
+        float nightAlpha = baseAlpha * cloudOpacity * 0.22;
+        gl_FragColor = vec4(cloudColor, mix(dayAlpha, nightAlpha, nightAmount));
     }
 `;
 
@@ -158,7 +165,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.85));
             renderer.outputColorSpace = THREE.SRGBColorSpace;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.14;
+            renderer.toneMappingExposure = 1.10;
 
             // Log GPU texture size limit so we know which cascade entries can work.
             const gl = renderer.getContext();
@@ -192,45 +199,50 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
             // dia, ~40% em noite real à direita, onde as luzes de cidade do
             // Black Marble brilham. Sol totalmente frontal achata o planeta
             // (sem terminador não há drama); manter a noite visível.
-            const sunLight = new THREE.DirectionalLight(0xfff2e0, EARTH_DEBUG_MINIMAL ? 2.0 : 2.4);
-            sunLight.position.set(4.2, -1.4, 1.6);
+            const sunLight = new THREE.DirectionalLight(0xfff2e0, EARTH_DEBUG_MINIMAL ? 2.0 : 2.12);
+            // Sol NO TOPO, atrás do limbo (referência): a câmera olha para -y, então
+            // o limbo "longe" sobe na tela. Colocando o sol bem longe em -y e um pouco
+            // atrás em -z, ele nasce no alto da curvatura central. O hemisfério voltado
+            // para a câmera fica majoritariamente NOITE: as luzes de cidade do Black
+            // Marble dominam o disco e o brilho dourado fica só no arco do topo.
+            sunLight.position.set(0.0, -2.9, -2.2);
             scene.add(sunLight);
 
             if (!EARTH_DEBUG_MINIMAL) {
                 // Cool fill from the dark side — kept very subtle so the night side
                 // stays genuinely dark and the Black Marble lights pop.
-                const rimLight = new THREE.DirectionalLight(0x2a8ec8, 0.18);
+                const rimLight = new THREE.DirectionalLight(0x2a8ec8, 0.16);
                 rimLight.position.set(-4.0, 0.2, -2.8);
                 scene.add(rimLight);
                 // Cyan back-light — thin luminous contour on the dark side limb
-                const cyanBackLight = new THREE.DirectionalLight(0x4ac8e8, 0.10);
+                const cyanBackLight = new THREE.DirectionalLight(0x4ac8e8, 0.21);
                 cyanBackLight.position.set(-3.2, 0.4, -2.0);
                 scene.add(cyanBackLight);
                 // Subtle blue scatter from above (skylight)
-                const topLight = new THREE.DirectionalLight(0x5ab0d8, 0.16);
+                const topLight = new THREE.DirectionalLight(0x5ab0d8, 0.08);
                 topLight.position.set(0, 5, 1);
                 scene.add(topLight);
-                // Warm twilight fill — softens the day/night terminator with
-                // sunset glow on the night-side limb (screen right = -x)
-                const twilightFill = new THREE.DirectionalLight(0xff9050, 0.18);
+                // Cool terminator fill (recomeçado sem quente): suaviza a transição
+                // dia/noite com um tom neutro frio, sem brilho de pôr do sol.
+                const twilightFill = new THREE.DirectionalLight(0x8ab4d0, 0.18);
                 twilightFill.position.set(-3.0, -1.0, 1.5);
                 scene.add(twilightFill);
-                // Warm back-rim from below — adds drama and separates from background
-                const backLight = new THREE.DirectionalLight(0xff8040, 0.08);
+                // Cool back-rim from below — separa do fundo sem aquecer.
+                const backLight = new THREE.DirectionalLight(0x6f9ec0, 0.08);
                 backLight.position.set(-2.0, -3.0, -1.5);
                 scene.add(backLight);
                 // Hemisphere: deep space below, faint blue sky above
-                scene.add(new THREE.HemisphereLight(0x7ac8e8, 0x010306, 0.10));
+                scene.add(new THREE.HemisphereLight(0x7ac8e8, 0x010306, 0.06));
                 // Very low ambient so night side stays dark and city lights pop
-                scene.add(new THREE.AmbientLight(0x060c14, 0.025));
+                scene.add(new THREE.AmbientLight(0x050a12, 0.008));
             } else {
                 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
             }
 
             // ── Earth surface mesh ───────────────────────────────────────────
             const earthMaterial = new THREE.MeshStandardMaterial({
-                color: new THREE.Color(0xffffff),
-                roughness: EARTH_DEBUG_MINIMAL ? 1.0 : 0.72,
+                color: new THREE.Color(0xc0c8c8),
+                roughness: EARTH_DEBUG_MINIMAL ? 1.0 : 0.68,
                 metalness: EARTH_DEBUG_MINIMAL ? 0.0 : 0.04,
                 envMapIntensity: 0.0,
             });
@@ -244,7 +256,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                 cloudShadowEnabled: { value: 0.0 },
                 cloudRotationY: { value: 0.0 },
                 cloudShadowSunDir: { value: sunDirection.clone() },
-                cloudShadowStrength: { value: 0.55 },
+                cloudShadowStrength: { value: 0.62 },
             };
 
             if (!EARTH_DEBUG_MINIMAL) {
@@ -281,10 +293,23 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                     ).replace(
                         '#include <map_fragment>',
                         `#include <map_fragment>
+                        vec3 surfaceNormal = normalize(vCloudShadowWorldNormal);
+                        float surfaceSun = dot(surfaceNormal, normalize(cloudShadowSunDir));
+                        // Cor base só levemente trabalhada; o BRILHO do lado noturno é
+                        // adicionado via emissive (abaixo), porque a iluminação direcional
+                        // do material zera a cor difusa onde não bate sol — mexer só na
+                        // diffuseColor deixava a noite preta por mais clara que fosse.
+                        diffuseColor.rgb *= vec3(1.00, 1.02, 1.06);
+                        // Profundidade/vinheta: escurece nas bordas (longe do sub-ponto da
+                        // câmera) e mais ainda embaixo (normal.y baixo), clareando para
+                        // cima/em direção ao sol. Dá volume ao globo em vez de disco chapado.
+                        float depthDown = smoothstep(-0.85, 0.35, surfaceNormal.y);
+                        float depthVignette = 0.40 + 0.60 * depthDown;
+                        diffuseColor.rgb *= depthVignette;
                         if (cloudShadowEnabled > 0.5) {
                             // Offset the cloud lookup slightly toward the sun in surface space —
                             // approximates a shadow cast a small distance toward the light source.
-                            vec3 nrm = normalize(vCloudShadowWorldNormal);
+                            vec3 nrm = surfaceNormal;
                             vec3 sunTangent = normalize(cloudShadowSunDir - nrm * dot(cloudShadowSunDir, nrm));
                             // Convert tangential offset into UV space. Magnitudes are tiny because
                             // the cloud layer sits just above the surface (~0.020 above radius 1).
@@ -299,6 +324,29 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                             float shadow = smoothstep(0.18, 0.78, cloudDensity) * cloudShadowStrength * lit;
                             diffuseColor.rgb *= (1.0 - shadow);
                         }`,
+                    ).replace(
+                        '#include <emissivemap_fragment>',
+                        `#include <emissivemap_fragment>
+                        // Brilho do lado NOTURNO via emissive: independe da luz do sol,
+                        // então o lado escuro deixa de ser preto. A luz de luar azulada
+                        // aparece só onde NÃO bate sol (nightMask) e usa a própria textura
+                        // (map) para revelar continentes/oceanos em penumbra. Esta é a
+                        // alavanca certa — mexer na diffuseColor não clareava a noite.
+                        vec3 nEm = normalize(vCloudShadowWorldNormal);
+                        float sunEm = dot(nEm, normalize(cloudShadowSunDir));
+                        float nightMask = 1.0 - smoothstep(-0.18, 0.30, sunEm);
+                        vec3 baseTex = diffuseColor.rgb;
+                        // Luar azul frio SUTIL: noite ainda escura, mas com relevo e
+                        // oceanos visíveis em penumbra; as cidades brilham por cima.
+                        // Leve realce no terminador (penumbra um pouco mais clara).
+                        float terminatorEm = (1.0 - smoothstep(0.0, 0.34, abs(sunEm)));
+                        vec3 moonlight = baseTex * vec3(0.085, 0.125, 0.215) + vec3(0.004, 0.009, 0.018);
+                        moonlight += vec3(0.010, 0.024, 0.046) * terminatorEm;
+                        // Mesma vinheta de profundidade do lado dia: penumbra mais escura
+                        // embaixo, clareando para cima.
+                        float depthDownEm = smoothstep(-0.85, 0.35, nEm.y);
+                        moonlight *= (0.40 + 0.60 * depthDownEm);
+                        totalEmissiveRadiance += moonlight * nightMask;`,
                     );
                 };
             }
@@ -520,15 +568,21 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                             uniform sampler2D lightsMap;
                             uniform vec3 sunDirection;
                             void main() {
-                                // Real Black Marble: RGB JPG, no alpha.
-                                // Use a forced positive LOD bias so the GPU picks a smaller mip
-                                // level than its derivatives suggest. Near the limb the texture
-                                // is foreshortened heavily — without this bias, single bright
-                                // pixels alias frame-to-frame and twinkle like stars.
-                                vec3 raw = texture2D(lightsMap, vUv, 0.6).rgb;
+                                vec3 n = normalize(vWorldNormal);
+                                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+                                float facing = max(dot(n, viewDir), 0.0);
+
+                                // Anti-twinkle: LOD bias positivo cresce perto do limbo, onde a
+                                // textura é foreshortened e pixels isolados aliasingam quadro a
+                                // quadro (piscam como estrelas). Amostrar um mip menor borra essa
+                                // cintilação. Base 1.1 + reforço quando facing é baixo (limbo).
+                                float lodBias = 1.1 + (1.0 - smoothstep(0.04, 0.45, facing)) * 1.4;
+                                vec3 raw = texture2D(lightsMap, vUv, lodBias).rgb;
 
                                 float lum = dot(raw, vec3(0.299, 0.587, 0.114));
-                                float intensity = smoothstep(0.025, 0.78, lum);
+                                // Piso mais alto: não acende os pixels muito fracos (ruído de
+                                // aliasing). Só luzes de cidade reais, estáveis entre quadros.
+                                float intensity = smoothstep(0.085, 0.62, lum);
 
                                 vec3 cityColor = mix(
                                     vec3(1.0, 0.78, 0.42),
@@ -536,20 +590,20 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                                     intensity
                                 );
 
-                                vec3 n = normalize(vWorldNormal);
                                 float sunDot = dot(n, normalize(sunDirection));
-                                float nightFactor = smoothstep(-0.05, -0.32, sunDot);
-                                float dayPenalty = smoothstep(0.05, -0.10, sunDot);
+                                // Sol no topo atrás do limbo: quase todo o disco visível é
+                                // penumbra/noite (sunDot baixo). Abrimos a janela para as
+                                // cidades acenderem já a partir da penumbra (sunDot ~0.40),
+                                // cobrindo o disco noturno como na referência; o dayPenalty
+                                // ainda apaga a faixa fina de dia no topo, perto do sol.
+                                float nightFactor = smoothstep(0.46, -0.10, sunDot);
+                                float dayPenalty = smoothstep(0.52, 0.20, sunDot);
 
-                                // Limb fade: perto do limbo a amostragem é oblíqua e vira
-                                // twinkle. O fade fica bem estreito para preservar as luzes de
-                                // cidade na faixa noturna do domo, apagando só a borda extrema.
-                                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-                                float facing = max(dot(n, viewDir), 0.0);
+                                // Apaga só a borda extrema do limbo (twinkle residual).
                                 float limbFade = smoothstep(0.015, 0.09, facing);
 
-                                float alpha = intensity * nightFactor * dayPenalty * limbFade * 1.05;
-                                gl_FragColor = vec4(cityColor * intensity * 1.30, clamp(alpha, 0.0, 1.0));
+                                float alpha = intensity * nightFactor * dayPenalty * limbFade * 1.75;
+                                gl_FragColor = vec4(cityColor * intensity * 2.1, clamp(alpha, 0.0, 1.0));
                             }
                         `,
                     }),
@@ -610,7 +664,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                         (tex) => {
                             if (disposed) { tex.dispose(); return; }
                             console.debug(`[earth] cloud texture loaded: ${url}`);
-                            applyCloudTexture(tex, isPng ? 0.7 : 0.65, isPng ? 1.0 : 0.0);
+                            applyCloudTexture(tex, isPng ? 0.92 : 0.88, isPng ? 1.0 : 0.0);
                         },
                         undefined,
                         () => tryLoadCloud(index + 1),
@@ -636,7 +690,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                             sunDirection: { value: sunDirection },
                             uColorDay: { value: new THREE.Color(0x6fd2ec) },
                             uColorDeep: { value: new THREE.Color(0x1e55b0) },
-                            uIntensity: { value: 1.0 },
+                            uIntensity: { value: 1.75 },
                         },
                         vertexShader: `
                             varying vec3 vWorldNormal;
@@ -660,20 +714,20 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                                 vec3 viewDir = normalize(cameraPosition - vWorldPosition);
                                 // Fresnel: 0 olhando o chão, 1 na tangência (limbo).
                                 float rim = 1.0 - max(dot(n, viewDir), 0.0);
-                                float fresnel = pow(rim, 4.5);
-                                // Núcleo: filete muito fino e quase branco exatamente no limbo.
-                                float core = pow(rim, 11.0);
-                                // Halo difuso mais estreito que antes — evita banda larga artificial.
-                                float halo = pow(rim, 7.0);
-                                // Dia brilha, noite quase some (realista).
+                                // Cena recomeçada SEM cores quentes: atmosfera só azul.
+                                // Halo azul mais largo + filete ciano rente ao limbo,
+                                // nenhuma lâmina âmbar/vermelha do nascer do sol.
+                                float blueHalo = pow(rim, 6.7);
+                                float blueCore = pow(rim, 13.0);
                                 float sunDot = dot(n, normalize(sunDirection));
+                                // Dia brilha, noite quase some (realista).
                                 float lit = smoothstep(-0.35, 0.28, sunDot);
-                                // Cor: azul profundo no halo → ciano perto do limbo → branco no núcleo.
-                                vec3 color = mix(uColorDeep, uColorDay, halo);
-                                color += vec3(0.90, 0.98, 1.0) * core * 0.35;
-                                // Alpha: halo fino + núcleo sutil; cap em 0.55 evita saturação.
-                                float alpha = (halo * 0.38 + core * 0.28) * (0.15 + lit * 0.85) * uIntensity;
-                                gl_FragColor = vec4(color, clamp(alpha, 0.0, 0.55));
+                                vec3 color =
+                                    uColorDeep * blueHalo * 0.72 +
+                                    uColorDay * blueCore * 0.92;
+                                float alpha =
+                                    (blueHalo * 0.28 + blueCore * 0.26) * (0.12 + lit * 0.88);
+                                gl_FragColor = vec4(color, clamp(alpha * uIntensity, 0.0, 0.76));
                             }
                         `,
                     }),

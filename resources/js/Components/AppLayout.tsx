@@ -144,14 +144,14 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
 
     return (
         <div className="flex min-h-screen flex-col">
-            <header className={`sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${hideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
+            <header className={`app-header sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${hideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
                 {/* Hairline ciano de assinatura, espelha a linha do footer */}
                 <div className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-signal-cyan/25 to-transparent" aria-hidden="true" />
                 <NavigationProgress />
                 <div ref={menuRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between lg:h-auto lg:py-4">
-                        <Link href="/" prefetch className="flex items-center gap-3">
-                            <span className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-signal-cyan to-signal-mint text-space-950 shadow-glow">
+                        <Link href="/" prefetch className="app-brand group flex items-center gap-3">
+                            <span className="app-brand-mark flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-signal-cyan to-signal-mint text-space-950 shadow-glow">
                                 <Rocket className="size-5" aria-hidden="true" />
                             </span>
                             <span>
@@ -161,7 +161,7 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                         </Link>
 
                         <div className="hidden items-center gap-2 lg:flex">
-                            <nav className="flex gap-2">
+                            <nav className="app-nav-shell flex gap-1.5">
                                 {navItems.map((item) => {
                                     const active = url === item.href || (item.href !== '/' && url.startsWith(item.href));
                                     const Icon = item.icon;
@@ -170,9 +170,9 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                                             key={item.href}
                                             href={item.href}
                                             prefetch
-                                            className={`inline-flex items-center gap-2 rounded px-3 py-2 text-sm transition ${
+                                            className={`app-nav-link inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
                                                 active
-                                                    ? 'border border-signal-cyan/30 bg-signal-cyan/15 text-signal-cyan shadow-[0_0_12px_rgba(84,214,214,0.15)]'
+                                                    ? 'app-nav-link-active border border-signal-cyan/30 bg-signal-cyan/15 text-signal-cyan shadow-[0_0_12px_rgba(84,214,214,0.15)]'
                                                     : 'border border-transparent bg-white/5 text-white/65 hover:bg-white/8 hover:text-white/90'
                                             }`}
                                         >
@@ -182,12 +182,12 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                                     );
                                 })}
                             </nav>
-                            <div className="ml-1 inline-flex rounded border border-white/10 bg-white/[0.04] p-1" aria-label={t('language.label')}>
+                            <div className="app-locale-switch ml-1 inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-1" aria-label={t('language.label')}>
                                 {(['pt-BR', 'en'] as Locale[]).map((item) => (
                                     <button
                                         key={item}
                                         type="button"
-                                        className={`rounded px-2.5 py-1 text-xs font-semibold transition ${
+                                        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                                             locale === item ? 'bg-signal-cyan text-space-950' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'
                                         }`}
                                         onClick={() => setLocale(item)}
@@ -199,12 +199,12 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                         </div>
 
                         <div className="flex items-center gap-2 lg:hidden">
-                            <div className="inline-flex rounded border border-white/10 bg-white/[0.04] p-1" aria-label={t('language.label')}>
+                            <div className="app-locale-switch inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-1" aria-label={t('language.label')}>
                                 {(['pt-BR', 'en'] as Locale[]).map((item) => (
                                     <button
                                         key={item}
                                         type="button"
-                                        className={`rounded px-2.5 py-1 text-xs font-semibold transition ${
+                                        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                                             locale === item ? 'bg-signal-cyan text-space-950' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'
                                         }`}
                                         onClick={() => setLocale(item)}
@@ -218,7 +218,7 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                                 aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
                                 aria-expanded={menuOpen}
                                 aria-controls="mobile-nav"
-                                className="inline-flex items-center justify-center rounded p-2 text-white/70 transition hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                                className="app-icon-button inline-flex items-center justify-center rounded-lg p-2 text-white/70 transition hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan"
                                 onClick={() => setMenuOpen((value) => !value)}
                             >
                                 {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}

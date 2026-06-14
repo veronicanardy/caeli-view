@@ -119,6 +119,7 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                 <Suspense fallback={<HeroEarthFallback />}>
                     <CinematicEarthScene />
                 </Suspense>
+                <div className="home-earth-cinematic-grade pointer-events-none absolute inset-0 z-[11]" aria-hidden="true" />
 
                 {/* Vignette: separa a navbar do céu e cria um poço suave atrás do
                     bloco editorial central, sem escurecer o horizonte embaixo. */}
@@ -128,23 +129,34 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                 </div>
 
                 {/* Glint quente acima do lado iluminado do horizonte */}
-                <div className="home-warm-glint pointer-events-none absolute inset-0 z-10" aria-hidden="true" />
+                <div className="home-warm-glint pointer-events-none absolute inset-0 z-[8]" aria-hidden="true" />
+                <div className="home-cinematic-sunrise pointer-events-none absolute inset-0 z-[8]" aria-hidden="true">
+                    <span className="home-cinematic-sunrise-bloom" />
+                    <span className="home-cinematic-sunrise-atmosphere" />
+                    <span className="home-cinematic-sunrise-corona" />
+                    <span className="home-cinematic-sunrise-core" />
+                </div>
 
-                <div className="home-hero-copy relative z-20 mx-auto flex w-full max-w-4xl flex-col items-center px-4 pt-[clamp(3rem,7.5vh,5rem)] text-center sm:px-6">
-                    <div className="hero-rise inline-flex items-center gap-2 rounded-full border border-signal-cyan/30 bg-signal-cyan/10 px-3.5 py-1.5 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-signal-cyan backdrop-blur">
+                <div className="home-hero-copy relative z-20 mx-auto flex w-full max-w-4xl flex-col items-center px-4 pt-[clamp(3.25rem,7.2vh,5.35rem)] text-center sm:px-6">
+                    <div className="home-hero-badge hero-rise inline-flex items-center gap-2 rounded-full border border-signal-cyan/30 bg-signal-cyan/10 px-3.5 py-1.5 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-signal-cyan backdrop-blur">
                         <Satellite className="size-3.5" aria-hidden="true" />
                         {t('home.hero.badge')}
                     </div>
-                    <h1 className="hero-headline hero-rise hero-rise-2 mt-6 text-6xl font-semibold leading-[0.95] sm:text-7xl lg:text-8xl">
+                    <h1 className="hero-headline hero-rise hero-rise-2 mt-5 text-6xl font-semibold leading-[0.94] sm:text-7xl lg:text-8xl">
                         {t('home.hero.heading')}
                     </h1>
-                    <p className="hero-rise hero-rise-3 mt-6 max-w-2xl text-balance text-lg leading-8 text-white/74">{t('home.hero.description')}</p>
+                    <p className="home-hero-description hero-rise hero-rise-3 mt-5 max-w-2xl text-balance text-lg leading-8 text-white/76">{t('home.hero.description')}</p>
+                    <p className="home-hero-source hero-rise hero-rise-3 mt-3 max-w-2xl text-balance text-[0.68rem] font-semibold uppercase leading-5 tracking-[0.18em] text-white/42">
+                        {t('home.hero.sources')}
+                    </p>
 
-                    <div className="hero-rise hero-rise-4 relative mt-9 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
-                        <Link
-                            href="/radar"
-                            prefetch
+                    <div className="hero-rise hero-rise-4 relative mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
+                        <button
+                            type="button"
                             className="home-cta group focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-space-950"
+                            aria-expanded={optionsOpen}
+                            aria-controls="home-options-panel"
+                            onClick={() => setOptionsOpen(true)}
                         >
                             <span className="home-cta-ring" aria-hidden="true" />
                             <span className="home-cta-ring home-cta-ring-2" aria-hidden="true" />
@@ -155,23 +167,17 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                                     <ArrowRight className="size-4" aria-hidden="true" />
                                 </span>
                             </span>
-                        </Link>
-                        <button
-                            type="button"
-                            className="home-cta-secondary"
-                            aria-expanded={optionsOpen}
-                            aria-controls="home-options-panel"
-                            onClick={() => setOptionsOpen(true)}
-                        >
-                            {en ? 'Explore modules' : 'Ver módulos'}
-                            <ArrowRight className="size-3.5" aria-hidden="true" />
                         </button>
+                        <Link href="/radar" prefetch className="home-cta-secondary">
+                            {en ? 'Go straight to Radar' : 'Ir direto ao Radar'}
+                            <ArrowRight className="size-3.5" aria-hidden="true" />
+                        </Link>
                     </div>
                 </div>
 
                 <OptionsScene open={optionsOpen} onBack={() => setOptionsOpen(false)} />
 
-                <div className="home-console-wrap relative z-20 mx-auto mt-auto w-full max-w-5xl px-4 pb-[clamp(3rem,8vh,5.5rem)] pt-6 sm:px-6">
+                <div className="home-console-wrap relative z-20 mx-auto mt-auto w-full max-w-5xl px-4 pb-[clamp(0.9rem,2.6vh,1.9rem)] pt-6 sm:px-6">
                     <ObservatoryConsole
                         spaceNews={feed.data.spaceNewsHighlight}
                         apod={feed.data.apod}
@@ -285,7 +291,7 @@ function ObservatoryConsole({
         <div className="hero-rise hero-rise-5">
             <section className="observatory-console" aria-label={t('home.hero.statusRibbonLabel')}>
                 <header className="console-header">
-                    <span className="console-header-title">{en ? 'Live observation panel' : 'Painel de observação ao vivo'}</span>
+                    <span className="console-header-title">{en ? 'Radar live feed' : 'Feed do Radar ao vivo'}</span>
                     <span className="console-header-location">
                         <span className="sky-status-pulse" aria-hidden="true" />
                         <span className="console-header-prefix">{en ? 'Local observation based on' : 'Observação local baseada em'}</span>
