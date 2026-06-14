@@ -1,5 +1,5 @@
-import { Link, usePage } from '@inertiajs/react';
-import { Earth, Image, Info, Menu, Rocket, Telescope, X } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { Earth, Image, Info, LoaderCircle, Menu, Rocket, Telescope, X } from 'lucide-react';
 import { PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { Locale, useTranslation } from '@/i18n';
 import { PageProps } from '@/types';
@@ -12,12 +12,92 @@ const navItems = [
     { href: '/sobre', labelKey: 'nav.about', icon: Info },
 ] as const;
 
+const minNavigationProgressMs = 320;
+const navigationProgressFadeMs = 180;
+
+function NavigationProgress() {
+    const [phase, setPhase] = useState<'hidden' | 'visible' | 'leaving'>('hidden');
+    const { locale } = useTranslation();
+    const startedAtRef = useRef(0);
+    const finishTimeoutRef = useRef<number | null>(null);
+    const hideTimeoutRef = useRef<number | null>(null);
+    const label = locale === 'en' ? 'Loading screen...' : 'Carregando tela...';
+    const detail = locale === 'en' ? 'Synchronizing view' : 'Sincronizando visualização';
+
+    useEffect(() => {
+        const clearTimers = () => {
+            if (finishTimeoutRef.current !== null) {
+                window.clearTimeout(finishTimeoutRef.current);
+                finishTimeoutRef.current = null;
+            }
+
+            if (hideTimeoutRef.current !== null) {
+                window.clearTimeout(hideTimeoutRef.current);
+                hideTimeoutRef.current = null;
+            }
+        };
+
+        const start = () => {
+            clearTimers();
+            startedAtRef.current = window.performance.now();
+            setPhase('visible');
+        };
+
+        const finish = () => {
+            const elapsed = window.performance.now() - startedAtRef.current;
+            const remaining = Math.max(0, minNavigationProgressMs - elapsed);
+
+            if (finishTimeoutRef.current !== null) {
+                window.clearTimeout(finishTimeoutRef.current);
+            }
+
+            finishTimeoutRef.current = window.setTimeout(() => {
+                setPhase('leaving');
+                hideTimeoutRef.current = window.setTimeout(() => {
+                    setPhase('hidden');
+                }, navigationProgressFadeMs);
+            }, remaining);
+        };
+
+        const removeStartListener = router.on('start', start);
+        const removeFinishListener = router.on('finish', finish);
+
+        return () => {
+            removeStartListener();
+            removeFinishListener();
+            clearTimers();
+        };
+    }, []);
+
+    if (phase === 'hidden') {
+        return null;
+    }
+
+    return (
+        <div
+            className={`pointer-events-none absolute inset-x-0 bottom-0 translate-y-full px-4 pt-2 transition duration-200 sm:px-6 lg:px-8 ${
+                phase === 'leaving' ? 'opacity-0' : 'opacity-100'
+            }`}
+            aria-hidden="true"
+        >
+            <div className="mx-auto flex max-w-7xl justify-start">
+                <div className="app-navigation-loader">
+                    <LoaderCircle className="size-4 animate-spin text-signal-cyan" aria-hidden="true" />
+                    <span className="font-medium text-white/85">{label}</span>
+                    <span className="hidden text-white/40 sm:inline">{detail}</span>
+                    <span className="app-navigation-loader-bar" aria-hidden="true" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ hideHeader?: boolean }>) {
     const { url, props } = usePage<PageProps>();
     const { locale, setLocale, t } = useTranslation();
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const appTagline = locale === 'en' ? 'Observatory with public NASA/JPL data' : 'Observatório com dados públicos NASA/JPL';
+    const appTagline = t('app.tagline');
     const footerCopy = locale === 'en'
         ? {
             label: 'Transparency',
@@ -65,6 +145,9 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
     return (
         <div className="flex min-h-screen flex-col">
             <header className={`sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${hideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
+                {/* Hairline ciano de assinatura, espelha a linha do footer */}
+                <div className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-signal-cyan/25 to-transparent" aria-hidden="true" />
+                <NavigationProgress />
                 <div ref={menuRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between lg:h-auto lg:py-4">
                         <Link href="/" prefetch className="flex items-center gap-3">

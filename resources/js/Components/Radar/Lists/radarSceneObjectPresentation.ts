@@ -1,8 +1,8 @@
 /**
  * Helpers de apresentação do item de lista da cena do radar.
  *
- * Responsabilidade: formatar o label trailing (data ou distância) e o tooltip
- * de indisponibilidade de cada item. Funções puras — não acessam cena nem API.
+ * Responsabilidade: formatar o label trailing (data ou distância) de cada item.
+ * Funções puras — não acessam cena nem API.
  */
 
 import { compactKm } from '@/lib/format';
@@ -31,24 +31,6 @@ export function formatObjectListTrailingLabel(
     }
 
     return compactKm(currentDistanceKm);
-}
-
-export function objectListItemTitle(
-    orbitBlocked: boolean,
-    hasScenePosition: boolean,
-    locale: ObservatoryLocale,
-): string | undefined {
-    const en = locale === 'en';
-
-    if (orbitBlocked) {
-        return en ? 'Orbit unavailable for this object \u2014 no orbital elements from Horizons.' : '\u00D3rbita indispon\u00EDvel para este objeto \u2014 sem elementos orbitais do Horizons.';
-    }
-
-    if (!hasScenePosition) {
-        return en ? 'No live position from Horizons right now \u2014 not shown on the radar.' : 'Sem posi\u00E7\u00E3o do Horizons no momento \u2014 n\u00E3o exibido no radar.';
-    }
-
-    return undefined;
 }
 
 // Isola o parsing da data de aproximacao sem fabricar posicoes ou estados novos.

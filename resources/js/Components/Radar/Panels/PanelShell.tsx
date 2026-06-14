@@ -1,81 +1,148 @@
 /**
  * Shell visual comum dos painéis flutuantes.
  *
- * Em desktop: painel lateral fixo (left-3, top-30%).
- * Em mobile: bottom sheet com handle de arraste, backdrop e posicionamento bottom-0.
+ * Em desktop: card do trilho esquerdo (left-3); o `top` e a altura máxima vêm
+ * de quem monta, calculados para encaixar logo abaixo do painel de navegação
+ * sem colidir com ele nem estourar a base da cena.
+ * Em mobile: bottom sheet com arraste real e três estados (minimizado, meio
+ * aberto, expandido). O handle e o cabeçalho são a região de arraste; um toque
+ * no handle cicla os estados. No estado minimizado só o cabeçalho fica visível,
+ * devolvendo a cena 3D ao usuário sem perder o contexto do objeto.
+ *
+ * Nota: o shell não usa -translate-y para posicionar no desktop. A animação de
+ * entrada aplica `transform` inline, que sobrescreveria qualquer classe de
+ * translate. Posição vertical é sempre via `top` + `max-height`.
  */
 
-import type { CSSProperties, ReactNode, Ref } from 'react';
+import { createContext, useContext, useMemo, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react';
 import { X } from 'lucide-react';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MOBILE_MEDIA_QUERY } from '../radarLayoutConstants';
+import { FOCUS_CARD_SNAP_FRACTION, nextSnapOnTap } from './bottomSheetSnap';
+import type { SheetSnap } from './bottomSheetSnap';
+import { useBottomSheetDrag } from './useBottomSheetDrag';
+
+/** Estados do card mobile: minimizado, meio aberto (padrão) e expandido. */
+const CARD_SNAPS: SheetSnap[] = ['peek', 'half', 'full'];
+
+/**
+ * Estado do sheet exposto ao conteúdo do card: permite priorizar dados no
+ * mobile (ex.: esconder o preview decorativo fora do estado expandido) sem
+ * acoplar o conteúdo ao mecanismo de arraste.
+ */
+export type PanelSheetState = {
+    /** True quando o shell está em modo bottom sheet (viewport mobile). */
+    isMobileSheet: boolean;
+    snap: SheetSnap;
+};
+
+const PanelSheetContext = createContext<PanelSheetState>({ isMobileSheet: false, snap: 'full' });
+
+export function usePanelSheetState(): PanelSheetState {
+    return useContext(PanelSheetContext);
+}
 
 type PanelShellProps = {
+    /** Idioma dos rótulos próprios do shell (handle de redimensionar). */
+    en?: boolean;
     onClose: () => void;
     closeLabel: string;
     showCloseButton?: boolean;
     eyebrow?: string;
     eyebrowPrefix?: ReactNode;
     title: ReactNode;
-    subtitle?: ReactNode;
     dotColor?: string;
     borderClass?: string;
     children: ReactNode;
     className?: string;
     style?: CSSProperties;
-    /** Em mobile, alinha ao topo (substitui o painel lateral) em vez de bottom. */
-    mobileTopAlign?: boolean;
     panelRef?: Ref<HTMLDivElement>;
     /** Marcador estável para o tutorial interativo destacar este painel. */
     dataTutorial?: string;
 };
 
 export function PanelShell({
+    en = false,
     onClose,
     closeLabel,
     showCloseButton = true,
     eyebrow,
     eyebrowPrefix,
     title,
-    subtitle,
     dotColor,
     borderClass = 'border-white/12',
     children,
     className = '',
     style,
-    mobileTopAlign = false,
     panelRef,
     dataTutorial,
 }: PanelShellProps) {
+    const isMobile = useMediaQuery(MOBILE_MEDIA_QUERY);
+    const sheetRef = useRef<HTMLDivElement>(null);
+    const [snap, setSnap] = useState<SheetSnap>('half');
+    const { dragging, heightStyle, dragRegionProps, wasDraggedRef } = useBottomSheetDrag({
+        sheetRef,
+        snaps: CARD_SNAPS,
+        snap,
+        onSnapChange: setSnap,
+        // Sem onDismiss: fechar o card é decisão explícita (botão X), nunca acidente de gesto.
+        fractions: FOCUS_CARD_SNAP_FRACTION,
+    });
+
+    const onHandleTap = () => {
+        // Ignora o click fantasma que o browser dispara logo após um arraste.
+        if (wasDraggedRef.current) return;
+        setSnap((current) => nextSnapOnTap(current, CARD_SNAPS));
+    };
+
+    const setRefs = (el: HTMLDivElement | null) => {
+        sheetRef.current = el;
+        if (typeof panelRef === 'function') panelRef(el);
+        else if (panelRef) panelRef.current = el;
+    };
+
+    // Memoizado para o conteúdo não re-renderizar a cada frame do arraste
+    // (dragHeight muda por pointermove; snap só muda no fim do gesto).
+    const sheetState = useMemo<PanelSheetState>(() => ({ isMobileSheet: isMobile, snap }), [isMobile, snap]);
+
+    const mobileStyle: CSSProperties = isMobile
+        ? {
+            ...heightStyle,
+            // Durante o arraste, a animação de entrada (opacity/transform) não pode reativar transição.
+            transition: dragging ? 'none' : `${heightStyle.transition}, opacity 0.18s ease, transform 0.22s ease`,
+        }
+        : {};
+
     return (
-        <>
-            {/* Backdrop mobile: pointer-events-none para não bloquear toques na cena 3D.
-                Fechar acontece pelo botão X ou selecionando outro objeto. */}
-            <div
-                className="pointer-events-none absolute inset-0 z-[19] lg:hidden"
-                aria-hidden
-            />
+        <div
+            ref={setRefs}
+            data-tutorial={dataTutorial}
+            style={{ ...style, ...mobileStyle, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            className={[
+                'pointer-events-auto absolute z-20 overflow-hidden border cursor-auto',
+                'bg-space-950/96 shadow-[0_0_36px_rgba(34,211,238,0.10),0_10px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl',
+                /* Mobile: bottom sheet largura total, canto superior arredondado */
+                'left-0 right-0 bottom-0 rounded-t-2xl',
+                /* Desktop: card do trilho esquerdo; top/max-h vêm do caller */
+                'lg:left-3 lg:right-auto lg:bottom-auto lg:rounded-2xl',
+                borderClass,
+                className,
+            ].join(' ')}
+        >
+            {/* Linha de acento ciano no topo */}
+            <div className="h-px w-full shrink-0 bg-gradient-to-r from-transparent via-signal-cyan/70 to-transparent" aria-hidden />
 
-            <div
-                ref={panelRef}
-                data-tutorial={dataTutorial}
-                style={{ ...style, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-                className={[
-                    'pointer-events-auto absolute z-20 overflow-hidden border cursor-auto',
-                    'bg-space-950/96 shadow-[0_0_36px_rgba(34,211,238,0.10),0_10px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl',
-                    /* Mobile: bottom sheet largura total, canto superior arredondado */
-                    'left-0 right-0 bottom-0 rounded-t-2xl',
-                    /* Desktop: card lateral esquerdo com cantos completos */
-                    'lg:left-3 lg:right-auto lg:bottom-auto lg:top-[30%] lg:-translate-y-1/2 lg:rounded-2xl',
-                    borderClass,
-                    className,
-                ].join(' ')}
-            >
-                {/* Linha de acento ciano no topo */}
-                <div className="h-px w-full bg-gradient-to-r from-transparent via-signal-cyan/70 to-transparent" aria-hidden />
-
-                {/* Handle de arraste — apenas mobile */}
-                <div className="flex justify-center pt-1.5 pb-0 lg:hidden" aria-hidden>
-                    <div className="h-1 w-8 rounded-full bg-white/20" />
-                </div>
+            {/* Região de arraste mobile: handle + cabeçalho. touch-none entrega o gesto ao hook. */}
+            <div className="shrink-0 touch-none lg:touch-auto" {...(isMobile ? dragRegionProps : {})}>
+                {/* Handle de arraste — apenas mobile. Toque cicla minimizado/meio/expandido. */}
+                <button
+                    type="button"
+                    onClick={onHandleTap}
+                    aria-label={en ? 'Toggle panel size' : 'Alternar tamanho do painel'}
+                    className="flex w-full justify-center pb-0 pt-1.5 outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan lg:hidden"
+                >
+                    <span className="h-1 w-8 rounded-full bg-white/20" aria-hidden />
+                </button>
 
                 <div className="flex min-h-0 shrink-0 items-start justify-between gap-2 px-4 pt-1.5 lg:px-4 lg:pt-4">
                     <div className="min-w-0">
@@ -93,11 +160,7 @@ export function PanelShell({
                                 </div>
                             </div>
                         ) : null}
-                        <div className="mt-1 truncate text-[16px] font-bold tracking-tight text-white lg:text-[18px]">{title}</div>
-                        {/* min-h reserva espaço mesmo sem subtítulo — evita salto de layout ao trocar objeto */}
-                        <div className="mt-0.5 min-h-[1rem] truncate text-[11px] text-white/50 lg:text-[12px]">
-                            {subtitle ?? null}
-                        </div>
+                        <div className="mt-1 truncate pb-1 text-[16px] font-bold tracking-tight text-white lg:text-[18px]">{title}</div>
                     </div>
                     {showCloseButton ? (
                         <button
@@ -110,8 +173,14 @@ export function PanelShell({
                         </button>
                     ) : null}
                 </div>
-                {children}
             </div>
-        </>
+
+            {/* Minimizado no mobile: corpo escondido, só o cabeçalho permanece. */}
+            <div className={`flex min-h-0 flex-1 flex-col ${isMobile && snap === 'peek' ? 'hidden' : ''}`}>
+                <PanelSheetContext.Provider value={sheetState}>
+                    {children}
+                </PanelSheetContext.Provider>
+            </div>
+        </div>
     );
 }

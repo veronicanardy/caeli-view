@@ -10,7 +10,7 @@ import { useMemo, useCallback } from 'react';
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, UnifiedApproach } from '@/types';
 import { OBJECT_PALETTE } from '@/lib/radar/palette';
-import { collectTimeTicks, currentPositionInScene } from '@/lib/radar/trajectorySampling';
+import { currentPositionInScene, trajectoryFramePoints } from '@/lib/radar/trajectorySampling';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { NowTrajectory } from '../Trajectory/NowTrajectory';
 import { framingForBody } from './cameraFraming';
@@ -32,6 +32,8 @@ export function AsteroidSceneLayer({
     showLabels,
     showLabelForObject,
     onFocusTrajectoryPoint,
+    panelBiasX = 0,
+    panelBiasY = 0,
 }: {
     closestNowObjects: ClosestNowObject[];
     selectedId: string | null;
@@ -41,6 +43,9 @@ export function AsteroidSceneLayer({
     showLabels: boolean;
     showLabelForObject: (id: string) => boolean;
     onFocusTrajectoryPoint?: (framing: FocusFraming) => void;
+    /** Frações do canvas cobertas por painéis: o zoom out de trajetória enquadra só a área livre. */
+    panelBiasX?: number;
+    panelBiasY?: number;
 }) {
     const handleFocusPoint = useCallback((vec: THREE.Vector3) => {
         if (!onFocusTrajectoryPoint) return;
@@ -51,12 +56,13 @@ export function AsteroidSceneLayer({
 
     const makeZoomProps = useCallback((position: SceneVector, object: ClosestNowObject) => {
         const trajectory = object.trajectory?.status === 'available' ? object.trajectory as AsteroidTrajectory : null;
-        const firstTick = trajectory ? collectTimeTicks(trajectory)[0] ?? null : null;
         const worldPos = new THREE.Vector3(earthPos[0] + position[0], earthPos[1] + position[1], earthPos[2] + position[2]);
-        const zoomOutTarget = firstTick
-            ? new THREE.Vector3(earthPos[0] + firstTick.vec.x, earthPos[1] + firstTick.vec.y, earthPos[2] + firstTick.vec.z)
-            : worldPos.clone();
-        return { zoomOutTarget, zoomOutDistance: 3.0, zoomWorldPosition: worldPos };
+        // Trecho que o zoom out deve enquadrar (até o marcador −72h), em coordenadas absolutas.
+        const zoomFramePoints = trajectory
+            ? trajectoryFramePoints(trajectory).map((vec) =>
+                new THREE.Vector3(earthPos[0] + vec.x, earthPos[1] + vec.y, earthPos[2] + vec.z))
+            : [];
+        return { zoomFramePoints, zoomWorldPosition: worldPos };
     }, [earthPos]);
 
     const renderableAsteroids = useMemo(() => {
@@ -86,6 +92,8 @@ export function AsteroidSceneLayer({
                         protectLabelFromFocus={!isSelected}
                         paletteColor={OBJECT_PALETTE[index % OBJECT_PALETTE.length].future}
                         showLabels={showLabels}
+                        panelBiasX={panelBiasX}
+                        panelBiasY={panelBiasY}
                         {...zoomCallbacks}
                     />
                 );

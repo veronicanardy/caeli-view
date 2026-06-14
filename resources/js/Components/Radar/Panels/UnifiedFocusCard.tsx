@@ -5,7 +5,11 @@
  * kind: 'body'     → tabs Resumo | Perfil Físico | História
  *
  * Mobile: bottom sheet com abas diretas, sem menu de seções intermediário.
- * Desktop: card lateral, altura estável entre abas via min-h fixo no conteúdo.
+ * Desktop: card do trilho esquerdo, ancorado logo abaixo do painel de navegação.
+ * O top usa a mesma fórmula de altura do painel (min(20rem,40vh), 16rem em modo
+ * órbita) para nunca colidir com ele; max-height garante folga até a base da
+ * cena, com scroll interno quando faltar espaço. Altura estável entre abas via
+ * min-h fixo no conteúdo.
  */
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from 'react';
@@ -16,9 +20,20 @@ import { approxKm, compactKm } from '@/lib/format';
 import { formatDistanceAU, formatRelativeDayLabel, formatTimestamp } from '@/lib/radar/format';
 import { motionLabel, objectTypeEyebrow, riskAssessment, sizeComparison, trajectoryStatusBadge, type StatusBadgeIcon } from './focusCardPresentation';
 import { BODIES, type BodyId } from './bodyData';
-import { PanelShell } from './PanelShell';
+import { PanelShell, usePanelSheetState } from './PanelShell';
 import { AsteroidModelPreview } from './AsteroidModelPreview';
 import { BodyImagePreview } from './BodyImagePreview';
+
+/**
+ * Slot do preview decorativo: no bottom sheet mobile, só aparece no estado
+ * expandido. Meio aberto prioriza dados (e evita um segundo contexto WebGL
+ * ativo enquanto o usuário só lê métricas).
+ */
+function SheetAwarePreview({ children }: { children: ReactNode }) {
+    const { isMobileSheet, snap } = usePanelSheetState();
+    if (isMobileSheet && snap !== 'full') return null;
+    return <>{children}</>;
+}
 
 type Tab = 'summary' | 'physical' | 'approach' | 'history';
 
@@ -57,9 +72,10 @@ type AsteroidProps = {
     onShowOrbit: () => void;
     onShowCloseUp: () => void;
     locale: 'pt-BR' | 'en';
-    mobileTopAlign?: boolean;
     onShowPanel?: () => void;
     panelRef?: Ref<HTMLDivElement>;
+    /** Desktop: painel de navegação recolhido em pill — o card sobe para logo abaixo dele. */
+    desktopPanelCollapsed?: boolean;
 };
 
 type BodyProps = {
@@ -67,9 +83,20 @@ type BodyProps = {
     body: BodyId;
     onClose: () => void;
     locale: 'pt-BR' | 'en';
-    mobileTopAlign?: boolean;
     panelRef?: Ref<HTMLDivElement>;
+    desktopPanelCollapsed?: boolean;
 };
+
+/**
+ * Classes desktop de top/max-height do card no trilho esquerdo.
+ * O top soma top-3 do painel (0.75rem) + altura do painel + gap (0.5rem);
+ * o max-height desconta o top e a folga inferior (0.75rem).
+ */
+function desktopRailClasses(panelCollapsed: boolean, orbitMode: boolean): string {
+    if (panelCollapsed) return 'lg:top-[3.75rem] lg:max-h-[calc(100%-4.5rem)]';
+    if (orbitMode) return 'lg:top-[calc(min(16rem,40vh)+1.25rem)] lg:max-h-[calc(100%-min(16rem,40vh)-2rem)]';
+    return 'lg:top-[calc(min(20rem,40vh)+1.25rem)] lg:max-h-[calc(100%-min(20rem,40vh)-2rem)]';
+}
 
 type Props = AsteroidProps | BodyProps;
 
@@ -145,9 +172,9 @@ function AsteroidCard({
     onShowOrbit,
     onShowCloseUp,
     locale,
-    mobileTopAlign,
     onShowPanel,
     panelRef,
+    desktopPanelCollapsed = false,
     en,
     tab,
     setTab,
@@ -177,10 +204,13 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
     const dotColor = orbitMode ? undefined : typeInfo.dotColor;
 
     const eyebrowPrefix = onShowPanel ? (
+        /* data-tutorial espelha o alvo da action bar: com o card aberto (barra oculta),
+           o tutorial resolve este botão como caminho visível para a lista. */
         <button
             type="button"
             onClick={onShowPanel}
-            className="lg:hidden flex items-center gap-1 text-[11px] text-white/50 transition hover:text-white/80 mr-1"
+            data-tutorial="object-list-toggle"
+            className="lg:hidden flex items-center gap-1 py-1 text-[11px] text-white/50 transition hover:text-white/80 mr-1"
             aria-label={en ? 'Back to list' : 'Voltar à lista'}
         >
             <ChevronDown className="-rotate-90 size-3" />
@@ -193,6 +223,7 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
 
     return (
         <PanelShell
+            en={en}
             onClose={onClose}
             closeLabel={en ? 'Close focus card' : 'Fechar painel'}
             showCloseButton={!orbitMode}
@@ -201,15 +232,16 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
             title={a.displayName ?? a.name}
             dotColor={dotColor}
             borderClass="border-signal-cyan/25"
-            /* Mobile: card inicia compacto (~38dvh), podendo crescer até 58dvh com scroll.
-               Desktop: card lateral com largura e altura controladas. */
-            className="flex max-h-[50dvh] lg:max-h-[76%] w-full lg:w-[min(22rem,48%)] flex-col lg:top-[30%]"
+            /* Mobile: altura controlada pelo PanelShell (snaps minimizado/meio/expandido).
+               Desktop: card do trilho esquerdo, abaixo do painel de navegação. */
+            className={`flex w-full lg:w-[min(22rem,48%)] flex-col ${desktopRailClasses(desktopPanelCollapsed, orbitMode)}`}
             style={enterStyle}
-            mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
             dataTutorial="selected-card"
         >
-            <AsteroidModelPreview object={object} locale={locale} />
+            <SheetAwarePreview>
+                <AsteroidModelPreview object={object} locale={locale} />
+            </SheetAwarePreview>
 
             {/* Abas — visíveis em mobile e desktop */}
             <FocusTabBar
@@ -220,23 +252,25 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
                 ariaLabel={en ? 'Focus card sections' : 'Seções do painel de foco'}
             />
 
-            {/* Área de conteúdo com scroll interno; py reduzido no mobile para dar espaço */}
+            {/* Área de conteúdo com scroll interno; py contido: altura disputada no trilho */}
             <div
                 role="tabpanel"
                 id="focus-tabpanel"
                 aria-labelledby={`focus-tab-${tab}`}
-                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 lg:px-4 lg:py-3"
+                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 lg:px-4"
                 style={{ transition: 'opacity 0.12s ease', opacity: contentVisible ? 1 : 0 }}
             >
                 {/* min-h estabiliza o card ao trocar abas sem cortar a aba mais alta (Resumo) */}
-                <div className="min-h-[13rem]">
+                {/* min-h só no desktop (estabiliza troca de abas); no mobile a altura vem do snap */}
+                <div className="lg:min-h-[13rem]">
                     {tab === 'summary' ? (
-                        <div className="space-y-3.5">
+                        <div className="space-y-2.5 lg:space-y-3.5">
                             {isNearClosest ? (
-                                <div className="flex items-center justify-center gap-2 rounded-lg border border-signal-cyan/40 bg-signal-cyan/10 px-3 py-2">
-                                    <Target className="size-4 shrink-0 text-signal-cyan" aria-hidden="true" />
+                                /* Compacto no mobile: o banner disputa altura com a métrica principal no sheet */
+                                <div className="flex items-center justify-center gap-2 rounded-lg border border-signal-cyan/40 bg-signal-cyan/10 px-2.5 py-1.5 lg:px-3 lg:py-2">
+                                    <Target className="size-3.5 shrink-0 text-signal-cyan lg:size-4" aria-hidden="true" />
                                     <div className="min-w-0">
-                                        <div className="text-[11.5px] font-semibold text-signal-cyan">
+                                        <div className="text-[11px] font-semibold text-signal-cyan lg:text-[11.5px]">
                                             {object.trajectory?.motionState === 'near_closest'
                                                 ? (en ? 'Closest approach' : 'Máxima aproximação')
                                                 : (en ? 'Closest approach coming up' : 'Máxima aproximação em breve')}
@@ -275,7 +309,7 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
                                     <span className="text-[11px] text-white/50">· {auText}</span>
                                 </div>
                             </div>
-                            <dl className="space-y-3 text-[13px]">
+                            <dl className="space-y-2 text-[13px] lg:space-y-3">
                                 {velocity != null ? (
                                     <Row label={en ? 'Velocity' : 'Velocidade'}>
                                         <span className="flex flex-col items-end gap-0.5">
@@ -441,25 +475,29 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                 </div>
             </div>
 
-            {/* Ações — footer unificado. Separador neutro: só a moldura externa leva ciano */}
-            <div className="shrink-0 border-t border-white/10 px-3 py-2 lg:px-4 lg:py-3">
-                <div className="space-y-1.5 lg:space-y-2">
+            {/* Ações — footer unificado. Separador neutro: só a moldura externa leva ciano.
+               Mobile: uma linha só (órbita + dossiê lado a lado), o sheet meio aberto é baixo.
+               Desktop: empilhado, com o botão completo de dossiê. */}
+            <div className="shrink-0 border-t border-white/10 px-3 py-1.5 lg:px-4 lg:py-2">
+                <div className="flex items-stretch gap-1.5 lg:flex-col lg:gap-0 lg:space-y-1.5">
                     {hasOrbit ? (
-                        <OrbitToggleButton
-                            orbitMode={orbitMode}
-                            canShowOrbitPosition={canShowOrbitPosition}
-                            onShowOrbit={onShowOrbit}
-                            onShowCloseUp={onShowCloseUp}
-                            en={en}
-                        />
+                        <div className="min-w-0 flex-1 lg:flex-none">
+                            <OrbitToggleButton
+                                orbitMode={orbitMode}
+                                canShowOrbitPosition={canShowOrbitPosition}
+                                onShowOrbit={onShowOrbit}
+                                onShowCloseUp={onShowCloseUp}
+                                en={en}
+                            />
+                        </div>
                     ) : null}
                     {onOpenFocus ? (
                         <>
-                            {/* Desktop: botão completo; mobile: link de texto compacto */}
+                            {/* Desktop: botão completo; mobile: pill compacto ao lado da órbita */}
                             <button
                                 type="button"
                                 onClick={() => onOpenFocus(a)}
-                                className="hidden lg:inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-2.5 text-[12px] font-medium text-white/60 transition outline-none hover:bg-white/5 hover:text-white/90 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                                className="hidden lg:inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-2 text-[12px] font-medium text-white/60 transition outline-none hover:bg-white/5 hover:text-white/90 focus-visible:ring-2 focus-visible:ring-signal-cyan"
                             >
                                 {en ? 'Open full dossier' : 'Abrir dossiê completo'}
                                 <ArrowRight className="size-3.5" aria-hidden="true" />
@@ -467,9 +505,9 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                             <button
                                 type="button"
                                 onClick={() => onOpenFocus(a)}
-                                className="lg:hidden flex w-full items-center justify-center gap-1 py-1 text-[11.5px] text-white/55 transition outline-none hover:text-white/85 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                                className="lg:hidden inline-flex shrink-0 items-center justify-center gap-1 rounded-full border border-white/10 px-3 py-2 text-[11.5px] text-white/60 transition outline-none hover:text-white/85 focus-visible:ring-2 focus-visible:ring-signal-cyan"
                             >
-                                {en ? 'Full dossier' : 'Dossiê completo'}
+                                {en ? 'Dossier' : 'Dossiê'}
                                 <ArrowRight className="size-3" aria-hidden="true" />
                             </button>
                         </>
@@ -485,8 +523,8 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
 function BodyCard({
     body,
     onClose,
-    mobileTopAlign,
     panelRef,
+    desktopPanelCollapsed = false,
     en,
     tab,
     setTab,
@@ -509,18 +547,21 @@ function BodyCard({
 
     return (
         <PanelShell
+            en={en}
             onClose={onClose}
             closeLabel={en ? 'Close' : 'Fechar'}
             eyebrow={en ? cfg.subtitleEn : cfg.subtitlePt}
             title={en ? cfg.nameEn : cfg.namePt}
             dotColor={cfg.dotColor}
             borderClass="border-white/20"
-            className="flex max-h-[50dvh] lg:h-[30rem] lg:max-h-none w-full lg:w-[min(22rem,48%)] flex-col lg:top-[30%]"
+            /* h fixa dá estabilidade entre corpos; o max-h do trilho corta com scroll em telas baixas */
+            className={`flex lg:h-[30rem] w-full lg:w-[min(22rem,48%)] flex-col ${desktopRailClasses(desktopPanelCollapsed, false)}`}
             style={enterStyle}
-            mobileTopAlign={mobileTopAlign}
             panelRef={panelRef}
         >
-            <BodyImagePreview body={body} />
+            <SheetAwarePreview>
+                <BodyImagePreview body={body} />
+            </SheetAwarePreview>
 
             {/* Abas — visíveis em mobile e desktop */}
             <FocusTabBar
@@ -539,7 +580,8 @@ function BodyCard({
                 style={{ transition: 'opacity 0.12s ease', opacity: contentVisible ? 1 : 0 }}
             >
                 {/* min-h estabiliza o card ao trocar abas sem cortar a aba mais alta (Resumo) */}
-                <div className="min-h-[13rem]">
+                {/* min-h só no desktop (estabiliza troca de abas); no mobile a altura vem do snap */}
+                <div className="lg:min-h-[13rem]">
                     {tab === 'summary' ? (
                         <div className="space-y-3.5">
                             <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">
@@ -594,7 +636,7 @@ function OrbitToggleButton({ orbitMode, canShowOrbitPosition, onShowOrbit, onSho
     en: boolean;
 }) {
     const disabled = !orbitMode && !canShowOrbitPosition;
-    const baseClass = 'inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-semibold tracking-tight transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan lg:py-2.5';
+    const baseClass = 'inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-semibold tracking-tight transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan';
     const stateClass = disabled
         ? 'cursor-not-allowed border border-white/8 bg-white/4 text-white/40'
         : orbitMode

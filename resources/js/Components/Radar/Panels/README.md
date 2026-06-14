@@ -30,18 +30,34 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 - `bodyData.ts`: fatos científicos, textos de contexto e narrativas históricas dos corpos celestes — unificado a partir dos antigos `bodyInfoContent.ts` e `bodyHistory.ts`, que compartilhavam a mesma chave `BodyId` e eram sempre lidos juntos.
 - `FocusObject.tsx`: conteúdo principal do objeto selecionado (usado fora do card unificado).
 - `focusCardPresentation.ts`: textos, badges e status de apresentação usados pelo `UnifiedFocusCard`. Ícones são retornados como nomes semânticos (`'alert'`, `'zap'`, ...) e mapeados para componentes lucide no card; emojis não devem voltar a ser usados como ícone.
-- `MobilePanelControls.tsx`: controles de navegação mobile.
+- `MobilePanelControls.tsx`: helpers de apresentação compartilhados (título da lista, mensagem de vazio).
 - `RadarDataQualityCard.tsx`: resumo visual de qualidade dos dados.
 - `RadarFloatingOverlays.tsx`: overlays flutuantes da cena 3D.
-- `RadarNavigationPanel.tsx`: moldura, colapso e flyout lateral da navegação do radar 3D.
-- `RadarNavigationMobileContent.tsx`: conteúdo mobile da navegação.
+- `RadarNavigationPanel.tsx`: decide a moldura por viewport — painel lateral + flyout no desktop, bottom sheets (objetos e filtros) no mobile.
+- `RadarNavigationMobileContent.tsx`: conteúdo do sheet de objetos mobile (referências, acordeão de planetas e lista).
 - `RadarNavigationDesktopContent.tsx`: conteúdo desktop da navegação.
 - `RadarNavigationObjectList.tsx`: lista visual de objetos e botão de atualização.
-- `radarNavigationTypes.ts`: contratos compartilhados da navegação, separando props do painel principal das props realmente usadas por conteúdos mobile/desktop.
-- `PanelShell.tsx`: shell visual reutilizável para painéis.
-- `SceneLegend.tsx`: legenda da cena.
+- `radarNavigationTypes.ts`: contratos compartilhados da navegação, incluindo `MobileSheetSection` (sheet mobile aberto: objetos/filtros/null).
+- `PanelShell.tsx`: shell visual reutilizável para painéis. No mobile vira bottom sheet com arraste real e três estados (minimizado/meio/expandido); no desktop, card lateral.
+- `MobileSheet.tsx`: bottom sheet genérico mobile (handle, arraste, snaps meio/expandido, fechamento por arraste ou X).
+- `MobileFiltersSheetContent.tsx`: conteúdo do sheet de filtros mobile, com descrição de cada critério sempre visível.
+- `bottomSheetSnap.ts`: geometria pura dos snaps dos sheets (alturas, snap mais próximo, dispensa, ciclo no toque). Testada em `tests/js/Radar/bottomSheetSnap.test.ts`.
+- `useBottomSheetDrag.ts`: hook de arraste vertical dos sheets, consumindo `bottomSheetSnap.ts`.
+- `SceneLegend.tsx`: legenda da cena (somente desktop; no mobile o guia abre pela `MobileActionBar` e o modal continua montado via portal).
 - `TechnicalDataPanel.tsx`: painel técnico expansível.
 - `panelFormatters.ts`: formatadores locais de datas e unidades exibidas nos painéis. `formatApproachDateTime` formata dia+mês+hora; `formatApproachDate` formata apenas a data.
+
+## Padrão Desktop: Trilho Esquerdo
+
+No desktop (lg:+), painel de navegação e card de foco formam um trilho único na esquerda: o card ancora logo abaixo do painel usando a mesma fórmula de altura (`min(20rem,40vh)`, 16rem em modo órbita) em `top`, com `max-height` até a base da cena e scroll interno quando faltar espaço (ver `desktopRailClasses` no `UnifiedFocusCard`). Isso elimina a colisão painel/card e o corte do rodapé do card que existiam com posicionamento independente (`top-[30%]`). O painel é recolhível em pill (`PanelLeftClose`) para dar protagonismo total à cena; o estado vive em `DailyOrbitalRadar3D` porque o card precisa subir junto. O enquadramento de foco compensa o trilho via `Scene/usePanelBias` (biasX, união painel+card, aplicado só durante tweens).
+
+Atenção: o shell dos cards não pode usar classes de translate para posicionar no desktop. A animação de entrada aplica `transform` inline, que sobrescreve qualquer `-translate-*` de classe (foi a causa original da colisão).
+
+## Padrão Mobile: Bottom Sheets E Action Bar
+
+No mobile (abaixo de lg:), a navegação abandona painéis flutuantes sobre a cena: a porta de entrada é a `Controls/MobileActionBar.tsx` (Objetos, Filtros, Guia) e cada superfície abre como bottom sheet. O card de foco (`PanelShell`) tem três estados com arraste; os sheets de navegação (`MobileSheet`) têm dois (meio/expandido) e fecham por arraste para baixo. A região de arraste é sempre handle + cabeçalho (com `touch-none`); o conteúdo rola livre, sem disputa entre gesto do sheet e scroll interno. A cena permanece visível e tocável acima do sheet — não há backdrop.
+
+No estado meio aberto o card prioriza dados: o preview decorativo (modelo 3D/imagem) só aparece no estado expandido, via `SheetAwarePreview` (`UnifiedFocusCard`), que lê o snap atual pelo contexto `usePanelSheetState` do `PanelShell`. Além de devolver as métricas ao primeiro olhar, isso evita um segundo contexto WebGL ativo enquanto o usuário só lê números. O valor do contexto é memoizado para o conteúdo não re-renderizar a cada frame de arraste.
 
 ## Remoção Do Caminho 2D E Consolidação De Cards
 
@@ -63,7 +79,7 @@ Filtros, referências, abertura de planetas, seleção de objetos, modo orbital 
 
 ## Tutorial Interativo
 
-Alguns painéis carregam marcadores `data-tutorial` consumidos pelo tutorial de primeira visita (`../Tutorial/`): `selected-card` (via prop `dataTutorial` do `PanelShell`), `card-tabs` e `orbit-button` no `UnifiedFocusCard`, `object-list` e `object-list-toggle` no `RadarNavigationPanel`, e `radar-guide` no `SceneLegend`. São atributos passivos, sem lógica: ao renomear ou mover esses elementos, atualize o contrato em `../Tutorial/README.md` e `radarTutorialSteps.ts`.
+Alguns painéis carregam marcadores `data-tutorial` consumidos pelo tutorial de primeira visita (`../Tutorial/`): `selected-card` (via prop `dataTutorial` do `PanelShell`), `card-tabs`, `orbit-button` e `object-list-toggle` (botão "Lista" do eyebrow mobile) no `UnifiedFocusCard`, `object-list` e `planet-flyout` no `RadarNavigationPanel` (desktop e sheet mobile), `radar-filter-criterion`/`radar-filter-limit` no `MobileFiltersSheetContent`, e `radar-guide` no `SceneLegend`. São atributos passivos, sem lógica: ao renomear ou mover esses elementos, atualize o contrato em `../Tutorial/README.md` e `radarTutorialSteps.ts`.
 
 ## Padrões Locais
 

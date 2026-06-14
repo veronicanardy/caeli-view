@@ -111,6 +111,28 @@ export function closestApproachNearPosition(
 }
 
 /**
+ * Trecho da trajetória que o zoom out de trajetória deve enquadrar: as amostras
+ * do passado até `maxAgeHours` atrás (cobre o marcador −72h com a mesma
+ * tolerância de 6h dos ticks) mais o ponto atual. Pontos sem timestamp legível
+ * entram no trecho — descartá-los esconderia trajetória real.
+ * Retorna posições na cena (relativas à Terra), em ordem cronológica.
+ */
+export function trajectoryFramePoints(trajectory: AsteroidTrajectory, maxAgeHours = 78): THREE.Vector3[] {
+    const now = trajectory.currentPoint?.timestamp ? new Date(trajectory.currentPoint.timestamp).getTime() : NaN;
+    const cutoff = Number.isNaN(now) ? null : now - maxAgeHours * 3_600_000;
+
+    const kept = (trajectory.pastPoints ?? []).filter((point) => {
+        if (cutoff === null) return true;
+        const stamp = new Date(point.timestamp).getTime();
+        return Number.isNaN(stamp) || stamp >= cutoff;
+    });
+
+    const points = kept.map((point) => toVec3(point));
+    if (trajectory.currentPoint) points.push(toVec3(trajectory.currentPoint));
+    return points;
+}
+
+/**
  * Escolhe as amostras de trajetória mais próximas de agora-24h, agora-7d e agora-30d e retorna
  * suas posições na cena com rótulos curtos. O "agora" é o timestamp do currentPoint, isto é,
  * o instante ao qual o Horizons ancorou a trajetória. Só emitimos marcadores quando existe uma

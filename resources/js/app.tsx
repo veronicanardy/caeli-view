@@ -19,7 +19,5 @@ createInertiaApp({
             </TranslationProvider>,
         );
     },
-    progress: {
-        color: '#54d6d6',
-    },
+    progress: false,
 });

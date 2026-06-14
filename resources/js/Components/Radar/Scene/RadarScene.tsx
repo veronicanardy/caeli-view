@@ -263,6 +263,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         showLabels={showLabels}
                         showLabelForObject={showLabelForObject}
                         onFocusTrajectoryPoint={onFocusTrajectoryPoint}
+                        panelBiasX={panelBiasX}
+                        panelBiasY={panelBiasY}
                     />
                 </>
             )}

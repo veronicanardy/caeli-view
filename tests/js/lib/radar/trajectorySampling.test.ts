@@ -9,6 +9,7 @@ import {
     currentPositionInScene,
     findClosestApproachPoint,
     toVec3,
+    trajectoryFramePoints,
 } from '@/lib/radar/trajectorySampling';
 import { KM_PER_LD } from '@/lib/sceneEphemeris';
 
@@ -241,5 +242,61 @@ describe('collectTimeTicks', () => {
         // The currentPoint itself is included in `all`, but it's 24h+ away from every target.
         const ticks = collectTimeTicks(trajectory);
         expect(ticks).toEqual([]);
+    });
+});
+
+
+// ─── trajectoryFramePoints ────────────────────────────────────────────────────
+
+describe('trajectoryFramePoints', () => {
+    const HOUR = 3_600_000;
+    const now = new Date('2026-05-28T12:00:00Z').getTime();
+    const at = (offsetHours: number) => new Date(now + offsetHours * HOUR).toISOString();
+
+    it('mantém amostras até 78h atrás e descarta as mais antigas', () => {
+        const trajectory = makeTrajectory({
+            currentPoint: makePoint({ timestamp: at(0), x: 0 }),
+            pastPoints: [
+                makePoint({ timestamp: at(-100), x: 5 * KM_PER_LD }),
+                makePoint({ timestamp: at(-72), x: 3 * KM_PER_LD }),
+                makePoint({ timestamp: at(-24), x: 1 * KM_PER_LD }),
+            ],
+        });
+        const points = trajectoryFramePoints(trajectory);
+        // -100h cai fora; -72h, -24h e o ponto atual permanecem, em ordem cronológica.
+        expect(points).toHaveLength(3);
+        expect(points[0].x).toBeGreaterThan(points[1].x);
+        expect(points[2].x).toBeCloseTo(0, 9);
+    });
+
+    it('sem timestamp legível no currentPoint, mantém todas as amostras', () => {
+        const trajectory = makeTrajectory({
+            currentPoint: makePoint({ timestamp: 'invalida', x: 0 }),
+            pastPoints: [
+                makePoint({ timestamp: at(-300), x: 9 * KM_PER_LD }),
+                makePoint({ timestamp: at(-24), x: 1 * KM_PER_LD }),
+            ],
+        });
+        expect(trajectoryFramePoints(trajectory)).toHaveLength(3);
+    });
+
+    it('amostra sem timestamp legível entra no trecho (não esconde trajetória real)', () => {
+        const trajectory = makeTrajectory({
+            currentPoint: makePoint({ timestamp: at(0), x: 0 }),
+            pastPoints: [
+                makePoint({ timestamp: 'sem-data', x: 2 * KM_PER_LD }),
+                makePoint({ timestamp: at(-24), x: 1 * KM_PER_LD }),
+            ],
+        });
+        expect(trajectoryFramePoints(trajectory)).toHaveLength(3);
+    });
+
+    it('sem currentPoint, retorna apenas o passado dentro da janela', () => {
+        const trajectory = makeTrajectory({
+            currentPoint: null,
+            pastPoints: [makePoint({ timestamp: at(-24), x: KM_PER_LD })],
+        });
+        const points = trajectoryFramePoints(trajectory);
+        expect(points).toHaveLength(1);
     });
 });

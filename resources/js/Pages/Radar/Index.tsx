@@ -173,14 +173,18 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
                     <ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />
                 ) : (
                     <>
-                        <CompactConsoleBar
-                            locale={locale}
-                            objectLimit={objectLimit}
-                            selectionMode={selectionMode}
-                            onLimitChange={setObjectLimit}
-                            onModeChange={setSelectionMode}
-                            radarLoading={closestNowLoading}
-                        />
+                        {/* Filtros do topo: só no desktop. No mobile vivem no bottom sheet
+                            aberto pela barra de ações da cena (DailyOrbitalRadar3D). */}
+                        <div className="hidden lg:block">
+                            <CompactConsoleBar
+                                locale={locale}
+                                objectLimit={objectLimit}
+                                selectionMode={selectionMode}
+                                onLimitChange={setObjectLimit}
+                                onModeChange={setSelectionMode}
+                                radarLoading={closestNowLoading}
+                            />
+                        </div>
 
                         {closestNowData && lunarReference ? (
                             <Suspense fallback={<ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />}>

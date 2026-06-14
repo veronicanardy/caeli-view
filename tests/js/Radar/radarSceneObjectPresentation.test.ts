@@ -1,43 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import {
-    formatObjectListTrailingLabel,
-    objectListItemTitle,
-} from '@/Components/Radar/Lists/radarSceneObjectPresentation';
+import { formatObjectListTrailingLabel } from '@/Components/Radar/Lists/radarSceneObjectPresentation';
 
 /**
  * `radarSceneObjectPresentation` monta labels do item de lista da cena.
  * O parsing customizado de data (YYYY-MMM-DD HH:MM) é o ponto crítico —
  * um formato inválido cai silenciosamente para distância em km.
  */
-
-// ─── objectListItemTitle ──────────────────────────────────────────────────────
-
-describe('objectListItemTitle', () => {
-    it('retorna undefined quando não há bloqueio nem ausência de posição', () => {
-        expect(objectListItemTitle(false, true, 'en')).toBeUndefined();
-        expect(objectListItemTitle(false, true, 'pt-BR')).toBeUndefined();
-    });
-
-    it('retorna mensagem de órbita indisponível quando orbitBlocked é true', () => {
-        const en = objectListItemTitle(true, true, 'en');
-        const pt = objectListItemTitle(true, true, 'pt-BR');
-        expect(en).toContain('Orbit unavailable');
-        expect(pt).toContain('rbita indispon');
-    });
-
-    it('retorna mensagem de posição ausente quando hasScenePosition é false', () => {
-        const en = objectListItemTitle(false, false, 'en');
-        const pt = objectListItemTitle(false, false, 'pt-BR');
-        expect(en).toContain('No live position');
-        expect(pt).toContain('Sem posição');
-    });
-
-    it('orbitBlocked tem precedência sobre !hasScenePosition', () => {
-        const title = objectListItemTitle(true, false, 'en');
-        expect(title).toContain('Orbit unavailable');
-        expect(title).not.toContain('No live position');
-    });
-});
 
 // ─── formatObjectListTrailingLabel ────────────────────────────────────────────
 

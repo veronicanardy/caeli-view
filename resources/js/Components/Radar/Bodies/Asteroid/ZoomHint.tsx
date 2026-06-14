@@ -7,6 +7,8 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { CAMERA_FOV_DEG } from '../../Scene/cameraConstants';
+import { framingForTrajectorySegment } from '../../Scene/cameraFraming';
 import { useCameraTween } from '../../Scene/CameraTweenContext';
 import { useZoomHintSetter } from './ZoomHintContext';
 
@@ -21,8 +23,10 @@ const MOVE_THRESHOLD_SQ = 0.000009; // ~0.003 de deslocamento por frame
 type ZoomHintProps = {
     /** Posição world absoluta do asteroide (earthPos + posição relativa). */
     worldPosition: THREE.Vector3;
-    zoomOutTarget: THREE.Vector3;
-    zoomOutDistance: number;
+    /** Trecho absoluto da trajetória (até −72h) que o zoom out deve enquadrar. */
+    zoomFramePoints: THREE.Vector3[];
+    panelBiasX: number;
+    panelBiasY: number;
 };
 
 const _projected = new THREE.Vector3();
@@ -30,13 +34,13 @@ const _prevCamPos = new THREE.Vector3();
 // Alvo de fallback quando os controls ainda não montaram — evita alocar Vector3 por frame.
 const _fallbackTarget = new THREE.Vector3();
 
-export function ZoomHint({ worldPosition, zoomOutTarget, zoomOutDistance }: ZoomHintProps) {
+export function ZoomHint({ worldPosition, zoomFramePoints, panelBiasX, panelBiasY }: ZoomHintProps) {
     const camera = useThree((s) => s.camera);
     const size = useThree((s) => s.size);
     const gl = useThree((s) => s.gl);
     const controls = useThree((s) => s.controls) as unknown as { target?: THREE.Vector3 } | null;
-    const tweenTo = useCameraTween();
     const setState = useZoomHintSetter();
+    const tweenTo = useCameraTween();
 
     const prevInitialised = useRef(false);
     const lastVisible = useRef(false);
@@ -47,26 +51,29 @@ export function ZoomHint({ worldPosition, zoomOutTarget, zoomOutDistance }: Zoom
     const controlsRef = useRef(controls);
     const tweenToRef = useRef(tweenTo);
     const worldPositionRef = useRef(worldPosition);
-    const zoomOutTargetRef = useRef(zoomOutTarget);
-    const zoomOutDistanceRef = useRef(zoomOutDistance);
+    const zoomFramePointsRef = useRef(zoomFramePoints);
+    const panelBiasRef = useRef({ x: panelBiasX, y: panelBiasY });
     useEffect(() => { cameraRef.current = camera; }, [camera]);
     useEffect(() => { controlsRef.current = controls; }, [controls]);
     useEffect(() => { tweenToRef.current = tweenTo; }, [tweenTo]);
     useEffect(() => { worldPositionRef.current = worldPosition; }, [worldPosition]);
-    useEffect(() => { zoomOutTargetRef.current = zoomOutTarget; }, [zoomOutTarget]);
-    useEffect(() => { zoomOutDistanceRef.current = zoomOutDistance; }, [zoomOutDistance]);
+    useEffect(() => { zoomFramePointsRef.current = zoomFramePoints; }, [zoomFramePoints]);
+    useEffect(() => { panelBiasRef.current = { x: panelBiasX, y: panelBiasY }; }, [panelBiasX, panelBiasY]);
 
     const handleZoomOut = useCallback(() => {
         const cam = cameraRef.current;
-        const ctrl = controlsRef.current;
-        const currentOffset = cam.position.clone().sub(ctrl?.target ?? worldPositionRef.current.clone());
-        const dir = currentOffset.lengthSq() > 1e-8
-            ? currentOffset.normalize()
-            : new THREE.Vector3(0.4, 0.45, 0.8).normalize();
-        tweenToRef.current(
-            zoomOutTargetRef.current.clone().add(dir.multiplyScalar(zoomOutDistanceRef.current)),
-            zoomOutTargetRef.current.clone(),
-        );
+        const perspective = cam instanceof THREE.PerspectiveCamera ? cam : null;
+        // Enquadra o trecho seta→−72h na área visível (descontando painéis abertos).
+        const framing = framingForTrajectorySegment({
+            points: zoomFramePointsRef.current,
+            rockPosition: worldPositionRef.current,
+            currentCameraPosition: cam.position,
+            fovDeg: perspective?.fov ?? CAMERA_FOV_DEG,
+            aspect: perspective?.aspect ?? 1,
+            visibleWidthFraction: 1 - panelBiasRef.current.x,
+            visibleHeightFraction: 1 - panelBiasRef.current.y,
+        });
+        tweenToRef.current(framing.position, framing.target);
     }, []);
 
     useEffect(() => () => setState(null), [setState]);

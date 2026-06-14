@@ -38,7 +38,8 @@ export function BodyImagePreview({ body }: { body: BodyId }) {
     return (
         <div className="mx-3 mt-1.5 lg:mx-4 lg:mt-2.5">
             <div
-                className="relative h-14 overflow-hidden rounded-xl border border-white/6 lg:h-28"
+                /* Desktop: altura fluida em vh, espelhando o AsteroidModelPreview, para o card caber em telas baixas */
+                className="relative h-14 overflow-hidden rounded-xl border border-white/6 lg:h-[clamp(3.5rem,9vh,7rem)]"
                 style={{ background: '#000' }}
             >
                 <img

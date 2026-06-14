@@ -42,15 +42,28 @@ export function ZoomHintOverlay() {
 
     const s = lastState.current!;
 
+    // Offset menor em telas estreitas e clamp na viewport: sem isso o botão
+    // (ancorado à direita/abaixo do asteroide projetado) cai fora da tela no mobile.
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const narrow = viewportWidth < 1024;
+    const offsetX = narrow ? 64 : 250;
+    const offsetY = narrow ? 72 : 130;
+    const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+    const left = clamp(s.x + offsetX, 8, viewportWidth - 56);
+    const top = clamp(s.y + offsetY, 8, viewportHeight - 56);
+
     return (
         <div
             style={{
                 position: 'fixed',
-                left: s.x + 250,
-                top: s.y + 130,
+                left,
+                top,
                 pointerEvents: state?.visible ? 'auto' : 'none',
                 userSelect: 'none',
-                zIndex: 40,
+                /* Abaixo de cards (z-20) e sheets (z-40): a lupa pertence à cena;
+                   quando a projeção do asteroide cai atrás de um painel, ela some junto. */
+                zIndex: 15,
                 opacity,
                 transition: state?.visible ? `opacity ${FADE_IN_MS}ms cubic-bezier(0.16, 1, 0.3, 1)` : 'none',
             }}

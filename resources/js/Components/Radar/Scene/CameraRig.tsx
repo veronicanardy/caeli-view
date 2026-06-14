@@ -8,12 +8,17 @@
  * É a fonte de verdade para posição e target da câmera. Qualquer setup inicial
  * ou reset deve acontecer aqui — não no prop camera= do Canvas nem em useEffects
  * externos, pois só aqui os OrbitControls já existem e podem ser atualizados.
+ *
+ * Compensação de painéis (biasX/biasY): aplicada via `setViewOffset` (projeção),
+ * nunca deslocando o alvo dos OrbitControls. Assim o objeto focado permanece o
+ * centro real de rotação e zoom: girar a cena com um card aberto mantém a rocha
+ * fixa na área visível, em vez de orbitar um ponto vazio e fugir da tela.
  */
 
 import { useFrame, useThree } from '@react-three/fiber';
 import { useContext, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { CAMERA_FOV_DEG, CAMERA_VIEWS } from './cameraConstants';
+import { CAMERA_VIEWS } from './cameraConstants';
 import type { CameraViewKey } from './cameraConstants';
 import type { FocusFraming } from './cameraFraming';
 import { CameraTweenContext } from './CameraTweenContext';
@@ -47,13 +52,14 @@ export function CameraRig({
     earthPos: [number, number, number];
     /** Vetor unitário Terra→Sol. Usado para manter a view inicial de costas para o Sol. */
     sunDir: [number, number, number];
-    /** Fração [0..1] da largura do canvas coberta pelo painel lateral. Desloca o foco para o centro da área útil. */
+    /** Fração [0..1] da largura do canvas coberta pelo trilho esquerdo. Desloca a projeção para a área útil. */
     panelBiasX?: number;
-    /** Fração [0..1] da altura do canvas coberta pela UI inferior (bottom sheet). Empurra o foco para a área livre acima. */
+    /** Fração [0..1] da altura do canvas coberta pela UI inferior (bottom sheet). Sobe a projeção para a área livre. */
     panelBiasY?: number;
     onUserInteraction?: () => void;
 }) {
     const camera = useThree((s) => s.camera);
+    const size = useThree((s) => s.size);
     const controls = useThree((s) => s.controls) as unknown as Controls | null;
 
     // earthPos e sunDir são lidos via ref para não disparar tween a cada atualização de efeméride (10s).
@@ -81,11 +87,9 @@ export function CameraRig({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view, viewNonce, focusTarget, focusNonce]);
 
-    // Vetores temporários reutilizados dentro do useFrame para evitar alocação a cada frame.
-    // Criados uma única vez — nunca usar fora do useFrame, pois são mutados in-place.
-    const _tmpTarget = useRef(new THREE.Vector3());
-    const _tmpRight  = useRef(new THREE.Vector3());
-    const _tmpUp     = useRef(new THREE.Vector3());
+    // Deslocamento de projeção atual (px), interpolado por frame para a
+    // compensação de painéis entrar e sair com suavidade.
+    const viewOffset = useRef({ x: 0, y: 0 });
 
     // No primeiro frame os OrbitControls já existem: posiciona câmera e target
     // diretamente, sem tween, para que a cena apareça centrada na Terra desde o início.
@@ -150,6 +154,30 @@ export function CameraRig({
     }, [controls]);
 
     useFrame(({ camera: fc }) => {
+        // Compensação de painéis na projeção: o centro visual desloca para a área
+        // livre (direita do trilho no desktop, acima do sheet no mobile) sem mexer
+        // no alvo dos OrbitControls. Interpolada para transições suaves.
+        // Fatores: 0.5 centralizaria exatamente na área livre; 0.25 (desktop) evita
+        // empurrar demais para a direita, 0.45 (mobile) deixa o objeto quase no
+        // centro do espaço acima do sheet.
+        if (fc instanceof THREE.PerspectiveCamera) {
+            const targetX = panelBiasX > 0.01 ? -panelBiasX * size.width * 0.25 : 0;
+            const targetY = panelBiasY > 0.01 ? panelBiasY * size.height * 0.45 : 0;
+            const current = viewOffset.current;
+            current.x += (targetX - current.x) * 0.08;
+            current.y += (targetY - current.y) * 0.08;
+            const settledAtZero = targetX === 0 && targetY === 0 && Math.abs(current.x) < 0.5 && Math.abs(current.y) < 0.5;
+            if (settledAtZero) {
+                if (fc.view?.enabled) {
+                    fc.clearViewOffset();
+                    current.x = 0;
+                    current.y = 0;
+                }
+            } else {
+                fc.setViewOffset(size.width, size.height, current.x, current.y, size.width, size.height);
+            }
+        }
+
         // Setup inicial: roda uma única vez no primeiro frame em que os controls existem.
         if (!initialised.current) {
             if (!controls?.target) return;
@@ -180,49 +208,19 @@ export function CameraRig({
 
         const ed = effectiveDesired.current;
 
-        // Quando há painel lateral, desloca o target para a esquerda em world-space para que
-        // o objeto fique centrado na área útil (à direita do painel), não na tela inteira.
-        // biasNDC = fração do canvas coberta pelo painel → o centro útil está deslocado para
-        // a direita em biasNDC/2 da tela. Compensamos movendo o target na direção -right da câmera.
-        let desiredTarget = ed.target;
-        if ((panelBiasX > 0.01 || panelBiasY > 0.01) && focusTarget) {
-            const distance = fc.position.distanceTo(ed.target);
-            const halfFovRad = THREE.MathUtils.degToRad(CAMERA_FOV_DEG / 2);
-            // Reutiliza ref em vez de clonar — evita alocação de Vector3 a cada frame.
-            desiredTarget = _tmpTarget.current.copy(ed.target);
-
-            if (panelBiasX > 0.01) {
-                // panelBiasX é a fração coberta pelo painel; o centro útil está deslocado para a direita
-                // em panelBiasX/2 do total — então compensamos movendo o target para a esquerda.
-                _tmpRight.current.setFromMatrixColumn(fc.matrixWorld, 0).normalize();
-                const worldOffsetX = Math.tan(halfFovRad) * distance * panelBiasX * 0.5;
-                desiredTarget.addScaledVector(_tmpRight.current, -worldOffsetX);
-            }
-
-            if (panelBiasY > 0.01) {
-                // panelBiasY é a fração da altura coberta pela UI inferior (bottom sheet).
-                // O FOV vertical é o ângulo real; compensamos movendo o target para cima.
-                const aspectRatio = fc instanceof THREE.PerspectiveCamera ? (fc as THREE.PerspectiveCamera).aspect : 1;
-                const halfFovVertRad = Math.atan(Math.tan(halfFovRad) / Math.max(0.01, aspectRatio));
-                // 0.38 em vez de 0.5: empurra menos para cima, objeto fica mais naturalmente centralizado na área livre.
-                _tmpUp.current.setFromMatrixColumn(fc.matrixWorld, 1).normalize();
-                const worldOffsetY = Math.tan(halfFovVertRad) * distance * panelBiasY * 0.38;
-                desiredTarget.addScaledVector(_tmpUp.current, -worldOffsetY);
-            }
-        }
-
         /* Lerp com ease-out suave: fator baixo para movimento fluido, desacelera naturalmente
-           à medida que a distância ao destino diminui. */
+           à medida que a distância ao destino diminui. O alvo é sempre o objeto real:
+           a compensação de painéis acontece na projeção (acima), não aqui. */
         fc.position.lerp(ed.position, 0.055);
         if (controls?.target) {
-            controls.target.lerp(desiredTarget, 0.055);
+            controls.target.lerp(ed.target, 0.055);
             controls.update();
         } else {
-            fc.lookAt(desiredTarget);
+            fc.lookAt(ed.target);
         }
 
         const posClose = fc.position.distanceToSquared(ed.position) < 1e-4;
-        const tgtClose = !controls?.target || controls.target.distanceToSquared(desiredTarget) < 1e-4;
+        const tgtClose = !controls?.target || controls.target.distanceToSquared(ed.target) < 1e-4;
         if (posClose && tgtClose) tweening.current = false;
     });
 

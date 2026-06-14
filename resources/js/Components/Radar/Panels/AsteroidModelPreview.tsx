@@ -62,8 +62,9 @@ export function AsteroidModelPreview({ object, locale }: { object: ClosestNowObj
 
     return (
         <div className="mx-3 mt-1.5 lg:mx-4 lg:mt-2.5">
-            {/* Canvas do modelo: borda quase invisível, fundo com gradiente radial escuro para presença. */}
-            <div className="relative h-14 overflow-hidden rounded-xl border border-white/6 lg:h-28"
+            {/* Canvas do modelo: borda quase invisível, fundo com gradiente radial escuro para presença.
+               Desktop: altura fluida em vh para o card do trilho caber em telas baixas (768p) sem cortar o rodapé. */}
+            <div className="relative h-14 overflow-hidden rounded-xl border border-white/6 lg:h-[clamp(3.5rem,9vh,7rem)]"
                 style={{ background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.03) 0%, rgba(3,6,13,0.95) 70%)' }}>
                 <Canvas
                     camera={{ position: [0, 0, 3.2], fov: 32 }}

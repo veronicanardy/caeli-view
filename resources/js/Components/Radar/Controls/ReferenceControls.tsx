@@ -19,6 +19,7 @@ export function ReferenceSection({
     onFocusMoon,
     onFocusSun,
     compact = false,
+    labelsAlwaysVisible = false,
 }: {
     en: boolean;
     orbitMode?: boolean;
@@ -28,6 +29,8 @@ export function ReferenceSection({
     onFocusMoon: () => void;
     onFocusSun: () => void;
     compact?: boolean;
+    /** Força os rótulos de texto mesmo abaixo de sm: (uso nos sheets mobile, onde há largura). */
+    labelsAlwaysVisible?: boolean;
 }) {
     return (
         <div className={compact ? '' : 'border-b border-white/[0.04] px-2 pb-1.5 pt-2'}>
@@ -37,11 +40,11 @@ export function ReferenceSection({
                 </div>
             ) : null}
             <div className="flex items-center gap-px rounded-lg border border-white/[0.07] bg-white/[0.02] p-0.5" data-tutorial="reference-controls">
-                <AstroButton symbol="☉" label={en ? 'Sun' : 'Sol'}   onClick={onFocusSun} dataTutorial="reference-body" />
+                <AstroButton symbol="☉" label={en ? 'Sun' : 'Sol'}   onClick={onFocusSun} dataTutorial="reference-body" labelAlways={labelsAlwaysVisible} />
                 <Divider />
-                <AstroButton symbol="♁" label={en ? 'Earth' : 'Terra'} onClick={onFocusEarth} dataTutorial="reference-body" />
+                <AstroButton symbol="♁" label={en ? 'Earth' : 'Terra'} onClick={onFocusEarth} dataTutorial="reference-body" labelAlways={labelsAlwaysVisible} />
                 <Divider />
-                <AstroButton symbol="☽" label={en ? 'Moon' : 'Lua'}  onClick={onFocusMoon} dataTutorial="reference-body" />
+                <AstroButton symbol="☽" label={en ? 'Moon' : 'Lua'}  onClick={onFocusMoon} dataTutorial="reference-body" labelAlways={labelsAlwaysVisible} />
                 {!orbitMode ? (
                     <>
                         <Divider />
@@ -53,6 +56,7 @@ export function ReferenceSection({
                             chevron
                             chevronOpen={planetsOpen}
                             dataTutorial="reference-planets"
+                            labelAlways={labelsAlwaysVisible}
                         />
                     </>
                 ) : null}
@@ -73,6 +77,7 @@ function AstroButton({
     chevron = false,
     chevronOpen = false,
     dataTutorial,
+    labelAlways = false,
 }: {
     symbol: string;
     label: string;
@@ -81,6 +86,7 @@ function AstroButton({
     chevron?: boolean;
     chevronOpen?: boolean;
     dataTutorial?: string;
+    labelAlways?: boolean;
 }) {
     return (
         <button
@@ -89,7 +95,8 @@ function AstroButton({
             aria-label={label}
             data-tutorial={dataTutorial}
             className={[
-                'group flex flex-1 items-center justify-center gap-1 rounded-md px-1 py-1.5 text-[11px] transition-all outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                'group flex flex-1 items-center justify-center gap-1 rounded-md px-1 transition-all outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                labelAlways ? 'py-2.5 text-[12px]' : 'py-1.5 text-[11px]',
                 active
                     ? 'bg-signal-cyan/10 text-signal-cyan shadow-[inset_0_1px_0_rgba(34,211,238,0.1)]'
                     : 'text-white/40 hover:bg-white/[0.04] hover:text-white/70',
@@ -98,12 +105,12 @@ function AstroButton({
             <span className="font-light leading-none" style={{ fontSize: '14px', fontFamily: 'serif' }}>
                 {symbol}
             </span>
-            <span className="hidden font-medium tracking-wide sm:inline" style={{ fontSize: '11px' }}>
+            <span className={`${labelAlways ? 'inline' : 'hidden sm:inline'} font-medium tracking-wide`} style={{ fontSize: '11px' }}>
                 {label}
             </span>
             {chevron ? (
                 <ChevronDown
-                    className="hidden size-2.5 shrink-0 opacity-50 transition-transform sm:block"
+                    className={`${labelAlways ? 'block' : 'hidden sm:block'} size-2.5 shrink-0 opacity-50 transition-transform`}
                     style={{ transform: chevronOpen ? 'rotate(90deg)' : 'rotate(-90deg)' }}
                     aria-hidden
                 />

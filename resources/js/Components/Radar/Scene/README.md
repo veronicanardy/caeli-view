@@ -28,7 +28,7 @@
 - `RadarScene.tsx`: compositor principal da cena.
 - `CameraRig.tsx`: transições explícitas de câmera.
 - `InertialZoom.tsx`: zoom inercial e extensão preservada de drift do alvo orbital.
-- `usePanelBias.ts`: hook que mede a fração do canvas coberta pelo painel lateral (biasX) e pelo bottom sheet mobile (biasY), devolvendo os valores para o `CameraRig` compensar o foco.
+- `usePanelBias.ts`: hook que mede a fração do canvas coberta pela UI. biasX (desktop) usa a união do trilho esquerdo (painel de navegação + card visível); biasY (mobile) usa o card inferior. O `CameraRig` aplica esses valores como deslocamento de projeção (`setViewOffset`), nunca movendo o alvo dos OrbitControls — assim o objeto focado continua sendo o centro real de rotação/zoom com cards abertos. Medições só em resize/mudança de card (com epsilon de 1%), nunca por frame.
 - `sceneOcclusion.ts`: montagem dos oclusores geométricos usados por labels 3D.
 - `cameraConstants.ts`: FOV, distância máxima e visões predefinidas.
 - `cameraFraming.ts`: helpers de enquadramento de corpos e asteroides.

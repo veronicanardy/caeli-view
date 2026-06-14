@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ClosestNowObject, LunarReference, UnifiedApproach } from '@/types';
 import type { SceneMode } from '../Controls/Manual/manualTypes';
+import { Tooltip } from '../Controls/Tooltip';
 import { OrbitWelcomeToast, RadarWelcomeToast } from '../Controls/WelcomeToast';
 import type { PlanetId } from '../Scene/planetConfig';
 import { UnifiedFocusCard } from './UnifiedFocusCard';
@@ -16,6 +17,8 @@ import { SceneLegend } from './SceneLegend';
 type Props = {
     en: boolean;
     locale: 'pt-BR' | 'en';
+    /** Desktop: painel de navegação recolhido — os cards do trilho sobem junto. */
+    desktopPanelCollapsed: boolean;
     visibleFocusedObject: ClosestNowObject | null;
     onOpenFocus?: (approach: UnifiedApproach) => void;
     onCloseFocusedObject: () => void;
@@ -67,6 +70,7 @@ function useElapsedLabel(since: Date | null, en: boolean): string {
 export function RadarFloatingOverlays({
     en,
     locale,
+    desktopPanelCollapsed,
     visibleFocusedObject,
     onOpenFocus,
     onCloseFocusedObject,
@@ -113,9 +117,9 @@ export function RadarFloatingOverlays({
                     onShowOrbit={onShowOrbit}
                     onShowCloseUp={onShowCloseUp}
                     locale={locale}
-                    mobileTopAlign={false}
                     onShowPanel={onShowNavigationPanel}
                     panelRef={focusCardRef}
+                    desktopPanelCollapsed={desktopPanelCollapsed}
                 />
             ) : bodyCardOpen ? (
                 <UnifiedFocusCard
@@ -123,14 +127,16 @@ export function RadarFloatingOverlays({
                     body={bodyCardOpen}
                     onClose={() => onBodyCardOpenChange(null)}
                     locale={locale}
-                    mobileTopAlign={false}
                     panelRef={bodyCardRef}
+                    desktopPanelCollapsed={desktopPanelCollapsed}
                 />
             ) : null}
 
-            <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-1.5">
+            {/* Mobile: pills no canto superior esquerdo (rodapé pertence à action bar e
+                o topo direito à toolbar). Desktop: permanecem na base da cena. */}
+            <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5 lg:left-1/2 lg:top-auto lg:bottom-3 lg:-translate-x-1/2 lg:items-center">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-[11px] font-medium text-white/40">
+                    <h2 className="hidden text-[11px] font-medium text-white/40 lg:block">
                         {en ? 'Orbital radar · 3D' : 'Radar orbital · 3D'}
                     </h2>
                     {/* Pill dinâmico: pulsa enquanto carrega, mostra tempo decorrido quando estável. */}
@@ -146,25 +152,36 @@ export function RadarFloatingOverlays({
                     </span>
                 ) : null}
                 </div>
-                {/* Badge de modo órbita: aparece apenas quando a cena muda para escala linear UA. */}
+                {/* Badge de modo órbita: aparece apenas quando a cena muda para escala linear UA.
+                    Os badges são pointer-events-auto só para o tooltip de hover funcionar. */}
                 {activeMode === 'orbit' ? (
-                    <span
-                        className="inline-flex items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/8 px-2 py-0.5 text-[9px] font-medium text-amber-300/65"
-                        title={en
-                            ? 'Osculating orbit — best-fit Keplerian ellipse at current epoch. Does not include planetary perturbations. Not a long-term prediction.'
-                            : 'Órbita osculadora — elipse kepleriana ajustada na época atual. Não inclui perturbações planetárias. Não é previsão de longo prazo.'}
+                    <Tooltip
+                        side="top"
+                        wrap
+                        hideDelay={150}
+                        className="pointer-events-auto"
+                        content={en
+                            ? 'Osculating orbit: best-fit Keplerian ellipse at current epoch. Does not include planetary perturbations. Not a long-term prediction.'
+                            : 'Órbita osculadora: elipse kepleriana ajustada na época atual. Não inclui perturbações planetárias. Não é previsão de longo prazo.'}
                     >
-                        {en ? '⬡ osculating orbit · linear AU scale' : '⬡ órbita osculadora · escala linear UA'}
-                    </span>
+                        <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/8 px-2 py-0.5 text-[9px] font-medium text-amber-300/65">
+                            {en ? '⬡ osculating orbit · linear AU scale' : '⬡ órbita osculadora · escala linear UA'}
+                        </span>
+                    </Tooltip>
                 ) : (
-                    <span
-                        className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/4 px-2 py-0.5 text-[9px] font-medium text-white/28"
-                        title={en
+                    <Tooltip
+                        side="top"
+                        wrap
+                        hideDelay={150}
+                        className="pointer-events-auto"
+                        content={en
                             ? 'Distances are radially compressed (logarithmic scale). Visual separation does not reflect real distance. Read numbers in the data panel.'
                             : 'Distâncias comprimidas radialmente (escala logarítmica). A separação visual não reflete distância real. Leia os números no painel de dados.'}
                     >
-                        {en ? '~ log scale · visual only' : '~ escala log · visual apenas'}
-                    </span>
+                        <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-white/10 bg-white/4 px-2 py-0.5 text-[9px] font-medium text-white/28">
+                            {en ? '~ log scale · visual only' : '~ escala log · visual apenas'}
+                        </span>
+                    </Tooltip>
                 )}
             </div>
 
@@ -189,7 +206,6 @@ export function RadarFloatingOverlays({
                 mode={activeMode}
                 manualOpen={manualOpen}
                 onManualOpenChange={onManualOpenChange}
-                cardOpen={Boolean(visibleFocusedObject) || Boolean(bodyCardOpen)}
                 ephemerisAvailable={ephemerisAvailable}
             />
         </>

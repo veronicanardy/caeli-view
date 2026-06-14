@@ -1,5 +1,16 @@
+/**
+ * Responsabilidade: hero "horizonte orbital" da Home.
+ *
+ * Orquestra a cena de entrada do CaeliView: backdrop espacial e horizonte
+ * da Terra (lazy), bloco editorial centralizado (badge, título, descrição,
+ * CTA), o console de observação com quatro módulos vivos (céu esta noite,
+ * dados do céu, próxima aproximação, destaque espacial; dados locais primeiro,
+ * link externo por último) e localização integrada, e a cena de opções
+ * pós-CTA. Frases derivadas das condições do céu vêm de heroSkyCopy.ts.
+ */
+
 import { Link } from '@inertiajs/react';
-import { ArrowLeft, ArrowRight, Earth, ExternalLink, Eye, Image, LocateFixed, Moon, Orbit, Satellite, Star } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Earth, ExternalLink, Eye, Image, Moon, Orbit, Satellite, Star } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useHomeAstronomyFeed } from '@/hooks/useHomeAstronomyFeed';
 import { useSkyObservation } from '@/hooks/useSkyObservation';
@@ -8,6 +19,13 @@ import { useVisibleObjects } from '@/hooks/useVisibleObjects';
 import { useTranslation } from '@/i18n';
 import { formatNumber } from '@/lib/format';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
+import {
+    buildObservationNote,
+    formatApproachDate,
+    formatObservingVisibility,
+    formatVisiblePlanetsLine,
+    moonPhaseLabel,
+} from './heroSkyCopy';
 import type { Apod, SpaceNewsHighlight, UnifiedApproach } from '@/types';
 import type { VisibleObject } from '@/services/visibleObjectsService';
 
@@ -54,11 +72,7 @@ type Props = {
 export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighlight }: Props) {
     const { locale, t } = useTranslation();
     const en = locale === 'en';
-    const heroDescription = en
-        ? 'Track approaches, visible objects, and real astronomical data in a visual experience built from public NASA/JPL data.'
-        : 'Acompanhe aproximações, objetos visíveis e dados astronômicos reais em uma experiência visual baseada em dados públicos da NASA/JPL.';
     const [optionsOpen, setOptionsOpen] = useState(false);
-    const [earthReady, setEarthReady] = useState(false);
     const sceneRef = useRef<HTMLElement | null>(null);
     const { location } = useUserLocation(locale);
     const sky = useSkyObservation(location);
@@ -98,84 +112,124 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
     }, [optionsOpen]);
 
     return (
-        <section ref={sceneRef} className={`home-hero-scene relative min-h-[640px] overflow-hidden border-b border-white/10 lg:min-h-[calc(100vh-5rem)] ${optionsOpen ? 'home-hero-scene-expanded' : ''}`}>
-                <div className="home-scene-camera" aria-hidden="true">
-                    <div className="home-scene-world">
-                        <Suspense fallback={null}>
-                            <CinematicSpaceBackdrop earthReady={earthReady} />
-                        </Suspense>
-                        <Suspense fallback={<HeroEarthFallback expanded={optionsOpen} />}>
-                            <CinematicEarthScene onReady={() => setEarthReady(true)} />
-                        </Suspense>
-                    </div>
-                </div>
+        <section ref={sceneRef} className={`home-hero-scene relative flex min-h-[660px] flex-col overflow-hidden border-b border-white/10 lg:min-h-[calc(100vh-5rem)] ${optionsOpen ? 'home-hero-scene-expanded' : ''}`}>
+                <Suspense fallback={null}>
+                    <CinematicSpaceBackdrop />
+                </Suspense>
+                <Suspense fallback={<HeroEarthFallback />}>
+                    <CinematicEarthScene />
+                </Suspense>
 
-                {/* Left-side gradient — anchors the copy and creates depth separation.
-                    Two layers stack: a strong linear darkening on the left third (mystery)
-                    plus a radial well on the far-left edge so the corner reads as deep space. */}
+                {/* Vignette: separa a navbar do céu e cria um poço suave atrás do
+                    bloco editorial central, sem escurecer o horizonte embaixo. */}
                 <div className="pointer-events-none absolute inset-0 z-10" aria-hidden="true">
-                    <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(2,5,12,0.92)_0%,rgba(3,8,18,0.62)_18%,rgba(3,8,18,0.28)_38%,rgba(3,8,18,0.08)_58%,transparent_78%)]" />
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_45%_60%_at_0%_55%,rgba(0,0,0,0.55)_0%,rgba(0,0,0,0.18)_38%,transparent_70%)]" />
-                    <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(3,8,18,0.45)_0%,transparent_24%,transparent_74%,rgba(3,8,18,0.55)_100%)]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(2,5,12,0.6)_0%,rgba(3,8,18,0.18)_16%,transparent_30%)]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_56%_40%_at_50%_38%,rgba(2,6,14,0.5)_0%,rgba(2,6,14,0.22)_55%,transparent_78%)]" />
                 </div>
 
-                <div className="home-hero-grid relative z-20 mx-auto grid w-full min-h-[640px] max-w-[88rem] gap-10 px-4 pb-12 pt-14 sm:px-6 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[0.85fr_1.25fr] lg:items-center lg:gap-6 lg:px-6 lg:pb-28 xl:px-4">
-                    <div className="home-hero-copy max-w-2xl lg:-ml-2 xl:-ml-6">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-signal-cyan/30 bg-signal-cyan/10 px-3 py-1 text-sm text-signal-cyan backdrop-blur">
-                            <Satellite className="size-4" aria-hidden="true" />
-                            {t('home.hero.badge')}
-                        </div>
-                        <h1 className="hero-headline mt-7 text-5xl font-semibold leading-[0.95] text-white sm:text-7xl lg:text-8xl">
-                            {t('home.hero.heading')}
-                        </h1>
-                        <p className="mt-7 max-w-xl text-lg leading-8 text-white/74">{heroDescription}</p>
+                {/* Glint quente acima do lado iluminado do horizonte */}
+                <div className="home-warm-glint pointer-events-none absolute inset-0 z-10" aria-hidden="true" />
 
-                        <div className="relative mt-10 flex flex-wrap items-center gap-3 lg:justify-start">
-                            <button
-                                type="button"
-                                className="home-cta group focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-space-950"
-                                aria-expanded={optionsOpen}
-                                aria-controls="home-options-panel"
-                                onClick={() => setOptionsOpen(true)}
-                            >
-                                <span className="home-cta-ring" aria-hidden="true" />
-                                <span className="home-cta-ring home-cta-ring-2" aria-hidden="true" />
-                                <span className="home-cta-glow" aria-hidden="true" />
-                                <span className="home-cta-body">
-                                    <span className="home-cta-label">{t('home.hero.options')}</span>
-                                    <span className="home-cta-arrow">
-                                        <ArrowRight className="size-4" aria-hidden="true" />
-                                    </span>
+                <div className="home-hero-copy relative z-20 mx-auto flex w-full max-w-4xl flex-col items-center px-4 pt-[clamp(3rem,7.5vh,5rem)] text-center sm:px-6">
+                    <div className="hero-rise inline-flex items-center gap-2 rounded-full border border-signal-cyan/30 bg-signal-cyan/10 px-3.5 py-1.5 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-signal-cyan backdrop-blur">
+                        <Satellite className="size-3.5" aria-hidden="true" />
+                        {t('home.hero.badge')}
+                    </div>
+                    <h1 className="hero-headline hero-rise hero-rise-2 mt-6 text-6xl font-semibold leading-[0.95] sm:text-7xl lg:text-8xl">
+                        {t('home.hero.heading')}
+                    </h1>
+                    <p className="hero-rise hero-rise-3 mt-6 max-w-2xl text-balance text-lg leading-8 text-white/74">{t('home.hero.description')}</p>
+
+                    <div className="hero-rise hero-rise-4 relative mt-9 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
+                        <Link
+                            href="/radar"
+                            prefetch
+                            className="home-cta group focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-space-950"
+                        >
+                            <span className="home-cta-ring" aria-hidden="true" />
+                            <span className="home-cta-ring home-cta-ring-2" aria-hidden="true" />
+                            <span className="home-cta-glow" aria-hidden="true" />
+                            <span className="home-cta-body">
+                                <span className="home-cta-label">{t('home.hero.options')}</span>
+                                <span className="home-cta-arrow">
+                                    <ArrowRight className="size-4" aria-hidden="true" />
                                 </span>
-                            </button>
-                        </div>
-
-                        <EditorialQuadCards
-                            spaceNews={feed.data.spaceNewsHighlight}
-                            apod={feed.data.apod}
-                            skySummary={skySummary}
-                            seeing={sky.data?.seeing ?? null}
-                            cloudCover={sky.data?.cloudCover ?? null}
-                            visibleNowPlanets={visibleNowPlanets}
-                            moonIllumination={visible.moonIllumination}
-                            approach={approach}
-                            en={en}
-                        />
+                            </span>
+                        </Link>
+                        <button
+                            type="button"
+                            className="home-cta-secondary"
+                            aria-expanded={optionsOpen}
+                            aria-controls="home-options-panel"
+                            onClick={() => setOptionsOpen(true)}
+                        >
+                            {en ? 'Explore modules' : 'Ver módulos'}
+                            <ArrowRight className="size-3.5" aria-hidden="true" />
+                        </button>
                     </div>
                 </div>
 
                 <OptionsScene open={optionsOpen} onBack={() => setOptionsOpen(false)} />
 
-                <div className="relative z-30 mx-auto max-w-7xl px-4 pb-5 sm:px-6 lg:absolute lg:inset-x-0 lg:bottom-0 lg:px-8">
-                    <SkyStatusRibbon locationLabel={locationLabel} />
+                <div className="home-console-wrap relative z-20 mx-auto mt-auto w-full max-w-5xl px-4 pb-[clamp(3rem,8vh,5.5rem)] pt-6 sm:px-6">
+                    <ObservatoryConsole
+                        spaceNews={feed.data.spaceNewsHighlight}
+                        apod={feed.data.apod}
+                        skySummary={skySummary}
+                        seeing={sky.data?.seeing ?? null}
+                        cloudCover={sky.data?.cloudCover ?? null}
+                        visibleNowPlanets={visibleNowPlanets}
+                        moonIllumination={visible.moonIllumination}
+                        approach={approach}
+                        locationLabel={locationLabel}
+                        en={en}
+                    />
                 </div>
             </section>
     );
 }
 
-// ─── Editorial Cards (4-card grid) ──────────────────────────────────────────
+// ─── Console de observação (painel sob o horizonte) ─────────────────────────
 
-function EditorialQuadCards({
+/**
+ * Spotlight que segue o ponteiro dentro das células do console.
+ *
+ * Um único listener no container atualiza, com throttle por rAF, as CSS vars
+ * --spot-x/--spot-y da célula sob o cursor; o brilho em si é um span com
+ * radial-gradient revelado no hover. Sem re-render React e desligado em
+ * dispositivos sem hover (touch).
+ */
+function useCardSpotlight() {
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return undefined;
+        if (window.matchMedia('(hover: none)').matches) return undefined;
+
+        let raf = 0;
+        const onPointerMove = (event: PointerEvent) => {
+            const cell = (event.target as HTMLElement | null)?.closest?.('.console-cell') as HTMLElement | null;
+            if (!cell || raf) return;
+            raf = window.requestAnimationFrame(() => {
+                raf = 0;
+                const rect = cell.getBoundingClientRect();
+                cell.style.setProperty('--spot-x', `${event.clientX - rect.left}px`);
+                cell.style.setProperty('--spot-y', `${event.clientY - rect.top}px`);
+            });
+        };
+
+        container.addEventListener('pointermove', onPointerMove, { passive: true });
+        return () => {
+            container.removeEventListener('pointermove', onPointerMove);
+            if (raf) window.cancelAnimationFrame(raf);
+        };
+    }, []);
+
+    return containerRef;
+}
+
+function ObservatoryConsole({
     spaceNews,
     apod,
     skySummary,
@@ -184,6 +238,7 @@ function EditorialQuadCards({
     visibleNowPlanets,
     moonIllumination,
     approach,
+    locationLabel,
     en,
 }: {
     spaceNews: SpaceNewsHighlight | null;
@@ -194,11 +249,13 @@ function EditorialQuadCards({
     visibleNowPlanets: VisibleObject[];
     moonIllumination: number;
     approach: UnifiedApproach | null | undefined;
+    locationLabel: string;
     en: boolean;
 }) {
     const { t } = useTranslation();
+    const gridRef = useCardSpotlight();
 
-    // ── Card 1: Destaque espacial ─────────────────────────────────────
+    // ── Célula 1: Destaque espacial ───────────────────────────────────
     const highlightTitle = spaceNews?.title ?? (apod?.title ?? null);
     const highlightSource = spaceNews?.source ?? 'NASA APOD';
     const highlightUrl = spaceNews?.url ?? '/apod';
@@ -208,7 +265,7 @@ function EditorialQuadCards({
         ? new Intl.DateTimeFormat(en ? 'en' : 'pt-BR', { day: '2-digit', month: 'short' }).format(new Date(spaceNews.publishedAt))
         : null;
 
-    // ── Card 2: Céu esta noite (merged: observação + resumo) ─────────
+    // ── Célula 2: Céu esta noite ──────────────────────────────────────
     const observationLine = buildObservationNote(skySummary, cloudCover, seeing, visibleNowPlanets, moonIllumination, en);
     const moonPhaseLine = moonPhaseLabel(moonIllumination, en);
     const cloudLine = cloudCover !== null
@@ -217,7 +274,7 @@ function EditorialQuadCards({
     const visibilityLabel = formatObservingVisibility(cloudCover, seeing, en);
     const observingConditionLine = en ? `Visibility: ${visibilityLabel}` : `Visibilidade: ${visibilityLabel}`;
     const planetsLine = formatVisiblePlanetsLine(visibleNowPlanets.map((p) => en ? p.nameEn : p.namePt), en);
-    // ── Card 3: Próxima aproximação ───────────────────────────────────
+    // ── Célula 4: Próxima aproximação ─────────────────────────────────
     const approachName = approach ? resolveApproachIdentity(approach).displayName : null;
     const approachDate = approach?.approachDate ? formatApproachDate(approach.approachDate, en) : null;
     const approachKm = approach?.nominalDistanceKm != null
@@ -225,203 +282,118 @@ function EditorialQuadCards({
         : null;
 
     return (
-        <div className="editorial-quad mt-10 grid gap-2.5" style={{ animationDelay: '280ms' }}>
-            {/* Row 1: 2 feature cards */}
-            <div className="editorial-quad-row editorial-quad-row-top">
-                {/* 1. Destaque espacial */}
-                <article className="editorial-card editorial-card-space editorial-card-feature editorial-card-fixed-height">
-                    <span className="editorial-card-icon" aria-hidden="true">
-                        <Star className="size-4" />
+        <div className="hero-rise hero-rise-5">
+            <section className="observatory-console" aria-label={t('home.hero.statusRibbonLabel')}>
+                <header className="console-header">
+                    <span className="console-header-title">{en ? 'Live observation panel' : 'Painel de observação ao vivo'}</span>
+                    <span className="console-header-location">
+                        <span className="sky-status-pulse" aria-hidden="true" />
+                        <span className="console-header-prefix">{en ? 'Local observation based on' : 'Observação local baseada em'}</span>
+                        <strong>{locationLabel}</strong>
                     </span>
-                    <div className="editorial-card-body">
-                        <span className="editorial-card-label">{t('home.hero.spaceHighlight')}</span>
-                        <h3 className="editorial-card-title editorial-card-title-note">{displayTitle}</h3>
-                        <div className="editorial-card-meta">
-                            {spaceNews?.url ? (
-                                <a
-                                    href={highlightUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="editorial-card-source"
-                                    aria-label={t('home.hero.openHighlightAria')}
-                                >
-                                    <span>{highlightSource}</span>
-                                    <ExternalLink className="size-3 opacity-80" aria-hidden="true" />
-                                </a>
+                </header>
+
+                <div ref={gridRef} className="console-grid">
+                    {/* 1. Céu esta noite */}
+                    <article className="console-cell console-cell-observe">
+                        <span className="editorial-card-glow" aria-hidden="true" />
+                        <span className="editorial-card-icon editorial-card-icon-mint" aria-hidden="true">
+                            <Eye className="size-4" />
+                        </span>
+                        <div className="editorial-card-body">
+                            <span className="editorial-card-label">
+                                {en ? 'Tonight\'s sky' : 'Céu esta noite'}
+                                <span className="editorial-live-dot" aria-hidden="true" />
+                            </span>
+                            <h3 className="editorial-card-title editorial-card-title-note">{observationLine}</h3>
+                        </div>
+                    </article>
+
+                    {/* 2. Dados do céu */}
+                    <article className="console-cell console-cell-sky">
+                        <span className="editorial-card-glow" aria-hidden="true" />
+                        <span className="editorial-card-icon editorial-card-icon-purple" aria-hidden="true">
+                            <Moon className="size-4" />
+                        </span>
+                        <div className="editorial-card-body">
+                            <span className="editorial-card-label">
+                                {en ? 'Sky data' : 'Dados do céu'}
+                                <span className="editorial-live-dot" aria-hidden="true" />
+                            </span>
+                            <h3 className="editorial-card-title editorial-card-main-value">{moonPhaseLine}</h3>
+                            <div className="editorial-sky-list">
+                                {cloudLine ? <span>{cloudLine}</span> : null}
+                                <span>{observingConditionLine}</span>
+                                <span className="editorial-sky-planets">{planetsLine}</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    {/* 3. Próxima aproximação */}
+                    <article className="console-cell console-cell-approach">
+                        <span className="editorial-card-glow" aria-hidden="true" />
+                        <span className="editorial-card-icon editorial-card-icon-orange" aria-hidden="true">
+                            <Orbit className="size-4" />
+                        </span>
+                        <div className="editorial-card-body">
+                            <span className="editorial-card-label">{en ? 'Next approach' : 'Próxima aproximação'}</span>
+                            {approachName ? (
+                                <>
+                                    <h3 className="editorial-card-title editorial-card-main-value">{approachName}</h3>
+                                    <div className="editorial-approach-details">
+                                        {approachDate ? <span className="editorial-approach-date">{approachDate}</span> : null}
+                                        {approachKm ? <span className="editorial-approach-item editorial-approach-item-dim">{approachKm}</span> : null}
+                                    </div>
+                                </>
                             ) : (
-                                <Link href={highlightUrl} className="editorial-card-source">
-                                    <span>{highlightSource}</span>
-                                    <ExternalLink className="size-3 opacity-80" aria-hidden="true" />
-                                </Link>
+                                <>
+                                    <h3 className="editorial-card-title editorial-card-main-value editorial-card-main-muted">
+                                        {en ? 'Quiet neighborhood' : 'Vizinhança tranquila'}
+                                    </h3>
+                                    <span className="editorial-card-secondary editorial-card-secondary-dim">
+                                        {en ? 'No tracked object poses a known risk in the coming hours.' : 'Nenhum objeto monitorado representa risco conhecido nas próximas horas.'}
+                                    </span>
+                                </>
                             )}
-                            {highlightDate ? <span className="editorial-card-dot" aria-hidden="true">·</span> : null}
-                            {highlightDate ? <span className="editorial-card-date">{highlightDate}</span> : null}
                         </div>
-                    </div>
-                </article>
+                    </article>
 
-                {/* 2. Céu esta noite */}
-                <article className="editorial-card editorial-card-observe editorial-card-feature editorial-card-fixed-height">
-                    <span className="editorial-card-icon editorial-card-icon-mint" aria-hidden="true">
-                        <Eye className="size-4" />
-                    </span>
-                    <div className="editorial-card-body">
-                        <span className="editorial-card-label">{en ? 'Tonight\'s sky' : 'Céu esta noite'}</span>
-                        <h3 className="editorial-card-title editorial-card-title-note">{observationLine}</h3>
-                    </div>
-                </article>
-            </div>
-
-            {/* Row 2: sky data and approach cards */}
-            <div className="editorial-quad-row editorial-quad-row-bottom">
-                {/* 3. Dados do céu */}
-                <article className="editorial-card editorial-card-data editorial-card-sky">
-                    <span className="editorial-card-icon editorial-card-icon-purple" aria-hidden="true">
-                        <Moon className="size-4" />
-                    </span>
-                    <div className="editorial-card-body">
-                        <span className="editorial-card-label">{en ? 'Sky data' : 'Dados do céu'}</span>
-                        <h3 className="editorial-card-title editorial-card-main-value">{moonPhaseLine}</h3>
-                        <div className="editorial-sky-list">
-                            {cloudLine ? <span>{cloudLine}</span> : null}
-                            <span>{observingConditionLine}</span>
-                            <span>{planetsLine}</span>
+                    {/* 4. Destaque espacial (link externo fica por último) */}
+                    <article className="console-cell">
+                        <span className="editorial-card-glow" aria-hidden="true" />
+                        <span className="editorial-card-icon" aria-hidden="true">
+                            <Star className="size-4" />
+                        </span>
+                        <div className="editorial-card-body">
+                            <span className="editorial-card-label">{t('home.hero.spaceHighlight')}</span>
+                            <h3 className="editorial-card-title editorial-card-title-note">{displayTitle}</h3>
+                            <div className="editorial-card-meta">
+                                {spaceNews?.url ? (
+                                    <a
+                                        href={highlightUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="editorial-card-source"
+                                        aria-label={t('home.hero.openHighlightAria')}
+                                    >
+                                        <span>{highlightSource}</span>
+                                        <ExternalLink className="size-3 opacity-80" aria-hidden="true" />
+                                    </a>
+                                ) : (
+                                    <Link href={highlightUrl} className="editorial-card-source">
+                                        <span>{highlightSource}</span>
+                                        <ExternalLink className="size-3 opacity-80" aria-hidden="true" />
+                                    </Link>
+                                )}
+                                {highlightDate ? <span className="editorial-card-dot" aria-hidden="true">·</span> : null}
+                                {highlightDate ? <span className="editorial-card-date">{highlightDate}</span> : null}
+                            </div>
                         </div>
-                    </div>
-                </article>
-
-                {/* 4. Próxima aproximação */}
-                <article className="editorial-card editorial-card-data editorial-card-approach">
-                    <span className="editorial-card-icon editorial-card-icon-orange" aria-hidden="true">
-                        <Orbit className="size-4" />
-                    </span>
-                    <div className="editorial-card-body">
-                        <span className="editorial-card-label">{en ? 'Next approach' : 'Próxima aproximação'}</span>
-                        {approachName ? (
-                            <>
-                                <h3 className="editorial-card-title editorial-card-main-value">{approachName}</h3>
-                                <div className="editorial-approach-details">
-                                    {approachDate ? <span className="editorial-approach-date">{approachDate}</span> : null}
-                                    {approachKm ? <span className="editorial-approach-item editorial-approach-item-dim">{approachKm}</span> : null}
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <h3 className="editorial-card-title editorial-card-main-value editorial-card-secondary-dim">
-                                    {en ? 'No relevant approach' : 'Sem aproximação relevante'}
-                                </h3>
-                                <span className="editorial-card-secondary editorial-card-secondary-dim">
-                                    {en ? 'No known object poses a risk in the coming hours.' : 'Nenhum objeto monitorado representa risco conhecido nas próximas horas.'}
-                                </span>
-                            </>
-                        )}
-                    </div>
-                </article>
-            </div>
+                    </article>
+                </div>
+            </section>
         </div>
     );
-}
-
-const GENERIC_SUMMARY_MARKERS = [
-    'condições estimadas',
-    'estimated observing',
-    'aguardando',
-    'reading local',
-    'lendo condições',
-];
-
-function isGenericSummary(text: string): boolean {
-    const lower = text.toLowerCase();
-    return GENERIC_SUMMARY_MARKERS.some((m) => lower.includes(m));
-}
-
-function buildObservationNote(
-    skySummary: string,
-    cloudCover: number | null,
-    seeing: string | null,
-    visiblePlanets: VisibleObject[],
-    moonIllumination: number,
-    en: boolean,
-): string {
-    if (cloudCover === null && isGenericSummary(skySummary)) {
-        return en ? 'Reading local sky conditions…' : 'Lendo condições do céu local…';
-    }
-    if (cloudCover !== null && cloudCover >= 85) {
-        const moonPct = Math.round(moonIllumination);
-        const moonVisible = moonPct >= 20;
-        const phase = moonPhaseLabel(moonIllumination, en);
-        if (en) {
-            return moonVisible
-                ? `Heavy cloud cover. The ${phase} may still appear through gaps, but planets and faint objects will be hard to see.`
-                : 'Heavy cloud cover expected. Conditions are unfavorable for observation tonight.';
-        }
-        return moonVisible
-            ? `Céu com muitas nuvens. A ${phase} pode aparecer em brechas, mas planetas e objetos fracos tendem a ficar ocultos.`
-            : 'Cobertura de nuvens densa. Condições pouco favoráveis para observação esta noite.';
-    }
-    if (cloudCover !== null && cloudCover >= 50) {
-        const planetNames = visiblePlanets.map((p) => en ? p.nameEn : p.namePt);
-        if (en) {
-            return planetNames.length > 0
-                ? `Partly cloudy. The Moon and ${joinReadableList(planetNames, true)} may still be visible through breaks in the clouds.`
-                : 'Partly cloudy sky. The Moon may still be visible, but most objects will be harder to observe.';
-        }
-        return planetNames.length > 0
-            ? `Céu parcialmente nublado. A Lua e ${joinReadableList(planetNames, false)} ainda podem aparecer em brechas.`
-            : 'Céu parcialmente nublado. A Lua pode aparecer em brechas, mas a maioria dos objetos ficará encoberta.';
-    }
-    if (cloudCover !== null && cloudCover < 50) {
-        if (seeing) {
-            const normalized = seeing.toLowerCase();
-            const isGood = normalized.includes('ótimo') || normalized.includes('otimo');
-            if (isGood) {
-                return en
-                    ? 'Clear skies with excellent seeing. Great conditions for deep-sky observation.'
-                    : 'Céu limpo com excelente estabilidade atmosférica. Ótimas condições para observação.';
-            }
-        }
-        return en
-            ? 'Few clouds. Most objects should be visible tonight.'
-            : 'Poucas nuvens. A maioria dos objetos deve estar visível esta noite.';
-    }
-    if (skySummary && !isGenericSummary(skySummary)) {
-        return skySummary.charAt(0).toUpperCase() + skySummary.slice(1);
-    }
-    return en ? 'Reading local sky conditions…' : 'Lendo condições do céu local…';
-}
-
-function formatObservingVisibility(cloudCover: number | null, seeing: string | null, en: boolean): string {
-    if (cloudCover === null) return en ? 'loading' : 'carregando';
-    if (cloudCover >= 85) return en ? 'low' : 'baixa';
-    if (cloudCover >= 50) return en ? 'moderate' : 'moderada';
-    if (seeing) {
-        const normalized = seeing.toLowerCase();
-        if (normalized.includes('instável') || normalized.includes('instavel')) return en ? 'unstable' : 'instável';
-    }
-    return en ? 'good' : 'boa';
-}
-
-function formatVisiblePlanetsLine(names: string[], en: boolean): string {
-    if (names.length === 0) {
-        return en ? 'No planets visible right now' : 'Nenhum planeta visível no momento';
-    }
-
-    const list = joinReadableList(names, en);
-
-    if (names.length === 1) {
-        return en ? `Planet visible right now: ${list}` : `Planeta visível no momento: ${list}`;
-    }
-
-    return en ? `${names.length} planets visible right now: ${list}` : `${names.length} planetas visíveis no momento: ${list}`;
-}
-
-function joinReadableList(items: string[], en: boolean): string {
-    if (items.length <= 1) {
-        return items.join('');
-    }
-
-    const conjunction = en ? ' and ' : ' e ';
-    return `${items.slice(0, -1).join(', ')}${conjunction}${items[items.length - 1]}`;
 }
 
 function OptionsScene({ open, onBack }: { open: boolean; onBack: () => void }) {
@@ -488,78 +460,12 @@ function OptionsScene({ open, onBack }: { open: boolean; onBack: () => void }) {
     );
 }
 
-
-function SkyStatusRibbon({ locationLabel }: { locationLabel: string }) {
-    const { t, locale } = useTranslation();
-    const en = locale === 'en';
-    const prefix = en ? 'Local observation based on' : 'Observação local baseada em';
-
-    return (
-        <div className="sky-status-ribbon" aria-label={t('home.hero.statusRibbonLabel')}>
-            <div className="sky-status-chip sky-status-chip-highlight sky-status-location-only">
-                <LocateFixed className="size-3.5" aria-hidden="true" />
-                <span className="sky-status-ribbon-prefix">{prefix}</span>
-                <strong>{locationLabel}</strong>
-            </div>
-        </div>
-    );
-}
-
-function HeroEarthFallback({ expanded: _expanded = false }: { expanded?: boolean }) {
+function HeroEarthFallback() {
     return (
         <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden" aria-hidden="true">
-            <div className="cinematic-earth-shell absolute right-0 top-1/2 aspect-square -translate-y-1/2 translate-x-[18%] opacity-100 md:translate-x-[2%] lg:translate-x-[-14%] xl:translate-x-[-18%] 2xl:translate-x-[-20%]">
-                <div className="earth-loading-spinner absolute inset-0 rounded-full" />
+            <div className="cinematic-earth-shell">
+                <div className="earth-loading-spinner absolute inset-0" />
             </div>
         </div>
     );
-}
-
-
-
-function formatApproachDate(value: string, en: boolean): string {
-    try {
-        // NASA format: "2026-Jun-01 03:26" or ISO "2026-06-01T03:26:00"
-        const normalized = value
-            .replace(
-                /^(\d{4})-([A-Za-z]{3})-(\d{2})\s*(.*)$/,
-                (_, year, mon, day, rest) => {
-                    const months: Record<string, string> = {
-                        Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
-                        Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
-                    };
-                    const time = rest ? rest.trim() : '00:00';
-                    return `${year}-${months[mon] ?? '01'}-${day}T${time}:00`;
-                },
-            );
-        const date = new Date(normalized);
-        if (Number.isNaN(date.getTime())) return value;
-        return new Intl.DateTimeFormat(en ? 'en' : 'pt-BR', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'UTC',
-        }).format(date);
-    } catch {
-        return value;
-    }
-}
-
-function moonPhaseLabel(illumination: number, en: boolean): string {
-    const pct = Math.round(illumination);
-    let phase: string;
-    if (pct <= 2) {
-        phase = en ? 'New Moon' : 'Lua nova';
-    } else if (pct <= 48) {
-        phase = en ? 'Crescent Moon' : 'Lua crescente';
-    } else if (pct <= 52) {
-        phase = en ? 'Quarter Moon' : 'Quarto de Lua';
-    } else if (pct <= 97) {
-        phase = en ? 'Gibbous Moon' : 'Lua gibosa';
-    } else {
-        phase = en ? 'Full Moon' : 'Lua cheia';
-    }
-    return en ? `${phase} (${pct}%)` : `${phase} (${pct}%)`;
 }

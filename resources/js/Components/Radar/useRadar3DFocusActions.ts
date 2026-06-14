@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
-import type { MobilePanelSection } from './Panels/MobilePanelControls';
+import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import type { CameraViewKey } from './Scene/cameraConstants';
 import { framingForBody } from './Scene/cameraFraming';
 import type { FocusFraming } from './Scene/cameraFraming';
@@ -27,11 +27,9 @@ type Args = {
     closestNowObjects: ClosestNowObject[];
     focusedObject: ClosestNowObject | null;
     ephemeris: SceneEphemeris | null;
-    mobilePanelSection: MobilePanelSection;
     onClearSelection?: () => void;
     onSelect: (approach: UnifiedApproach) => void;
-    setMobilePanelSection: (section: MobilePanelSection) => void;
-    setPanelCollapsed: (collapsed: boolean) => void;
+    setMobileSheet: (sheet: MobileSheetSection | null) => void;
     setPlanetsOpen: (open: boolean) => void;
     triggerTransition: (fn: () => void) => void;
 };
@@ -43,11 +41,9 @@ export function useRadar3DFocusActions({
     closestNowObjects,
     focusedObject,
     ephemeris,
-    mobilePanelSection,
     onClearSelection,
     onSelect,
-    setMobilePanelSection,
-    setPanelCollapsed,
+    setMobileSheet,
     setPlanetsOpen,
     triggerTransition,
 }: Args) {
@@ -75,8 +71,8 @@ export function useRadar3DFocusActions({
         if (typeof window === 'undefined') return;
         if (!window.matchMedia(MOBILE_MEDIA_QUERY).matches) return;
         setPlanetsOpen(false);
-        setPanelCollapsed(true);
-    }, [setPanelCollapsed, setPlanetsOpen]);
+        setMobileSheet(null);
+    }, [setMobileSheet, setPlanetsOpen]);
 
     const pickView = useCallback((key: CameraViewKey) => {
         onClearSelection?.();
@@ -113,9 +109,8 @@ export function useRadar3DFocusActions({
         setBodyCardOpen(null);
         clearPlanetTargets();
         setPlanetsOpen(false);
-        setPanelCollapsed(false);
-        setMobilePanelSection('objects');
-    }, [clearPlanetTargets, onClearSelection, setMobilePanelSection, setPanelCollapsed, setPlanetsOpen]);
+        setMobileSheet('objects');
+    }, [clearPlanetTargets, onClearSelection, setMobileSheet, setPlanetsOpen]);
 
     const closeFocusedObject = useCallback(() => {
         if (focusedObject) setDismissedFocusObjectId(focusedObject.approach.id);
@@ -201,10 +196,7 @@ export function useRadar3DFocusActions({
     useEffect(() => {
         if (!orbitMode) return;
         setPlanetsOpen(false);
-        if (mobilePanelSection !== 'objects') {
-            setMobilePanelSection('objects');
-        }
-    }, [mobilePanelSection, orbitMode, setMobilePanelSection, setPlanetsOpen]);
+    }, [orbitMode, setPlanetsOpen]);
 
     return {
         bodyCardOpen,

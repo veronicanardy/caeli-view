@@ -80,10 +80,9 @@ describe('RADAR_TUTORIAL_STEPS', () => {
         expect(ids.indexOf('camera-rotate')).toBeLessThan(ids.indexOf('filter-criterion'));
     });
 
-    it('após a órbita: reset, dica de clique na cena, toolbar com contemplações e o guia por último', () => {
+    it('após as referências: reset, dica de clique na cena, toolbar com contemplações e o guia por último', () => {
         const ids = RADAR_TUTORIAL_STEPS.map((s) => s.id);
         const tail = [
-            'orbit-return',
             'reset-view',
             'scene-click-hint',
             'toolbar-labels-off',
@@ -93,9 +92,13 @@ describe('RADAR_TUTORIAL_STEPS', () => {
             'fullscreen-view',
             'toolbar-fullscreen-off',
             'radar-guide',
+            'guide-invitation',
             'finale',
         ];
         expect(ids.slice(ids.length - tail.length)).toEqual(tail);
+        // O bloco de referências fica entre o retorno da órbita e o reset de vista.
+        expect(ids.indexOf('orbit-return')).toBeLessThan(ids.indexOf('references-bodies'));
+        expect(ids.indexOf('references-planets-arrival')).toBeLessThan(ids.indexOf('reset-view'));
     });
 
     it('os passos de contemplação destacam a cena inteira, sem escurecer o céu', () => {
@@ -106,7 +109,7 @@ describe('RADAR_TUTORIAL_STEPS', () => {
         }
     });
 
-    it('referências em dois passos: corpos (Sol/Terra/Lua) e depois planetas', () => {
+    it('referências em dois blocos: corpos (Sol/Terra/Lua) com chegada e depois planetas com chegada', () => {
         const bodies = RADAR_TUTORIAL_STEPS.find((s) => s.id === 'references-bodies')!;
         expect(bodies.advance).toEqual({ kind: 'click', requireSelector: '[data-tutorial="reference-body"]' });
         expect(bodies.settleWhileAdvancing).toBe(true);
@@ -115,8 +118,11 @@ describe('RADAR_TUTORIAL_STEPS', () => {
         expect(planets.advance).toEqual({ kind: 'click', requireSelector: '[data-tutorial="planet-option"]' });
         expect(planets.settleWhileAdvancing).toBe(true);
 
+        // Cada bloco tem um passo de chegada logo após o clique, no mesmo skipGroup.
         const ids = RADAR_TUTORIAL_STEPS.map((s) => s.id);
-        expect(ids.indexOf('references-planets')).toBe(ids.indexOf('references-bodies') + 1);
+        expect(ids.indexOf('references-bodies-arrival')).toBe(ids.indexOf('references-bodies') + 1);
+        expect(ids.indexOf('references-planets')).toBe(ids.indexOf('references-bodies-arrival') + 1);
+        expect(ids.indexOf('references-planets-arrival')).toBe(ids.indexOf('references-planets') + 1);
     });
 
     it('a seleção devolve a câmera ao ponto de partida e espera a viagem dela', () => {
@@ -127,11 +133,12 @@ describe('RADAR_TUTORIAL_STEPS', () => {
         expect(select.targets.some((t) => t.includes('radar-canvas'))).toBe(false);
     });
 
-    it('as abas pedem um clique e dão um respiro de 1,5 s antes de avançar', () => {
-        const tabs = RADAR_TUTORIAL_STEPS.find((s) => s.id === 'card-tabs')!;
-        expect(tabs.requiredClicks).toBeUndefined();
-        expect(tabs.settleWhileAdvancing).toBe(true);
-        expect(tabs.advanceDelayMs).toBe(1500);
+    it('os passos de troca de aba avançam com um clique em aba não selecionada', () => {
+        for (const id of ['card-tabs-to-physical', 'card-tabs-to-approach']) {
+            const step = RADAR_TUTORIAL_STEPS.find((s) => s.id === id)!;
+            expect(step.advance, id).toEqual({ kind: 'click', requireSelector: '[role="tab"][aria-selected="false"]' });
+            expect(step.requiresSelection, id).toBe(true);
+        }
     });
 
     it('a explicação da órbita não menciona a Terra (ela não aparece no modo orbital)', () => {
@@ -180,7 +187,8 @@ describe('indexAfterGroup', () => {
         const steps = stepsForViewport(false);
         const orbitView = steps.findIndex((s) => s.id === 'orbit-view');
         const after = indexAfterGroup(steps, orbitView);
-        expect(steps[after].skipGroup).toBeUndefined();
+        // O passo seguinte pertence a outro grupo (referências), nunca ao orbit.
+        expect(steps[after].skipGroup).not.toBe('orbit');
         expect(steps.slice(orbitView, after).every((s) => s.skipGroup === 'orbit')).toBe(true);
     });
 });

@@ -51,9 +51,11 @@ type AsteroidMarkerProps = {
     protectLabelFromFocus: boolean;
     paletteColor: string;
     showLabels: boolean;
-    zoomOutTarget?: THREE.Vector3;
-    zoomOutDistance?: number;
+    /** Trecho absoluto da trajetória que o zoom out deve enquadrar (vazio = sem trajetória). */
+    zoomFramePoints?: THREE.Vector3[];
     zoomWorldPosition?: THREE.Vector3;
+    panelBiasX?: number;
+    panelBiasY?: number;
 };
 
 /**
@@ -79,9 +81,10 @@ export function AsteroidMarker({
     protectLabelFromFocus,
     paletteColor,
     showLabels,
-    zoomOutTarget,
-    zoomOutDistance,
+    zoomFramePoints,
     zoomWorldPosition,
+    panelBiasX = 0,
+    panelBiasY = 0,
 }: AsteroidMarkerProps) {
     const [hovered, setHovered] = useState(false);
     const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
@@ -107,8 +110,13 @@ export function AsteroidMarker({
             {/* Mostra label quando: (a) sempre visível por config, ou (b) hover — mesmo com labels suprimidos.
                 Apenas o nome: identificação rápida. Detalhes (posição estimada, máxima aproximação)
                 pertencem ao card do painel lateral, não à cena 3D. */}
-            {isSelected && showLabels && zoomOutTarget && zoomOutDistance && zoomWorldPosition ? (
-                <ZoomHint worldPosition={zoomWorldPosition} zoomOutTarget={zoomOutTarget} zoomOutDistance={zoomOutDistance} />
+            {isSelected && showLabels && zoomFramePoints && zoomWorldPosition ? (
+                <ZoomHint
+                    worldPosition={zoomWorldPosition}
+                    zoomFramePoints={zoomFramePoints}
+                    panelBiasX={panelBiasX}
+                    panelBiasY={panelBiasY}
+                />
             ) : null}
 
             {(showLabel || hovered) ? (

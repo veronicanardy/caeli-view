@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import type { NoGoRect } from '../Overlays/SceneLabels';
-import type { MobilePanelSection } from '../Panels/MobilePanelControls';
+import type { MobileSheetSection } from '../Panels/radarNavigationTypes';
 import type { PlanetId } from './planetConfig';
 
 type UseLabelNoGoRectsArgs = {
@@ -21,8 +21,7 @@ type UseLabelNoGoRectsArgs = {
     planetsOpen: boolean;
     focusedObjectId: string | null;
     bodyCardOpen: 'earth' | 'moon' | 'sun' | PlanetId | null;
-    panelCollapsed: boolean;
-    mobilePanelSection: MobilePanelSection;
+    mobileSheet: MobileSheetSection | null;
 };
 
 /**
@@ -41,8 +40,7 @@ export function useLabelNoGoRects({
     planetsOpen,
     focusedObjectId,
     bodyCardOpen,
-    panelCollapsed,
-    mobilePanelSection,
+    mobileSheet,
 }: UseLabelNoGoRectsArgs): NoGoRect[] {
     const [noGoRects, setNoGoRects] = useState<NoGoRect[]>([]);
 
@@ -103,8 +101,7 @@ export function useLabelNoGoRects({
         focusCardRef,
         focusedObjectId,
         fullscreen,
-        mobilePanelSection,
-        panelCollapsed,
+        mobileSheet,
         planetFlyoutRef,
         planetsOpen,
         sidePanelRef,

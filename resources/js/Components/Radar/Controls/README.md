@@ -59,14 +59,15 @@ Qualquer mudança de linguagem nesses manuais deve preservar esses quatro avisos
 ### Controles Principais Da Cena
 
 - `SceneToolbar.tsx`: toolbar com Reset de vista, toggle de labels e fullscreen. Usa `Tooltip` para os três botões. Carrega os marcadores `data-tutorial` `camera-controls`, `toggle-labels`, `toggle-fullscreen` e `reset-view` usados pelo tutorial interativo (contrato em `../Tutorial/README.md`).
-- `ReferenceControls.tsx`: atalhos de foco para Sol, Terra, Lua e planetas, exibidos com símbolos astronômicos Unicode (☉ ♁ ☽ ✦). O cluster de botões carrega `data-tutorial="reference-controls"` para o passo de referências do tutorial.
+- `MobileActionBar.tsx`: barra de ações inferior do mobile (abaixo de lg:), com as três portas de entrada da interface: Objetos, Filtros e Guia. Oculta enquanto um sheet ou card ocupa o rodapé. Os botões espelham os marcadores `data-tutorial` do desktop (`object-list-toggle`, `radar-filters`, `radar-guide`); o tutorial resolve por visibilidade.
+- `ReferenceControls.tsx`: atalhos de foco para Sol, Terra, Lua e planetas, exibidos com símbolos astronômicos Unicode (☉ ♁ ☽ ✦). O cluster de botões carrega `data-tutorial="reference-controls"` para o passo de referências do tutorial. A prop `labelsAlwaysVisible` força os rótulos de texto abaixo de sm: (uso nos sheets mobile, onde há largura).
 - `Tooltip.tsx`: tooltip customizado do observatório — aparece imediatamente no hover e some após 2 s. Suporta `side` (bottom/top), `align` (center/left/right) e `hideDelay`.
 
 ### Filtros E Formulários
 
 - `ObservationControls.tsx`: formulário principal de data, tipo e busca.
-- `CompactConsoleBar.tsx`: versão condensada dos controles para espaços menores. Marcada com `data-tutorial="radar-filters"`.
-- `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D. Os grupos carregam `data-tutorial="radar-filter-criterion"` e `data-tutorial="radar-filter-limit"`; como o componente renderiza duas vezes (desktop e mobile), o tutorial resolve o alvo filtrando por visibilidade real.
+- `CompactConsoleBar.tsx`: barra de filtros do topo da página, somente desktop (a página esconde abaixo de lg:). No mobile os mesmos filtros vivem no bottom sheet aberto pela `MobileActionBar`. Marcada com `data-tutorial="radar-filters"`.
+- `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D. Os grupos carregam `data-tutorial="radar-filter-criterion"` e `data-tutorial="radar-filter-limit"`; o sheet mobile de filtros (`../Panels/MobileFiltersSheetContent.tsx`) duplica esses marcadores e o tutorial resolve o alvo filtrando por visibilidade real.
 
 ## Remoção do radar 2D
 
