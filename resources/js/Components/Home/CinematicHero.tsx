@@ -130,9 +130,16 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
 
                 {/* Glint quente acima do lado iluminado do horizonte */}
                 <div className="home-warm-glint pointer-events-none absolute inset-0 z-[8]" aria-hidden="true" />
+                {/* Glow difuso do nascer do sol fica ATRÁS da Terra (z-8): a luz
+                    parece vir de trás do planeta e o limbo recorta o brilho. */}
                 <div className="home-cinematic-sunrise pointer-events-none absolute inset-0 z-[8]" aria-hidden="true">
                     <span className="home-cinematic-sunrise-bloom" />
                     <span className="home-cinematic-sunrise-atmosphere" />
+                </div>
+                {/* A BOLINHA fica ATRÁS da Terra (z-9 < Terra z-10): o planeta opaco
+                    recorta a base do disco e só a fatia de cima aparece sobre o limbo,
+                    como um sol nascendo atrás da Terra. */}
+                <div className="home-cinematic-sunrise-disc pointer-events-none absolute inset-0 z-[9]" aria-hidden="true">
                     <span className="home-cinematic-sunrise-corona" />
                     <span className="home-cinematic-sunrise-core" />
                 </div>
@@ -142,11 +149,15 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                         <Satellite className="size-3.5" aria-hidden="true" />
                         {t('home.hero.badge')}
                     </div>
-                    <h1 className="hero-headline hero-rise hero-rise-2 mt-5 text-6xl font-semibold leading-[0.94] sm:text-7xl lg:text-8xl">
+                    <h1 className="hero-headline hero-rise hero-rise-2 mt-5 text-5xl font-semibold leading-[0.94] sm:text-6xl lg:text-7xl">
                         {t('home.hero.heading')}
                     </h1>
-                    <p className="home-hero-description hero-rise hero-rise-3 mt-5 max-w-2xl text-balance text-lg leading-8 text-white/76">{t('home.hero.description')}</p>
-                    <p className="home-hero-source hero-rise hero-rise-3 mt-3 max-w-2xl text-balance text-[0.68rem] font-semibold uppercase leading-5 tracking-[0.18em] text-white/42">
+                    <p className="home-hero-tagline hero-rise hero-rise-3 mt-5 max-w-2xl text-balance text-xl font-medium leading-9 text-white/92 sm:text-2xl">
+                        {t('home.hero.tagline')}
+                    </p>
+                    <p className="home-hero-description hero-rise hero-rise-3 mt-3 max-w-xl text-balance text-base leading-7 text-white/68">{t('home.hero.description')}</p>
+                    <p className="home-hero-source hero-rise hero-rise-4 mt-4 inline-flex items-center gap-2 text-[0.68rem] font-semibold uppercase leading-5 tracking-[0.18em] text-white/45">
+                        <span className="home-hero-source-dot" aria-hidden="true" />
                         {t('home.hero.sources')}
                     </p>
 
@@ -169,7 +180,7 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                             </span>
                         </button>
                         <Link href="/radar" prefetch className="home-cta-secondary">
-                            {en ? 'Go straight to Radar' : 'Ir direto ao Radar'}
+                            {en ? 'Enter the Radar' : 'Entrar no Radar'}
                             <ArrowRight className="size-3.5" aria-hidden="true" />
                         </Link>
                     </div>
@@ -275,10 +286,10 @@ function ObservatoryConsole({
     const observationLine = buildObservationNote(skySummary, cloudCover, seeing, visibleNowPlanets, moonIllumination, en);
     const moonPhaseLine = moonPhaseLabel(moonIllumination, en);
     const cloudLine = cloudCover !== null
-        ? (en ? `Clouds: ${formatNumber(cloudCover, 0)}%` : `Nuvens: ${formatNumber(cloudCover, 0)}%`)
+        ? (en ? `${formatNumber(cloudCover, 0)}% cloud cover` : `${formatNumber(cloudCover, 0)}% de nuvens`)
         : null;
     const visibilityLabel = formatObservingVisibility(cloudCover, seeing, en);
-    const observingConditionLine = en ? `Visibility: ${visibilityLabel}` : `Visibilidade: ${visibilityLabel}`;
+    const observingConditionLine = en ? `${visibilityLabel} visibility` : `Visibilidade ${visibilityLabel.toLowerCase()}`;
     const planetsLine = formatVisiblePlanetsLine(visibleNowPlanets.map((p) => en ? p.nameEn : p.namePt), en);
     // ── Célula 4: Próxima aproximação ─────────────────────────────────
     const approachName = approach ? resolveApproachIdentity(approach).displayName : null;
@@ -291,10 +302,10 @@ function ObservatoryConsole({
         <div className="hero-rise hero-rise-5">
             <section className="observatory-console" aria-label={t('home.hero.statusRibbonLabel')}>
                 <header className="console-header">
-                    <span className="console-header-title">{en ? 'Radar live feed' : 'Feed do Radar ao vivo'}</span>
+                    <span className="console-header-title">{en ? 'Live observatory feed' : 'Feed do observatório ao vivo'}</span>
                     <span className="console-header-location">
                         <span className="sky-status-pulse" aria-hidden="true" />
-                        <span className="console-header-prefix">{en ? 'Local observation based on' : 'Observação local baseada em'}</span>
+                        <span className="console-header-prefix">{en ? 'Observing from' : 'Observando de'}</span>
                         <strong>{locationLabel}</strong>
                     </span>
                 </header>

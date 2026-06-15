@@ -519,6 +519,7 @@ body {
    limbo superior, centro-x. O disco abaixo é noturno com cidades acesas. */
 .home-cinematic-sunrise {
     --sun-x: 50%;
+    /* Altura do BRILHO dourado difuso (no limbo). Controla só o glow. */
     --sun-y: 60.5%;
     z-index: 8;
     mix-blend-mode: screen;
@@ -581,10 +582,12 @@ body {
 
 .home-cinematic-sunrise-atmosphere {
     left: 50%;
-    top: calc(var(--sun-y) + 0.05%);
+    /* Faixa reta centrada no MEIO do sol (na altura da bolinha, 55%). translate
+       -50%,-50% faz o top virar o centro real, igual à bolinha. */
+    top: 55%;
     width: 38vw;
     height: 4.4rem;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
     border-radius: 50%;
     background:
         radial-gradient(ellipse at 50% 42%, rgba(255, 255, 240, 1) 0%, rgba(255, 220, 112, 0.82) 9%, rgba(255, 130, 34, 0.42) 20%, transparent 40%),
@@ -596,11 +599,21 @@ body {
     mask-image: linear-gradient(to bottom, transparent 0%, #000 32%, #000 52%, transparent 100%);
 }
 
+/* Wrapper da bolinha (z acima da Terra). Define suas próprias vars para não
+   depender de .home-cinematic-sunrise, e usa screen para o branco clarear sobre
+   o planeta escuro. --sun-disc-y controla a altura do disco. */
+.home-cinematic-sunrise-disc {
+    --sun-x: 50%;
+    /* Altura da BOLINHA (atrás da Terra, z-9). Independente do glow: este é o
+       valor que mostrava a bolinha nascendo no print bom. Menor = mais alta. */
+    --sun-disc-y: 55%;
+    mix-blend-mode: screen;
+}
+
 .home-cinematic-sunrise-corona {
     left: var(--sun-x);
-    /* Acompanha o core (acima do limbo) para emoldurar a bolinha, sem virar um
-       borrão sobre ela. */
-    top: calc(var(--sun-y) - 3%);
+    /* Acompanha o core para emoldurar a bolinha, sem virar um borrão sobre ela. */
+    top: var(--sun-disc-y);
     width: min(20rem, 21vw);
     height: min(10rem, 12vh);
     transform: translate(-50%, -50%);
@@ -613,21 +626,22 @@ body {
 
 .home-cinematic-sunrise-core {
     left: var(--sun-x);
-    /* Disco do sol emergindo na borda superior da Terra: sobe o suficiente para
-       a "bolinha" ficar visível acima do limbo, com contorno branco nítido. */
-    top: calc(var(--sun-y) - 3%);
-    width: clamp(2rem, 2.8vw, 3.2rem);
-    height: clamp(2rem, 2.8vw, 3.2rem);
+    /* Disco do sol emergindo na borda superior da Terra: o topo da bolinha fica
+       visível acima do limbo, a base é recortada pelo planeta (camada de z superior).
+       Controlado por --sun-disc-y para calibrar a altura sem mexer no brilho difuso. */
+    top: var(--sun-disc-y);
+    width: clamp(2.4rem, 3.4vw, 4rem);
+    height: clamp(2.4rem, 3.4vw, 4rem);
     transform: translate(-50%, -50%);
     border-radius: 9999px;
     /* Disco branco PURO e nítido: é a "bolinha" do sol que precisa saltar acima
        do glow difuso. Núcleo branco sólido até 55%, decaindo rápido. */
-    background: radial-gradient(circle, #fff 0%, #fff 45%, rgba(255, 250, 232, 1) 62%, rgba(255, 210, 130, 0.9) 80%, transparent 100%);
+    background: radial-gradient(circle, #fff 0%, #fff 48%, rgba(255, 250, 232, 1) 64%, rgba(255, 210, 130, 0.95) 82%, transparent 100%);
     box-shadow:
-        0 0 1rem rgba(255, 255, 255, 1),
-        0 0 2.6rem rgba(255, 252, 240, 1),
-        0 0 6rem rgba(255, 220, 140, 0.92),
-        0 0 12rem rgba(255, 170, 70, 0.6);
+        0 0 1.2rem rgba(255, 255, 255, 1),
+        0 0 3.2rem rgba(255, 252, 240, 1),
+        0 0 7rem rgba(255, 224, 150, 0.95),
+        0 0 14rem rgba(255, 175, 75, 0.65);
     filter: blur(0.1px);
     opacity: 1;
 }
@@ -676,12 +690,37 @@ body {
         0 0 30px rgba(84, 214, 214, 0.13);
 }
 
+/* Linha de leitura forte do hero: a promessa do produto. Mais clara e com
+   sombra própria para vencer o céu, fica acima da descrição de apoio. */
+.home-hero-tagline {
+    text-shadow:
+        0 1px 22px rgba(3, 8, 18, 0.86),
+        0 0 38px rgba(3, 8, 18, 0.4);
+}
+
 .home-hero-description {
     text-shadow: 0 1px 18px rgba(3, 8, 18, 0.78);
 }
 
+/* Microcopy NASA/JPL: chip discreto com ponto "ao vivo" ciano à esquerda,
+   reforçando a procedência sem virar uma linha técnica de specs. */
 .home-hero-source {
     text-shadow: 0 0 20px rgba(3, 8, 18, 0.9);
+}
+
+.home-hero-source-dot {
+    width: 0.34rem;
+    height: 0.34rem;
+    border-radius: 9999px;
+    background: rgba(84, 214, 214, 0.95);
+    box-shadow: 0 0 9px rgba(84, 214, 214, 0.6);
+    animation: liveDotPulse 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-hero-source-dot {
+        animation: none !important;
+    }
 }
 
 .orbiting-dot {
@@ -1725,6 +1764,9 @@ body {
 
 .home-hero-scene {
     isolation: isolate;
+    /* CONTROLE ÚNICO da altura do sol (blur dourado + bolinha juntos).
+       Menor = sol mais alto; maior = mais baixo/escondido atrás da Terra. */
+    --sun-pos: 56%;
 }
 
 /* Fade-in from hero to mission section — prevents abrupt cut */
