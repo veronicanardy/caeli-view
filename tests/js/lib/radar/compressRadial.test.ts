@@ -24,7 +24,7 @@ import {
     compressSceneVector,
     helioAUToSunCenteredScene,
 } from '@/lib/sceneEphemeris';
-import { horizonsGeoToHelioScene, horizonsToScene } from '@/lib/radar/coordinates';
+import { horizonsToScene } from '@/lib/radar/coordinates';
 
 /** Ângulo (radianos) entre dois vetores 3D. 0 = mesma direção. */
 function angleBetween(a: readonly number[], b: readonly number[]): number {
@@ -161,36 +161,29 @@ describe('objeto perto de Júpiter cai na região visual de Júpiter', () => {
         expect(dist).toBeLessThan(jupiterRadius * 0.05);
     });
 
-    it('o mesmo objeto via frame GEOCÊNTRICO+helio também aponta para a região de Júpiter', () => {
-        // horizonsGeoToHelioScene soma o vetor geocêntrico à posição helio da Terra, no MESMO
-        // frame linear de helioAUToSunCenteredScene. Terra em +x (1 UA), Júpiter em +x (5,2 UA):
-        // o objeto geocêntrico a ~4,2 UA na direção +x cai sobre Júpiter.
-        const earthHelioAU = { x: 1, y: 0, z: 0 };
-        const geoTowardJupiterKm = (JUPITER_AU - 1) * KM_PER_AU; // 4,2 UA à frente da Terra em +x
-        const objScene = horizonsGeoToHelioScene(geoTowardJupiterKm, 0, 0, earthHelioAU);
-        // Deve cair praticamente sobre Júpiter (mesma direção e raio).
+    it('um objeto a 5,2 UA heliocêntricas cai sobre Júpiter na régua linear', () => {
+        // Na régua helio (helioAUToSunCenteredScene), um objeto na mesma distância e direção de
+        // Júpiter cai sobre ele — a vizinhança heliocêntrica é fiel à UA, sem compressão.
+        const objScene = helioAUToSunCenteredScene({ x: JUPITER_AU, y: 0, z: 0 });
         expect(angleBetween(objScene, jupiterScene)).toBeCloseTo(0, 6);
-        const robj = Math.hypot(...objScene);
-        const rjup = Math.hypot(...jupiterScene);
-        expect(robj).toBeCloseTo(rjup, 6);
+        expect(Math.hypot(...objScene)).toBeCloseTo(Math.hypot(...jupiterScene), 6);
     });
 
-    it('NÃO misturar frames: geocêntrico log e heliocêntrico linear divergem (por isso são modos distintos)', () => {
-        // O MESMO objeto distante, posicionado pelos dois caminhos, NÃO coincide — comprova
-        // por que a cena separa radar (log, geo) de órbita (linear, helio). Misturá-los no mesmo
-        // frame colocaria o objeto numa região errada (o bug histórico que a separação corrigiu).
-        const geoKm = (JUPITER_AU - 1) * KM_PER_AU;
-        const logGeo = horizonsToScene(geoKm, 0, 0);              // camada radar: comprimido perto da Terra
-        const linHelio = horizonsGeoToHelioScene(geoKm, 0, 0, { x: 1, y: 0, z: 0 }); // camada órbita
+    it('NÃO misturar réguas: geocêntrico log e heliocêntrico linear divergem (por isso são modos distintos)', () => {
+        // A MESMA distância de 4,2 UA, medida pelas duas réguas, NÃO coincide — comprova por que a
+        // cena separa radar (log, geocêntrico) de órbita (linear, heliocêntrico). Misturá-las
+        // colocaria o objeto numa região errada (o bug histórico que a separação corrigiu).
+        const distAU = JUPITER_AU - 1; // 4,2 UA
+        const logGeo = horizonsToScene(distAU * KM_PER_AU, 0, 0);     // camada radar: comprimido
+        const linHelio = helioAUToSunCenteredScene({ x: distAU, y: 0, z: 0 }); // camada órbita: linear
         const rLog = Math.hypot(...logGeo);
         const rHelio = Math.hypot(...linHelio);
         // Invariante de fronteira, derivado das constantes (sem multiplicador mágico):
-        //  - a camada LINEAR é fiel à UA: o objeto a 5,2 UA fica exatamente em 5,2 × ORBIT_AU_SCALE;
+        //  - a camada LINEAR é fiel à UA: 4,2 UA ficam exatamente em 4,2 × ORBIT_AU_SCALE;
         //  - a camada LOG comprime esses 4,2 UA geocêntricos para bem menos que isso.
-        // Os dois caminhos não podem ocupar o mesmo frame — misturá-los jogaria o objeto numa região errada.
-        expect(rHelio).toBeCloseTo(JUPITER_AU * ORBIT_AU_SCALE, 6); // linear: fiel à distância em UA
-        expect(rLog).toBeLessThan(rHelio * 0.5);                    // log: fortemente comprimido vs. linear
-        expect(rLog).toBeGreaterThan(SUN_DISPLAY_DL);              // mas ainda além do Sol (4,2 UA > 1 UA), ordem preservada
+        expect(rHelio).toBeCloseTo(distAU * ORBIT_AU_SCALE, 6); // linear: fiel à distância em UA
+        expect(rLog).toBeLessThan(rHelio * 0.5);                // log: fortemente comprimido vs. linear
+        expect(rLog).toBeGreaterThan(SUN_DISPLAY_DL);           // mas ainda além do Sol (4,2 UA > 1 UA), ordem preservada
     });
 });
 
@@ -203,9 +196,9 @@ describe('unidades e eixos aplicados exatamente uma vez', () => {
         expect(Math.hypot(...scene)).toBeCloseTo(compressDistanceDl(1), 9);
     });
 
-    it('horizonsGeoToHelioScene usa KM_PER_AU uma vez: 1 UA em km → 1 × ORBIT_AU_SCALE', () => {
-        // Dupla aplicação de KM_PER_AU colapsaria o objeto na origem.
-        const s = horizonsGeoToHelioScene(KM_PER_AU, 0, 0, { x: 0, y: 0, z: 0 });
+    it('helioAUToSunCenteredScene usa KM_PER_AU uma vez: 1 UA → 1 × ORBIT_AU_SCALE', () => {
+        // A régua linear é fiel à UA: 1 UA cai exatamente em ORBIT_AU_SCALE, sem dupla conversão.
+        const s = helioAUToSunCenteredScene({ x: 1, y: 0, z: 0 });
         expect(s[0]).toBeCloseTo(ORBIT_AU_SCALE, 9);
     });
 
@@ -217,28 +210,11 @@ describe('unidades e eixos aplicados exatamente uma vez', () => {
         expect(s[2]).toBeCloseTo(-1, 9);
     });
 
-    it('helioAUToSunCenteredScene e horizonsGeoToHelioScene concordam na convenção de eixos', () => {
-        // Mesmo ponto helio (UA) pelos dois caminhos deve dar o mesmo vetor de cena —
-        // garante que não há divergência de eixo entre os dois conversores do frame linear.
-        const helio = { x: 2.1, y: -1.3, z: 0.4 };
-        const viaDirect = helioAUToSunCenteredScene(helio);
-        const viaGeo = horizonsGeoToHelioScene(
-            helio.x * KM_PER_AU,
-            helio.y * KM_PER_AU,
-            helio.z * KM_PER_AU,
-            { x: 0, y: 0, z: 0 },
-        );
-        expect(viaGeo[0]).toBeCloseTo(viaDirect[0], 6);
-        expect(viaGeo[1]).toBeCloseTo(viaDirect[1], 6);
-        expect(viaGeo[2]).toBeCloseTo(viaDirect[2], 6);
-    });
-
-    it('km→UA e km→DL diferem pelo fator AU_IN_DL (não há confusão de unidade entre camadas)', () => {
-        // O mesmo deslocamento em km deve produzir razão de magnitude consistente com KM_PER_AU/KM_PER_LD,
-        // confirmando que cada camada usa sua própria unidade sem cruzar.
-        const km = 0.01 * KM_PER_AU; // pequeno o bastante p/ horizonsToScene ficar ~linear
-        const helio = horizonsGeoToHelioScene(km, 0, 0, { x: 0, y: 0, z: 0 });
-        const geo = horizonsToScene(km, 0, 0);
+    it('régua log (geo) e régua linear (helio) usam unidades próprias sem cruzar', () => {
+        // O mesmo deslocamento físico, medido pelas duas réguas, produz magnitudes não nulas e
+        // distintas — cada camada usa sua própria unidade (DL na log, UA na linear) sem confusão.
+        const helio = helioAUToSunCenteredScene({ x: 0.01, y: 0, z: 0 }); // 0,01 UA na régua linear
+        const geo = horizonsToScene(0.01 * KM_PER_AU, 0, 0);              // mesma distância na régua log
         expect(Math.hypot(...helio)).toBeGreaterThan(0);
         expect(Math.hypot(...geo)).toBeGreaterThan(0);
         // Sanidade cruzada: 1 UA = KM_PER_AU/KM_PER_LD distâncias lunares.

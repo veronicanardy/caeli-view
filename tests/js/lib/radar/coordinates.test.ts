@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { horizonsGeoToHelioScene, horizonsToScene, normalize3, sunDirectionFromIncoming } from '@/lib/radar/coordinates';
-import { KM_PER_AU, KM_PER_LD, ORBIT_AU_SCALE, compressDistanceDl } from '@/lib/sceneEphemeris';
+import { horizonsToScene, normalize3, sunDirectionFromIncoming } from '@/lib/radar/coordinates';
+import { KM_PER_LD, compressDistanceDl } from '@/lib/sceneEphemeris';
 
 describe('horizonsToScene', () => {
     it('mapeia +Y da eclíptica para -Z da cena para manter o plano da eclíptica em XZ', () => {
@@ -30,54 +30,6 @@ describe('horizonsToScene', () => {
         expect(mag).toBeCloseTo(compressDistanceDl(5), 9);
         expect(km).toBeGreaterThan(0); // shut unused-var
         expect(Math.hypot(scene[0], scene[1], scene[2])).toBeGreaterThan(0);
-    });
-});
-
-describe('horizonsGeoToHelioScene', () => {
-    const earth = { x: 1, y: 0, z: 0 }; // Terra no ponto vernal (1 UA, eclíptico +x)
-
-    it('objeto na Terra (geo zero) cai na posição da Terra na cena', () => {
-        const s = horizonsGeoToHelioScene(0, 0, 0, earth);
-        expect(s[0]).toBeCloseTo(earth.x * ORBIT_AU_SCALE, 10);
-        expect(s[1]).toBeCloseTo(0, 10);
-        expect(s[2]).toBeCloseTo(0, 10);
-    });
-
-    it('soma corretamente a posição geocêntrica do asteroide à posição heliocêntrica da Terra', () => {
-        // Asteroide a 1 UA da Terra na direção eclíptica +x → helio x = 1+1 = 2 UA
-        const s = horizonsGeoToHelioScene(KM_PER_AU, 0, 0, earth);
-        expect(s[0]).toBeCloseTo(2 * ORBIT_AU_SCALE, 10);
-        expect(s[1]).toBeCloseTo(0, 10);
-        expect(s[2]).toBeCloseTo(0, 10);
-    });
-
-    it('convenção de eixos: eclíptico +y geocêntrico vira cena −z', () => {
-        // geo +y → helio y = 0 + 1UA → cena z = -1*scale
-        const s = horizonsGeoToHelioScene(0, KM_PER_AU, 0, { x: 0, y: 0, z: 0 });
-        expect(s[0]).toBeCloseTo(0, 10);
-        expect(s[1]).toBeCloseTo(0, 10);
-        expect(s[2]).toBeCloseTo(-1 * ORBIT_AU_SCALE, 10);
-    });
-
-    it('inclui o Z eclíptico (inclinação orbital): eclíptico +z geocêntrico vira cena +y', () => {
-        // geo +z → helio z = 0 + 1UA → cena y = +1*scale
-        const s = horizonsGeoToHelioScene(0, 0, KM_PER_AU, { x: 0, y: 0, z: 0 });
-        expect(s[0]).toBeCloseTo(0, 10);
-        expect(s[1]).toBeCloseTo(1 * ORBIT_AU_SCALE, 10);
-        expect(s[2]).toBeCloseTo(0, 10);
-    });
-
-    it('escala é LINEAR (ORBIT_AU_SCALE), não logarítmica', () => {
-        // Dois objetos a 1 UA e 2 UA: distância na cena deve dobrar exatamente
-        const s1 = horizonsGeoToHelioScene(KM_PER_AU, 0, 0, { x: 0, y: 0, z: 0 });
-        const s2 = horizonsGeoToHelioScene(2 * KM_PER_AU, 0, 0, { x: 0, y: 0, z: 0 });
-        expect(s2[0]).toBeCloseTo(s1[0] * 2, 10);
-    });
-
-    it('usa KM_PER_AU para a conversão km→UA (não KM_PER_LD)', () => {
-        // 1 UA em km deve dar exatamente 1*ORBIT_AU_SCALE na cena
-        const s = horizonsGeoToHelioScene(KM_PER_AU, 0, 0, { x: 0, y: 0, z: 0 });
-        expect(s[0]).toBeCloseTo(ORBIT_AU_SCALE, 10);
     });
 });
 

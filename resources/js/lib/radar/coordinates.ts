@@ -12,7 +12,7 @@
  */
 
 import type { SunDirection } from '@/types';
-import { KM_PER_AU, KM_PER_LD, ORBIT_AU_SCALE, compressSceneVector } from '@/lib/sceneEphemeris';
+import { KM_PER_LD, compressSceneVector } from '@/lib/sceneEphemeris';
 
 /**
  * Transforma um vetor geocêntrico eclíptico (km) em um vetor de cena radar (unidades de cena,
@@ -25,39 +25,6 @@ export function horizonsToScene(xKm: number, yKm: number, zKm: number): [number,
         zKm / KM_PER_LD,
         -yKm / KM_PER_LD,
     ]);
-}
-
-/**
- * Transforma um vetor geocêntrico eclíptico (km) em uma posição heliocêntrica de cena (unidades
- * de cena, pós compressão logarítmica), dado o ponto heliocêntrico da Terra em UA (eclíptico J2000).
- *
- * Por que: aplicar compressão logarítmica em um vetor geocêntrico e depois somar earthPos
- * (que é ele próprio comprimido heliocentricamente) NÃO produz a posição heliocêntrica correta
- * — as duas compressões não compõem linearmente. Para objetos próximos (< ~0,1 UA) o erro é
- * desprezível, mas para objetos do cinturão como Ceres ou Vesta (2–4 UA geocêntricas) o asteroide
- * aparece comprimido junto ao Sol em vez de estar na sua distância heliocêntrica real.
- *
- * Solução: converte geo (km) → geo (UA) → soma earthHelio (UA) → helio (UA) → escala LINEAR
- * compatível com helioToScene/ORBIT_AU_SCALE, para que o asteroide caia na mesma grade das
- * órbitas planetárias e do earthPos.
- */
-export function horizonsGeoToHelioScene(
-    xKm: number,
-    yKm: number,
-    zKm: number,
-    earthHelioAU: { x: number; y: number; z: number },
-): [number, number, number] {
-    const helioX = earthHelioAU.x + xKm / KM_PER_AU;
-    const helioY = earthHelioAU.y + yKm / KM_PER_AU;
-    const helioZ = earthHelioAU.z + zKm / KM_PER_AU;
-    // Convenção consistente com helioAUToSunCenteredScene e horizonsToScene:
-    //   eclíptico (x, y, z) → cena (x, z, −y).
-    // Norte eclíptico (z > 0) aponta para +Y da cena; escala LINEAR (ORBIT_AU_SCALE).
-    return [
-        helioX * ORBIT_AU_SCALE,
-        helioZ * ORBIT_AU_SCALE,
-        -helioY * ORBIT_AU_SCALE,
-    ];
 }
 
 /** Retorna o vetor redimensionado para comprimento unitário, ou [0, 0, 0] se degenerado. */
