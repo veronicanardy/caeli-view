@@ -130,6 +130,11 @@ export type UnifiedApproach = {
     orbitId: string | null;
     absoluteMagnitude: number | null;
     distanceContext: DistanceContext;
+    /** Campos opcionais do SBDB, preenchidos sob demanda (ex.: card dos asteroides famosos). */
+    orbitClass?: string | null;
+    orbitClassDescription?: string | null;
+    albedo?: number | null;
+    rotationPeriodHours?: number | null;
 };
 
 export type TrajectoryPoint = {
@@ -203,7 +208,7 @@ export type ClosestNowObject = {
 
 export const OBJECT_LIMITS = [5, 15, 30] as const;
 export type ObjectLimit = (typeof OBJECT_LIMITS)[number];
-export type SelectionMode = 'nearest' | 'upcoming';
+export type SelectionMode = 'nearest' | 'upcoming' | 'famous';
 
 export type ClosestNowResponse = {
     mode: 'closest_now';

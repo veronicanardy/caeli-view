@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Exceptions\JplApiException;
 use App\Http\Requests\RadarAsteroidModelRequest;
 use App\Http\Requests\RadarClosestNowRequest;
 use App\Http\Requests\RadarIndexRequest;
 use App\Http\Requests\RadarTrajectoryRequest;
+use App\Http\Requests\SmallBodyLookupRequest;
 use App\Services\Approaches\AsteroidModelResolverService;
 use App\Services\Approaches\ClosestNowSelector;
 use App\Services\Approaches\RadarService;
 use App\Services\Jpl\Horizons\HorizonsTrajectoryService;
+use App\Services\Jpl\Sbdb\SmallBodyService;
 use App\Support\DistancePresenter;
 use App\Support\SunDirectionCalculator;
 use Carbon\CarbonImmutable;
@@ -25,6 +28,7 @@ class RadarController
         private readonly AsteroidModelResolverService $asteroidModels,
         private readonly HorizonsTrajectoryService $horizons,
         private readonly ClosestNowSelector $closestNow,
+        private readonly SmallBodyService $smallBodies,
     ) {
     }
 
@@ -114,6 +118,28 @@ class RadarController
 
         return response()->json($this->asteroidModels->resolve($request->validated()))
             ->header('Cache-Control', "public, max-age={$ttl}, stale-while-revalidate=86400");
+    }
+
+    /**
+     * Responsabilidade: retorna o detalhe físico/orbital de um small-body (JPL SBDB) como JSON,
+     * para enriquecer o card dos asteroides famosos do radar sem recarregar a página.
+     *
+     * Reusa o mesmo SmallBodyService da página de viajantes; o front mostra a base na hora e
+     * preenche o resto quando esta resposta chega (carregamento progressivo, sem bloquear).
+     */
+    public function smallBody(SmallBodyLookupRequest $request): JsonResponse
+    {
+        try {
+            $data = $this->smallBodies->lookup($request->identifier());
+        } catch (JplApiException $exception) {
+            return response()->json(
+                ['error' => $exception->getUserMessage()],
+                $exception->getStatusCode(),
+            );
+        }
+
+        return response()->json($data['smallBody'])
+            ->header('Cache-Control', 'public, max-age=86400, stale-while-revalidate=86400');
     }
 
     private function trajectoryWindowFor(int $historyDays): array

@@ -40,6 +40,7 @@ import { LabelBackdropGate } from './LabelBackdropGate';
 import { computeEarthPosition, computeMoonGeoPosition, computeMoonPosition, computeSunDirection, planetScenePositions } from './scenePositions';
 import { useBodyFocus } from './useBodyFocus';
 import { KnownAsteroidsLayer } from './KnownAsteroidsLayer';
+import { knownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
 // --------------- Scene ---------------
 
 type RadarSceneProps = {
@@ -272,7 +273,14 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
 
                     {/* Conhecidos com modelo exclusivo: régua dos planetas, na região real de cada um. */}
                     {showKnownAsteroids ? (
-                        <KnownAsteroidsLayer showLabels={showLabels} dimmed={hasSelection} />
+                        <KnownAsteroidsLayer
+                            showLabels={showLabels}
+                            selectedId={selectedId}
+                            onSelect={(known) => {
+                                const object = closestNowObjects.find((o) => o.approach.id === knownAsteroidId(known));
+                                if (object) onSelect(object.approach);
+                            }}
+                        />
                     ) : null}
                 </>
             )}

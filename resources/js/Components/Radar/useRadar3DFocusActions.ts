@@ -20,6 +20,7 @@ import type { CameraIntent } from './Scene/cameraIntent';
 import { PLANET_CONFIG } from './Scene/planetConfig';
 import type { PlanetId } from './Scene/planetConfig';
 import { MOBILE_MEDIA_QUERY } from './radarLayoutConstants';
+import { knownAsteroidById, knownAsteroidScenePosition, knownAsteroidVisualScale } from './Bodies/Asteroid/knownAsteroids';
 
 export type Radar3DBodyCardTarget = 'earth' | 'moon' | 'sun' | PlanetId | null;
 
@@ -57,6 +58,9 @@ export function useRadar3DFocusActions({
     const [bodyCardOpen, setBodyCardOpen] = useState<Radar3DBodyCardTarget>(null);
     const [planetFocusTargets, setPlanetFocusTargets] = useState<Partial<Record<PlanetId, FocusFraming>>>({});
     const [sunFocusTarget, setSunFocusTarget] = useState<FocusFraming | null>(null);
+    // Enquadramento dos asteroides famosos: voo até um conhecido (clique) ou panorama da régua dos
+    // planetas (entrada no modo). Vive no mesmo trilho de foco dos planetas/Sol no RadarSceneCanvas.
+    const [knownFocusTarget, setKnownFocusTarget] = useState<FocusFraming | null>(null);
 
     const visibleFocusedObject = focusedObject && focusedObject.approach.id !== dismissedFocusObjectId
         ? focusedObject
@@ -65,7 +69,16 @@ export function useRadar3DFocusActions({
     const clearPlanetTargets = useCallback(() => {
         setPlanetFocusTargets({});
         setSunFocusTarget(null);
+        setKnownFocusTarget(null);
     }, []);
+
+    /** Recua a câmera para enquadrar toda a régua dos planetas (onde vivem os famosos). */
+    const frameFamousBelt = useCallback(() => {
+        clearPlanetTargets();
+        // Raio grande centrado no Sol: os conhecidos ficam a ~100–270 unidades; este enquadramento
+        // os traz todos ao campo de visão na entrada do modo. Multiplicador alto = câmera bem recuada.
+        setKnownFocusTarget(framingForBody(new THREE.Vector3(0, 0, 0), 24, undefined, 9));
+    }, [clearPlanetTargets]);
 
     const collapseNavigationForMobile = useCallback(() => {
         if (typeof window === 'undefined') return;
@@ -89,7 +102,22 @@ export function useRadar3DFocusActions({
         setBodyCardOpen(null);
         clearPlanetTargets();
         collapseNavigationForMobile();
-        setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
+
+        // Conhecidos (régua dos planetas) não têm trajetória geocêntrica, então o cameraIntent
+        // 'object' não os enquadra. Voamos até a posição heliocêntrica deles via FocusFraming, no
+        // mesmo trilho dos planetas. Demais objetos seguem pelo cameraIntent 'object' habitual.
+        const known = knownAsteroidById(approach.id);
+        const knownPos = known ? knownAsteroidScenePosition(known) : null;
+        if (known && knownPos) {
+            // Mesmo raio de enquadramento dos planetas (≈ raio visual): o corpo preenche o quadro
+            // sem ficar um ponto nem estourar a tela. O nonce é incrementado também aqui para que a
+            // troca entre conhecidos (ex.: Eros → Vesta) sempre re-dispare o voo da câmera.
+            setKnownFocusTarget(framingForBody(new THREE.Vector3(...knownPos), knownAsteroidVisualScale()));
+            setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
+        } else {
+            setKnownFocusTarget(null);
+            setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
+        }
         onSelect(approach);
     }, [clearPlanetTargets, closestNowObjects, collapseNavigationForMobile, onSelect, orbitMode]);
 
@@ -207,6 +235,8 @@ export function useRadar3DFocusActions({
         focusBody,
         focusPlanet,
         focusSun,
+        frameFamousBelt,
+        knownFocusTarget,
         orbitMode,
         pickView,
         planetFocusTargets,

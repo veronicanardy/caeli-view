@@ -45,6 +45,17 @@ export function useClosestNow(
     );
 
     useEffect(() => {
+        // Modo "famous" não consulta o feed de aproximação: a cena mostra os asteroides conhecidos
+        // (posição heliocêntrica fixa, sem evento de aproximação), então não há nada a buscar na API.
+        if (mode === 'famous') {
+            staleDataRef.current = null;
+            resolvedParamsRef.current = currentParams;
+            setData(null);
+            setError(null);
+            setFetchLoading(false);
+            return;
+        }
+
         const controller = new AbortController();
         setFetchLoading(true);
         setError(null);

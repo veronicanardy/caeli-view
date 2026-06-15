@@ -9,6 +9,7 @@
 import { TriangleAlert } from 'lucide-react';
 import type { ClosestNowObject, SelectionMode, UnifiedApproach } from '@/types';
 import { Tooltip } from '../Controls/Tooltip';
+import { isKnownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
 import { formatObjectListTrailingLabel } from './radarSceneObjectPresentation';
 
 type ObjectListItemProps = {
@@ -25,7 +26,10 @@ type ObjectListItemProps = {
 // Representa um item interativo da lista do radar sem alterar regras globais de selecao.
 export function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, selectionMode, compact = false, orbitMode = false }: ObjectListItemProps) {
     const en = locale === 'en';
-    const hasScenePosition = Boolean(o.trajectory?.currentPoint);
+    // Conhecidos (famosos) são plotados na régua dos planetas via Kepler, sem trajetória geocêntrica:
+    // têm posição, só não a do feed. Não marcar "sem pos." para eles.
+    const isKnown = isKnownAsteroidId(o.approach.id);
+    const hasScenePosition = isKnown || Boolean(o.trajectory?.currentPoint);
     const hasOrbit = Boolean(o.trajectory?.orbitalElements);
     const orbitBlocked = orbitMode && !hasOrbit;
     const hazard = o.approach.hazardFlag;

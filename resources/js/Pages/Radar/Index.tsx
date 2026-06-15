@@ -8,15 +8,39 @@ import { ErrorMessage } from '@/Components/ErrorMessage';
 import { buildRadarObjects, trajectoryToPositionResult } from '@/lib/radarData';
 import { useTranslation } from '@/i18n';
 import { useClosestNow } from '@/hooks/useClosestNow';
+import { useKnownAsteroidDetail } from '@/hooks/useKnownAsteroidDetail';
 import { useRadarControls } from '@/hooks/useRadarControls';
+import { KNOWN_ASTEROIDS, isKnownAsteroidId, knownAsteroidToClosestNowObject } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
 import {
     ApproachObservatoryFilters,
     AsteroidTrajectory,
+    ClosestNowResponse,
     HorizonsPositionResult,
     PageProps,
     SunDirection,
     UnifiedApproach,
 } from '@/types';
+
+/**
+ * Dataset sintético do critério "Asteroides famosos": os conhecidos (Ceres, Vesta, Eros, Bennu,
+ * Itokawa) como ClosestNowObjects, sem aproximação. Não consulta a API (o feed não os retorna);
+ * a cena os posiciona na régua heliocêntrica via KnownAsteroidsLayer.
+ */
+const FAMOUS_DATASET: ClosestNowResponse = {
+    mode: 'closest_now',
+    selectionMode: 'famous',
+    generatedAt: '',
+    window: { dateMin: '', dateMax: '' },
+    requestedLimit: KNOWN_ASTEROIDS.length,
+    candidatesEvaluated: KNOWN_ASTEROIDS.length,
+    objects: KNOWN_ASTEROIDS.map(knownAsteroidToClosestNowObject),
+    lunarReference: {
+        distanceKm: 384_400,
+        earthDiametersApprox: 30,
+        label: '',
+        description: '',
+    },
+};
 
 const DailyOrbitalRadar3D = lazy(() =>
     import('@/Components/Radar/DailyOrbitalRadar3D').then((module) => ({ default: module.DailyOrbitalRadar3D })),
@@ -39,12 +63,12 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
 
     useEffect(() => {
         setSelectedFocusId(null);
-    }, [filters.date_min, filters.date_max, filters.type]);
+    }, [filters.date_min, filters.date_max, filters.type, selectionMode]);
 
     const {
-        data:    closestNowData,
-        loading: closestNowLoading,
-        error:   closestNowError,
+        data:    fetchedData,
+        loading: fetchLoading,
+        error:   fetchError,
     } = useClosestNow(
         filters.date_min,
         filters.date_max,
@@ -52,6 +76,13 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
         selectionMode,
         refreshNonce,
     );
+
+    // No critério "famosos" a cena usa o dataset sintético dos conhecidos (sem rede, sem erro);
+    // nos demais, os dados do feed. Tudo a jusante consome `closestNowData` indistintamente.
+    const isFamous = selectionMode === 'famous';
+    const closestNowData = isFamous ? FAMOUS_DATASET : fetchedData;
+    const closestNowLoading = isFamous ? false : fetchLoading;
+    const closestNowError = isFamous ? null : fetchError;
 
     const closestNowApproaches = useMemo<UnifiedApproach[]>(() => {
         if (!closestNowData) return [];
@@ -88,6 +119,41 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
         if (!selectedFocusId) return null;
         return closestNowApproaches.find((approach) => approach.id === selectedFocusId) ?? null;
     }, [closestNowApproaches, selectedFocusId]);
+
+    // Detalhe SBDB do conhecido selecionado (carregamento progressivo): só busca quando o objeto em
+    // foco é um asteroide famoso. O número de catálogo (permanentNumber) é o identificador da consulta.
+    const knownDetailIdentifier = isFamous && focusApproach && isKnownAsteroidId(focusApproach.id)
+        ? focusApproach.permanentNumber ?? null
+        : null;
+    const { detail: knownDetail } = useKnownAsteroidDetail(knownDetailIdentifier);
+
+    // Mescla os campos vivos do SBDB sobre o objeto sintético do conhecido em foco. A base já está
+    // visível; quando o detalhe chega, o card ganha classe orbital, albedo, rotação, etc.
+    const sceneData = useMemo(() => {
+        if (!closestNowData) return closestNowData;
+        if (!isFamous || !knownDetail || !focusApproach) return closestNowData;
+        const refinedDiameterM = knownDetail.diameterKm != null ? Math.round(knownDetail.diameterKm * 1000) : null;
+        return {
+            ...closestNowData,
+            objects: closestNowData.objects.map((object) => {
+                if (object.approach.id !== focusApproach.id) return object;
+                return {
+                    ...object,
+                    approach: {
+                        ...object.approach,
+                        absoluteMagnitude: knownDetail.absoluteMagnitude ?? object.approach.absoluteMagnitude,
+                        diameterMeters: refinedDiameterM ?? object.approach.diameterMeters,
+                        estimatedDiameterMinMeters: refinedDiameterM ?? object.approach.estimatedDiameterMinMeters,
+                        estimatedDiameterMaxMeters: refinedDiameterM ?? object.approach.estimatedDiameterMaxMeters,
+                        orbitClass: knownDetail.orbitClass,
+                        orbitClassDescription: knownDetail.orbitClassDescription,
+                        albedo: knownDetail.albedo,
+                        rotationPeriodHours: knownDetail.rotationPeriodHours,
+                    },
+                };
+            }),
+        };
+    }, [closestNowData, isFamous, knownDetail, focusApproach]);
 
     const trajectoryKey = focusApproach ? `${focusApproach.id}:${focusApproach.approachDate ?? ''}` : null;
 
@@ -186,10 +252,10 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
                             />
                         </div>
 
-                        {closestNowData && lunarReference ? (
+                        {sceneData && lunarReference ? (
                             <Suspense fallback={<ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />}>
                                 <DailyOrbitalRadar3D
-                                    closestNowObjects={closestNowData.objects}
+                                    closestNowObjects={sceneData.objects}
                                     selectedId={focusApproach?.id ?? null}
                                     objectLimit={objectLimit}
                                     selectionMode={selectionMode}

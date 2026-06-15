@@ -109,8 +109,12 @@ export type SceneEphemeris = {
     earthHelioPositionAU: { x: number; y: number; z: number };
     /** Posição heliocêntrica da Terra em unidades de cena (Sol na origem). Âncora para Lua, asteroides e visual da Terra. */
     earthScenePosition: [number, number, number];
-    /** Longitude do periélio da Terra derivada da posição real (graus). Usada para a elipse de órbita terrestre. */
-    earthLonPerihelionDeg: number;
+    /**
+     * Elementos osculadores da Terra derivados do state vector real (não fixados). i e Ω são ~0 por
+     * definição do eclíptico, mas derivados, então a elipse desenhada e a posição amostrada usam
+     * EXATAMENTE os mesmos elementos — a Terra cai sobre a própria linha como os demais planetas.
+     */
+    earthLonPerihelionDeg: number; earthInclinationDeg: number; earthLonAscNodeDeg: number; earthSemiMajorAU: number; earthEccentricity: number;
     /**
      * Posição heliocêntrica de Mercúrio em unidades de cena (Sol na origem, 1 UA = ORBIT_AU_SCALE).
      * Nulo até que a efeméride assíncrona seja resolvida.
@@ -227,33 +231,33 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         const earthHelioEcl = A.RotateVector(eqjToEclMatrix(A), earthHelioEqj);
         const earthHelioPositionAU = { x: earthHelioEcl.x, y: earthHelioEcl.y, z: earthHelioEcl.z };
 
-        // Terra: posição heliocêntrica real — âncora dos asteroides e da Lua.
-        // Todos os planetas e a Terra: posição heliocêntrica real, eclíptico 3D completo.
-        // Convenção idêntica a helioAUToSunCenteredScene e buildHeliocentricOrbit:
-        //   eclíptico (x, y, z) → cena (x, z, −y). Norte eclíptico (z > 0) → +Y da cena.
-        // A altura (ecl.z) é PRESERVADA: a inclinação orbital sobe/desce do plano da cena,
-        // exatamente como os asteroides conhecidos — planetas e asteroides agora coplanares
-        // no mesmo espaço 3D. Inclinações planetárias são pequenas (< 7°), mas reais.
-        function helioToScene(ecl: { x: number; y: number; z: number }): [number, number, number] {
-            return [ecl.x * ORBIT_AU_SCALE, ecl.z * ORBIT_AU_SCALE, -ecl.y * ORBIT_AU_SCALE];
-        }
+        // earthHelioPositionAU (acima) é o vetor heliocêntrico EXATO (HelioVector). É a âncora da Lua,
+        // dos asteroides e do enquadramento de câmera, então preserva a posição astronômica fiel, sem
+        // idealizar. A posição RENDERIZADA da Terra (earthScenePosition), porém, é amostrada na mesma
+        // polilinha da sua elipse — ver planetData abaixo — para que a Terra caia exatamente sobre a
+        // linha como todos os outros planetas. As duas diferem por ~0,02% (desvio de discretização),
+        // irrelevante para direção de luz e enquadramento.
 
-        const earthScenePosition = helioToScene(earthHelioPositionAU);
-        // Longitude do periélio da Terra J2000 (Ω + ω) — elemento orbital estável.
-        const earthLonPerihelionDeg = 102.94;
-
-        // Para cada planeta: posição de cena 3D + elementos osculadores completos (a, e, i, Ω, ω),
+        // Para cada planeta E a Terra: posição de cena 3D + elementos osculadores completos (a, e, i, Ω, ω),
         // derivados dos vetores de estado heliocêntricos do astronomy-engine.
         //
-        // FONTE ÚNICA DE GEOMETRIA: a posição do planeta E a elipse desenhada (buildEllipsePoints)
-        // são ambas geradas por perifocalToEclipticAU a partir dos MESMOS i, Ω, ω. Por construção o
-        // planeta cai exatamente sobre sua elipse — sem dois modelos de elipse para conciliar, que
-        // era a causa de Mercúrio (e alto), Urano e Netuno (longe) "saírem da linha".
+        // FONTE ÚNICA DE GEOMETRIA: a posição do planeta E a elipse desenhada (buildHeliocentricEllipse)
+        // passam ambas por ellipseVertexAtNu a partir dos MESMOS i, Ω, ω. A posição é amostrada na
+        // polilinha (sampleHeliocentricEllipseAtNu), não na curva ideal, então cai exatamente sobre a
+        // linha visível — sem dois modelos de elipse para conciliar, que era a causa de Mercúrio
+        // (e alto), Urano e Netuno (longe) "saírem da linha".
         //
         // i (inclinação) e Ω (nó ascendente) vêm do vetor momento angular h = r × v:
         //   cos i = h_z / |h| ;  Ω = atan2(h_x, −h_y).
         // ω (argumento do periélio) e ν (anomalia verdadeira) vêm do vetor de excentricidade no
         // plano orbital. A altura eclíptica (z) é preservada na cena — inclinação real visível.
+        //
+        // ESTABILIDADE NUMÉRICA: os guardas (eccentricity || 1) e (hypot(nx,ny) || 1) impedem divisão
+        // por zero quando e→0 (ω indefinido) ou i→0 (Ω indefinido). Nesses casos isolados a posição
+        // permanece correta porque ν absorve a referência arbitrária de ω. ATENÇÃO: se e→0 E i→0
+        // SIMULTANEAMENTE, ω e ν viram arbitrários de forma independente e a posição QUEBRA. Nenhum
+        // corpo real chega nesse ponto (todos têm e ≳ 0,007 e i ≳ 0,8°), mas não alimente este caminho
+        // com uma órbita perfeitamente circular e coplanar.
         function planetData(body: Astronomy.Body): {
             scenePosition: [number, number, number];
             lonPerihelionDeg: number;
@@ -321,6 +325,14 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             return { scenePosition, lonPerihelionDeg, inclinationDeg, lonAscNodeDeg, semiMajorAU, eccentricity };
         }
 
+        // Terra derivada como qualquer planeta: a, e, i, Ω, ν reais do state vector, posição amostrada
+        // na polilinha. i e Ω da Terra são ~0 por definição do eclíptico (mas derivados, não fixados),
+        // então a elipse fica praticamente no plano. earthHelioPositionAU acima permanece o vetor
+        // exato (âncora); earthScenePosition aqui é a posição renderizada, sobre a linha.
+        const earth = planetData(A.Body.Earth);
+        const earthScenePosition = earth.scenePosition;
+        const earthLonPerihelionDeg = earth.lonPerihelionDeg;
+
         const mercury = planetData(A.Body.Mercury);
         const venus    = planetData(A.Body.Venus);
         const mars     = planetData(A.Body.Mars);
@@ -348,7 +360,7 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             subsolarLonDeg,
             earthHelioPositionAU,
             earthScenePosition,
-            earthLonPerihelionDeg,
+            earthLonPerihelionDeg, earthInclinationDeg: earth.inclinationDeg, earthLonAscNodeDeg: earth.lonAscNodeDeg, earthSemiMajorAU: earth.semiMajorAU, earthEccentricity: earth.eccentricity,
             mercuryScenePosition, mercuryLonPerihelionDeg: mercury.lonPerihelionDeg, mercuryInclinationDeg: mercury.inclinationDeg, mercuryLonAscNodeDeg: mercury.lonAscNodeDeg, mercurySemiMajorAU: mercury.semiMajorAU, mercuryEccentricity: mercury.eccentricity,
             venusScenePosition,   venusLonPerihelionDeg:   venus.lonPerihelionDeg,   venusInclinationDeg:   venus.inclinationDeg,   venusLonAscNodeDeg:   venus.lonAscNodeDeg,   venusSemiMajorAU:   venus.semiMajorAU,   venusEccentricity:   venus.eccentricity,
             marsScenePosition,    marsLonPerihelionDeg:    mars.lonPerihelionDeg,    marsInclinationDeg:    mars.inclinationDeg,    marsLonAscNodeDeg:    mars.lonAscNodeDeg,    marsSemiMajorAU:    mars.semiMajorAU,    marsEccentricity:    mars.eccentricity,

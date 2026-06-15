@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ClosestNowObject } from '@/types';
 import { computeFocusFraming } from './cameraFraming';
 import type { FocusFraming } from './cameraFraming';
+import { isKnownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
 
 /**
  * Deriva o enquadramento de câmera da seleção atual sem reagir a cada tick de efeméride.
@@ -29,6 +30,13 @@ export function useSelectionFocusFraming(
 
     useEffect(() => {
         if (!focusedObject) {
+            setFraming(null);
+            return;
+        }
+        // Conhecidos (régua dos planetas) não têm posição geocêntrica: seu enquadramento é o
+        // knownFocusTarget (voo heliocêntrico), tratado à parte no RadarSceneCanvas. Aqui retornamos
+        // null para não competir com ele.
+        if (isKnownAsteroidId(focusedObject.approach.id)) {
             setFraming(null);
             return;
         }

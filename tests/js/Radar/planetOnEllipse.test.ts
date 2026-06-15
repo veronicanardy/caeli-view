@@ -141,6 +141,32 @@ describe('asteroide do modo órbita também cai sobre a sua própria linha', () 
         }
     });
 
+    it('amostrar a posição com OUTRO número de segmentos que a linha faz o corpo SAIR da linha', () => {
+        // Regressão do bug real: HeliocentricScene desenhava a linha com 256 segmentos mas amostrava
+        // a posição com ORBIT_ELLIPSE_SEGMENTS (192). Polilinhas diferentes → o asteroide sai da
+        // própria linha. Este teste prova que a contagem PRECISA casar: 192-vs-256 desvia visivelmente,
+        // 192-vs-192 tem desvio ~0.
+        const g = orbitGeometryFromElements(comet)!;
+        const line256 = buildHeliocentricOrbit(comet, 256)!;
+        const lineMatched = buildHeliocentricOrbit(comet, ORBIT_ELLIPSE_SEGMENTS)!;
+        let worstMismatch = 0;
+        let worstMatched = 0;
+        // Varredura densa para capturar o pior ν (a divergência é máxima entre vértices de polilinhas
+        // de contagens diferentes, não em pontos arbitrários).
+        for (let k = 0; k < 400; k += 1) {
+            const nu = (k / 400) * Math.PI * 2;
+            const pos = sampleHeliocentricEllipseAtNu(g, nu, ORBIT_ELLIPSE_SEGMENTS);
+            const r = Math.hypot(...pos) || 1;
+            worstMismatch = Math.max(worstMismatch, distanceToPolyline(pos, line256) / r);
+            worstMatched = Math.max(worstMatched, distanceToPolyline(pos, lineMatched) / r);
+        }
+        // Segmentos divergentes (192 vs 256): o corpo destaca da linha por ~4e-4 do raio, ordens de
+        // grandeza acima do caso casado. Segmentos casados: desvio só do armazenamento Float32 (~1e-5).
+        expect(worstMismatch).toBeGreaterThan(1e-4);
+        expect(worstMatched).toBeLessThan(1e-5);
+        expect(worstMismatch).toBeGreaterThan(worstMatched * 10);
+    });
+
     it('buildHeliocentricOrbit e buildHeliocentricEllipse produzem a MESMA geometria', () => {
         // Prova a unificação: a órbita do asteroide (q, ω, Ω) e a elipse do planeta (a, ϖ) são o
         // mesmo objeto quando descrevem a mesma órbita — um único gerador de vértice.

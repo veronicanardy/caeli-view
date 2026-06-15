@@ -123,6 +123,8 @@ export function DailyOrbitalRadar3D({
         focusBody,
         focusPlanet,
         focusSun,
+        frameFamousBelt,
+        knownFocusTarget,
         orbitMode,
         planetFocusTargets,
         resetView,
@@ -156,6 +158,14 @@ export function DailyOrbitalRadar3D({
 
     // Limpa o foco de trajetória quando o usuário interage com outra coisa.
     useEffect(() => { setTrajectoryPointFocus(null); }, [focusTarget, bodyCardOpen]);
+
+    // Ao entrar no critério "Asteroides famosos", recua a câmera para enquadrar a régua dos planetas,
+    // onde os conhecidos vivem (a ~100–270 unidades do Sol). Sem isso, eles ficam fora do quadro
+    // inicial e o usuário precisaria dar zoom out manual para achá-los.
+    useEffect(() => {
+        if (selectionMode === 'famous') frameFamousBelt();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectionMode]);
 
     const activeMode: SceneMode = deriveActiveMode(orbitMode, focusedObject);
     const sidePanelRef = useRef<HTMLDivElement>(null);
@@ -220,11 +230,13 @@ export function DailyOrbitalRadar3D({
                     cameraIntent={cameraIntent}
                     focusTarget={trajectoryPointFocus ?? focusTarget}
                     sunFocusTarget={sunFocusTarget}
+                    knownFocusTarget={knownFocusTarget}
                     planetFocusTargets={planetFocusTargets}
                     ephemeris={ephemeris}
                     fallbackSunDirection={fallbackSunDirection}
                     locale={locale}
                     showLabels={showLabels}
+                    showKnownAsteroids={selectionMode === 'famous'}
                     bodyCardOpen={bodyCardOpen}
                     onBodyCardOpenChange={setBodyCardOpen}
                     onClearPlanetTargets={clearPlanetTargets}

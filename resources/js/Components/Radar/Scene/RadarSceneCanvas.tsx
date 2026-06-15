@@ -34,11 +34,15 @@ type Props = {
     cameraIntent: CameraIntent;
     focusTarget: FocusFraming | null;
     sunFocusTarget: FocusFraming | null;
+    /** Enquadramento dos asteroides famosos (voo a um conhecido ou panorama da régua dos planetas). */
+    knownFocusTarget: FocusFraming | null;
     planetFocusTargets: Partial<Record<PlanetId, FocusFraming>>;
     ephemeris: SceneEphemeris | null;
     fallbackSunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
     showLabels: boolean;
+    /** Mostra os asteroides conhecidos na régua dos planetas (critério "famosos"). */
+    showKnownAsteroids: boolean;
     bodyCardOpen: 'earth' | 'moon' | 'sun' | PlanetId | null;
     onBodyCardOpenChange: (body: 'earth' | 'moon' | 'sun' | PlanetId | null) => void;
     onClearPlanetTargets: () => void;
@@ -65,11 +69,13 @@ export function RadarSceneCanvas({
     cameraIntent,
     focusTarget,
     sunFocusTarget,
+    knownFocusTarget,
     planetFocusTargets,
     ephemeris,
     fallbackSunDirection,
     locale,
     showLabels,
+    showKnownAsteroids,
     bodyCardOpen,
     onBodyCardOpenChange,
     onClearPlanetTargets,
@@ -78,9 +84,9 @@ export function RadarSceneCanvas({
     onFocusBody,
     onFocusTrajectoryPoint,
 }: Props) {
-    // Prioridade de foco: seleção de objeto > foco no Sol > foco em planeta.
+    // Prioridade de foco: seleção de objeto > foco no Sol > conhecido (famosos) > foco em planeta.
     // Garante que a câmera siga a seleção do usuário antes de qualquer alvo secundário.
-    const activeFocusTarget = focusTarget ?? sunFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
+    const activeFocusTarget = focusTarget ?? sunFocusTarget ?? knownFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
     const [sceneReady, setSceneReady] = useState(false);
     const tweenToRef = useRef<TweenTo>(() => {});
     const [zoomHintState, setZoomHintState] = useState<ZoomHintState | null>(null);
@@ -122,7 +128,7 @@ export function RadarSceneCanvas({
                         fallbackSunDirection={fallbackSunDirection}
                         locale={locale}
                         showLabels={showLabels}
-                        showKnownAsteroids
+                        showKnownAsteroids={showKnownAsteroids}
                         onFirstFrame={() => {
                             setSceneReady(true);
                             // Adia o preload dos modelos reais para depois do primeiro frame:

@@ -7,8 +7,12 @@
 import { describe, expect, it } from 'vitest';
 import {
     KNOWN_ASTEROIDS,
+    isKnownAsteroidId,
+    knownAsteroidById,
+    knownAsteroidId,
     knownAsteroidPlacements,
     knownAsteroidScenePosition,
+    knownAsteroidToClosestNowObject,
     modelAssetForKnown,
 } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
 import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
@@ -121,5 +125,44 @@ describe('régua única (planetas) para todos os conhecidos', () => {
 
     it('todos os cinco aparecem (nenhuma troca de régua, nenhum some)', () => {
         expect(knownAsteroidPlacements(FIXED_DATE)).toHaveLength(5);
+    });
+});
+
+describe('conversão para o card de rocha (ClosestNowObject)', () => {
+    it('produz um id sintético reconhecível e estável', () => {
+        for (const known of KNOWN_ASTEROIDS) {
+            const id = knownAsteroidId(known);
+            expect(id).toContain(known.number);
+            expect(isKnownAsteroidId(id)).toBe(true);
+        }
+        // Um id de feed comum NÃO é reconhecido como conhecido.
+        expect(isKnownAsteroidId('2024 AB')).toBe(false);
+        expect(isKnownAsteroidId(null)).toBe(false);
+    });
+
+    it('resolve o conhecido a partir do id sintético (ida e volta), e ignora ids estranhos', () => {
+        for (const known of KNOWN_ASTEROIDS) {
+            expect(knownAsteroidById(knownAsteroidId(known))).toBe(known);
+        }
+        expect(knownAsteroidById('known:999')).toBeNull();
+        expect(knownAsteroidById('2024 AB')).toBeNull();
+        expect(knownAsteroidById(null)).toBeNull();
+    });
+
+    it('mapeia identidade e diâmetro, sem inventar aproximação', () => {
+        const ceres = KNOWN_ASTEROIDS.find((k) => k.name === 'Ceres')!;
+        const obj = knownAsteroidToClosestNowObject(ceres);
+
+        expect(obj.approach.id).toBe(knownAsteroidId(ceres));
+        expect(obj.approach.name).toBe('Ceres');
+        expect(obj.approach.permanentNumber).toBe('1');
+        expect(obj.approach.diameterMeters).toBe(ceres.diameterMeters);
+
+        // Sem aproximação: o card já trata estes nulos (esconde data/distância/trajetória).
+        expect(obj.trajectory).toBeNull();
+        expect(obj.approach.approachDate).toBeNull();
+        expect(obj.currentDistanceKm).toBeNull();
+        expect(obj.hasRealCurrentDistance).toBe(false);
+        expect(obj.approach.hazardFlag).toBe(false);
     });
 });

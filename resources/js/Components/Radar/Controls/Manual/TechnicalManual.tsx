@@ -469,13 +469,13 @@ function OrbitTechnical({ en, locale }: { en: boolean; locale: 'pt-BR' | 'en' })
                     </p>
                     <p>
                         {en
-                            ? '⬡ The view shows the full orbit as a closed loop. It does not animate the asteroid moving along the loop — for real-time motion, switch to radar mode.'
-                            : '⬡ A vista mostra a órbita completa como um loop fechado. Não anima o asteroide se movendo pelo loop — para movimento em tempo real, mude para o modo radar.'}
+                            ? '⬡ The view shows the full orbit as a closed loop. It does not animate the asteroid moving along the loop; for real-time motion, switch to radar mode.'
+                            : '⬡ A vista mostra a órbita completa como um loop fechado. Não anima o asteroide se movendo pelo loop; para movimento em tempo real, mude para o modo radar.'}
                     </p>
                     <p>
                         {en
-                            ? '⬡ The rendered body is sampled on the same polyline that draws the orbit, so it always sits exactly on its line. This shifts the body along its own orbit by under 0.1% of the distance versus the exact Keplerian point. The direction is unchanged; the offset has no physical meaning at this scale.'
-                            : '⬡ O corpo renderizado é amostrado na mesma polilinha que desenha a órbita, então fica sempre exatamente sobre a sua linha. Isso desloca o corpo ao longo da própria órbita em menos de 0,1% da distância em relação ao ponto Kepleriano exato. A direção não muda; o deslocamento não tem significado físico nessa escala.'}
+                            ? '⬡ The rendered body is sampled on the same polyline that draws the orbit, so it always sits exactly on its line. This shifts the body along its own orbit by under 0.02% of the distance versus the exact Keplerian point. The direction is unchanged; the offset has no physical meaning at this scale.'
+                            : '⬡ O corpo renderizado é amostrado na mesma polilinha que desenha a órbita, então fica sempre exatamente sobre a sua linha. Isso desloca o corpo ao longo da própria órbita em menos de 0,02% da distância em relação ao ponto Kepleriano exato. A direção não muda; o deslocamento não tem significado físico nessa escala.'}
                     </p>
                 </div>
                 <p className="mt-3 text-[12px] leading-relaxed text-white/40">

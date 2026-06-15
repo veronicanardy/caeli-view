@@ -32,8 +32,12 @@ export function HeliocentricScene({
 }: HeliocentricSceneProps) {
     const en = locale === 'en';
 
+    // Linha e posição DEVEM usar o mesmo número de segmentos (ORBIT_ELLIPSE_SEGMENTS): a posição é
+    // amostrada na própria polilinha (sampleHeliocentricEllipseAtNu, abaixo). Se a linha for desenhada
+    // com outra contagem, ela vira um polígono diferente e o asteroide volta a sair da linha — o
+    // sintoma que a amostragem corrige só se as duas polilinhas forem idênticas.
     const orbitPoints = useMemo(
-        () => buildHeliocentricOrbit(elements, 256),
+        () => buildHeliocentricOrbit(elements, ORBIT_ELLIPSE_SEGMENTS),
         [elements],
     );
 

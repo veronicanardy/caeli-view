@@ -27,6 +27,7 @@ const LIMITS = OBJECT_LIMITS;
 const MODE_OPTIONS: Array<{ value: SelectionMode; labelPt: string; labelEn: string }> = [
     { value: 'nearest',  labelPt: 'Mais próximos agora',   labelEn: 'Closest now' },
     { value: 'upcoming', labelPt: 'Próximas aproximações', labelEn: 'Upcoming passes' },
+    { value: 'famous',   labelPt: 'Asteroides famosos',    labelEn: 'Famous asteroids' },
 ];
 
 /**
@@ -49,6 +50,8 @@ export function RadarObjectControls({
     const en = locale === 'en';
     const tutorial = useRadarTutorialOptional();
     const tutorialActive = tutorial?.active ?? false;
+    // "Famosos" é um conjunto fixo de corpos: a quantidade de objetos não se aplica.
+    const limitDisabled = selectionMode === 'famous';
     const modeDescriptions: Record<SelectionMode, string> = {
         nearest: en
             ? 'Shows asteroids and comets that are closest to Earth right now — like a live distance ranking.'
@@ -56,6 +59,9 @@ export function RadarObjectControls({
         upcoming: en
             ? 'Shows objects that will pass closest to Earth in the coming days, sorted by when they arrive.'
             : 'Mostra os objetos que vão passar mais perto da Terra nos próximos dias, em ordem de chegada.',
+        famous: en
+            ? 'Shows famous asteroids visited by space missions (Ceres, Vesta, Eros, Bennu, Itokawa) where they are now in the Solar System.'
+            : 'Mostra asteroides famosos visitados por missões espaciais (Ceres, Vesta, Eros, Bennu, Itokawa) onde estão agora no Sistema Solar.',
     };
 
     // Interpolação contínua baseada em 100dvh:
@@ -130,7 +136,11 @@ export function RadarObjectControls({
             </div>
 
             <div
-                className="flex min-w-0 flex-wrap items-center rounded-xl border border-white/10 bg-space-950/70 md:flex-nowrap"
+                className={[
+                    'flex min-w-0 flex-wrap items-center rounded-xl border border-white/10 bg-space-950/70 md:flex-nowrap',
+                    // Quantidade não se aplica a "famosos": é um conjunto fixo de corpos conhecidos.
+                    limitDisabled ? 'opacity-40' : '',
+                ].join(' ')}
                 style={{ height: 'var(--ctrl-h)', gap: 'var(--ctrl-gap)', paddingInline: 'var(--ctrl-px-group)' }}
                 data-tutorial="radar-filter-limit"
             >
@@ -144,7 +154,7 @@ export function RadarObjectControls({
                     <button
                         key={limit}
                         type="button"
-                        disabled={loading}
+                        disabled={loading || limitDisabled}
                         onClick={() => onLimitChange(limit)}
                         aria-pressed={objectLimit === limit}
                         className={[

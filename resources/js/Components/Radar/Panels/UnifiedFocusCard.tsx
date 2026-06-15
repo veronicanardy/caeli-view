@@ -417,6 +417,22 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                             <Row label={en ? 'Absolute magnitude (H)' : 'Magnitude absoluta (H)'}>
                                 {a.absoluteMagnitude != null ? a.absoluteMagnitude.toFixed(1) : '—'}
                             </Row>
+                            {/* Campos do SBDB, presentes só quando o detalhe foi carregado (asteroides famosos). */}
+                            {a.orbitClass ? (
+                                <Row label={en ? 'Orbit class' : 'Classe orbital'}>
+                                    {a.orbitClassDescription ?? a.orbitClass}
+                                </Row>
+                            ) : null}
+                            {a.albedo != null ? (
+                                <Row label={en ? 'Albedo' : 'Albedo'}>
+                                    {a.albedo.toFixed(2)}
+                                </Row>
+                            ) : null}
+                            {a.rotationPeriodHours != null ? (
+                                <Row label={en ? 'Rotation period' : 'Período de rotação'}>
+                                    {`${a.rotationPeriodHours.toFixed(2)} h`}
+                                </Row>
+                            ) : null}
                         </dl>
                         );
                     })() : null}
