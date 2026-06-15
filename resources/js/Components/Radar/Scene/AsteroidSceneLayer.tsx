@@ -10,7 +10,8 @@ import { useMemo, useCallback } from 'react';
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, UnifiedApproach } from '@/types';
 import { OBJECT_PALETTE } from '@/lib/radar/palette';
-import { currentPositionInScene, trajectoryFramePoints } from '@/lib/radar/trajectorySampling';
+import { currentPositionInHelioScene, currentPositionInScene, trajectoryFramePoints } from '@/lib/radar/trajectorySampling';
+import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { NowTrajectory } from '../Trajectory/NowTrajectory';
 import { framingForBody } from './cameraFraming';
@@ -34,6 +35,8 @@ export function AsteroidSceneLayer({
     onFocusTrajectoryPoint,
     panelBiasX = 0,
     panelBiasY = 0,
+    helioScene = false,
+    earthHelioAU = null,
 }: {
     closestNowObjects: ClosestNowObject[];
     selectedId: string | null;
@@ -46,6 +49,10 @@ export function AsteroidSceneLayer({
     /** Frações do canvas cobertas por painéis: o zoom out de trajetória enquadra só a área livre. */
     panelBiasX?: number;
     panelBiasY?: number;
+    /** [EXPERIMENTO Eyes] Plota os NEOs na régua heliocêntrica linear (Sol na origem). */
+    helioScene?: boolean;
+    /** Posição heliocêntrica da Terra (AU), necessária no modo helioScene. */
+    earthHelioAU?: EarthHelioAU | null;
 }) {
     const handleFocusPoint = useCallback((vec: THREE.Vector3) => {
         if (!onFocusTrajectoryPoint) return;
@@ -74,6 +81,37 @@ export function AsteroidSceneLayer({
             })
             .filter((entry): entry is { object: ClosestNowObject; position: SceneVector } => entry !== null);
     }, [closestNowObjects]);
+
+    // [EXPERIMENTO Eyes · Etapa 1] Régua única heliocêntrica LINEAR, escala real (sem multiplicador):
+    // os NEOs caem na posição verdadeira ao redor do Sol. É a base honesta — a separação visual de
+    // objetos próximos virá do ZOOM de câmera (Etapa 2), não de distorção de escala.
+    if (helioScene && earthHelioAU) {
+        return (
+            <group>
+                {closestNowObjects.map((object, index) => {
+                    const position = currentPositionInHelioScene(object, earthHelioAU);
+                    if (!position) return null;
+                    const isSelected = object.approach.id === selectedId;
+                    return (
+                        <AsteroidMarker
+                            key={object.approach.id}
+                            object={object}
+                            position={position}
+                            isSelected={isSelected}
+                            dimmed={hasSelection && !isSelected}
+                            onSelect={onSelect}
+                            showLabel={showLabelForObject(object.approach.id)}
+                            protectLabelFromFocus={!isSelected}
+                            paletteColor={OBJECT_PALETTE[index % OBJECT_PALETTE.length].future}
+                            showLabels={showLabels}
+                            panelBiasX={panelBiasX}
+                            panelBiasY={panelBiasY}
+                        />
+                    );
+                })}
+            </group>
+        );
+    }
 
     return (
         <group position={earthPos}>

@@ -41,6 +41,7 @@ import { computeEarthPosition, computeMoonGeoPosition, computeMoonPosition, comp
 import { useBodyFocus } from './useBodyFocus';
 import { KnownAsteroidsLayer } from './KnownAsteroidsLayer';
 import { knownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
+import { eyesExperimentEnabled } from './eyesExperiment';
 // --------------- Scene ---------------
 
 type RadarSceneProps = {
@@ -269,6 +270,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         onFocusTrajectoryPoint={onFocusTrajectoryPoint}
                         panelBiasX={panelBiasX}
                         panelBiasY={panelBiasY}
+                        helioScene={eyesExperimentEnabled()}
+                        earthHelioAU={ephemeris?.earthHelioPositionAU ?? null}
                     />
 
                     {/* Conhecidos com modelo exclusivo: régua dos planetas, na região real de cada um. */}

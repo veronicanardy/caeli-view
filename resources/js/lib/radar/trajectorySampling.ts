@@ -5,7 +5,8 @@
 
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, TrajectoryPoint } from '@/types';
-import { KM_PER_LD } from '@/lib/sceneEphemeris';
+import { KM_PER_LD, helioAUToSunCenteredScene } from '@/lib/sceneEphemeris';
+import { KM_PER_AU } from '@/lib/physicalConstants';
 import { horizonsToScene } from './coordinates';
 
 export type EarthHelioAU = { x: number; y: number; z: number };
@@ -26,6 +27,30 @@ export function currentPositionInScene(object: ClosestNowObject): [number, numbe
     const distKm = Math.hypot(point.x, point.y, point.z ?? 0);
     if (distKm > MAX_GEOCENTRIC_KM) return null;
     return horizonsToScene(point.x, point.y, point.z ?? 0);
+}
+
+/**
+ * [EXPERIMENTO Eyes] Posição de cena de um objeto do feed na régua HELIOCÊNTRICA LINEAR (Sol na
+ * origem), igual aos planetas/conhecidos — em vez da régua log geocêntrica.
+ *
+ * O ponto do Horizons é geocêntrico (km, eclíptico, Terra como origem). A posição heliocêntrica é
+ * earthHelioAU + (ponto / KM_PER_AU), depois passada por helioAUToSunCenteredScene. Resultado é
+ * ABSOLUTO (Sol na origem), então deve ser desenhado SEM o offset da Terra.
+ */
+export function currentPositionInHelioScene(
+    object: ClosestNowObject,
+    earthHelioAU: EarthHelioAU,
+): [number, number, number] | null {
+    const point = object.trajectory?.currentPoint;
+    if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') return null;
+    const distKm = Math.hypot(point.x, point.y, point.z ?? 0);
+    if (distKm > MAX_GEOCENTRIC_KM) return null;
+    const helio = {
+        x: earthHelioAU.x + point.x / KM_PER_AU,
+        y: earthHelioAU.y + point.y / KM_PER_AU,
+        z: earthHelioAU.z + (point.z ?? 0) / KM_PER_AU,
+    };
+    return helioAUToSunCenteredScene(helio);
 }
 
 /** Converte um ponto de trajetória (km, eclíptico J2000, Terra como origem de medição) para THREE.Vector3 na cena. */
