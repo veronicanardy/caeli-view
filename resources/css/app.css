@@ -288,22 +288,22 @@ body {
     position: absolute;
     inset: 0;
     border-radius: 9999px;
-    border: 1px solid rgba(84, 214, 214, 0.28);
-    opacity: 0.50;
+    border: 1px solid rgba(84, 214, 214, 0.2);
+    opacity: 0.34;
     pointer-events: none;
-    animation: ctaRingSpin 28s linear infinite;
+    animation: ctaRingSpin 40s linear infinite;
 }
 
 .home-cta-ring-2 {
     inset: 6px;
-    border: 1px solid rgba(118, 228, 181, 0.16);
+    border: 1px solid transparent;
     border-style: solid;
-    border-top-color: rgba(84, 214, 214, 0.34);
-    border-right-color: rgba(84, 214, 214, 0.08);
-    border-bottom-color: rgba(255, 255, 255, 0.06);
-    border-left-color: rgba(167, 139, 250, 0.24);
-    animation: ctaRingSpin 18s linear infinite reverse;
-    opacity: 0.54;
+    border-top-color: rgba(84, 214, 214, 0.24);
+    border-right-color: rgba(84, 214, 214, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.04);
+    border-left-color: rgba(167, 139, 250, 0.16);
+    animation: ctaRingSpin 26s linear infinite reverse;
+    opacity: 0.4;
 }
 
 /* Soft outer glow that pulses — kept subtle on idle */
@@ -421,11 +421,13 @@ body {
 }
 
 .home-cta:hover .home-cta-ring {
-    animation-duration: 6s;
+    animation-duration: 14s;
+    opacity: 0.5;
 }
 
 .home-cta:hover .home-cta-ring-2 {
-    animation-duration: 4s;
+    animation-duration: 10s;
+    opacity: 0.56;
 }
 
 .home-cta:active .home-cta-body {
@@ -538,8 +540,10 @@ body {
     height: min(20rem, 24vh);
     transform: translate(-50%, -50%);
     border-radius: 9999px;
+    /* Halo grande: laranja quente derretendo em coral/rosa nas bordas (golden
+       hour orbital). Núcleo claro, âmbar saturado no meio, coral antes de sumir. */
     background:
-        radial-gradient(ellipse at center, rgba(255, 248, 214, 0.95) 0%, rgba(255, 198, 92, 0.64) 16%, rgba(255, 132, 40, 0.3) 40%, rgba(150, 50, 16, 0.1) 62%, transparent 78%);
+        radial-gradient(ellipse at center, rgba(255, 246, 210, 0.96) 0%, rgba(255, 184, 78, 0.7) 16%, rgba(255, 118, 46, 0.42) 38%, rgba(246, 90, 98, 0.2) 58%, rgba(150, 44, 30, 0.08) 73%, transparent 84%);
     filter: blur(32px);
     opacity: 1;
 }
@@ -574,10 +578,11 @@ body {
     height: min(11rem, 13vh);
     transform: translate(-50%, -50%);
     border-radius: 9999px;
+    /* Brasa: laranja quente puxando para coral/rosa, dando rubor de golden hour. */
     background:
-        radial-gradient(ellipse at center, rgba(255, 158, 44, 0.30) 0%, rgba(211, 74, 18, 0.18) 36%, rgba(83, 20, 8, 0.06) 64%, transparent 82%);
+        radial-gradient(ellipse at center, rgba(255, 146, 56, 0.34) 0%, rgba(240, 88, 80, 0.22) 34%, rgba(208, 60, 70, 0.1) 60%, transparent 82%);
     filter: blur(34px);
-    opacity: 0.9;
+    opacity: 0.92;
 }
 
 .home-cinematic-sunrise-atmosphere {
@@ -590,11 +595,11 @@ body {
     transform: translate(-50%, -50%);
     border-radius: 50%;
     background:
-        radial-gradient(ellipse at 50% 42%, rgba(255, 255, 240, 1) 0%, rgba(255, 220, 112, 0.82) 9%, rgba(255, 130, 34, 0.42) 20%, transparent 40%),
-        linear-gradient(90deg, transparent 0%, rgba(55, 152, 226, 0.08) 26%, rgba(255, 235, 170, 0.66) 46%, rgba(255, 143, 36, 0.6) 50%, rgba(126, 36, 12, 0.12) 70%, transparent 88%);
+        radial-gradient(ellipse at 50% 42%, rgba(255, 252, 238, 1) 0%, rgba(255, 212, 110, 0.84) 9%, rgba(255, 116, 52, 0.46) 20%, rgba(244, 96, 104, 0.18) 32%, transparent 44%),
+        linear-gradient(90deg, transparent 0%, rgba(55, 152, 226, 0.08) 24%, rgba(255, 224, 158, 0.66) 44%, rgba(255, 128, 44, 0.62) 50%, rgba(238, 92, 96, 0.22) 60%, rgba(120, 34, 16, 0.1) 72%, transparent 88%);
     filter:
         blur(2.4px)
-        drop-shadow(0 -6px 20px rgba(255, 149, 45, 0.26));
+        drop-shadow(0 -6px 20px rgba(255, 124, 64, 0.3));
     opacity: 1;
     mask-image: linear-gradient(to bottom, transparent 0%, #000 32%, #000 52%, transparent 100%);
 }
@@ -606,7 +611,7 @@ body {
     --sun-x: 50%;
     /* Altura da BOLINHA (atrás da Terra, z-9). Independente do glow: este é o
        valor que mostrava a bolinha nascendo no print bom. Menor = mais alta. */
-    --sun-disc-y: 55%;
+    --sun-disc-y: 54%;
     mix-blend-mode: screen;
 }
 
@@ -634,15 +639,16 @@ body {
     height: clamp(2.4rem, 3.4vw, 4rem);
     transform: translate(-50%, -50%);
     border-radius: 9999px;
-    /* Disco branco PURO e nítido: é a "bolinha" do sol que precisa saltar acima
-       do glow difuso. Núcleo branco sólido até 55%, decaindo rápido. */
-    background: radial-gradient(circle, #fff 0%, #fff 48%, rgba(255, 250, 232, 1) 64%, rgba(255, 210, 130, 0.95) 82%, transparent 100%);
+    /* Sol DIFUSO, não disco perfeito: núcleo branco pequeno que derrete suave em
+       âmbar e some sem borda dura, como o Sol visto através da atmosfera. O blur
+       maior dissolve o contorno; o gradiente decai cedo para virar mancha de luz. */
+    background: radial-gradient(circle, #fff 0%, rgba(255, 254, 248, 1) 34%, rgba(255, 238, 196, 0.92) 52%, rgba(255, 204, 130, 0.62) 70%, rgba(255, 174, 98, 0.28) 86%, transparent 100%);
     box-shadow:
-        0 0 1.2rem rgba(255, 255, 255, 1),
-        0 0 3.2rem rgba(255, 252, 240, 1),
-        0 0 7rem rgba(255, 224, 150, 0.95),
-        0 0 14rem rgba(255, 175, 75, 0.65);
-    filter: blur(0.1px);
+        0 0 1.8rem rgba(255, 255, 255, 1),
+        0 0 5rem rgba(255, 250, 238, 1),
+        0 0 10rem rgba(255, 218, 148, 1),
+        0 0 18rem rgba(255, 172, 84, 0.75);
+    filter: blur(3px);
     opacity: 1;
 }
 
@@ -781,22 +787,25 @@ body {
 }
 
 .app-nav-shell {
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 0.75rem;
-    background: rgba(255, 255, 255, 0.026);
+    background: rgba(255, 255, 255, 0.015);
     padding: 0.2rem;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .app-nav-link {
     min-height: 2.25rem;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .app-nav-link:hover {
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.07),
-        0 0 20px rgba(84, 214, 214, 0.06);
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 18px rgba(84, 214, 214, 0.05);
+}
+
+.app-nav-link-active {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .app-nav-link-active {
@@ -1385,6 +1394,20 @@ body {
     font-weight: 500;
 }
 
+/* Selo discreto que sinaliza conteúdo de feed externo em inglês quando a
+   interface está em PT, para o título não ler como falha de tradução. */
+.editorial-card-feed-tag {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 0.05rem 0.4rem;
+    white-space: nowrap;
+}
+
 .editorial-card-icon-orange {
     background: rgba(251, 146, 60, 0.14);
     color: rgba(251, 146, 60, 1);
@@ -1425,7 +1448,7 @@ body {
 /* O wrapper recebe as transitions do estado expandido (a entrada anima no
    filho interno, ver .hero-rise-5). */
 .home-console-wrap {
-    transform: translateY(0.9rem);
+    transform: translateY(-0.6rem);
     transition:
         opacity 820ms cubic-bezier(0.16, 1, 0.3, 1),
         transform 1100ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -1494,12 +1517,34 @@ body {
         rgba(255, 255, 255, 0.012);
 }
 
+.console-header-lead {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
 .console-header-title {
     font-size: 0.66rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: rgba(220, 250, 252, 0.80);
+}
+
+/* Selo "ao vivo" do console: pulso + rótulo, vende dados em tempo real. */
+.console-live-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.34rem;
+    padding: 0.1rem 0.45rem 0.1rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid rgba(84, 214, 214, 0.28);
+    background: rgba(84, 214, 214, 0.1);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(180, 244, 244, 0.92);
 }
 
 .console-header-location {
@@ -1560,6 +1605,15 @@ body {
 
 .console-cell-approach {
     --card-accent: 251, 146, 60;
+    /* Coração do produto: leve realce permanente para liderar a hierarquia
+       do console sem quebrar o alinhamento das quatro células. */
+    background: linear-gradient(180deg, rgba(251, 146, 60, 0.05), transparent 70%);
+}
+
+.console-cell-approach::after {
+    opacity: 0.55;
+    left: 6%;
+    right: 6%;
 }
 
 .console-cell + .console-cell {
@@ -1789,6 +1843,59 @@ body {
         opacity 820ms cubic-bezier(0.16, 1, 0.3, 1),
         transform 1100ms cubic-bezier(0.16, 1, 0.3, 1),
         filter 820ms ease;
+}
+
+/* Poeira estelar do hero: campo de estrelas finas concentrado na faixa
+   central (entre o bloco editorial e o horizonte), onde antes havia um vazio
+   preto. A máscara vertical concentra o brilho nessa faixa e o apaga antes
+   do limbo da Terra; a horizontal afina nas bordas para não criar moldura. */
+/* O campo de estrelas usa box-shadow múltiplo (pontos sólidos que não
+   dependem de mask para existir); a máscara vertical apenas confina o brilho
+   à faixa central, onde antes havia vazio preto. Centralizado para as posições
+   em px dos pontos lerem em relação ao meio da cena. */
+.home-hero-stardust {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 20%, #000 38%, #000 52%, transparent 64%);
+    mask-image: linear-gradient(to bottom, transparent 20%, #000 38%, #000 52%, transparent 64%);
+    opacity: 0.9;
+    animation: heroStardustTwinkle 6.5s ease-in-out infinite;
+}
+
+.home-hero-stardust-field {
+    position: relative;
+    top: -4rem;
+    width: 1px;
+    height: 1px;
+    border-radius: 50%;
+    background: transparent;
+    box-shadow:
+        -460px -40px 0 0.2px rgba(255, 255, 255, 0.85),
+        -300px 30px 0 0.1px rgba(204, 234, 255, 0.7),
+        -210px -70px 0 0.3px rgba(255, 255, 255, 0.7),
+        -120px 60px 0 0 rgba(255, 255, 255, 0.6),
+        -60px -30px 0 0.2px rgba(214, 234, 255, 0.65),
+        30px 50px 0 0 rgba(255, 255, 255, 0.55),
+        90px -60px 0 0.3px rgba(255, 255, 255, 0.75),
+        170px 20px 0 0.1px rgba(210, 230, 255, 0.6),
+        260px -40px 0 0.2px rgba(255, 255, 255, 0.7),
+        360px 40px 0 0 rgba(255, 255, 255, 0.55),
+        440px -20px 0 0.2px rgba(214, 234, 255, 0.62),
+        -380px 70px 0 0 rgba(255, 255, 255, 0.5),
+        200px 80px 0 0 rgba(255, 255, 255, 0.5),
+        -160px 100px 0 0 rgba(210, 230, 255, 0.45);
+}
+
+@keyframes heroStardustTwinkle {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-hero-stardust {
+        animation: none;
+    }
 }
 
 .home-hero-scene::after {
@@ -2490,25 +2597,38 @@ body {
 }
 
 @media (max-width: 767px) {
-    /* No mobile o horizonte fica um pouco mais baixo e discreto para a
-       coluna de copy e o console respirarem. */
+    /* Mobile: a cena ganha altura para o horizonte da Terra (ancorado na
+       base, como no desktop) ter espaço de aparecer entre o CTA e o
+       console, em vez de o painel cobrir o planeta inteiro. */
     .home-hero-scene {
-        min-height: 760px;
+        min-height: 92vh;
     }
 
     .home-hero-copy {
         padding-top: clamp(2.8rem, 6vh, 3.8rem);
     }
 
+    /* O enquadramento do horizonte sobe via câmera (HORIZON_NDC_Y mobile no
+       componente), então o shell volta a uma altura sóbria; o arco iluminado
+       já aparece alto, na faixa entre o CTA e o console. */
     .cinematic-earth-shell {
-        height: 66%;
-        opacity: 0.90;
+        height: 70%;
+        opacity: 0.92;
+    }
+
+    /* Respiro entre o CTA e o console: janela do limbo da Terra. Encurtado
+       para o vão não ler como vazio preto acima do horizonte. */
+    .home-console-wrap {
+        margin-top: auto;
+        padding-top: clamp(6rem, 20vh, 10rem);
     }
 
     .home-cinematic-sunrise {
         opacity: 0.66;
     }
 
+    /* O nascer do sol acompanha o limbo da Terra, que subiu no mobile via
+       HORIZON_NDC_Y_MOBILE; sem isso o sol fica descolado, baixo demais. */
     .home-cinematic-sunrise::before,
     .home-cinematic-sunrise::after,
     .home-cinematic-sunrise-bloom,
@@ -2516,7 +2636,7 @@ body {
     .home-cinematic-sunrise-corona,
     .home-cinematic-sunrise-core {
         left: 50%;
-        top: 58%;
+        top: 44%;
     }
 
     .home-cinematic-sunrise-atmosphere {
@@ -2531,10 +2651,6 @@ body {
 
     .home-hero-source {
         display: none;
-    }
-
-    .cinematic-earth-shell-ready {
-        opacity: 1;
     }
 
     .home-cta {
@@ -2555,12 +2671,34 @@ body {
         height: 1.7rem;
     }
 
-    .home-console-wrap {
-        padding-top: 1rem;
-    }
-
     .console-header-location strong {
         max-width: 11rem;
+    }
+
+    /* Console mais translúcido no mobile: o limbo da Terra atravessa o vidro
+       em vez de ser cortado por uma parede opaca, mantendo o planeta presente. */
+    .observatory-console {
+        background:
+            radial-gradient(circle at 50% -24%, rgba(84, 214, 214, 0.12), transparent 22rem),
+            linear-gradient(165deg, rgba(5, 10, 20, 0.74), rgba(3, 7, 15, 0.66));
+    }
+
+    /* Console compacto no mobile: células mais baixas e menos respiro
+       interno, para o painel não engolir a faixa da Terra logo acima. */
+    .console-cell {
+        min-height: 0;
+        padding: 0.85rem 0.95rem;
+    }
+
+    .console-cell .editorial-card-title-note {
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+    }
+
+    /* Poeira estelar é calibrada para a faixa central do desktop; no mobile
+       o layout muda e ela não tem onde assentar — desliga. */
+    .home-hero-stardust {
+        display: none;
     }
 
     /* A cena de opções vira overlay fixo (abaixo); o hero por trás não

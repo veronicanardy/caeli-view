@@ -34,7 +34,18 @@ const EARTH_DEBUG_MINIMAL = false;
 // HORIZON_NDC_Y moderado: o topo do arco fica abaixo do CTA, deixando o
 // nascer do sol respirar como fundo cinematografico em vez de competir com a UI.
 const ORBIT_ALTITUDE = 0.7;
-const HORIZON_NDC_Y = 0.30;
+// Altura da linha do horizonte no canvas (0 = centro, positivo = acima).
+// No desktop o limbo fica no terço inferior, deixando o nascer do sol como
+// fundo. No mobile a cena é mais alta e estreita e o console ocupa a base:
+// subir o horizonte traz o arco iluminado da Terra para a faixa visível
+// entre o CTA e o console, em vez de ele ficar escondido lá embaixo.
+const HORIZON_NDC_Y_DESKTOP = 0.30;
+const HORIZON_NDC_Y_MOBILE = 0.72;
+const MOBILE_HORIZON_MAX_WIDTH = 767;
+const resolveHorizonNdcY = () =>
+    typeof window !== 'undefined' && window.matchMedia(`(max-width: ${MOBILE_HORIZON_MAX_WIDTH}px)`).matches
+        ? HORIZON_NDC_Y_MOBILE
+        : HORIZON_NDC_Y_DESKTOP;
 const CAMERA_FOV = 38;
 
 // Cascade of Earth daymap textures, tried in order. First success wins.
@@ -145,7 +156,13 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
             // bug que jogava o planeta para fora do quadro).
             const horizonDip = Math.acos(1 / (1 + ORBIT_ALTITUDE));
             const fovHalfRad = THREE.MathUtils.degToRad(CAMERA_FOV * 0.5);
-            const baseDownTilt = horizonDip + Math.atan(HORIZON_NDC_Y * Math.tan(fovHalfRad));
+            // Recalculável: o enquadramento do horizonte muda entre mobile e
+            // desktop. Um listener de matchMedia (abaixo) atualiza isto quando o
+            // breakpoint cruza, sem remontar a cena, evitando que o valor de um
+            // viewport fique "grudado" ao alternar largura.
+            const computeBaseDownTilt = () =>
+                horizonDip + Math.atan(resolveHorizonNdcY() * Math.tan(fovHalfRad));
+            let baseDownTilt = computeBaseDownTilt();
             const viewTarget = new THREE.Vector3();
             const applyCameraView = (extraPitch: number, yaw: number) => {
                 const tilt = baseDownTilt + extraPitch;
@@ -690,6 +707,10 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                             sunDirection: { value: sunDirection },
                             uColorDay: { value: new THREE.Color(0x6fd2ec) },
                             uColorDeep: { value: new THREE.Color(0x1e55b0) },
+                            // Âmbar do nascer do sol casado com a corona do disco solar
+                            // (CSS rgba(255,158,46) = 0xff9e2e), para atmosfera e sol lerem
+                            // como uma luz só.
+                            uColorWarm: { value: new THREE.Color(0xff9e2e) },
                             uIntensity: { value: 1.75 },
                         },
                         vertexShader: `
@@ -708,26 +729,36 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                             uniform vec3 sunDirection;
                             uniform vec3 uColorDay;
                             uniform vec3 uColorDeep;
+                            uniform vec3 uColorWarm;
                             uniform float uIntensity;
                             void main() {
                                 vec3 n = normalize(vWorldNormal);
                                 vec3 viewDir = normalize(cameraPosition - vWorldPosition);
                                 // Fresnel: 0 olhando o chão, 1 na tangência (limbo).
                                 float rim = 1.0 - max(dot(n, viewDir), 0.0);
-                                // Cena recomeçada SEM cores quentes: atmosfera só azul.
-                                // Halo azul mais largo + filete ciano rente ao limbo,
-                                // nenhuma lâmina âmbar/vermelha do nascer do sol.
+                                // Atmosfera majoritariamente azul: halo largo + filete ciano
+                                // rente ao limbo. O calor (âmbar) entra só no ponto do nascer
+                                // do sol, abaixo, via warmRim — o resto da borda fica frio.
                                 float blueHalo = pow(rim, 6.7);
                                 float blueCore = pow(rim, 13.0);
                                 float sunDot = dot(n, normalize(sunDirection));
                                 // Dia brilha, noite quase some (realista).
                                 float lit = smoothstep(-0.35, 0.28, sunDot);
+                                // Âmbar do nascer do sol: concentrado no arco do limbo na
+                                // direção do sol. O sol nasce atrás/abaixo do limbo, então essa
+                                // região é penumbra (sunDot moderado, não alto) — a janela do
+                                // smoothstep cobre essa faixa em vez de exigir sol frontal.
+                                // Desbota para o ciano/azul nas laterais; largura do rim maior
+                                // que o filete azul para o tom quente vencer o aditivo.
+                                float sunGlow = smoothstep(-0.15, 0.55, sunDot);
+                                float warmRim = pow(rim, 6.0) * sunGlow;
                                 vec3 color =
                                     uColorDeep * blueHalo * 0.72 +
-                                    uColorDay * blueCore * 0.92;
+                                    uColorDay * blueCore * 0.92 +
+                                    uColorWarm * warmRim * 2.1;
                                 float alpha =
-                                    (blueHalo * 0.28 + blueCore * 0.26) * (0.12 + lit * 0.88);
-                                gl_FragColor = vec4(color, clamp(alpha * uIntensity, 0.0, 0.76));
+                                    (blueHalo * 0.28 + blueCore * 0.26 + warmRim * 0.5) * (0.12 + lit * 0.88);
+                                gl_FragColor = vec4(color, clamp(alpha * uIntensity, 0.0, 0.85));
                             }
                         `,
                     }),
@@ -749,6 +780,16 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
             const observer = new ResizeObserver(resize);
             observer.observe(mount);
             resize();
+
+            // Reorienta a câmera quando a largura cruza o breakpoint mobile,
+            // sem remontar: o horizonte sobe no mobile e volta no desktop ao
+            // vivo, em vez de ficar preso ao viewport da montagem.
+            const horizonQuery = window.matchMedia(`(max-width: ${MOBILE_HORIZON_MAX_WIDTH}px)`);
+            const onHorizonChange = () => {
+                baseDownTilt = computeBaseDownTilt();
+                applyCameraView(0, 0);
+            };
+            horizonQuery.addEventListener('change', onHorizonChange);
 
             // ── Pointer parallax ─────────────────────────────────────────────
             const onPointerMove = (event: PointerEvent) => {
@@ -823,6 +864,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                 disposed = true;
                 window.cancelAnimationFrame(frame);
                 window.removeEventListener('pointermove', onPointerMove);
+                horizonQuery.removeEventListener('change', onHorizonChange);
                 observer.disconnect();
                 earthTexture?.dispose();
                 normalTexture?.dispose();

@@ -173,7 +173,7 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                                             className={`app-nav-link inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
                                                 active
                                                     ? 'app-nav-link-active border border-signal-cyan/30 bg-signal-cyan/15 text-signal-cyan shadow-[0_0_12px_rgba(84,214,214,0.15)]'
-                                                    : 'border border-transparent bg-white/5 text-white/65 hover:bg-white/8 hover:text-white/90'
+                                                    : 'border border-transparent text-white/60 hover:bg-white/[0.06] hover:text-white'
                                             }`}
                                         >
                                             <Icon className="size-4" aria-hidden="true" />

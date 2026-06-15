@@ -128,6 +128,15 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_56%_40%_at_50%_38%,rgba(2,6,14,0.5)_0%,rgba(2,6,14,0.22)_55%,transparent_78%)]" />
                 </div>
 
+                {/* Poeira estelar na faixa entre o bloco editorial e o horizonte:
+                    preenche o vazio escuro central para que ele leia como céu
+                    profundo, não como espaço morto. Acima da vignette/grade
+                    (z-10/11) para não ser apagada pelo escurecimento, abaixo do
+                    bloco editorial (z-20). */}
+                <div className="home-hero-stardust pointer-events-none absolute inset-0 z-[12]" aria-hidden="true">
+                    <span className="home-hero-stardust-field" />
+                </div>
+
                 {/* Glint quente acima do lado iluminado do horizonte */}
                 <div className="home-warm-glint pointer-events-none absolute inset-0 z-[8]" aria-hidden="true" />
                 {/* Glow difuso do nascer do sol fica ATRÁS da Terra (z-8): a luz
@@ -180,7 +189,7 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                             </span>
                         </button>
                         <Link href="/radar" prefetch className="home-cta-secondary">
-                            {en ? 'Enter the Radar' : 'Entrar no Radar'}
+                            {en ? 'Open the radar' : 'Abrir o radar'}
                             <ArrowRight className="size-3.5" aria-hidden="true" />
                         </Link>
                     </div>
@@ -302,9 +311,14 @@ function ObservatoryConsole({
         <div className="hero-rise hero-rise-5">
             <section className="observatory-console" aria-label={t('home.hero.statusRibbonLabel')}>
                 <header className="console-header">
-                    <span className="console-header-title">{en ? 'Live observatory feed' : 'Feed do observatório ao vivo'}</span>
+                    <span className="console-header-lead">
+                        <span className="console-header-title">{en ? 'The sky right now' : 'O céu agora'}</span>
+                        <span className="console-live-tag">
+                            <span className="sky-status-pulse" aria-hidden="true" />
+                            {t('home.hero.liveLabel')}
+                        </span>
+                    </span>
                     <span className="console-header-location">
-                        <span className="sky-status-pulse" aria-hidden="true" />
                         <span className="console-header-prefix">{en ? 'Observing from' : 'Observando de'}</span>
                         <strong>{locationLabel}</strong>
                     </span>
@@ -365,10 +379,10 @@ function ObservatoryConsole({
                             ) : (
                                 <>
                                     <h3 className="editorial-card-title editorial-card-main-value editorial-card-main-muted">
-                                        {en ? 'Quiet neighborhood' : 'Vizinhança tranquila'}
+                                        {en ? 'All quiet up there' : 'Tudo tranquilo lá em cima'}
                                     </h3>
                                     <span className="editorial-card-secondary editorial-card-secondary-dim">
-                                        {en ? 'No tracked object poses a known risk in the coming hours.' : 'Nenhum objeto monitorado representa risco conhecido nas próximas horas.'}
+                                        {en ? 'Nothing we track is coming close in the next few hours.' : 'Nada que monitoramos chega perto nas próximas horas.'}
                                     </span>
                                 </>
                             )}
@@ -404,6 +418,12 @@ function ObservatoryConsole({
                                 )}
                                 {highlightDate ? <span className="editorial-card-dot" aria-hidden="true">·</span> : null}
                                 {highlightDate ? <span className="editorial-card-date">{highlightDate}</span> : null}
+                                {!en && spaceNews?.url ? (
+                                    <>
+                                        <span className="editorial-card-dot" aria-hidden="true">·</span>
+                                        <span className="editorial-card-feed-tag">{t('home.hero.externalFeed')}</span>
+                                    </>
+                                ) : null}
                             </div>
                         </div>
                     </article>
