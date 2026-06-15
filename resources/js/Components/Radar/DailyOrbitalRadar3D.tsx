@@ -34,6 +34,7 @@ import { RadarFloatingOverlays } from './Panels/RadarFloatingOverlays';
 import { RadarNavigationPanel } from './Panels/RadarNavigationPanel';
 import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import { RadarSceneCanvas } from './Scene/RadarSceneCanvas';
+import { eyesExperimentEnabled } from './Scene/eyesExperiment';
 import { deriveActiveMode } from './Scene/sceneMode';
 import { useLabelNoGoRects } from './Scene/useLabelNoGoRects';
 import { useSceneEphemeris } from './Scene/useSceneEphemeris';
@@ -168,6 +169,9 @@ export function DailyOrbitalRadar3D({
     }, [selectionMode]);
 
     const activeMode: SceneMode = deriveActiveMode(orbitMode, focusedObject);
+    // No experimento Eyes (?eyes), famosos e NEOs convivem no MESMO espaço linear (Ceres no cinturão
+    // + NEOs perto da Terra). Fora dele, famosos só no critério dedicado.
+    const showKnownAsteroidsInScene = selectionMode === 'famous' || eyesExperimentEnabled();
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const planetFlyoutRef = useRef<HTMLDivElement>(null);
     const focusCardRef = useRef<HTMLDivElement>(null);
@@ -236,7 +240,7 @@ export function DailyOrbitalRadar3D({
                     fallbackSunDirection={fallbackSunDirection}
                     locale={locale}
                     showLabels={showLabels}
-                    showKnownAsteroids={selectionMode === 'famous'}
+                    showKnownAsteroids={showKnownAsteroidsInScene}
                     bodyCardOpen={bodyCardOpen}
                     onBodyCardOpenChange={setBodyCardOpen}
                     onClearPlanetTargets={clearPlanetTargets}
