@@ -105,14 +105,14 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                     en={en}
                     title={en ? '5. Radial log compression — asteroids and Moon' : '5. Compressão radial logarítmica — asteroides e Lua'}
                     formulas={[
-                        { expr: `R₀ = 8 DL`, comment: { en: `pivot = ${nf.format(8 * lunarDistanceKm)} km`, pt: `pivô = ${nf.format(8 * lunarDistanceKm)} km` } },
+                        { expr: `R₀ = 40 DL`, comment: { en: `pivot = ${nf.format(40 * lunarDistanceKm)} km`, pt: `pivô = ${nf.format(40 * lunarDistanceKm)} km` } },
                         { expr: 'K  = 1 / ln(1 + 1/R₀)', comment: { en: 'normalisation constant', pt: 'constante de normalização' } },
                         { expr: 'f(r) = K · ln(1 + r/R₀)', comment: { en: 'compressed radius', pt: 'raio comprimido' } },
                         { expr: 'r_scene = f(d_DL) · r̂', comment: { en: 'r̂ = r/‖r‖  (direction preserved)', pt: 'r̂ = r/‖r‖  (direção preservada)' } },
                     ]}
                     note={en
-                        ? 'R₀ = 8 DL is the compression pivot. K is derived from R₀ by the constraint f(1) = 1, forcing the Moon to always land at exactly 1 scene unit. r̂ is preserved through compression so direction and trail shape are never distorted. Numbers in the UI are always the original, uncompressed values.'
-                        : 'R₀ = 8 DL é o pivô de compressão. K é derivado de R₀ pela restrição f(1) = 1, forçando a Lua a sempre cair em exatamente 1 unidade de cena. r̂ é preservado durante a compressão, então direção e forma da trilha nunca são distorcidos. Os números na interface são sempre os valores originais.'}
+                        ? 'R₀ = 40 DL is the compression pivot, chosen so the interplanetary range opens up without crushing the nearby NEOs. K is derived from R₀ by the constraint f(1) = 1, forcing the Moon to always land at exactly 1 scene unit. r̂ is preserved through compression so direction and trail shape are never distorted. Numbers in the UI are always the original, uncompressed values.'
+                        : 'R₀ = 40 DL é o pivô de compressão, escolhido para abrir a faixa interplanetária sem esmagar os NEOs próximos. K é derivado de R₀ pela restrição f(1) = 1, forçando a Lua a sempre cair em exatamente 1 unidade de cena. r̂ é preservado durante a compressão, então direção e forma da trilha nunca são distorcidos. Os números na interface são sempre os valores originais.'}
                 />
 
                 <FormulaPanel
@@ -120,13 +120,13 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                     title={en ? '5b. Linear AU scale — planets and their orbits' : '5b. Escala linear em UA — planetas e suas órbitas'}
                     formulas={[
                         { expr: 'ORBIT_AU_SCALE = f(1 AU in DL)', comment: { en: 'same K·ln constant', pt: 'mesma constante K·ln' } },
-                        { expr: 'planet_scene = (ecl.x, 0, −ecl.y) · scale', comment: { en: 'y=0: projected onto ecliptic', pt: 'y=0: projetado no eclíptico' } },
+                        { expr: 'planet_scene = (ecl.x, ecl.z, −ecl.y) · scale', comment: { en: 'full 3D: inclination preserved', pt: '3D completo: inclinação preservada' } },
                         { expr: 'position ← astronomy-engine HelioState()', comment: { en: 'real heliocentric vector', pt: 'vetor heliocêntrico real' } },
-                        { expr: 'orbit ellipse ← lonPerihelion from live vectors' },
+                        { expr: 'orbit ellipse ← perifocal(a, e, i, Ω, ω)', comment: { en: 'same source as position', pt: 'mesma fonte da posição' } },
                     ]}
                     note={en
-                        ? "Planets live in a separate heliocentric layer with strictly linear scale. The ecliptic z component is dropped (y = 0 in scene), projecting all planetary orbits onto the ecliptic plane. The perihelion longitude orienting each orbit ellipse is derived from live HelioState() vectors."
-                        : 'Os planetas vivem numa camada heliocêntrica separada com escala estritamente linear. A componente z eclíptica é descartada (y = 0 na cena), projetando as órbitas no plano eclíptico. A longitude do periélio de cada elipse é derivada dos vetores HelioState() ao vivo.'}
+                        ? "Planets live in a separate heliocentric layer with strictly linear scale. The full 3D ecliptic mapping (x, z, −y) is used, so orbital inclination is preserved — planets and known asteroids share one coplanar space. Position and orbit ellipse come from the SAME geometry source (perifocal rotation from live osculating elements), so the planet always lands on its drawn line."
+                        : 'Os planetas vivem numa camada heliocêntrica separada com escala estritamente linear. O mapeamento eclíptico 3D completo (x, z, −y) é usado, então a inclinação orbital é preservada: planetas e asteroides conhecidos compartilham um único espaço coplanar. A posição e a elipse vêm da MESMA fonte de geometria (rotação perifocal dos elementos osculadores ao vivo), então o planeta sempre cai sobre a linha desenhada.'}
                 />
 
                 <FormulaPanel
@@ -396,13 +396,13 @@ function OrbitTechnical({ en, locale }: { en: boolean; locale: 'pt-BR' | 'en' })
                     title={en ? '5. Mapping to the 3D scene' : '5. Mapeamento para a cena 3D'}
                     formulas={[
                         { expr: '1 AU = ORBIT_AU_SCALE', comment: { en: 'linear scale, no log compression', pt: 'escala linear, sem compressão log' } },
-                        { expr: 'asteroid: (x_ecl, z_ecl, −y_ecl) · scale', comment: { en: 'full 3D — inclination preserved', pt: '3D completo — inclinação preservada' } },
-                        { expr: en ? 'planet: (x_ecl, 0, −y_ecl) · scale' : 'planeta: (x_ecl, 0, −y_ecl) · scale', comment: { en: 'y=0: projected onto ecliptic plane', pt: 'y=0: projetado no plano eclíptico' } },
+                        { expr: 'body: (x_ecl, z_ecl, −y_ecl) · scale', comment: { en: 'full 3D, inclination preserved', pt: '3D completo, inclinação preservada' } },
+                        { expr: 'ellipse ← perifocal(a, e, i, Ω, ω)', comment: { en: 'same rotation as the body', pt: 'mesma rotação do corpo' } },
                         { expr: en ? 'positions ← astronomy-engine HelioState()' : 'posições ← astronomy-engine HelioState()', comment: { en: 'real heliocentric vectors', pt: 'vetores heliocêntricos reais' } },
                     ]}
                     note={en
-                        ? 'Two axis conventions coexist in the same scene. The asteroid orbit uses a full 3D ecliptic mapping (x, z, −y) so inclination is preserved; steeply tilted orbits rise above/below the screen plane. The planet layer projects onto the ecliptic plane (y = 0 always), which is accurate because planetary inclinations are small (< 7°) and the visual difference is sub-pixel. The scale is strictly linear for both: the drawn ellipse faithfully reflects the eccentricity and perihelion of the real orbit.'
-                        : 'Duas convenções de eixos coexistem na mesma cena. A órbita do asteroide usa mapeamento eclíptico 3D completo (x, z, −y) para que a inclinação seja preservada; órbitas muito inclinadas sobem acima ou abaixo do plano da tela. A camada dos planetas é projetada no plano eclíptico (y = 0 sempre), o que é preciso porque as inclinações planetárias são pequenas (< 7°) e a diferença visual é sub-pixel. A escala é estritamente linear para ambos: a elipse desenhada reflete fielmente a excentricidade e o periélio da órbita real.'}
+                        ? 'One axis convention for the whole heliocentric scene: the full 3D ecliptic mapping (x, z, −y), so orbital inclination is preserved for planets and asteroids alike. Steeply tilted orbits rise above/below the screen plane. The body position is SAMPLED ON THE SAME POLYLINE that is drawn for the orbit (at the body true anomaly ν), not on the ideal curve, so the body lands exactly on its line at any distance, even when the orbit is eccentric (Mercury) or far out (Uranus, Neptune). The scale is strictly linear: the ellipse faithfully reflects the real eccentricity, inclination and perihelion.'
+                        : 'Uma única convenção de eixos para toda a cena heliocêntrica: o mapeamento eclíptico 3D completo (x, z, −y), então a inclinação orbital é preservada para planetas e asteroides igualmente. Órbitas muito inclinadas sobem acima ou abaixo do plano da tela. A posição do corpo é AMOSTRADA NA MESMA POLILINHA desenhada para a órbita (na anomalia verdadeira ν do corpo), não na curva ideal, então o corpo cai exatamente sobre a sua linha em qualquer distância, mesmo quando a órbita é excêntrica (Mercúrio) ou distante (Urano, Netuno). A escala é estritamente linear: a elipse reflete fielmente a excentricidade, a inclinação e o periélio reais.'}
                 />
             </div>
 
@@ -471,6 +471,11 @@ function OrbitTechnical({ en, locale }: { en: boolean; locale: 'pt-BR' | 'en' })
                         {en
                             ? '⬡ The view shows the full orbit as a closed loop. It does not animate the asteroid moving along the loop — for real-time motion, switch to radar mode.'
                             : '⬡ A vista mostra a órbita completa como um loop fechado. Não anima o asteroide se movendo pelo loop — para movimento em tempo real, mude para o modo radar.'}
+                    </p>
+                    <p>
+                        {en
+                            ? '⬡ The rendered body is sampled on the same polyline that draws the orbit, so it always sits exactly on its line. This shifts the body along its own orbit by under 0.1% of the distance versus the exact Keplerian point. The direction is unchanged; the offset has no physical meaning at this scale.'
+                            : '⬡ O corpo renderizado é amostrado na mesma polilinha que desenha a órbita, então fica sempre exatamente sobre a sua linha. Isso desloca o corpo ao longo da própria órbita em menos de 0,1% da distância em relação ao ponto Kepleriano exato. A direção não muda; o deslocamento não tem significado físico nessa escala.'}
                     </p>
                 </div>
                 <p className="mt-3 text-[12px] leading-relaxed text-white/40">

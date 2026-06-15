@@ -36,9 +36,9 @@ describe('compressDistanceDl', () => {
         }
     });
 
-    it('places 1 AU between 20 and 60 scene units (well past the Moon, not absurd)', () => {
-        expect(SUN_DISPLAY_DL).toBeGreaterThan(20);
-        expect(SUN_DISPLAY_DL).toBeLessThan(60);
+    it('places 1 AU between 60 and 140 scene units (well past the Moon, not absurd) — R0=40', () => {
+        expect(SUN_DISPLAY_DL).toBeGreaterThan(60);
+        expect(SUN_DISPLAY_DL).toBeLessThan(140);
     });
 });
 

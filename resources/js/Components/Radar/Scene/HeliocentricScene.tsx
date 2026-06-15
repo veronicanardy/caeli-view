@@ -8,8 +8,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { OrbitalElements } from '@/types';
-import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
-import { heliocentricPositionAU } from '@/lib/keplerOrbit';
+import { buildHeliocentricOrbit, orbitGeometryFromElements, sampleHeliocentricEllipseAtNu, ORBIT_AU_SCALE, ORBIT_ELLIPSE_SEGMENTS } from '@/lib/sceneEphemeris';
+import { trueAnomalyNow } from '@/lib/keplerOrbit';
 import { FocusProtectedHtml, ScreenLabel } from '../Overlays/SceneLabels';
 import { Sun } from '../Bodies/Sun/Sun';
 import { OrbitLineHelio } from '../Trajectory/HeliocentricLines';
@@ -37,18 +37,22 @@ export function HeliocentricScene({
         [elements],
     );
 
-    const [asteroidScenePos, setAsteroidScenePos] = useState<[number, number, number] | null>(() => {
-        const p = heliocentricPositionAU(elements, new Date());
-        return p ? helioAUToSunCenteredScene(p) : null;
-    });
+    // Posição AMOSTRADA NA MESMA POLILINHA da órbita (no ν atual), não na curva ideal — o asteroide
+    // cai exatamente sobre a linha desenhada, mesma garantia dos planetas. Desvio zero em qualquer
+    // distância, inclusive no afélio de cometas.
+    const sampleAt = (date: Date): [number, number, number] | null => {
+        const g = orbitGeometryFromElements(elements);
+        const nu = trueAnomalyNow(elements, date);
+        if (!g || nu === null) return null;
+        return sampleHeliocentricEllipseAtNu(g, nu, ORBIT_ELLIPSE_SEGMENTS);
+    };
+    const [asteroidScenePos, setAsteroidScenePos] = useState<[number, number, number] | null>(() => sampleAt(new Date()));
     useEffect(() => {
-        const tick = () => {
-            const p = heliocentricPositionAU(elements, new Date());
-            setAsteroidScenePos(p ? helioAUToSunCenteredScene(p) : null);
-        };
+        const tick = () => setAsteroidScenePos(sampleAt(new Date()));
         tick();
         const id = window.setInterval(tick, 60 * 1000);
         return () => window.clearInterval(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [elements]);
 
     return (

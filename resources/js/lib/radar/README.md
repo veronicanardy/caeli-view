@@ -62,6 +62,9 @@ Os testes unitários ficam em `tests/js/lib/radar/` e seguem o padrão Vitest do
 | `format.ts`           | `format.test.ts`                        | Dígitos dinâmicos, locales, fallbacks nulos, dias relativos |
 | `cursor.ts`           | `cursor.test.ts`                        | Contagem de referência, reset, leaves extras           |
 | `bodyScale.ts`        | `bodyScale.test.ts`                     | Invariantes hitbox > raio visual                       |
+| _(transversal)_       | `compressRadial.test.ts`                | Firewall científico: compressão radial preserva direção (nunca por eixo), alinhamento relativo no mesmo frame, objeto na região de Júpiter, unidades/eixos aplicados uma vez |
+
+`compressRadial.test.ts` não cobre um arquivo específico: trava INVARIANTES da pipeline de posicionamento (regra de ouro "a compressão mente sobre a escala, nunca sobre a direção") contra regressões, mesmo que a implementação seja reescrita. A independência entre posição científica e modelo 3D vive em `tests/js/Radar/modelPositionIndependence.test.ts`.
 
 Funções que dependem de DOM ou Three.js com contexto WebGL (`buildMoonBump`, shaders) não têm testes unitários — requerem JSDOM ou ambiente de renderização.
 

@@ -19,6 +19,13 @@ type PlanetOrbitConfig = {
     eccentricityKey: keyof Pick<SceneEphemeris,
         'mercuryEccentricity' | 'venusEccentricity' | 'marsEccentricity' |
         'jupiterEccentricity' | 'saturnEccentricity' | 'uranusEccentricity' | 'neptuneEccentricity'> | null;
+    /** Inclinação e nó ascendente da efeméride; null na Terra (i ≈ 0 por definição do eclíptico). */
+    inclinationKey: keyof Pick<SceneEphemeris,
+        'mercuryInclinationDeg' | 'venusInclinationDeg' | 'marsInclinationDeg' |
+        'jupiterInclinationDeg' | 'saturnInclinationDeg' | 'uranusInclinationDeg' | 'neptuneInclinationDeg'> | null;
+    lonAscNodeKey: keyof Pick<SceneEphemeris,
+        'mercuryLonAscNodeDeg' | 'venusLonAscNodeDeg' | 'marsLonAscNodeDeg' |
+        'jupiterLonAscNodeDeg' | 'saturnLonAscNodeDeg' | 'uranusLonAscNodeDeg' | 'neptuneLonAscNodeDeg'> | null;
     fallbackSemiMajorAU: number;
     fallbackEccentricity: number;
     color: string;
@@ -26,18 +33,21 @@ type PlanetOrbitConfig = {
 };
 
 const PLANET_ORBIT_CONFIGS: PlanetOrbitConfig[] = [
-    { lonPerihelionKey: 'mercuryLonPerihelionDeg', semiMajorKey: 'mercurySemiMajorAU', eccentricityKey: 'mercuryEccentricity', fallbackSemiMajorAU: 0.387,  fallbackEccentricity: 0.2056, color: '#9aa0aa', opacity: 0.08 },
-    { lonPerihelionKey: 'venusLonPerihelionDeg',   semiMajorKey: 'venusSemiMajorAU',   eccentricityKey: 'venusEccentricity',   fallbackSemiMajorAU: 0.723,  fallbackEccentricity: 0.0068, color: '#c8b870', opacity: 0.08 },
-    { lonPerihelionKey: 'earthLonPerihelionDeg',   semiMajorKey: null,                 eccentricityKey: null,                  fallbackSemiMajorAU: 1.000,  fallbackEccentricity: 0.0167, color: '#5b9bd5', opacity: 0.18 },
-    { lonPerihelionKey: 'marsLonPerihelionDeg',    semiMajorKey: 'marsSemiMajorAU',    eccentricityKey: 'marsEccentricity',    fallbackSemiMajorAU: 1.524,  fallbackEccentricity: 0.0934, color: '#c0501a', opacity: 0.08 },
-    { lonPerihelionKey: 'jupiterLonPerihelionDeg', semiMajorKey: 'jupiterSemiMajorAU', eccentricityKey: 'jupiterEccentricity', fallbackSemiMajorAU: 5.203,  fallbackEccentricity: 0.0489, color: '#c8a060', opacity: 0.07 },
-    { lonPerihelionKey: 'saturnLonPerihelionDeg',  semiMajorKey: 'saturnSemiMajorAU',  eccentricityKey: 'saturnEccentricity',  fallbackSemiMajorAU: 9.537,  fallbackEccentricity: 0.0565, color: '#c8a840', opacity: 0.06 },
-    { lonPerihelionKey: 'uranusLonPerihelionDeg',  semiMajorKey: 'uranusSemiMajorAU',  eccentricityKey: 'uranusEccentricity',  fallbackSemiMajorAU: 19.19,  fallbackEccentricity: 0.0472, color: '#4ab8c8', opacity: 0.05 },
-    { lonPerihelionKey: 'neptuneLonPerihelionDeg', semiMajorKey: 'neptuneSemiMajorAU', eccentricityKey: 'neptuneEccentricity', fallbackSemiMajorAU: 30.07,  fallbackEccentricity: 0.0086, color: '#2878d8', opacity: 0.04 },
+    { lonPerihelionKey: 'mercuryLonPerihelionDeg', semiMajorKey: 'mercurySemiMajorAU', eccentricityKey: 'mercuryEccentricity', inclinationKey: 'mercuryInclinationDeg', lonAscNodeKey: 'mercuryLonAscNodeDeg', fallbackSemiMajorAU: 0.387,  fallbackEccentricity: 0.2056, color: '#9aa0aa', opacity: 0.08 },
+    { lonPerihelionKey: 'venusLonPerihelionDeg',   semiMajorKey: 'venusSemiMajorAU',   eccentricityKey: 'venusEccentricity',   inclinationKey: 'venusInclinationDeg',   lonAscNodeKey: 'venusLonAscNodeDeg',   fallbackSemiMajorAU: 0.723,  fallbackEccentricity: 0.0068, color: '#c8b870', opacity: 0.08 },
+    { lonPerihelionKey: 'earthLonPerihelionDeg',   semiMajorKey: null,                 eccentricityKey: null,                  inclinationKey: null,                    lonAscNodeKey: null,                   fallbackSemiMajorAU: 1.000,  fallbackEccentricity: 0.0167, color: '#5b9bd5', opacity: 0.18 },
+    { lonPerihelionKey: 'marsLonPerihelionDeg',    semiMajorKey: 'marsSemiMajorAU',    eccentricityKey: 'marsEccentricity',    inclinationKey: 'marsInclinationDeg',    lonAscNodeKey: 'marsLonAscNodeDeg',    fallbackSemiMajorAU: 1.524,  fallbackEccentricity: 0.0934, color: '#c0501a', opacity: 0.08 },
+    { lonPerihelionKey: 'jupiterLonPerihelionDeg', semiMajorKey: 'jupiterSemiMajorAU', eccentricityKey: 'jupiterEccentricity', inclinationKey: 'jupiterInclinationDeg', lonAscNodeKey: 'jupiterLonAscNodeDeg', fallbackSemiMajorAU: 5.203,  fallbackEccentricity: 0.0489, color: '#c8a060', opacity: 0.07 },
+    { lonPerihelionKey: 'saturnLonPerihelionDeg',  semiMajorKey: 'saturnSemiMajorAU',  eccentricityKey: 'saturnEccentricity',  inclinationKey: 'saturnInclinationDeg',  lonAscNodeKey: 'saturnLonAscNodeDeg',  fallbackSemiMajorAU: 9.537,  fallbackEccentricity: 0.0565, color: '#c8a840', opacity: 0.06 },
+    { lonPerihelionKey: 'uranusLonPerihelionDeg',  semiMajorKey: 'uranusSemiMajorAU',  eccentricityKey: 'uranusEccentricity',  inclinationKey: 'uranusInclinationDeg',  lonAscNodeKey: 'uranusLonAscNodeDeg',  fallbackSemiMajorAU: 19.19,  fallbackEccentricity: 0.0472, color: '#4ab8c8', opacity: 0.05 },
+    { lonPerihelionKey: 'neptuneLonPerihelionDeg', semiMajorKey: 'neptuneSemiMajorAU', eccentricityKey: 'neptuneEccentricity', inclinationKey: 'neptuneInclinationDeg', lonAscNodeKey: 'neptuneLonAscNodeDeg', fallbackSemiMajorAU: 30.07,  fallbackEccentricity: 0.0086, color: '#2878d8', opacity: 0.04 },
 ];
 
 /**
  * Elipses orbitais planetárias usando elementos osculadores dinâmicos da efeméride.
+ * Inclinação e nó ascendente são passados para que a elipse seja 3D — a mesma fonte de
+ * geometria (perifocalToEclipticAU) que posiciona o planeta, garantindo que ele caia
+ * sobre a linha mesmo com a órbita inclinada (Terra: i = 0, elipse no plano).
  */
 export function PlanetOrbitLayer({ ephemeris, show }: { ephemeris: SceneEphemeris | null; show: boolean }) {
     if (!show || !ephemeris) return null;
@@ -50,6 +60,8 @@ export function PlanetOrbitLayer({ ephemeris, show }: { ephemeris: SceneEphemeri
                     semiMajorAU={config.semiMajorKey ? ephemeris[config.semiMajorKey] : config.fallbackSemiMajorAU}
                     eccentricity={config.eccentricityKey ? ephemeris[config.eccentricityKey] : config.fallbackEccentricity}
                     lonPerihelionDeg={ephemeris[config.lonPerihelionKey]}
+                    inclinationDeg={config.inclinationKey ? ephemeris[config.inclinationKey] : 0}
+                    lonAscNodeDeg={config.lonAscNodeKey ? ephemeris[config.lonAscNodeKey] : 0}
                     color={config.color}
                     opacity={config.opacity}
                 />
