@@ -86,7 +86,8 @@ describe('computeMoonGeoPosition', () => {
     });
 
     it('retorna posição comprimida quando efeméride tem moonScenePosition', () => {
-        // Posição bruta em DL; compressSceneVector aplica log-compressão em cada eixo.
+        // Posição bruta em DL; compressSceneVector comprime a MAGNITUDE radial e preserva a
+        // direção — nunca cada eixo isolado (isso distorceria a direção). Ver compressRadial.test.ts.
         const ephemeris = { moonScenePosition: [1, 0, 0] } as unknown as SceneEphemeris;
         const pos = computeMoonGeoPosition(ephemeris);
         // Resultado deve ser finito e não nulo.

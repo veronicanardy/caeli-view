@@ -55,11 +55,13 @@ Determina qual modelo 3D usar para representar um asteroide, aplicando uma hiera
 
 | Nível | Tipo | Condição |
 |-------|------|----------|
-| N1 | `real_shape` | GLB de missão científica (Bennu, Ryugu, Eros) disponível |
-| N2 | `catalog_reference` | Objeto no catálogo, mas sem GLB configurado |
+| N1 | `real_shape` | GLB de missão científica disponível (Bennu, Eros, Itokawa, Vesta, Ceres) |
+| N2 | `catalog_reference` | Objeto no catálogo, mas sem GLB configurado (ex.: Ryugu) |
 | N3 | `procedural` | Diâmetro medido + identidade orbital (SPK-ID ou designação) |
 | N4 | `procedural` | Apenas intervalo de diâmetro estimado |
 | N5 | `size_placeholder` | Sem dados físicos |
+
+A correspondência com o catálogo (N1/N2) usa o mesmo critério inequívoco do front (`asteroidModelRegistry.ts`): **aliases** batem por palavra inteira (evita "eros" em "Heros") e **números** por igualdade do campo inteiro em designation/detailIdentifier, tolerando "(N)" (evita "433" em "2000433" e números baixos como Ceres=1 em fragmentos como "2001 AB1"; o SPK-ID, que é `2000000 + número`, nunca é usado para casar número). Isso substituiu o `str_contains` anterior, que gerava falsos positivos. Os `modelUrl` apontam para os GLBs em `public/models/asteroids/`, as mesmas URLs que o front usa.
 
 O `shapeSeed` é determinístico por objeto: o mesmo asteroide sempre recebe a mesma semente, garantindo aparência consistente entre sessões.
 

@@ -39,6 +39,7 @@ import { SceneWarmup } from './SceneWarmup';
 import { LabelBackdropGate } from './LabelBackdropGate';
 import { computeEarthPosition, computeMoonGeoPosition, computeMoonPosition, computeSunDirection, planetScenePositions } from './scenePositions';
 import { useBodyFocus } from './useBodyFocus';
+import { KnownAsteroidsLayer } from './KnownAsteroidsLayer';
 // --------------- Scene ---------------
 
 type RadarSceneProps = {
@@ -74,6 +75,8 @@ type RadarSceneProps = {
     isSunFocused?: boolean;
     /** Quando false, todas as labels 3D (planetas, asteroides, Terra, Lua) ficam ocultas. */
     showLabels?: boolean;
+    /** Mostra os asteroides conhecidos (modelo exclusivo) na régua dos planetas. */
+    showKnownAsteroids?: boolean;
     /** Chamado uma única vez após o primeiro frame da cena ser renderizado na GPU. */
     onFirstFrame?: () => void;
     onFocusTrajectoryPoint?: (framing: FocusFraming) => void;
@@ -89,7 +92,7 @@ function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
     return null;
 }
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, showKnownAsteroids = false, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -266,6 +269,11 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         panelBiasX={panelBiasX}
                         panelBiasY={panelBiasY}
                     />
+
+                    {/* Conhecidos com modelo exclusivo: régua dos planetas, na região real de cada um. */}
+                    {showKnownAsteroids ? (
+                        <KnownAsteroidsLayer showLabels={showLabels} dimmed={hasSelection} />
+                    ) : null}
                 </>
             )}
 

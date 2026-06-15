@@ -122,6 +122,7 @@ export function RadarSceneCanvas({
                         fallbackSunDirection={fallbackSunDirection}
                         locale={locale}
                         showLabels={showLabels}
+                        showKnownAsteroids
                         onFirstFrame={() => {
                             setSceneReady(true);
                             // Adia o preload dos modelos reais para depois do primeiro frame:
