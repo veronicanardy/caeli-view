@@ -105,10 +105,10 @@ export function useRadar3DFocusActions({
         clearPlanetTargets();
         collapseNavigationForMobile();
 
-        // Conhecidos (régua dos planetas) não têm trajetória geocêntrica, então o cameraIntent
-        // 'object' não os enquadra. Voamos até a posição heliocêntrica deles via FocusFraming, no
-        // mesmo trilho dos planetas. Demais objetos seguem pelo cameraIntent 'object' habitual.
-        const known = knownAsteroidById(approach.id);
+        // No modo linear os famosos vêm do Horizons (posição heliocêntrica real, igual aos NEOs),
+        // então seguem o cameraIntent 'object' habitual → useSelectionFocusFraming os enquadra. Só na
+        // régua log de bastidor (sem posição geocêntrica para eles) usamos o voo Kepler dedicado.
+        const known = !linearModeEnabled() ? knownAsteroidById(approach.id) : null;
         const knownPos = known ? knownAsteroidScenePosition(known) : null;
         if (known && knownPos) {
             // Mesmo raio de enquadramento dos planetas (≈ raio visual): o corpo preenche o quadro

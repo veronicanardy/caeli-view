@@ -204,7 +204,11 @@ export function closestApproachNearPosition(
  * entram no trecho — descartá-los esconderia trajetória real.
  * Retorna posições na cena (relativas à Terra), em ordem cronológica.
  */
-export function trajectoryFramePoints(trajectory: AsteroidTrajectory, maxAgeHours = 78): THREE.Vector3[] {
+export function trajectoryFramePoints(
+    trajectory: AsteroidTrajectory,
+    maxAgeHours = 78,
+    project: PointProjector = toVec3,
+): THREE.Vector3[] {
     const now = trajectory.currentPoint?.timestamp ? new Date(trajectory.currentPoint.timestamp).getTime() : NaN;
     const cutoff = Number.isNaN(now) ? null : now - maxAgeHours * 3_600_000;
 
@@ -214,8 +218,8 @@ export function trajectoryFramePoints(trajectory: AsteroidTrajectory, maxAgeHour
         return Number.isNaN(stamp) || stamp >= cutoff;
     });
 
-    const points = kept.map((point) => toVec3(point));
-    if (trajectory.currentPoint) points.push(toVec3(trajectory.currentPoint));
+    const points = kept.map((point) => project(point));
+    if (trajectory.currentPoint) points.push(project(trajectory.currentPoint));
     return points;
 }
 

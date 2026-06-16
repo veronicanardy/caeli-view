@@ -10,37 +10,15 @@ import { useTranslation } from '@/i18n';
 import { useClosestNow } from '@/hooks/useClosestNow';
 import { useKnownAsteroidDetail } from '@/hooks/useKnownAsteroidDetail';
 import { useRadarControls } from '@/hooks/useRadarControls';
-import { KNOWN_ASTEROIDS, isKnownAsteroidId, knownAsteroidToClosestNowObject } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
+import { isKnownAsteroidId } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
 import {
     ApproachObservatoryFilters,
     AsteroidTrajectory,
-    ClosestNowResponse,
     HorizonsPositionResult,
     PageProps,
     SunDirection,
     UnifiedApproach,
 } from '@/types';
-
-/**
- * Dataset sintético do critério "Asteroides famosos": os conhecidos (Ceres, Vesta, Eros, Bennu,
- * Itokawa) como ClosestNowObjects, sem aproximação. Não consulta a API (o feed não os retorna);
- * a cena os posiciona na régua heliocêntrica via KnownAsteroidsLayer.
- */
-const FAMOUS_DATASET: ClosestNowResponse = {
-    mode: 'closest_now',
-    selectionMode: 'famous',
-    generatedAt: '',
-    window: { dateMin: '', dateMax: '' },
-    requestedLimit: KNOWN_ASTEROIDS.length,
-    candidatesEvaluated: KNOWN_ASTEROIDS.length,
-    objects: KNOWN_ASTEROIDS.map(knownAsteroidToClosestNowObject),
-    lunarReference: {
-        distanceKm: 384_400,
-        earthDiametersApprox: 30,
-        label: '',
-        description: '',
-    },
-};
 
 const DailyOrbitalRadar3D = lazy(() =>
     import('@/Components/Radar/DailyOrbitalRadar3D').then((module) => ({ default: module.DailyOrbitalRadar3D })),
@@ -77,12 +55,13 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
         refreshNonce,
     );
 
-    // No critério "famosos" a cena usa o dataset sintético dos conhecidos (sem rede, sem erro);
-    // nos demais, os dados do feed. Tudo a jusante consome `closestNowData` indistintamente.
+    // O critério "famosos" também vem do backend agora (endpoint /radar/famous, via useClosestNow),
+    // com posição e trilha curta do Horizons. Tudo a jusante consome `closestNowData` indistintamente.
+    // `isFamous` segue só para o detalhe SBDB progressivo do famoso em foco.
     const isFamous = selectionMode === 'famous';
-    const closestNowData = isFamous ? FAMOUS_DATASET : fetchedData;
-    const closestNowLoading = isFamous ? false : fetchLoading;
-    const closestNowError = isFamous ? null : fetchError;
+    const closestNowData = fetchedData;
+    const closestNowLoading = fetchLoading;
+    const closestNowError = fetchError;
 
     const closestNowApproaches = useMemo<UnifiedApproach[]>(() => {
         if (!closestNowData) return [];

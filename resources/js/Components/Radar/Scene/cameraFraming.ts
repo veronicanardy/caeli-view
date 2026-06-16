@@ -178,14 +178,16 @@ export function computeFocusFraming(
     linearScale: number | null = null,
 ): FocusFraming | null {
     // Modo linear: o objeto vive na régua heliocêntrica (Sol na origem), não offsetado pela Terra.
-    // Mira a posição heliocêntrica absoluta; distância de câmera proporcional à escala da régua.
+    // Mira a posição heliocêntrica absoluta da rocha. A DISTÂNCIA é a mesma do close-up log
+    // (SELECTION_DISTANCE = 0.1): o MODELO da rocha tem o mesmo tamanho visual nas duas réguas (a
+    // escala da régua move posições, não corpos), então 0,1 dá zoom total na rocha E cai na faixa em
+    // que a lupa de "ver trajetória" aparece. Proporcional à régua (0.02×escala) afastava demais.
     if (linearScale != null && earthHelioPositionAU && !orbitMode) {
         const helioPos = currentPositionInHelioScene(object, earthHelioPositionAU);
         if (helioPos) {
             const target = new THREE.Vector3(...helioPos);
             const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
-            // ~0,02 AU de afastamento na escala da régua: enquadra o NEO de perto sem colar.
-            const distance = Math.max(0.02 * linearScale, 0.3);
+            const distance = 0.1;
             return { target, position: target.clone().add(dir.multiplyScalar(distance)), transition: 'preserve_heading' };
         }
     }

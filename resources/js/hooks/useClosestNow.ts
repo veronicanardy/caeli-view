@@ -45,33 +45,28 @@ export function useClosestNow(
     );
 
     useEffect(() => {
-        // Modo "famous" não consulta o feed de aproximação: a cena mostra os asteroides conhecidos
-        // (posição heliocêntrica fixa, sem evento de aproximação), então não há nada a buscar na API.
-        if (mode === 'famous') {
-            staleDataRef.current = null;
-            resolvedParamsRef.current = currentParams;
-            setData(null);
-            setError(null);
-            setFetchLoading(false);
-            return;
-        }
-
         const controller = new AbortController();
         setFetchLoading(true);
         setError(null);
 
-        const params = new URLSearchParams({
-            date_min: dateMin,
-            date_max: dateMax,
-            limit:    String(limit),
-            mode,
-        });
+        // Modo "famous" busca os asteroides famosos por um endpoint próprio (lista fixa, posição e
+        // trilha curta do Horizons em lote), em vez do feed de aproximações. O shape da resposta é o
+        // mesmo (ClosestNowResponse), então todo o resto a jusante consome igual aos demais modos.
+        const params = new URLSearchParams(
+            mode === 'famous'
+                ? {}
+                : { date_min: dateMin, date_max: dateMax, limit: String(limit), mode },
+        );
         if (refreshNonce > 0) params.set('force_refresh', '1');
+
+        const endpoint = mode === 'famous' ? '/radar/famous' : '/radar/closest-now';
 
         const headers: HeadersInit = { Accept: 'application/json' };
         if (refreshNonce > 0) headers['Cache-Control'] = 'no-cache';
 
-        fetch(`/radar/closest-now?${params.toString()}`, {
+        const query = params.toString();
+
+        fetch(query ? `${endpoint}?${query}` : endpoint, {
             signal:      controller.signal,
             credentials: 'same-origin',
             headers,

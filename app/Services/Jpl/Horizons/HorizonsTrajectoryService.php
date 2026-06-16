@@ -125,7 +125,7 @@ final class HorizonsTrajectoryService
      * @param  array{startOffsetHours: int, stopOffsetHours: int, stepSize: string}  $window
      *         Ex.: ['startOffsetHours' => -24, 'stopOffsetHours' => 72, 'stepSize' => '1 hours']
      */
-    public function trajectoryAroundNow(array $object, array $window): array
+    public function trajectoryAroundNow(array $object, array $window, bool $forceRefresh = false): array
     {
         $startOffset = (int) ($window['startOffsetHours'] ?? -24);
         $stopOffset = (int) ($window['stopOffsetHours'] ?? 72);
@@ -142,6 +142,13 @@ final class HorizonsTrajectoryService
             $stepSize,
             self::NOW_TRAJECTORY_CACHE_VERSION,
         ]));
+
+        // force_refresh do endpoint precisa chegar até aqui: o cache externo do selector sozinho não
+        // cura uma trajetória envenenada (valor absurdo gravado por código antigo), porque ela vive
+        // nesta chave interna. Esquecê-la força uma releitura limpa do Horizons.
+        if ($forceRefresh) {
+            Cache::forget($key);
+        }
 
         $cached = Cache::get($key);
         if (is_array($cached)) {

@@ -45,7 +45,13 @@
 
 ## Câmera e enquadramento
 
-Constantes de câmera ficam em `cameraConstants.ts`. Cálculos de enquadramento ficam em `cameraFraming.ts`. `CameraRig.tsx` apenas executa transições de câmera a partir de intenções explícitas e devolve o controle ao usuário quando há interação.
+Constantes de câmera ficam em `cameraConstants.ts`. Cálculos de enquadramento ficam em `cameraFraming.ts`. `CameraRig.tsx` apenas executa transições de câmera a partir de intenções explícitas.
+
+O voo da câmera é **ininterrupto**: enquanto um tween está em andamento, o `CameraRig` desabilita os OrbitControls (`controls.enabled = false`), e as demais camadas de input (`InertialZoom`, `TouchGestures`, `KeyboardPan`) respeitam esse flag. Assim rotação, pan, zoom (roda/pinça) e teclado ficam inertes durante a navegação, que segue até o destino. O controle volta ao usuário automaticamente quando a câmera chega.
+
+O voo em si é o lerp suave original (fator 0,055, com `controls.update()` por frame); ao cruzar o limiar de proximidade o tween termina e os controles são reabilitados. Não há teleporte nem encaixe no fim: o lerp desacelera de forma assintótica e a câmera já está praticamente imóvel quando o controle volta, sem "tranco" perceptível. A única diferença em relação ao comportamento anterior é que a interação não cancela mais o voo no meio, ela só fica inerte até a chegada.
+
+Como o voo desabilita os OrbitControls, é obrigatório garantir a soltura. O foco de asteroide usa `transition: 'preserve_heading'` e mira um alvo distante (a rocha na escala da cena); com damping, o teste de proximidade `1e-4` pode oscilar e nunca cruzar, deixando os controles presos em `disabled` (o usuário não conseguiria mais girar/zoom depois de chegar). Por isso há o teto `MAX_TWEEN_FRAMES`: ao atingi-lo o tween encerra e reabilita os controles **sem mexer na câmera** (não teleporta, o lerp para onde já está, então sem tranco). É só rede de segurança, ~3,3s a 60fps, bem além de qualquer voo real.
 
 ## Cena radar/geocêntrica
 

@@ -91,7 +91,7 @@ export function Tooltip({
     const transformOrigin = side === 'right'
         ? 'translateY(-50%)'
         : side === 'top'
-            ? 'translateX(-50%)'
+            ? 'translate(-50%, -100%)'
             : 'translateX(-50%)';
 
     const arrowClass = side === 'right'

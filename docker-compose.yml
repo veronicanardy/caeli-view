@@ -22,9 +22,11 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
       VITE_HMR_HOST: localhost
-      NASA_TIMEOUT_SECONDS: 3
+      NASA_TIMEOUT_SECONDS: 8
       NASA_RETRY_TIMES: 0
-      JPL_TIMEOUT_SECONDS: 3
+      # Horizons responde rotineiramente em ~5s (Bennu, um SPK merged maior, beira isso): 3s
+      # estourava sempre e jogava o objeto no fallback simbólico. 20s dá folga real.
+      JPL_TIMEOUT_SECONDS: 20
       JPL_RETRY_TIMES: 0
       HOME_OBSERVATORY_FEED_ENABLED: "false"
     command: >

@@ -156,7 +156,7 @@ final class ClosestNowSelector
         $full = Cache::flexible(
             $cacheKey,
             [self::RESULT_CACHE_TTL_SECONDS, self::RESULT_CACHE_TTL_SECONDS + 900],
-            fn (): array => $this->resolve($dateMin, $dateMax, $mode, $limit, $anchor),
+            fn (): array => $this->resolve($dateMin, $dateMax, $mode, $limit, $anchor, $forceRefresh),
         );
 
         // Resultado vazio causado por falha das fontes (não por ausência real de objetos)
@@ -193,7 +193,7 @@ final class ClosestNowSelector
      * `$limit + HORIZONS_MARGIN` primeiros têm posição real do Horizons. O slice
      * final para o $limit pedido é aplicado pelo chamador (select).
      */
-    private function resolve(string $dateMin, string $dateMax, string $mode, int $limit = self::TOP_RESULT_LIMIT, string $anchor = ''): array
+    private function resolve(string $dateMin, string $dateMax, string $mode, int $limit = self::TOP_RESULT_LIMIT, string $anchor = '', bool $forceRefresh = false): array
     {
         // Âncora para filtros por data (modo 'upcoming'): usa o valor fornecido ou cai para $dateMin.
         $anchorDate = $anchor !== '' ? $anchor : $dateMin;
@@ -258,7 +258,7 @@ final class ClosestNowSelector
 
         // Passo 4: busca trajetórias do Horizons apenas para os candidatos prioritários.
         $started      = microtime(true);
-        $trajectories = $this->fetchTrajectoriesParallel($priorityCandidates);
+        $trajectories = $this->fetchTrajectoriesParallel($priorityCandidates, $forceRefresh);
         $elapsed      = round((microtime(true) - $started) * 1000);
 
         $horizonsOk    = count(array_filter($trajectories, fn ($t) => ($t['status'] ?? null) === 'available'));
@@ -454,10 +454,13 @@ final class ClosestNowSelector
      * mantêm a concorrência útil sem saturar a conexão com o JPL.
      * Entre lotes há uma pausa de 300ms para não bater no rate-limit da API.
      *
+     * $forceRefresh chega até o cache interno de cada trajetória (trajectoryAroundNow), curando
+     * valores envenenados que o cache externo do select() sozinho não alcança.
+     *
      * @param  array<int, array<string, mixed>>   $candidates
      * @return array<string, array<string, mixed>>
      */
-    private function fetchTrajectoriesParallel(array $candidates): array
+    private function fetchTrajectoriesParallel(array $candidates, bool $forceRefresh = false): array
     {
         $tasks = [];
 
@@ -469,7 +472,7 @@ final class ClosestNowSelector
             $payload    = $this->toHorizonsPayload($approach);
             $distKm     = isset($approach['nominalDistanceKm']) ? (float) $approach['nominalDistanceKm'] : null;
             $window     = $this->trajectoryWindowFor($distKm);
-            $tasks[$id] = fn () => $this->horizons->trajectoryAroundNow($payload, $window);
+            $tasks[$id] = fn () => $this->horizons->trajectoryAroundNow($payload, $window, $forceRefresh);
         }
 
         if ($tasks === []) {

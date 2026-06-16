@@ -91,6 +91,24 @@ TEXT;
         $this->assertSame(400.0, $points[1]['x']);
     }
 
+    public function test_parse_vector_points_drops_physically_impossible_geocentric_distance(): void
+    {
+        // Regressão: efemérides de outro corpo entraram sob o id de Eros e o card mostrou ~5,2 bilhões
+        // de km (≈35 UA), impossível para um objeto deste radar. O ponto absurdo deve ser descartado
+        // para nunca chegar ao card nem ser gravado no cache de trajetória. O limite é 750 M km (≈5 UA);
+        // o range abaixo (5,2e9 km) está muito acima dele, o válido (1,6e8 km) está bem dentro.
+        $text = <<<'TEXT'
+$$SOE
+2461205.291666667, A.D. 2026-Jun-13 19:00:00.0000, 2962727492.27, -4260262563.53, -379044946.78, -24.37, 5.93, -1.44, 17355.0, 5203005513.68, -18.63
+2461207.500000000, A.D. 2026-Jun-16 00:00:00.0000, -153355633.18, 33371484.76, -39240332.91, -19.28, -20.78, -0.99, 539.0, 161775801.50, 14.23
+$$EOE
+TEXT;
+        $points = $this->pointArrays($text);
+
+        $this->assertCount(1, $points, 'O ponto com distância geocêntrica impossível deve ser descartado.');
+        $this->assertEqualsWithDelta(161775801.50, $points[0]['rangeKm'], 1e-2);
+    }
+
     public function test_parse_vector_points_returns_empty_array_when_sentinels_missing(): void
     {
         $this->assertSame([], $this->parser()->parseVectorPoints('no sentinels here'));

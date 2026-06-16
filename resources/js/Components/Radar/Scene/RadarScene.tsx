@@ -111,6 +111,17 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
         [closestNowObjects, selectedId],
     );
+    // Famosos que já têm posição real do Horizons (trajectory disponível): a camada de fallback
+    // Kepler (KnownAsteroidsLayer) pula esses e só desenha os que o Horizons não resolveu, evitando
+    // duplicar a rocha (uma do AsteroidSceneLayer, outra do Kepler).
+    const knownWithRealPosition = useMemo(
+        () => new Set(
+            closestNowObjects
+                .filter((o) => o.trajectory?.status === 'available')
+                .map((o) => o.approach.id),
+        ),
+        [closestNowObjects],
+    );
     // A seleção exibe a trajetória geocêntrica local. A órbita Kepleriana solar aparece somente
     // após o usuário solicitar o enquadramento recuado de órbita.
     const selectedHasOrbit = useMemo(
@@ -261,44 +272,51 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         isFocused={isSunFocused}
                         showLabel={showLabels}
                     />
-                    {/* Terra na posição heliocêntrica real. */}
-                    <group position={earthPos}>
-                        <Earth
-                            onFocus={focusEarth}
-                            sunDirection={sunDir}
-                            subsolarLatDeg={ephemeris?.subsolarLatDeg ?? 0}
-                            subsolarLonDeg={ephemeris?.subsolarLonDeg ?? 0}
-                            showLabel={showLabels && !orbitLabelsOnly}
-                            protectLabelFromFocus={bodyFocus?.body !== 'earth'}
-                            isFocused={bodyFocus?.body === 'earth'}
-                        />
-                        <SceneRingsLayer onEarthFocus={focusEarth} showLabels={showLabels && !compactLabels && !orbitLabelsOnly} />
-                    </group>
-                    {/* Lua: position absoluto para o grupo 3D e labels; geocentricPosition para tidal lock. */}
-                    <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} illuminatedFraction={ephemeris?.moonIlluminatedFraction} radiusScale={linearScene ? 0.54 : 1} />
-                    {showLabels ? <MoonOrbit moonPos={moonPos} earthPos={earthPos} orbitNormal={moonOrbitNormal} /> : null}
-                    {/* Planetas — posições heliocêntricas reais, Sol na origem. */}
-                    <PlanetLayer
-                        {...planetPositions}
-                        locale={locale}
-                        showLabels={showLabels}
-                        onFocusMercury={onFocusMercury}
-                        isMercuryFocused={isMercuryFocused}
-                        onFocusVenus={onFocusVenus}
-                        isVenusFocused={isVenusFocused}
-                        onFocusMars={onFocusMars}
-                        isMarsFocused={isMarsFocused}
-                        onFocusJupiter={onFocusJupiter}
-                        isJupiterFocused={isJupiterFocused}
-                        onFocusSaturn={onFocusSaturn}
-                        isSaturnFocused={isSaturnFocused}
-                        onFocusUranus={onFocusUranus}
-                        isUranusFocused={isUranusFocused}
-                        onFocusNeptune={onFocusNeptune}
-                        isNeptuneFocused={isNeptuneFocused}
-                    />
-                    {/* Elipses orbitais — longitude do periélio calculada dinamicamente da efeméride. */}
-                    <PlanetOrbitLayer ephemeris={ephemeris} show={showLabels && !orbitLabelsOnly} />
+                    {/* [Modo linear] No modo órbita Kepler deixamos só o Sol e a rocha focada com sua
+                        elipse: Terra, Lua e os demais planetas (e suas órbitas) somem para a elipse do
+                        objeto ser lida sem ruído. Fora do modo órbita, a cena completa volta. */}
+                    {!linearShowFullOrbit ? (
+                        <>
+                            {/* Terra na posição heliocêntrica real. */}
+                            <group position={earthPos}>
+                                <Earth
+                                    onFocus={focusEarth}
+                                    sunDirection={sunDir}
+                                    subsolarLatDeg={ephemeris?.subsolarLatDeg ?? 0}
+                                    subsolarLonDeg={ephemeris?.subsolarLonDeg ?? 0}
+                                    showLabel={showLabels && !orbitLabelsOnly}
+                                    protectLabelFromFocus={bodyFocus?.body !== 'earth'}
+                                    isFocused={bodyFocus?.body === 'earth'}
+                                />
+                                <SceneRingsLayer onEarthFocus={focusEarth} showLabels={showLabels && !compactLabels && !orbitLabelsOnly} />
+                            </group>
+                            {/* Lua: position absoluto para o grupo 3D e labels; geocentricPosition para tidal lock. */}
+                            <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} illuminatedFraction={ephemeris?.moonIlluminatedFraction} radiusScale={linearScene ? 0.54 : 1} />
+                            {showLabels ? <MoonOrbit moonPos={moonPos} earthPos={earthPos} orbitNormal={moonOrbitNormal} /> : null}
+                            {/* Planetas — posições heliocêntricas reais, Sol na origem. */}
+                            <PlanetLayer
+                                {...planetPositions}
+                                locale={locale}
+                                showLabels={showLabels}
+                                onFocusMercury={onFocusMercury}
+                                isMercuryFocused={isMercuryFocused}
+                                onFocusVenus={onFocusVenus}
+                                isVenusFocused={isVenusFocused}
+                                onFocusMars={onFocusMars}
+                                isMarsFocused={isMarsFocused}
+                                onFocusJupiter={onFocusJupiter}
+                                isJupiterFocused={isJupiterFocused}
+                                onFocusSaturn={onFocusSaturn}
+                                isSaturnFocused={isSaturnFocused}
+                                onFocusUranus={onFocusUranus}
+                                isUranusFocused={isUranusFocused}
+                                onFocusNeptune={onFocusNeptune}
+                                isNeptuneFocused={isNeptuneFocused}
+                            />
+                            {/* Elipses orbitais — longitude do periélio calculada dinamicamente da efeméride. */}
+                            <PlanetOrbitLayer ephemeris={ephemeris} show={showLabels && !orbitLabelsOnly} />
+                        </>
+                    ) : null}
 
                     {/* [Modo linear] Órbita completa do NEO ao redor do Sol — só sob demanda (botão
                         "Ver a órbita ao redor do Sol" → orbitMode). Por padrão a cena mostra apenas a
@@ -328,29 +346,38 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         />
                     ) : null}
 
-                    {/* Asteroides e trajetórias: vetores Horizons log-comprimidos, offsetados pela Terra na cena. */}
-                    <AsteroidSceneLayer
-                        closestNowObjects={closestNowObjects}
-                        selectedId={selectedId}
-                        hasSelection={hasSelection}
-                        earthPos={earthPos}
-                        onSelect={onSelect}
-                        showLabels={showLabels}
-                        showLabelForObject={showLabelForObject}
-                        onFocusTrajectoryPoint={onFocusTrajectoryPoint}
-                        panelBiasX={panelBiasX}
-                        panelBiasY={panelBiasY}
-                        helioScene={linearModeEnabled()}
-                        earthHelioAU={ephemeris?.earthHelioPositionAU ?? null}
-                        skipObjectId={linearFocusBodyPosition ? focusedObject?.approach.id ?? null : null}
-                    />
+                    {/* Asteroides e trajetórias: vetores Horizons log-comprimidos, offsetados pela Terra na cena.
+                        No modo órbita Kepler (elipse visível) a camada inteira some: a rocha focada já é
+                        desenhada sobre a elipse (linearFocusBodyPosition acima), e queremos só ela + o Sol,
+                        sem os demais objetos nem a trilha curta. */}
+                    {!(linearShowFullOrbit && linearFocusOrbit) ? (
+                        <AsteroidSceneLayer
+                            closestNowObjects={closestNowObjects}
+                            selectedId={selectedId}
+                            hasSelection={hasSelection}
+                            earthPos={earthPos}
+                            onSelect={onSelect}
+                            showLabels={showLabels}
+                            showLabelForObject={showLabelForObject}
+                            onFocusTrajectoryPoint={onFocusTrajectoryPoint}
+                            panelBiasX={panelBiasX}
+                            panelBiasY={panelBiasY}
+                            helioScene={linearModeEnabled()}
+                            earthHelioAU={ephemeris?.earthHelioPositionAU ?? null}
+                            skipObjectId={linearFocusBodyPosition ? focusedObject?.approach.id ?? null : null}
+                        />
+                    ) : null}
 
-                    {/* Conhecidos com modelo exclusivo: régua dos planetas, na região real de cada um. */}
-                    {showKnownAsteroids ? (
+                    {/* Conhecidos com modelo exclusivo: fallback de posição. Os famosos agora fluem
+                        pelo AsteroidSceneLayer com posição real do Horizons. Esta camada só desenha
+                        (via Kepler local) os famosos cujo Horizons falhou (trajectory null) — para que
+                        nenhum famoso suma da cena. Os que têm posição real são pulados via skipIds. */}
+                    {showKnownAsteroids && !(linearShowFullOrbit && linearFocusOrbit) ? (
                         <KnownAsteroidsLayer
                             showLabels={showLabels}
                             selectedId={selectedId}
                             auScale={linearModeEnabled() ? LINEAR_AU_SCALE : undefined}
+                            skipIds={knownWithRealPosition}
                             onSelect={(known) => {
                                 const object = closestNowObjects.find((o) => o.approach.id === knownAsteroidId(known));
                                 if (object) onSelect(object.approach);

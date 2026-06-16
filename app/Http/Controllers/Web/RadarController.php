@@ -10,6 +10,7 @@ use App\Http\Requests\RadarTrajectoryRequest;
 use App\Http\Requests\SmallBodyLookupRequest;
 use App\Services\Approaches\AsteroidModelResolverService;
 use App\Services\Approaches\ClosestNowSelector;
+use App\Services\Approaches\FamousAsteroidsSelector;
 use App\Services\Approaches\RadarService;
 use App\Services\Jpl\Horizons\HorizonsTrajectoryService;
 use App\Services\Jpl\Sbdb\SmallBodyService;
@@ -28,6 +29,7 @@ class RadarController
         private readonly AsteroidModelResolverService $asteroidModels,
         private readonly HorizonsTrajectoryService $horizons,
         private readonly ClosestNowSelector $closestNow,
+        private readonly FamousAsteroidsSelector $famous,
         private readonly SmallBodyService $smallBodies,
     ) {
     }
@@ -86,6 +88,28 @@ class RadarController
         }
 
         return response()->json($payload)->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * Responsabilidade: retorna os asteroides famosos (Ceres, Vesta, Eros, Bennu, Itokawa) com
+     * posição e trilha curta de movimento do JPL Horizons, no mesmo shape do closest-now.
+     *
+     * Lista fixa (não passa pelo feed de aproximações): o único parâmetro aceito é force_refresh.
+     */
+    public function famous(RadarClosestNowRequest $request): JsonResponse
+    {
+        $forceRefresh = (bool) ($request->input('force_refresh', false));
+
+        try {
+            $payload = $this->famous->select($forceRefresh);
+        } catch (\Throwable $e) {
+            Log::error('[famous] falha ao resolver asteroides famosos', ['error' => $e->getMessage()]);
+
+            $payload = $this->emptyClosestNowPayload('famous', '', '', 5);
+        }
+
+        return response()->json($payload)
+            ->header('Cache-Control', 'public, max-age=1800, stale-while-revalidate=1800');
     }
 
     /**

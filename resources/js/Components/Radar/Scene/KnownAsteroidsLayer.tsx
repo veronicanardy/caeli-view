@@ -1,17 +1,16 @@
 /**
- * Camada dos asteroides conhecidos (Bennu, Eros, Ceres, Vesta, Itokawa) na cena do radar.
+ * Camada de FALLBACK dos asteroides conhecidos (Bennu, Eros, Ceres, Vesta, Itokawa) na cena do radar.
  *
- * Responsabilidade: renderizar os asteroides com modelo 3D exclusivo na régua LINEAR dos planetas
- * (Sol na origem), ao lado da região real de cada um. As posições vêm de knownAsteroids (Kepler +
- * helioAUToSunCenteredScene); esta camada só desenha modelo, label e hitbox de clique/hover.
+ * Responsabilidade: desenhar (modelo 3D exclusivo, label e hitbox) os famosos cuja posição NÃO veio do
+ * Horizons, na régua LINEAR dos planetas (Sol na origem), via Kepler local (knownAsteroids: Kepler +
+ * helioAUToSunCenteredScene). É a rede de segurança para que nenhum famoso suma quando o Horizons falha.
+ *
+ * Caminho principal: os famosos agora vêm do feed /radar/famous com posição real do Horizons e são
+ * desenhados pelo AsteroidSceneLayer (igual aos NEOs). Esta camada recebe `skipIds` com os famosos que
+ * já têm posição real e os PULA, evitando duplicar a rocha.
  *
  * Por que vive no espaço heliocêntrico (e não offsetada pela Terra): estes objetos são distantes e
- * usam a mesma escala dos planetas, então caem ao lado deles sem a compressão log do radar. É a
- * resposta a "se está perto de Júpiter, aparece perto de Júpiter".
- *
- * Escala VISUAL deriva do diâmetro REAL, comprimida em log (knownAsteroidVisualScale): preserva a
- * ordem de tamanho (Ceres ≫ Bennu) sem que os menores sumam nem os maiores dominem a cena. A POSIÇÃO
- * é fiel; o TAMANHO é uma compressão honesta em ordem de grandeza, como o resto da cena.
+ * usam a mesma escala dos planetas, então caem ao lado deles sem a compressão log do radar.
  *
  * São exibidos apenas no critério "Asteroides famosos" (SelectionMode 'famous'), que oculta o feed
  * de aproximação. Como os dois conjuntos nunca coexistem, não há duplicação a tratar aqui.
@@ -40,6 +39,11 @@ type KnownAsteroidsLayerProps = {
     selectedId?: string | null;
     /** Escala AU própria (modo linear); default = ORBIT_AU_SCALE da régua normal. */
     auScale?: number;
+    /**
+     * Ids de conhecidos que já têm posição real do Horizons (desenhados pelo AsteroidSceneLayer).
+     * Esta camada (Kepler local) os PULA, atuando só como fallback dos que o Horizons não resolveu.
+     */
+    skipIds?: Set<string>;
     /** Abre o card do conhecido clicado. */
     onSelect?: (known: KnownAsteroid) => void;
 };
@@ -49,7 +53,7 @@ type KnownAsteroidsLayerProps = {
  * cada um na região real onde está. As posições são recalculadas por render a partir da data atual
  * (barato: 5 propagações de Kepler).
  */
-export function KnownAsteroidsLayer({ showLabels, selectedId, auScale, onSelect }: KnownAsteroidsLayerProps) {
+export function KnownAsteroidsLayer({ showLabels, selectedId, auScale, skipIds, onSelect }: KnownAsteroidsLayerProps) {
     const placements = useMemo(() => knownAsteroidPlacements(new Date(), auScale), [auScale]);
     const hasSelection = Boolean(selectedId);
 
@@ -57,6 +61,8 @@ export function KnownAsteroidsLayer({ showLabels, selectedId, auScale, onSelect 
         <group>
             {placements.map(({ known, scenePosition }) => {
                 const id = knownAsteroidId(known);
+                // Pula os que já têm posição real do Horizons (desenhados pelo AsteroidSceneLayer).
+                if (skipIds?.has(id)) return null;
                 const isSelected = id === selectedId;
                 return (
                     <KnownAsteroidBody

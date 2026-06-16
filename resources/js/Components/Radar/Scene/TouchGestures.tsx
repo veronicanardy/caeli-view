@@ -38,6 +38,7 @@ const _pinchToTarget = new THREE.Vector3();
 
 type Controls = {
     target: THREE.Vector3;
+    enabled: boolean;
     update: () => void;
     dispatchEvent?: (e: { type: string }) => void;
 };
@@ -61,6 +62,8 @@ export function TouchGestures({ minDistance, maxDistance }: { minDistance: numbe
         const el = gl.domElement;
 
         const onTouchStart = (e: TouchEvent) => {
+            // Câmera em voo (controls desabilitados): navegação ininterrupta, ignora o gesto.
+            if (controls && !controls.enabled) return;
             touchCount.current = e.touches.length;
             isDragging.current = false;
 
@@ -79,6 +82,7 @@ export function TouchGestures({ minDistance, maxDistance }: { minDistance: numbe
         };
 
         const onTouchMove = (e: TouchEvent) => {
+            if (controls && !controls.enabled) return;
             touchCount.current = e.touches.length;
 
             if (e.touches.length === 1 && primaryStart.current) {

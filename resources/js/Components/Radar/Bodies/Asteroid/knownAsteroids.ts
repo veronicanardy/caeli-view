@@ -1,14 +1,14 @@
 /**
- * Asteroides conhecidos com identidade fixa e modelo 3D exclusivo, exibidos no radar mesmo
- * quando NÃO fazem aproximação próxima da Terra.
+ * Asteroides conhecidos com identidade fixa e modelo 3D exclusivo (Ceres, Vesta, Eros, Bennu, Itokawa).
  *
- * Responsabilidade: guardar os elementos orbitais osculadores (eclíptico J2000) e a identidade
- * dos asteroides famosos por missões espaciais, para que a cena possa posicioná-los na régua
- * LINEAR dos planetas (helioAUToSunCenteredScene) — ao lado do planeta/região real onde estão.
+ * Responsabilidade: guardar a identidade desses corpos (número, nome, modelo, ids sintéticos) e os
+ * elementos orbitais osculadores (eclíptico J2000) usados como POSIÇÃO DE FALLBACK na régua LINEAR
+ * dos planetas (helioAUToSunCenteredScene), via propagador de Kepler (heliocentricPositionAU).
  *
- * Por que aqui e não no feed: Bennu, Eros, Ceres, Vesta e Itokawa raramente passam perto da Terra,
- * então o feed de aproximações (closest-now) não os retorna. Para mostrá-los "onde estão agora" no
- * Sistema Solar, usamos os elementos abaixo + o propagador de Kepler (heliocentricPositionAU).
+ * A posição PRINCIPAL agora vem do JPL Horizons ao vivo (endpoint /radar/famous → FamousAsteroidsSelector
+ * no backend), igual a qualquer outro objeto da cena. Estes elementos só entram quando o Horizons falha
+ * para um famoso (KnownAsteroidsLayer, via skipIds), garantindo que nenhum suma. A identidade aqui ainda
+ * é a fonte para casar o GLB e o id sintético (knownAsteroidId / knownAsteroidById) na cena.
  *
  * Fonte dos elementos: JPL Small-Body Database (ssd.jpl.nasa.gov/tools/sbdb_lookup.html), elementos
  * osculadores na época indicada. São valores fixos: a precisão é de visualização, não de efeméride
@@ -18,11 +18,10 @@
  * posição (elementos abaixo) ficam desacopladas, exatamente como nos asteroides do feed.
  */
 
-import type { ClosestNowObject, OrbitalElements, SmallBodyObjectType, UnifiedApproach } from '@/types';
+import type { OrbitalElements, SmallBodyObjectType } from '@/types';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
 import { helioAUToSunCenteredScene } from '@/lib/sceneEphemeris';
 import { MARS } from '@/lib/radar/planetData';
-import { KM_PER_AU } from '@/lib/physicalConstants';
 import type { AsteroidModelAsset } from './asteroidModelRegistry';
 import { REAL_ASTEROID_MODELS } from './asteroidModelRegistry';
 
@@ -134,25 +133,6 @@ export function knownAsteroidScenePosition(
 }
 
 /**
- * Distância REAL Terra→conhecido em km, calculada por geometria heliocêntrica (sem Horizons):
- * |posição_conhecido − posição_Terra|, ambas em AU eclíptico. O Horizons daria o mesmo número, mas
- * estes corpos não passam pelo feed; como já temos os dois vetores heliocêntricos (Kepler + Terra do
- * ephemeris), a subtração é exata o bastante para exibir no card. Retorna null se não for ancorável.
- */
-export function knownAsteroidEarthDistanceKm(
-    known: KnownAsteroid,
-    earthHelioAU: { x: number; y: number; z: number },
-    date: Date = new Date(),
-): number | null {
-    const helio = heliocentricPositionAU(known.elements, date);
-    if (!helio) return null;
-    const dx = helio.x - earthHelioAU.x;
-    const dy = helio.y - earthHelioAU.y;
-    const dz = helio.z - earthHelioAU.z;
-    return Math.sqrt(dx * dx + dy * dy + dz * dz) * KM_PER_AU;
-}
-
-/**
  * Posições de todos os conhecidos que puderam ser ancorados em `date`, na régua dos planetas.
  * `scale` permite a escala própria do modo linear (default = ORBIT_AU_SCALE da régua normal).
  */
@@ -197,59 +177,4 @@ export function knownAsteroidById(id: string | null | undefined): KnownAsteroid 
     if (!isKnownAsteroidId(id)) return null;
     const number = (id as string).slice(KNOWN_ASTEROID_ID_PREFIX.length);
     return KNOWN_ASTEROIDS.find((k) => k.number === number) ?? null;
-}
-
-/**
- * Converte um conhecido num ClosestNowObject sintético para alimentar o card de rocha
- * (UnifiedFocusCard, kind 'asteroid'). NÃO há aproximação: trajectory e campos de distância/data
- * ficam null de propósito. O card já trata esses nulos (esconde aba de aproximação, distância etc.),
- * então o usuário vê o perfil físico (diâmetro, tamanho comparado) e a identidade.
- */
-export function knownAsteroidToClosestNowObject(known: KnownAsteroid): ClosestNowObject {
-    const approach: UnifiedApproach = {
-        id: knownAsteroidId(known),
-        source: 'cad',
-        sourceLabel: 'JPL Small-Body Database',
-        name: known.name,
-        displayName: known.name,
-        designation: known.number,
-        permanentNumber: known.number,
-        properName: known.name,
-        aliases: [known.name.toLowerCase()],
-        objectType: known.objectType,
-        approachDate: null,
-        approachBody: null,
-        nominalDistanceKm: null,
-        nominalDistanceMiles: null,
-        lunarDistance: null,
-        relativeVelocityKph: null,
-        relativeVelocityKms: null,
-        estimatedDiameterMinMeters: known.diameterMeters,
-        estimatedDiameterMaxMeters: known.diameterMeters,
-        diameterMeters: known.diameterMeters,
-        hazardFlag: false,
-        detailIdentifier: known.number,
-        detailSource: 'sbdb',
-        detailRoute: '',
-        orbitId: null,
-        absoluteMagnitude: null,
-        distanceContext: {
-            kilometers: null,
-            miles: null,
-            lunarDistance: null,
-            lunarReferenceKm: 384_400,
-            earthDiametersApprox: null,
-            proximityBand: 'unknown',
-            headline: '',
-            comparison: '',
-        },
-    };
-
-    return {
-        approach,
-        trajectory: null,
-        currentDistanceKm: null,
-        currentDistanceLD: null,
-        hasRealCurrentDistance: false,
-    };
 }

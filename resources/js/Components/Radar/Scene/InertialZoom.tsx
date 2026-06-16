@@ -22,7 +22,7 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
     const { camera } = useThree();
     const gl = useThree((s) => s.gl);
     const controls = useThree((s) => s.controls) as unknown as
-        | { target: THREE.Vector3; update: () => void; dispatchEvent?: (e: { type: string }) => void }
+        | { target: THREE.Vector3; enabled: boolean; update: () => void; dispatchEvent?: (e: { type: string }) => void }
         | null;
 
     // Velocidade de zoom acumulada em unidades de log-distância (negativo = aproximando).
@@ -34,9 +34,9 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
         const onWheel = (event: WheelEvent) => {
             event.preventDefault(); // impede scroll da página durante zoom na cena
 
-            // Tratar scroll como interação do usuário para que o CameraRig (que escuta 'start')
-            // devolva o controle durante uma transição em andamento, evitando conflito com o dolly.
-            controls?.dispatchEvent?.({ type: 'start' });
+            // Enquanto a câmera está em voo (CameraRig desabilita os controls), o zoom fica
+            // inerte: a navegação é ininterrupta e a roda não deve desviar o dolly.
+            if (controls && !controls.enabled) return;
 
             // deltaY é ~±100 por clique; escala para um incremento suave de velocidade por clique.
             // Normalizar pelo modo de delta (linha/página) mantém trackpads e mouses comparáveis.

@@ -12,7 +12,6 @@ import {
     knownAsteroidId,
     knownAsteroidPlacements,
     knownAsteroidScenePosition,
-    knownAsteroidToClosestNowObject,
     modelAssetForKnown,
 } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
 import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
@@ -128,7 +127,7 @@ describe('régua única (planetas) para todos os conhecidos', () => {
     });
 });
 
-describe('conversão para o card de rocha (ClosestNowObject)', () => {
+describe('identidade sintética (id de cena, casamento de GLB)', () => {
     it('produz um id sintético reconhecível e estável', () => {
         for (const known of KNOWN_ASTEROIDS) {
             const id = knownAsteroidId(known);
@@ -147,22 +146,5 @@ describe('conversão para o card de rocha (ClosestNowObject)', () => {
         expect(knownAsteroidById('known:999')).toBeNull();
         expect(knownAsteroidById('2024 AB')).toBeNull();
         expect(knownAsteroidById(null)).toBeNull();
-    });
-
-    it('mapeia identidade e diâmetro, sem inventar aproximação', () => {
-        const ceres = KNOWN_ASTEROIDS.find((k) => k.name === 'Ceres')!;
-        const obj = knownAsteroidToClosestNowObject(ceres);
-
-        expect(obj.approach.id).toBe(knownAsteroidId(ceres));
-        expect(obj.approach.name).toBe('Ceres');
-        expect(obj.approach.permanentNumber).toBe('1');
-        expect(obj.approach.diameterMeters).toBe(ceres.diameterMeters);
-
-        // Sem aproximação: o card já trata estes nulos (esconde data/distância/trajetória).
-        expect(obj.trajectory).toBeNull();
-        expect(obj.approach.approachDate).toBeNull();
-        expect(obj.currentDistanceKm).toBeNull();
-        expect(obj.hasRealCurrentDistance).toBe(false);
-        expect(obj.approach.hazardFlag).toBe(false);
     });
 });

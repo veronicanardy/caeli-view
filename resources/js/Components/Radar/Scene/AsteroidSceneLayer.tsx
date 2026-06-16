@@ -110,6 +110,18 @@ export function AsteroidSceneLayer({
                     const position = currentPositionInHelioScene(object, earthHelioAU);
                     if (!position) return null;
                     const isSelected = object.approach.id === selectedId;
+                    // Lupa de "ver trajetória" no NEO focado: pontos da trajetória curta projetados na
+                    // régua heliocêntrica (absolutos, sem offset de Terra). Mesma UX do log; aqui só
+                    // muda a projeção. Só o selecionado recebe, igual ao log.
+                    const trajectory = isSelected && object.trajectory?.status === 'available'
+                        ? object.trajectory as AsteroidTrajectory
+                        : null;
+                    const zoomProps = trajectory
+                        ? {
+                            zoomWorldPosition: new THREE.Vector3(...position),
+                            zoomFramePoints: trajectoryFramePoints(trajectory, 78, helioProject),
+                        }
+                        : {};
                     return (
                         <AsteroidMarker
                             key={object.approach.id}
@@ -124,6 +136,7 @@ export function AsteroidSceneLayer({
                             showLabels={showLabels}
                             panelBiasX={panelBiasX}
                             panelBiasY={panelBiasY}
+                            {...zoomProps}
                         />
                     );
                 })}

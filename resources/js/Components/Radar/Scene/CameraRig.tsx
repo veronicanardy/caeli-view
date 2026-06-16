@@ -25,6 +25,7 @@ import { CameraTweenContext } from './CameraTweenContext';
 
 type Controls = {
     target: THREE.Vector3;
+    enabled: boolean;
     update: () => void;
     addEventListener: (t: string, fn: () => void) => void;
     removeEventListener: (t: string, fn: () => void) => void;
@@ -33,6 +34,14 @@ type Controls = {
 /* Distância radial e elevação usadas pela view "perspective" em coordenadas solares. */
 const PERSPECTIVE_DISTANCE = 15.0;
 const PERSPECTIVE_ELEVATION = 5.5;
+
+/* Teto de frames de um voo. Rede de segurança para SEMPRE devolver o controle ao usuário:
+   com `controls.update()` + damping (e, no foco de asteroide, um alvo que ainda micro-desloca),
+   o teste de proximidade pode oscilar sem nunca cruzar o limiar `1e-4`. Como o voo desabilita os
+   OrbitControls, sem este teto eles ficariam presos em `disabled` e o usuário não conseguiria mais
+   girar/zoom depois de chegar. A ~60fps são ~3,3s, bem mais que qualquer voo real — não corta
+   movimento visível, só encerra o tween (NÃO teleporta a câmera: o lerp para onde já está). */
+const MAX_TWEEN_FRAMES = 200;
 
 export function CameraRig({
     view,
@@ -43,7 +52,6 @@ export function CameraRig({
     sunDir,
     panelBiasX = 0,
     panelBiasY = 0,
-    onUserInteraction,
 }: {
     view: CameraViewKey;
     viewNonce: number;
@@ -56,7 +64,6 @@ export function CameraRig({
     panelBiasX?: number;
     /** Fração [0..1] da altura do canvas coberta pela UI inferior (bottom sheet). Sobe a projeção para a área livre. */
     panelBiasY?: number;
-    onUserInteraction?: () => void;
 }) {
     const camera = useThree((s) => s.camera);
     const size = useThree((s) => s.size);
@@ -105,12 +112,16 @@ export function CameraRig({
     const adHocTweening = useRef(false);
     const adHocDesired = useRef<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
 
+    // Frames decorridos no voo atual: alimenta o teto MAX_TWEEN_FRAMES (rede de segurança da soltura).
+    const tweenFrames = useRef(0);
+
     const mounted = useRef(false);
     useEffect(() => {
         if (!mounted.current) { mounted.current = true; return; }
         // Não sobrescreve um tween avulso em andamento — a câmera fica onde o usuário a deixou.
         if (adHocTweening.current) return;
         tweening.current = true;
+        tweenFrames.current = 0;
         /* Resolve o desired no momento da mudança, preservando o ângulo atual da câmera
            sem forçar virada — o usuário chega ao asteroide pelo heading que já tem. */
         if (focusTarget?.transition === 'preserve_heading' && controls?.target) {
@@ -128,9 +139,6 @@ export function CameraRig({
         effectiveDesired.current = desired;
     }, [desired]);
 
-    const onUserInteractionRef = useRef(onUserInteraction);
-    useEffect(() => { onUserInteractionRef.current = onUserInteraction; }, [onUserInteraction]);
-
     const tweenCtxRef = useContext(CameraTweenContext);
     useEffect(() => {
         if (!tweenCtxRef) return;
@@ -138,20 +146,18 @@ export function CameraRig({
             adHocDesired.current = { position: position.clone(), target: target.clone() };
             adHocTweening.current = true;
             tweening.current = false;
+            tweenFrames.current = 0;
         };
     }, [tweenCtxRef]);
 
-    // Interação do usuário cancela o tween imediatamente.
-    useEffect(() => {
-        if (!controls?.addEventListener) return undefined;
-        const cancel = () => {
-            if (tweening.current) onUserInteractionRef.current?.();
-            tweening.current = false;
-            adHocTweening.current = false;
-        };
-        controls.addEventListener('start', cancel);
-        return () => controls.removeEventListener('start', cancel);
-    }, [controls]);
+    // O voo da câmera é ininterrupto: enquanto um tween (de foco ou avulso) está em
+    // andamento, os OrbitControls ficam desabilitados para que rotação/pan/zoom do usuário
+    // não desviem nem cancelem a navegação. O controle volta sozinho quando a câmera chega ao
+    // destino. As demais camadas de input (InertialZoom, TouchGestures, KeyboardPan) também
+    // respeitam controls.enabled, então roda, pinça e teclado ficam inertes durante o voo.
+    const setControlsEnabled = (enabled: boolean) => {
+        if (controls && controls.enabled !== enabled) controls.enabled = enabled;
+    };
 
     useFrame(({ camera: fc }) => {
         // Compensação de painéis na projeção: o centro visual desloca para a área
@@ -192,7 +198,9 @@ export function CameraRig({
 
         // Tween avulso tem prioridade — não altera focusTarget global.
         if (adHocTweening.current && adHocDesired.current) {
+            setControlsEnabled(false);
             const ad = adHocDesired.current;
+            tweenFrames.current++;
             fc.position.lerp(ad.position, 0.055);
             if (controls?.target) {
                 controls.target.lerp(ad.target, 0.055);
@@ -200,13 +208,22 @@ export function CameraRig({
             }
             const posClose = fc.position.distanceToSquared(ad.position) < 1e-4;
             const tgtClose = !controls?.target || controls.target.distanceToSquared(ad.target) < 1e-4;
-            if (posClose && tgtClose) adHocTweening.current = false;
+            if ((posClose && tgtClose) || tweenFrames.current >= MAX_TWEEN_FRAMES) {
+                adHocTweening.current = false;
+                setControlsEnabled(true);
+            }
             return;
         }
 
-        if (!tweening.current) return;
+        if (!tweening.current) {
+            // Sem tween em andamento: garante que o usuário tenha o controle de volta.
+            setControlsEnabled(true);
+            return;
+        }
 
+        setControlsEnabled(false);
         const ed = effectiveDesired.current;
+        tweenFrames.current++;
 
         /* Lerp com ease-out suave: fator baixo para movimento fluido, desacelera naturalmente
            à medida que a distância ao destino diminui. O alvo é sempre o objeto real:
@@ -221,7 +238,10 @@ export function CameraRig({
 
         const posClose = fc.position.distanceToSquared(ed.position) < 1e-4;
         const tgtClose = !controls?.target || controls.target.distanceToSquared(ed.target) < 1e-4;
-        if (posClose && tgtClose) tweening.current = false;
+        if ((posClose && tgtClose) || tweenFrames.current >= MAX_TWEEN_FRAMES) {
+            tweening.current = false;
+            setControlsEnabled(true);
+        }
     });
 
     return null;
