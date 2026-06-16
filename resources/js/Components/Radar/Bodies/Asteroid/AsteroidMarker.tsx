@@ -9,6 +9,7 @@
 import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
+import { estimateAsteroidDiameterMeters, symbolicRockRadiusFromDiameter } from '@/lib/radar/asteroidScale';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import RealAsteroidModel from './RealAsteroidModel';
@@ -22,32 +23,15 @@ const HITBOX_SEGMENTS = 16;
 const LABEL_POSITION: [number, number, number] = [0, 0.04, 0];
 
 /**
- * Raio visual SIMBÓLICO de um asteroide do feed, em degraus por classe de tamanho.
+ * Raio visual SIMBÓLICO de um asteroide do feed.
  *
- * NÃO é proporcional ao diâmetro real: um asteroide real seria sub-pixel na escala da cena
- * (a régua de distância é linear e fiel, ver lib/radar/README.md). Os degraus apenas dão uma
- * pista grosseira de "maior/menor" mantendo todos visíveis e inequivocamente menores que a Terra.
- * Maior diâmetro nunca produz raio menor (monotônico).
- *
- * O diâmetro de entrada vem do feed; quando ausente, é estimado da magnitude absoluta H pela
- * relação padrão D[km] = 1329/√(albedo) · 10^(−H/5), com a faixa de albedo assumida pelo JPL
- * (0,25 para o limite inferior de diâmetro, 0,05 para o superior); × 1000 converte km → m.
+ * Adaptador fino sobre a política central (lib/radar/asteroidScale): estima o diâmetro a partir
+ * do que o feed traz (diâmetro, faixa estimada ou magnitude absoluta H) e mapeia para o raio
+ * visual em degraus. A mesma política é usada pelos asteroides conhecidos, garantindo que o
+ * MESMO corpo tenha o MESMO tamanho independente do pipeline que o desenha.
  */
 export function symbolicRockRadiusForApproach(a: UnifiedApproach): number {
-    const dMin = a.estimatedDiameterMinMeters
-        ?? (a.absoluteMagnitude != null ? (1329 / Math.sqrt(0.25)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000 : null);
-    const dMax = a.estimatedDiameterMaxMeters
-        ?? (a.absoluteMagnitude != null ? (1329 / Math.sqrt(0.05)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000 : null);
-    const d = a.diameterMeters
-        ?? (dMin != null && dMax != null ? Math.round((dMin + dMax) / 2) : dMax ?? dMin)
-        ?? null;
-    if (d == null) return 0.013;
-    if (d < 10)   return 0.006;
-    if (d < 50)   return 0.008;
-    if (d < 150)  return 0.010;
-    if (d < 500)  return 0.013;
-    if (d < 1000) return 0.017;
-    return 0.022;
+    return symbolicRockRadiusFromDiameter(estimateAsteroidDiameterMeters(a));
 }
 
 /**

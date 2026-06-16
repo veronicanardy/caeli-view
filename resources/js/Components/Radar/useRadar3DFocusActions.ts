@@ -114,7 +114,7 @@ export function useRadar3DFocusActions({
             // Mesmo raio de enquadramento dos planetas (≈ raio visual): o corpo preenche o quadro
             // sem ficar um ponto nem estourar a tela. O nonce é incrementado também aqui para que a
             // troca entre conhecidos (ex.: Eros → Vesta) sempre re-dispare o voo da câmera.
-            setKnownFocusTarget(framingForBody(new THREE.Vector3(...knownPos), knownAsteroidVisualScale()));
+            setKnownFocusTarget(framingForBody(new THREE.Vector3(...knownPos), knownAsteroidVisualScale(known)));
             setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
         } else {
             setKnownFocusTarget(null);

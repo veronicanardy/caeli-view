@@ -21,7 +21,7 @@
 import type { OrbitalElements, SmallBodyObjectType } from '@/types';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
 import { helioAUToSunCenteredScene } from '@/lib/sceneEphemeris';
-import { MARS } from '@/lib/radar/planetData';
+import { symbolicRockRadiusFromDiameter } from '@/lib/radar/asteroidScale';
 import type { AsteroidModelAsset } from './asteroidModelRegistry';
 import { REAL_ASTEROID_MODELS } from './asteroidModelRegistry';
 
@@ -146,20 +146,22 @@ export function knownAsteroidPlacements(date: Date = new Date(), scale?: number)
 }
 
 /**
- * Escala visual do modelo GLB de um conhecido na cena: PADRONIZADA com os planetas ilustrativos.
+ * Escala visual do modelo GLB de um conhecido na cena.
  *
- * Por que tamanho único (e não proporcional ao diâmetro): os conhecidos convivem na MESMA régua dos
- * planetas ambiente, que têm raio visual entre ~0,03 (Mercúrio) e ~0,19 (Júpiter) — todos exagerados
- * de forma calibrada, não fiéis à escala. Padronizar os conhecidos por um planeta de referência
- * (Marte, um rochoso pequeno) deixa-os coerentes com a cena em vez de gigantes desproporcionais.
+ * Usa a MESMA política simbólica dos asteroides do feed (symbolicRockRadiusFromDiameter), agora a
+ * partir do diâmetro real do conhecido. Antes era um tamanho fixo igual ao de Marte (0,048 DL), o
+ * que fazia:
+ *  - Itokawa (330 m) e Bennu (490 m) parecerem do tamanho de um PLANETA (maiores que Mercúrio);
+ *  - Ceres (939 km) e Bennu (490 m) terem o mesmo tamanho aparente, apesar de ~1900× de diferença;
+ *  - o mesmo corpo aparecer 6× maior pelo fallback Kepler do que pelo feed do Horizons.
+ * Com a política única, Ceres cai no degrau máximo e Itokawa num degrau baixo, preservando a
+ * diferença entre eles e mantendo todos inequivocamente menores que os planetas.
  *
  * Unidade: o RealAsteroidModel normaliza o GLB para "maior eixo = 2" (raio ≈ 1), então a escala
- * aplicada aqui É o raio visual em DL. Igualá-la a MARS.visualRadiusDl casa o tamanho com Marte.
+ * aplicada aqui É o raio visual em DL.
  */
-const KNOWN_VISUAL_SCALE = MARS.visualRadiusDl;
-
-export function knownAsteroidVisualScale(): number {
-    return KNOWN_VISUAL_SCALE;
+export function knownAsteroidVisualScale(known: KnownAsteroid): number {
+    return symbolicRockRadiusFromDiameter(known.diameterMeters);
 }
 
 /** Id sintético estável de um conhecido (usado como selectedId e para reabrir o card). */

@@ -24,11 +24,17 @@ import type { KnownAsteroid } from '../Bodies/Asteroid/knownAsteroids';
 import { knownAsteroidId, knownAsteroidPlacements, knownAsteroidVisualScale, modelAssetForKnown } from '../Bodies/Asteroid/knownAsteroids';
 
 /**
- * Hitbox generosa em relação ao raio visual (que agora é pequeno, padronizado com os planetas):
+ * Hitbox generosa em relação ao raio visual (que é pequeno, escala simbólica de asteroide):
  * um alvo maior que o corpo facilita clique/hover a dezenas de unidades do centro, como o
  * radiusMultiplier dos planetas pequenos.
  */
 const HITBOX_RADIUS_FACTOR = 4;
+/**
+ * Piso absoluto do raio da hitbox (DL). As menores rochas (Itokawa, Bennu) têm raio visual ~0,008,
+ * então 4× ainda daria um alvo minúsculo; este piso garante um alvo clicável independentemente do
+ * tamanho do corpo. Não afeta o tamanho VISUAL da rocha (a hitbox é invisível).
+ */
+const MIN_HITBOX_RADIUS = 0.06;
 const KNOWN_HITBOX_SEGMENTS: [number, number] = [16, 16];
 /** Altura do label acima do corpo, em múltiplos do raio visual. */
 const LABEL_OFFSET_FACTOR = 6;
@@ -96,9 +102,12 @@ function KnownAsteroidBody({ known, position, showLabel, dimmed, selected, onSel
         () => ({ key: 'generic' as const, url: modelAsset.url, rotation: modelAsset.rotation, aliases: [], numbers: [] }),
         [modelAsset.url, modelAsset.rotation],
     );
-    const scale = knownAsteroidVisualScale();
+    const scale = knownAsteroidVisualScale(known);
     const opacity = dimmed && !hovered ? 0.5 : 1;
-    const labelOffset: [number, number, number] = [0, scale * LABEL_OFFSET_FACTOR, 0];
+    // Pisos absolutos: com rochas pequenas (scale ~0,008) os fatores relativos dariam alvo e label
+    // colados no corpo. O max garante um mínimo utilizável sem mexer no tamanho visual da rocha.
+    const hitboxRadius = Math.max(scale * HITBOX_RADIUS_FACTOR, MIN_HITBOX_RADIUS);
+    const labelOffset: [number, number, number] = [0, Math.max(scale * LABEL_OFFSET_FACTOR, 0.05), 0];
 
     return (
         <group position={position}>
@@ -110,7 +119,7 @@ function KnownAsteroidBody({ known, position, showLabel, dimmed, selected, onSel
                 selecionado, então clicar de novo no que já está focado não re-dispara a câmera. */}
             {!selected ? (
                 <BodyHitbox
-                    radius={scale * HITBOX_RADIUS_FACTOR}
+                    radius={hitboxRadius}
                     segments={KNOWN_HITBOX_SEGMENTS}
                     onClick={() => onSelect?.()}
                     onHoverChange={setHovered}
