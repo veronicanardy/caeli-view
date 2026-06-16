@@ -67,9 +67,10 @@ export const MERCURY: PlanetDatum = {
  *
  * physicalRadiusDl = 6051.8 km / 384400 km/DL = 0.01574 DL
  *
- * Exagero visual: Vênus é ligeiramente menor que a Terra (0.11 DL visual).
- * Renderizamos em 0.038 DL (~24× físico) — maior que Mercúrio, menor que a Terra,
- * refletindo a proporção real (Vênus ≈ 95% do diâmetro terrestre).
+ * Exagero visual: Vênus é o "planeta-irmão" da Terra (~95% do diâmetro terrestre).
+ * Renderizamos em 0.10 DL (~6.4× físico) — quase do tamanho da Terra (0.11 DL), claramente maior
+ * que Mercúrio (0.028) e ainda inequivocamente menor que a Terra, refletindo a proporção real.
+ * (Antes ficava em 0.038, ~35% da Terra, contradizendo a própria proporção declarada.)
  *
  * Rotação: −243.018 dias terrestres (retrógrada — negativo na lógica do spin).
  *   O sinal negativo é aplicado na taxa de rotação do componente Venus.tsx.
@@ -80,7 +81,7 @@ export const MERCURY: PlanetDatum = {
  */
 export const VENUS: PlanetDatum = {
     physicalRadiusDl: 6_051.8 / KM_PER_LD,           // 0.01574 DL — raio real
-    visualRadiusDl: 0.038,                              // raio renderizado (~24× exagero)
+    visualRadiusDl: 0.10,                               // raio renderizado (~6.4× exagero, ~91% da Terra)
     rotationPeriodS: 243.018 * 24 * 3600,              // magnitude; sinal aplicado em Venus.tsx
     axialTiltDeg: 177.36,                               // obliquidade retrógrada (IAU WGCCRE 2015)
     texturePath: '/images/venus/venus-8k.jpg',
