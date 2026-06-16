@@ -111,8 +111,8 @@ All external API integrations live in the Laravel backend. React pages receive c
 - Combines **NASA NeoWs** and **JPL CAD** in parallel, deduplicates and merges by identity
 - Default view zooms in on Earth's neighborhood; reference panel lets you switch to Sun, Moon, or full planet view
 - Asteroid positions from **JPL Horizons API** ephemeris queries with real state vectors
-- Gradient trajectory lines, direction cones, approach markers, and logarithmic distance compression
-- Scene footer always shows "escala log. visual apenas" to make the scale convention explicit
+- Gradient trajectory lines, direction cones, approach markers; distances on a single **linear AU scale** (no compression), with a close approach revealed by camera zoom
+- Scene badge shows "escala linear · UA" by default; a legacy logarithmic ruler stays behind `?log` as a backstage comparison only
 - Focus mode locks camera to any body; keyboard and touch pan/zoom
 - Navigation panel with object list, data quality card, and technical data tabs
 - Scale legend (1 LD / 1 AU) in the corner; interactive guide (manual) explains the representation
