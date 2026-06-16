@@ -7,6 +7,7 @@
 
 import type * as THREE from 'three';
 import type { AsteroidTrajectory } from '@/types';
+import type { PointProjector } from '@/lib/radar/trajectorySampling';
 import type { Palette } from '@/lib/radar/palette';
 import { DirectionCone } from './DirectionCone';
 import { GradientTrajectoryLine } from './GradientTrajectoryLine';
@@ -22,9 +23,11 @@ type NowTrajectoryProps = {
     /** Quando `true`, renderiza apenas o cone de direção, sem linhas de trajetória. */
     coneOnly?: boolean;
     onFocusPoint?: (vec: THREE.Vector3) => void;
+    /** Projetor dos pontos para a cena. Default: régua log. No linear, projeção heliocêntrica. */
+    project?: PointProjector;
 };
 
-export function NowTrajectory({ trajectory, palette, emphasized, dimmed, coneOnly = false, onFocusPoint }: NowTrajectoryProps) {
+export function NowTrajectory({ trajectory, palette, emphasized, dimmed, coneOnly = false, onFocusPoint, project }: NowTrajectoryProps) {
     const {
         fullPast,
         closestApproach,
@@ -33,7 +36,7 @@ export function NowTrajectory({ trajectory, palette, emphasized, dimmed, coneOnl
         timeTicks,
         pastPeakOpacity,
         coneOpacity,
-    } = useNowTrajectoryPresentation({ trajectory, emphasized, dimmed });
+    } = useNowTrajectoryPresentation({ trajectory, emphasized, dimmed, project });
 
     return (
         <group>

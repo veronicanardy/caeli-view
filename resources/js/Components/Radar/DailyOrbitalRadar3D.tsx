@@ -171,9 +171,9 @@ export function DailyOrbitalRadar3D({
     }, [selectionMode]);
 
     const activeMode: SceneMode = deriveActiveMode(orbitMode, focusedObject);
-    // No modo linear (?linear), famosos e NEOs convivem no MESMO espaço (Ceres no cinturão + NEOs
-    // perto da Terra). Fora dele, famosos só no critério dedicado.
-    const showKnownAsteroidsInScene = selectionMode === 'famous' || linearModeEnabled();
+    // Famosos (Ceres, Bennu, etc.) só aparecem no critério dedicado "Asteroides famosos", em qualquer
+    // régua. Fora dele, a cena mostra apenas o feed de aproximações, sem misturar os dois conjuntos.
+    const showKnownAsteroidsInScene = selectionMode === 'famous';
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const planetFlyoutRef = useRef<HTMLDivElement>(null);
     const focusCardRef = useRef<HTMLDivElement>(null);

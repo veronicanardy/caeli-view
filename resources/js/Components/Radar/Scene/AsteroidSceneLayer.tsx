@@ -10,7 +10,7 @@ import { useMemo, useCallback } from 'react';
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, UnifiedApproach } from '@/types';
 import { OBJECT_PALETTE } from '@/lib/radar/palette';
-import { currentPositionInHelioScene, currentPositionInScene, trajectoryFramePoints } from '@/lib/radar/trajectorySampling';
+import { currentPositionInHelioScene, currentPositionInScene, makeHelioLinearProjector, trajectoryFramePoints } from '@/lib/radar/trajectorySampling';
 import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
 import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
 import { NowTrajectory } from '../Trajectory/NowTrajectory';
@@ -37,6 +37,7 @@ export function AsteroidSceneLayer({
     panelBiasY = 0,
     helioScene = false,
     earthHelioAU = null,
+    skipObjectId = null,
 }: {
     closestNowObjects: ClosestNowObject[];
     selectedId: string | null;
@@ -53,6 +54,12 @@ export function AsteroidSceneLayer({
     helioScene?: boolean;
     /** Posição heliocêntrica da Terra (AU), necessária no modo helioScene. */
     earthHelioAU?: EarthHelioAU | null;
+    /**
+     * [Modo linear] Id do objeto cuja rocha é desenhada FORA desta camada, sobre a própria órbita
+     * (RadarScene). Pulamos aqui para não duplicar o corpo: a posição amostrada da elipse e o ponto
+     * Horizons divergem, e renderizar os dois mostraria duas rochas.
+     */
+    skipObjectId?: string | null;
 }) {
     const handleFocusPoint = useCallback((vec: THREE.Vector3) => {
         if (!onFocusTrajectoryPoint) return;
@@ -86,9 +93,20 @@ export function AsteroidSceneLayer({
     // redor do Sol. Base honesta — a separação visual de objetos próximos vem do ZOOM de câmera, não
     // de distorção de escala.
     if (helioScene && earthHelioAU) {
+        // Projetor heliocêntrico fixo (a Terra mal se move no intervalo da trajetória): leva os pontos
+        // geocêntricos do Horizons à régua linear, em coordenadas absolutas (Sol na origem).
+        const helioProject = makeHelioLinearProjector(earthHelioAU);
+        const selectedObject = selectedId
+            ? closestNowObjects.find((o) => o.approach.id === selectedId) ?? null
+            : null;
+        const selectedTrajectoryAvailable = selectedObject?.trajectory?.status === 'available';
+        const selectedIndex = selectedObject
+            ? closestNowObjects.findIndex((o) => o.approach.id === selectedObject.approach.id)
+            : -1;
         return (
             <group>
                 {closestNowObjects.map((object, index) => {
+                    if (object.approach.id === skipObjectId) return null;
                     const position = currentPositionInHelioScene(object, earthHelioAU);
                     if (!position) return null;
                     const isSelected = object.approach.id === selectedId;
@@ -109,6 +127,21 @@ export function AsteroidSceneLayer({
                         />
                     );
                 })}
+
+                {/* [Modo linear] Trajetória curta geocêntrica do NEO focado, projetada na régua
+                    heliocêntrica (fiel à escala): é o trecho de poucos dias perto da Terra, como o
+                    NASA Eyes mostra. Fica fisicamente pequena (sem a compressão log que estica o
+                    radar), aparecendo ao dar zoom na Terra. Em coordenadas absolutas — o projetor já
+                    põe os pontos no espaço do Sol, então NÃO há offset de Terra aqui. */}
+                {showLabels && selectedObject && selectedTrajectoryAvailable ? (
+                    <NowTrajectory
+                        trajectory={selectedObject.trajectory as AsteroidTrajectory}
+                        palette={OBJECT_PALETTE[Math.max(0, selectedIndex) % OBJECT_PALETTE.length]}
+                        emphasized
+                        dimmed={false}
+                        project={helioProject}
+                    />
+                ) : null}
             </group>
         );
     }

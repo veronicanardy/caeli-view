@@ -4,8 +4,16 @@
  */
 
 import * as THREE from 'three';
-import type { AsteroidTrajectory, ClosestNowObject, TrajectoryPoint } from '@/types';
-import { KM_PER_LD, LINEAR_AU_SCALE, helioAUToSunCenteredScene } from '@/lib/sceneEphemeris';
+import type { AsteroidTrajectory, ClosestNowObject, OrbitalElements, TrajectoryPoint } from '@/types';
+import {
+    KM_PER_LD,
+    LINEAR_AU_SCALE,
+    ORBIT_ELLIPSE_SEGMENTS,
+    helioAUToSunCenteredScene,
+    orbitGeometryFromElements,
+    sampleHeliocentricEllipseAtNu,
+} from '@/lib/sceneEphemeris';
+import { trueAnomalyNow } from '@/lib/keplerOrbit';
 import { KM_PER_AU } from '@/lib/physicalConstants';
 import { horizonsToScene } from './coordinates';
 
@@ -55,10 +63,56 @@ export function currentPositionInHelioScene(
     return helioAUToSunCenteredScene(helio, LINEAR_AU_SCALE);
 }
 
+/**
+ * [Modo linear] Posição do NEO focado AMOSTRADA NA PRÓPRIA ELIPSE Kepleriana desenhada, no ν de
+ * agora — a mesma estratégia dos planetas (sampleHeliocentricEllipseAtNu) e do modo órbita
+ * (HeliocentricScene). Quando a órbita do objeto está sendo desenhada, a rocha DEVE vir desta
+ * polilinha (não do ponto Horizons de currentPositionInHelioScene), senão fica deslocada da linha:
+ * a linha é a elipse de dois corpos e o Horizons inclui perturbações, então as fontes divergem.
+ *
+ * IMPORTANTE: o resultado está em ORBIT_AU_SCALE (embutido em ellipseVertexAtNu), igual à órbita
+ * construída por buildHeliocentricOrbit. Quem renderiza deve aplicar o MESMO LINEAR_SCALE_FACTOR
+ * (via <group scale>) à linha e a este ponto, para que ambos caiam juntos na régua linear.
+ * Retorna null quando os elementos não permitem ancorar o ν (sem época de periélio, hiperbólico).
+ */
+export function focusedOrbitSamplePosition(
+    elements: OrbitalElements,
+    date: Date = new Date(),
+): [number, number, number] | null {
+    const g = orbitGeometryFromElements(elements);
+    const nu = trueAnomalyNow(elements, date);
+    if (!g || nu === null) return null;
+    return sampleHeliocentricEllipseAtNu(g, nu, ORBIT_ELLIPSE_SEGMENTS);
+}
+
 /** Converte um ponto de trajetória (km, eclíptico J2000, Terra como origem de medição) para THREE.Vector3 na cena. */
 export function toVec3(point: { x: number; y: number; z?: number | null }): THREE.Vector3 {
     const [x, y, z] = horizonsToScene(point.x, point.y, point.z ?? 0);
     return new THREE.Vector3(x, y, z);
+}
+
+/**
+ * [Modo linear] Versão de toVec3 para a régua HELIOCÊNTRICA de escala real: o ponto geocêntrico do
+ * Horizons (km) é levado a heliocêntrico (earthHelioAU + ponto/KM_PER_AU) e projetado por
+ * helioAUToSunCenteredScene na LINEAR_AU_SCALE. Resultado ABSOLUTO (Sol na origem), igual à rocha em
+ * currentPositionInHelioScene — então a trajetória curta cai exatamente onde o corpo está, fiel à
+ * escala (e por isso fisicamente pequena: é o movimento geocêntrico de poucos dias, sem esticar).
+ *
+ * Devolve um projetor pronto para um ponto, casando com a assinatura de toVec3 (point) usada pelo
+ * hook de apresentação. earthHelioAU é fixo para a trajetória inteira (a Terra mal se move no intervalo).
+ */
+export function makeHelioLinearProjector(
+    earthHelioAU: EarthHelioAU,
+): (point: { x: number; y: number; z?: number | null }) => THREE.Vector3 {
+    return (point) => {
+        const helio = {
+            x: earthHelioAU.x + point.x / KM_PER_AU,
+            y: earthHelioAU.y + point.y / KM_PER_AU,
+            z: earthHelioAU.z + (point.z ?? 0) / KM_PER_AU,
+        };
+        const [x, y, z] = helioAUToSunCenteredScene(helio, LINEAR_AU_SCALE);
+        return new THREE.Vector3(x, y, z);
+    };
 }
 
 /**
@@ -95,7 +149,13 @@ export type ClosestApproachSample = {
     timestamp: string;
 };
 
-export function findClosestApproachPoint(trajectory: AsteroidTrajectory): ClosestApproachSample | null {
+/** Projetor de um ponto de trajetória para a cena. Default: régua log (toVec3). */
+export type PointProjector = (point: { x: number; y: number; z?: number | null }) => THREE.Vector3;
+
+export function findClosestApproachPoint(
+    trajectory: AsteroidTrajectory,
+    project: PointProjector = toVec3,
+): ClosestApproachSample | null {
     const candidates: TrajectoryPoint[] = [
         ...(trajectory.pastPoints ?? []),
         ...(trajectory.futurePoints ?? []),
@@ -117,7 +177,7 @@ export function findClosestApproachPoint(trajectory: AsteroidTrajectory): Closes
     if (!best) return null;
 
     return {
-        vec: toVec3(best),
+        vec: project(best),
         distanceKm: bestKm,
         distanceLD: typeof best.distanceLunar === 'number' ? best.distanceLunar : bestKm / KM_PER_LD,
         timestamp: best.timestamp,
@@ -165,7 +225,10 @@ export function trajectoryFramePoints(trajectory: AsteroidTrajectory, maxAgeHour
  * o instante ao qual o Horizons ancorou a trajetória. Só emitimos marcadores quando existe uma
  * amostra real dentro de ~6h do instante alvo.
  */
-export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: THREE.Vector3; label: string; tooltip: string; zOrder: number }> {
+export function collectTimeTicks(
+    trajectory: AsteroidTrajectory,
+    project: PointProjector = toVec3,
+): Array<{ vec: THREE.Vector3; label: string; tooltip: string; zOrder: number }> {
     const now = trajectory.currentPoint?.timestamp ? new Date(trajectory.currentPoint.timestamp).getTime() : NaN;
     if (Number.isNaN(now)) return [];
 
@@ -201,7 +264,7 @@ export function collectTimeTicks(trajectory: AsteroidTrajectory): Array<{ vec: T
                 ? new Intl.NumberFormat('pt-BR').format(Math.round(best.distanceKm))
                 : null;
             const tooltip = `O asteroide estava aqui há ${hoursAgo}h${distKm ? `|${distKm} km da Terra` : ''}`;
-            ticks.push({ vec: toVec3(best), label, tooltip, zOrder });
+            ticks.push({ vec: project(best), label, tooltip, zOrder });
         }
     }
     return ticks;
