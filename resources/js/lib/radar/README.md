@@ -15,8 +15,9 @@ que precise do mesmo pipeline gráfico.
 - Orientação de corpos celestes (Terra tidal-lock, Lua lock face)
 - Shaders GLSL dos planetas, Sol e Lua (`shaders/`)
 - Amostragem e recorte de trajetórias geocêntricas
-- Escala visual dos corpos (`bodyScale.ts`)
+- Escala visual da Terra e da Lua (`bodyScale.ts`)
 - Constantes físicas e visuais dos planetas ambientes (`planetData.ts`)
+- Política ÚNICA de tamanho visual dos asteroides (`asteroidScale.ts`)
 - Paleta de cores dos objetos rastreados (`palette.ts`)
 - Gerenciamento do cursor da cena 3D (`cursor.ts`)
 - Formatadores específicos da cena (timestamp UTC, distância em UA, rótulo relativo de dias)
@@ -60,14 +61,22 @@ deve ler isto antes.
   proximidade é revelada por ZOOM de câmera na Terra, nunca esticando a régua.
 - **Régua log geocêntrica:** legada, só por trás de `?log` (`compressDistanceDl`/`compressSceneVector`).
   Rede de comparação, invisível ao visitante. Não é o caminho padrão.
-- **Tamanho dos corpos: exagerado para legibilidade** (`bodyScale.ts`, `planetData.ts`). O diâmetro
-  real da Terra nessa escala seria sub-pixel. Os raios visuais preservam a ordem (Terra > Lua;
-  Júpiter > Terra) mas NÃO são fiéis à escala de distância.
-- **Asteroides do feed: raio SIMBÓLICO em degraus por classe de tamanho**
-  (`symbolicRockRadiusForApproach` em `AsteroidMarker.tsx`). Não é proporcional ao diâmetro real;
-  apenas pista grosseira de maior/menor, sempre menor que a Terra.
-- **Asteroides conhecidos: tamanho PADRONIZADO** no raio visual de Marte
-  (`knownAsteroidVisualScale` em `knownAsteroids.ts`). Diâmetro real só no painel de dados.
+- **Planetas: exagero CALIBRADO por planeta** (`planetData.ts`). O diâmetro real seria sub-pixel.
+  Os gigantes (Júpiter, Saturno) ficam quase em escala real (~1×); os rochosos pequenos recebem
+  exagero maior para serem visíveis. A hierarquia é preservada e travada por teste
+  (`bodyScaleHierarchy.test.ts`): Júpiter > Saturno > Urano ≥ Netuno > Terra > Vênus > Marte > Mercúrio.
+- **Terra e Lua: raio exagerado fixo** (`bodyScale.ts`). Lua sempre menor que a Terra; no modo
+  linear a Lua usa `radiusScale 0,54` (tamanho aparente do Sol visto da Terra, a coincidência dos
+  eclipses) e continua menor que Mercúrio.
+- **Sol: ÚNICO corpo em escala REAL (1×)** (`bodyRenderConstants.ts`,
+  `SUN_PHYSICAL_RADIUS_DL`/`SUN_VISUAL_RADIUS_DL`). Já é gigante o bastante para dominar (~9,5× o
+  raio visual de Júpiter); exagerar seria absurdo, reduzir o faria competir com planetas.
+- **Asteroides (feed E conhecidos): UMA política simbólica em degraus por diâmetro real**
+  (`asteroidScale.ts` → `symbolicRockRadiusFromDiameter`). Não é proporcional ao diâmetro (seria
+  sub-pixel); apenas pista de maior/menor. Piso `MIN_ROCK_RADIUS_DL` (visibilidade) e teto
+  `MAX_ROCK_RADIUS_DL` ABAIXO de Mercúrio (nenhuma rocha compete com planeta). Os conhecidos usam
+  a MESMA função a partir do seu diâmetro real (`knownAsteroidVisualScale`), então Ceres > Bennu e
+  o mesmo corpo tem o mesmo tamanho venha ele do Horizons ou do fallback Kepler.
 - **O painel de dados sempre mostra as distâncias e diâmetros REAIS**, sem qualquer escala visual.
 
 ## Testes
