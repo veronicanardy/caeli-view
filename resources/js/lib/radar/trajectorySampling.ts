@@ -30,7 +30,7 @@ export function currentPositionInScene(object: ClosestNowObject): [number, numbe
 }
 
 /**
- * [EXPERIMENTO Eyes] Posição de cena de um objeto do feed na régua HELIOCÊNTRICA LINEAR (Sol na
+ * [Modo linear] Posição de cena de um objeto do feed na régua HELIOCÊNTRICA de escala real (Sol na
  * origem), igual aos planetas/conhecidos — em vez da régua log geocêntrica.
  *
  * O ponto do Horizons é geocêntrico (km, eclíptico, Terra como origem). A posição heliocêntrica é

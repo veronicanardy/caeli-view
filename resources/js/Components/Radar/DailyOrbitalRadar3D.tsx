@@ -34,7 +34,7 @@ import { RadarFloatingOverlays } from './Panels/RadarFloatingOverlays';
 import { RadarNavigationPanel } from './Panels/RadarNavigationPanel';
 import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import { RadarSceneCanvas } from './Scene/RadarSceneCanvas';
-import { eyesExperimentEnabled } from './Scene/eyesExperiment';
+import { linearModeEnabled } from './Scene/linearMode';
 import { deriveActiveMode } from './Scene/sceneMode';
 import { useLabelNoGoRects } from './Scene/useLabelNoGoRects';
 import { useSceneEphemeris } from './Scene/useSceneEphemeris';
@@ -169,9 +169,9 @@ export function DailyOrbitalRadar3D({
     }, [selectionMode]);
 
     const activeMode: SceneMode = deriveActiveMode(orbitMode, focusedObject);
-    // No experimento Eyes (?eyes), famosos e NEOs convivem no MESMO espaço linear (Ceres no cinturão
-    // + NEOs perto da Terra). Fora dele, famosos só no critério dedicado.
-    const showKnownAsteroidsInScene = selectionMode === 'famous' || eyesExperimentEnabled();
+    // No modo linear (?linear), famosos e NEOs convivem no MESMO espaço (Ceres no cinturão + NEOs
+    // perto da Terra). Fora dele, famosos só no critério dedicado.
+    const showKnownAsteroidsInScene = selectionMode === 'famous' || linearModeEnabled();
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const planetFlyoutRef = useRef<HTMLDivElement>(null);
     const focusCardRef = useRef<HTMLDivElement>(null);

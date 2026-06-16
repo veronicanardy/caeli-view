@@ -387,6 +387,14 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
 export const ORBIT_AU_SCALE = SUN_DISPLAY_DL;
 
 /**
+ * [Modo linear] Escala AU PRÓPRIA do modo régua-única, isolada da régua normal (que mantém
+ * ORBIT_AU_SCALE ≈ 96, amarrado ao encontro das duas réguas no Sol). 150 deixa os NEOs mais soltos
+ * da Terra (≈ 1,9 unid vs 1,2 em 96), ao custo de empurrar cinturão/planetas mais longe. Só vale
+ * quando o modo linear está ligado; o modo normal não é afetado.
+ */
+export const LINEAR_AU_SCALE = 150;
+
+/**
  * Perifocal (x em direção ao periélio, y a +90° no sentido do movimento) → eclíptico heliocêntrico
  * J2000, ambos em UA. Função pura, compartilhada entre o construtor de curva orbital e o propagador
  * da equação de Kepler (lib/keplerOrbit) para que a elipse desenhada e o ponto "agora" do asteroide
@@ -452,8 +460,11 @@ export function buildHeliocentricOrbit(
  * Convenção de eixos: eclíptico (x, y, z) → cena (x, z, −y).
  * Norte eclíptico (z > 0) aponta para +Y da cena; plano XZ da cena é o plano eclíptico.
  */
-export function helioAUToSunCenteredScene(p: { x: number; y: number; z: number }): [number, number, number] {
-    return [p.x * ORBIT_AU_SCALE, p.z * ORBIT_AU_SCALE, -p.y * ORBIT_AU_SCALE];
+export function helioAUToSunCenteredScene(
+    p: { x: number; y: number; z: number },
+    scale: number = ORBIT_AU_SCALE,
+): [number, number, number] {
+    return [p.x * scale, p.z * scale, -p.y * scale];
 }
 
 export type OrbitGeometry = {
