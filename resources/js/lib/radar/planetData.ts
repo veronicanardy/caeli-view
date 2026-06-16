@@ -11,9 +11,10 @@
  *   fallbackColor     — cor hex usada quando texturePath está indisponível ou ainda carregando
  *
  * Por que separar physicalRadiusDl de visualRadiusDl:
- * Na escala radar com compressão logarítmica, o raio real de Mercúrio (0,00635 DL) seria sub-pixel.
- * Mantemos o valor científico explícito para que consumidores futuros possam rotular distâncias
- * corretamente, enquanto o valor visual dimensiona a esfera renderizada.
+ * Na régua linear de distância (UA), o raio real de Mercúrio (0,00635 DL) seria sub-pixel. Mantemos o
+ * valor científico explícito para que consumidores futuros possam rotular distâncias corretamente,
+ * enquanto o valor visual dimensiona a esfera renderizada. (As distâncias seguem a régua linear; só
+ * os tamanhos dos corpos são exagerados — ver lib/radar/README.md.)
  *
  * Fontes:
  *   - Raios:            IAU Working Group on Cartographic Coordinates and Rotational Elements 2015
@@ -26,7 +27,7 @@ import { KM_PER_LD } from '@/lib/sceneEphemeris';
 export interface PlanetDatum {
     /** Raio médio IAU, km → DL. */
     physicalRadiusDl: number;
-    /** Raio renderizado em unidades de cena (DL, comprimido logaritmicamente). */
+    /** Raio renderizado em unidades de cena (DL). Exagero calibrado por planeta; ver docblock acima. */
     visualRadiusDl: number;
     /** Período de rotação sideral, segundos. */
     rotationPeriodS: number;

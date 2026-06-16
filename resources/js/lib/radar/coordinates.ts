@@ -5,8 +5,10 @@
  * - O JPL Horizons retorna vetores eclípticos em km, com a Terra como origem de medição.
  * - Eixos da cena: eclíptico X → cena X, eclíptico Z → cena Y, eclíptico −Y → cena Z.
  *   Isso coloca o plano eclíptico em XZ (onde ficam os anéis de DL) e o norte eclíptico em +Y da cena.
- * - No modo radar, "1 unidade de cena = 1 DL", comprimido radialmente via compressSceneVector
- *   (em sceneEphemeris.ts) — a direção é preservada, só a magnitude é reescalonada.
+ * - horizonsToScene (abaixo) serve a régua LOG LEGADA, acessível só atrás de `?log`: "1 unidade de
+ *   cena = 1 DL", comprimido radialmente via compressSceneVector (em sceneEphemeris.ts) — direção
+ *   preservada, só a magnitude reescalonada. O caminho PADRÃO é a régua linear em UA, que projeta os
+ *   vetores via makeHelioLinearProjector / helioAUToSunCenteredScene, sem passar por aqui.
  *
  * Tudo neste arquivo é puro: mesma entrada → mesma saída, sem I/O nem DOM.
  */
@@ -15,9 +17,10 @@ import type { SunDirection } from '@/types';
 import { KM_PER_LD, compressSceneVector } from '@/lib/sceneEphemeris';
 
 /**
- * Transforma um vetor geocêntrico eclíptico (km) em um vetor de cena radar (unidades de cena,
- * pós compressão logarítmica). A troca Y ↔ Z alinha o plano eclíptico com o plano XZ da cena;
- * a compressão radial mantém direção e inclinação honestas enquanto recolhe o enorme gap até o Sol.
+ * [Régua log legada, `?log`] Transforma um vetor geocêntrico eclíptico (km) em vetor de cena radar
+ * (unidades de cena, pós compressão logarítmica). A troca Y ↔ Z alinha o plano eclíptico com o plano
+ * XZ da cena; a compressão radial mantém direção e inclinação honestas enquanto recolhe o enorme gap
+ * até o Sol. NÃO é o caminho padrão (esse é a régua linear em UA).
  */
 export function horizonsToScene(xKm: number, yKm: number, zKm: number): [number, number, number] {
     return compressSceneVector([

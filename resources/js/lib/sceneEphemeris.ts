@@ -16,7 +16,9 @@ import { KM_PER_AU, LUNAR_DISTANCE_KM as KM_PER_LD } from '@/lib/physicalConstan
 export const AU_IN_DL = KM_PER_AU / KM_PER_LD;
 
 /**
- * Compressão logarítmica radial — A ÚNICA regra de escala de toda a cena.
+ * Compressão logarítmica radial — regra de escala da régua LOG LEGADA (acessível só atrás de `?log`).
+ * O caminho PADRÃO da cena é a régua linear em UA (LINEAR_AU_SCALE, mais abaixo); esta compressão é
+ * mantida como rede de comparação de bastidor, não como a experiência principal.
  *
  * Uma escala puramente linear (1 DL = 1 unidade) é honesta mas inutilizável: 1 UA = 389 DL, então
  * o Sol ficaria a ~389 unidades da Terra enquanto a Lua estaria em 1, uma dispersão impossível de

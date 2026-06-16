@@ -346,7 +346,10 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         />
                     ) : null}
 
-                    {/* Asteroides e trajetórias: vetores Horizons log-comprimidos, offsetados pela Terra na cena.
+                    {/* Asteroides e trajetórias. No modo linear (padrão) os vetores Horizons caem na
+                        régua heliocêntrica linear (Sol na origem, sem compressão); só atrás de `?log`
+                        eles são log-comprimidos e offsetados pela Terra. O caminho é escolhido pelo
+                        prop helioScene de AsteroidSceneLayer abaixo.
                         No modo órbita Kepler (elipse visível) a camada inteira some: a rocha focada já é
                         desenhada sobre a elipse (linearFocusBodyPosition acima), e queremos só ela + o Sol,
                         sem os demais objetos nem a trilha curta. */}
