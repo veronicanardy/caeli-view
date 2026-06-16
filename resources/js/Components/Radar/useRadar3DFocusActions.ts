@@ -9,7 +9,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
+import { LINEAR_SCALE_FACTOR } from '@/lib/sceneEphemeris';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
+import { linearModeEnabled } from './Scene/linearMode';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import type { CameraViewKey } from './Scene/cameraConstants';
@@ -168,7 +170,12 @@ export function useRadar3DFocusActions({
     const focusPlanet = useCallback((id: PlanetId) => {
         onClearSelection?.();
         const cfg = PLANET_CONFIG[id];
-        const pos = ephemeris?.[cfg.ephemerisKey];
+        const rawPos = ephemeris?.[cfg.ephemerisKey];
+        // O ephemeris aqui é o CRU; no linear o planeta é DESENHADO em LINEAR_SCALE_FACTOR (RadarScene
+        // reescala). A câmera precisa mirar na MESMA posição escalada, senão voa para a posição antiga.
+        const pos = rawPos && linearModeEnabled()
+            ? ([rawPos[0] * LINEAR_SCALE_FACTOR, rawPos[1] * LINEAR_SCALE_FACTOR, rawPos[2] * LINEAR_SCALE_FACTOR] as [number, number, number])
+            : rawPos;
         withOrbitExit(() => {
             setDismissedFocusObjectId(null);
             setBodyCardOpen(id);
