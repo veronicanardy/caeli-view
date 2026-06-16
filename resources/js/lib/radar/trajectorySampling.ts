@@ -38,7 +38,7 @@ export function currentPositionInScene(object: ClosestNowObject): [number, numbe
 }
 
 /**
- * [Modo linear] Posição de cena de um objeto do feed na régua HELIOCÊNTRICA de escala real (Sol na
+ * [Modo linear] Posição de cena de um objeto do feed na régua HELIOCÊNTRICA linear em UA (Sol na
  * origem), igual aos planetas/conhecidos — em vez da régua log geocêntrica.
  *
  * O ponto do Horizons é geocêntrico (km, eclíptico, Terra como origem). A posição heliocêntrica é
@@ -92,7 +92,7 @@ export function toVec3(point: { x: number; y: number; z?: number | null }): THRE
 }
 
 /**
- * [Modo linear] Versão de toVec3 para a régua HELIOCÊNTRICA de escala real: o ponto geocêntrico do
+ * [Modo linear] Versão de toVec3 para a régua HELIOCÊNTRICA linear em UA: o ponto geocêntrico do
  * Horizons (km) é levado a heliocêntrico (earthHelioAU + ponto/KM_PER_AU) e projetado por
  * helioAUToSunCenteredScene na LINEAR_AU_SCALE. Resultado ABSOLUTO (Sol na origem), igual à rocha em
  * currentPositionInHelioScene — então a trajetória curta cai exatamente onde o corpo está, fiel à

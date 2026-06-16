@@ -62,13 +62,13 @@ deve ler isto antes.
 - **Régua log geocêntrica:** legada, só por trás de `?log` (`compressDistanceDl`/`compressSceneVector`).
   Rede de comparação, invisível ao visitante. Não é o caminho padrão.
 - **Planetas: exagero CALIBRADO por planeta** (`planetData.ts`). O diâmetro real seria sub-pixel.
-  Os gigantes (Júpiter, Saturno) ficam quase em escala real (~1×); os rochosos pequenos recebem
+  Os gigantes (Júpiter, Saturno) ficam quase no raio físico (~1×); os rochosos pequenos recebem
   exagero maior para serem visíveis. A hierarquia é preservada e travada por teste
   (`bodyScaleHierarchy.test.ts`): Júpiter > Saturno > Urano ≥ Netuno > Terra > Vênus > Marte > Mercúrio.
 - **Terra e Lua: raio exagerado fixo** (`bodyScale.ts`). Lua sempre menor que a Terra; no modo
   linear a Lua usa `radiusScale 0,54` (tamanho aparente do Sol visto da Terra, a coincidência dos
   eclipses) e continua menor que Mercúrio.
-- **Sol: ÚNICO corpo em escala REAL (1×)** (`bodyRenderConstants.ts`,
+- **Sol: ÚNICO corpo no raio físico (1×, sem exagero)** (`bodyRenderConstants.ts`,
   `SUN_PHYSICAL_RADIUS_DL`/`SUN_VISUAL_RADIUS_DL`). Já é gigante o bastante para dominar (~9,5× o
   raio visual de Júpiter); exagerar seria absurdo, reduzir o faria competir com planetas.
 - **Asteroides (feed E conhecidos): UMA política simbólica em degraus por diâmetro real**

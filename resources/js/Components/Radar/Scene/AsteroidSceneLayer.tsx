@@ -50,7 +50,7 @@ export function AsteroidSceneLayer({
     /** Frações do canvas cobertas por painéis: o zoom out de trajetória enquadra só a área livre. */
     panelBiasX?: number;
     panelBiasY?: number;
-    /** [Modo linear] Plota os NEOs na régua heliocêntrica de escala real (Sol na origem). */
+    /** [Modo linear] Plota os NEOs na régua heliocêntrica linear em UA (Sol na origem). */
     helioScene?: boolean;
     /** Posição heliocêntrica da Terra (AU), necessária no modo helioScene. */
     earthHelioAU?: EarthHelioAU | null;
@@ -89,7 +89,7 @@ export function AsteroidSceneLayer({
             .filter((entry): entry is { object: ClosestNowObject; position: SceneVector } => entry !== null);
     }, [closestNowObjects]);
 
-    // [Modo linear] Régua única heliocêntrica de escala real: os NEOs caem na posição verdadeira ao
+    // [Modo linear] Régua única heliocêntrica linear em UA: os NEOs caem na posição verdadeira ao
     // redor do Sol. Base honesta — a separação visual de objetos próximos vem do ZOOM de câmera, não
     // de distorção de escala.
     if (helioScene && earthHelioAU) {

@@ -103,7 +103,7 @@ export function RadarFloatingOverlays({
     }, [radarLoading]);
 
     const elapsedLabel = useElapsedLabel(lastUpdated, en);
-    // Régua linear (escala real) é o padrão; a régua log só existe por trás de `?log`.
+    // Régua linear (escala linear em UA) é o padrão; a régua log só existe por trás de `?log`.
     const linear = linearModeEnabled();
 
     return (

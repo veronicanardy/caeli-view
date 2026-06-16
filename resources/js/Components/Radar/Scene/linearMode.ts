@@ -1,5 +1,5 @@
 /**
- * Modo LINEAR: régua única heliocêntrica de escala real, com a aproximação resolvida por zoom de
+ * Modo LINEAR: régua única heliocêntrica linear em UA, com a aproximação resolvida por zoom de
  * câmera. É a experiência PADRÃO do radar (a cara do CaeliView).
  *
  * Responsabilidade: dizer se o modo linear está ligado. Liga por padrão; só desliga quando a URL
