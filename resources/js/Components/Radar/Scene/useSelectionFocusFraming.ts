@@ -20,6 +20,7 @@ export function useSelectionFocusFraming(
     orbitMode: boolean,
     earthHelioPositionAU: { x: number; y: number; z: number } | null,
     earthScenePosition: [number, number, number] | null,
+    linearScale: number | null = null,
 ): FocusFraming | null {
     const [framing, setFraming] = useState<FocusFraming | null>(null);
     const latestEarthHelio = useRef(earthHelioPositionAU);
@@ -35,8 +36,9 @@ export function useSelectionFocusFraming(
         }
         // Conhecidos (régua dos planetas) não têm posição geocêntrica: seu enquadramento é o
         // knownFocusTarget (voo heliocêntrico), tratado à parte no RadarSceneCanvas. Aqui retornamos
-        // null para não competir com ele.
-        if (isKnownAsteroidId(focusedObject.approach.id)) {
+        // null para não competir com ele — exceto no modo linear, onde os NEOs do feed também são
+        // heliocêntricos e usam o caminho linear abaixo (conhecidos continuam pelo knownFocusTarget).
+        if (linearScale == null && isKnownAsteroidId(focusedObject.approach.id)) {
             setFraming(null);
             return;
         }
@@ -45,10 +47,11 @@ export function useSelectionFocusFraming(
             orbitMode,
             latestEarthHelio.current,
             latestEarthScene.current ?? [0, 0, 0],
+            linearScale,
         ));
         // refs lidas intencionalmente fora das dependências.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [focusedObject?.approach.id, selectionFocusNonce, orbitMode]);
+    }, [focusedObject?.approach.id, selectionFocusNonce, orbitMode, linearScale]);
 
     return framing;
 }

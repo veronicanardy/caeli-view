@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
 import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
-import { currentPositionInScene } from '@/lib/radar/trajectorySampling';
+import { currentPositionInHelioScene, currentPositionInScene } from '@/lib/radar/trajectorySampling';
 import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
 import { CAMERA_FOV_DEG, CAMERA_VIEWS, MAX_CAMERA_DISTANCE } from './cameraConstants';
 
@@ -175,7 +175,20 @@ export function computeFocusFraming(
     orbitMode = false,
     earthHelioPositionAU: EarthHelioAU | null = null,
     earthScenePosition: [number, number, number] = [0, 0, 0],
+    linearScale: number | null = null,
 ): FocusFraming | null {
+    // Modo linear: o objeto vive na régua heliocêntrica (Sol na origem), não offsetado pela Terra.
+    // Mira a posição heliocêntrica absoluta; distância de câmera proporcional à escala da régua.
+    if (linearScale != null && earthHelioPositionAU && !orbitMode) {
+        const helioPos = currentPositionInHelioScene(object, earthHelioPositionAU);
+        if (helioPos) {
+            const target = new THREE.Vector3(...helioPos);
+            const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
+            // ~0,02 AU de afastamento na escala da régua: enquadra o NEO de perto sem colar.
+            const distance = Math.max(0.02 * linearScale, 0.3);
+            return { target, position: target.clone().add(dir.multiplyScalar(distance)), transition: 'preserve_heading' };
+        }
+    }
     if (orbitMode && object.trajectory?.orbitalElements) {
         const elements = object.trajectory.orbitalElements;
         const orbitPoints = buildHeliocentricOrbit(elements, 256);

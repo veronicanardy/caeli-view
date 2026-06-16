@@ -27,6 +27,9 @@ export interface MoonProps {
     locale: 'pt-BR' | 'en';
     isFocused?: boolean;
     illuminatedFraction?: number;
+    /** Multiplica o raio visual do globo lunar. No modo linear, ~0,54 deixa a Lua do tamanho
+     *  aparente do Sol vista da Terra (mesma coincidência dos eclipses). Default 1. */
+    radiusScale?: number;
 }
 
 export function Moon({
@@ -40,6 +43,7 @@ export function Moon({
     locale,
     isFocused = false,
     illuminatedFraction = 0.5,
+    radiusScale = 1,
 }: MoonProps) {
     const en = locale === 'en';
     const [hovered, setHovered] = useState(false);
@@ -95,7 +99,7 @@ export function Moon({
     return (
         <group position={position}>
             <mesh ref={meshRef}>
-                <sphereGeometry args={[MOON_RADIUS_DL, 64, 64]} />
+                <sphereGeometry args={[MOON_RADIUS_DL * radiusScale, 64, 64]} />
                 {material ? (
                     <primitive object={material} attach="material" />
                 ) : (

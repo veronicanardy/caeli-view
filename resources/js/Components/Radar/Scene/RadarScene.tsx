@@ -12,7 +12,8 @@ import { useMemo, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
-import { LINEAR_AU_SCALE, scaleEphemerisForLinear } from '@/lib/sceneEphemeris';
+import { LINEAR_AU_SCALE, LINEAR_SCALE_FACTOR, buildHeliocentricOrbit, scaleEphemerisForLinear } from '@/lib/sceneEphemeris';
+import { OrbitLineHelio } from '../Trajectory/HeliocentricLines';
 import { OBJECT_PALETTE } from '@/lib/radar/palette';
 import { EARTH_RADIUS_DL } from '@/lib/radar/bodyScale';
 import { Sun } from '../Bodies/Sun/Sun';
@@ -192,6 +193,14 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         ? OBJECT_PALETTE[Math.max(0, closestNowObjects.findIndex((o) => o.approach.id === focusedObject.approach.id)) % OBJECT_PALETTE.length]
         : OBJECT_PALETTE[0];
 
+    // [Modo linear] Órbita heliocêntrica COMPLETA do NEO selecionado, ao redor do Sol (como os
+    // planetas). Construída na escala normal (ORBIT_AU_SCALE) e reescalada pelo grupo abaixo para
+    // bater com a régua linear — reusa a mesma geometria dos planetas, sem duplicar matemática.
+    const linearFocusOrbit = useMemo(
+        () => (linearScene && focusedElements ? buildHeliocentricOrbit(focusedElements) : null),
+        [linearScene, focusedElements],
+    );
+
     return (
         <SceneObjectOccludersContext.Provider value={sceneObjectOccluders}>
             <LabelOccluderContext.Provider value={labelOccluder}>
@@ -241,7 +250,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         <SceneRingsLayer onEarthFocus={focusEarth} showLabels={showLabels && !compactLabels && !orbitLabelsOnly} />
                     </group>
                     {/* Lua: position absoluto para o grupo 3D e labels; geocentricPosition para tidal lock. */}
-                    <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} illuminatedFraction={ephemeris?.moonIlluminatedFraction} />
+                    <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} illuminatedFraction={ephemeris?.moonIlluminatedFraction} radiusScale={linearScene ? 0.54 : 1} />
                     {showLabels ? <MoonOrbit moonPos={moonPos} earthPos={earthPos} orbitNormal={moonOrbitNormal} /> : null}
                     {/* Planetas — posições heliocêntricas reais, Sol na origem. */}
                     <PlanetLayer
@@ -265,6 +274,14 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     />
                     {/* Elipses orbitais — longitude do periélio calculada dinamicamente da efeméride. */}
                     <PlanetOrbitLayer ephemeris={ephemeris} show={showLabels && !orbitLabelsOnly} />
+
+                    {/* [Modo linear] Órbita completa do NEO selecionado ao redor do Sol. O grupo
+                        reescala a geometria (feita em ORBIT_AU_SCALE) para a régua linear. */}
+                    {linearFocusOrbit ? (
+                        <group scale={LINEAR_SCALE_FACTOR}>
+                            <OrbitLineHelio points={linearFocusOrbit} color={focusedPalette.future} opacity={0.5} />
+                        </group>
+                    ) : null}
 
                     {/* Asteroides e trajetórias: vetores Horizons log-comprimidos, offsetados pela Terra na cena. */}
                     <AsteroidSceneLayer

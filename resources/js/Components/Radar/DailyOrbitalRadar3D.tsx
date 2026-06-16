@@ -35,6 +35,7 @@ import { RadarNavigationPanel } from './Panels/RadarNavigationPanel';
 import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import { RadarSceneCanvas } from './Scene/RadarSceneCanvas';
 import { linearModeEnabled } from './Scene/linearMode';
+import { LINEAR_AU_SCALE } from '@/lib/sceneEphemeris';
 import { deriveActiveMode } from './Scene/sceneMode';
 import { useLabelNoGoRects } from './Scene/useLabelNoGoRects';
 import { useSceneEphemeris } from './Scene/useSceneEphemeris';
@@ -153,6 +154,7 @@ export function DailyOrbitalRadar3D({
         orbitMode,
         ephemeris?.earthHelioPositionAU ?? null,
         ephemeris?.earthScenePosition ?? null,
+        linearModeEnabled() ? LINEAR_AU_SCALE : null,
     );
 
     const [trajectoryPointFocus, setTrajectoryPointFocus] = useState<FocusFraming | null>(null);
