@@ -388,11 +388,40 @@ export const ORBIT_AU_SCALE = SUN_DISPLAY_DL;
 
 /**
  * [Modo linear] Escala AU PRÓPRIA do modo régua-única, isolada da régua normal (que mantém
- * ORBIT_AU_SCALE ≈ 96, amarrado ao encontro das duas réguas no Sol). 150 deixa os NEOs mais soltos
- * da Terra (≈ 1,9 unid vs 1,2 em 96), ao custo de empurrar cinturão/planetas mais longe. Só vale
- * quando o modo linear está ligado; o modo normal não é afetado.
+ * ORBIT_AU_SCALE ≈ 96, amarrado ao encontro das duas réguas no Sol). 300 dá aos NEOs bom respiro da
+ * Terra (≈ 2,4–6 unid, vs 0,8–1,9 em 96), ao custo de empurrar cinturão/planetas mais longe (Ceres a
+ * ~831 unid). Só vale quando o modo linear está ligado; o modo normal não é afetado. Fonte ÚNICA da
+ * escala do modo: mudar aqui recalibra todos os corpos.
  */
-export const LINEAR_AU_SCALE = 150;
+export const LINEAR_AU_SCALE = 300;
+
+/** Fator que converte a escala normal (ORBIT_AU_SCALE) na escala do modo linear. */
+export const LINEAR_SCALE_FACTOR = LINEAR_AU_SCALE / ORBIT_AU_SCALE;
+
+/**
+ * [Modo linear] Devolve uma CÓPIA do ephemeris com toda a geometria de cena reescalada por
+ * LINEAR_SCALE_FACTOR: as posições renderizadas (campos `*ScenePosition`) e os semieixos maiores
+ * (`*SemiMajorAU`, de que as elipses orbitais derivam o tamanho). Assim planetas, Terra, Lua, Sol e
+ * as órbitas todos esticam juntos e de forma consistente, sem tocar cada consumidor.
+ *
+ * Os ângulos (lon. periélio, inclinação, nó, excentricidade) NÃO são tocados: definem a forma e a
+ * orientação da órbita, não o tamanho. earthHelioPositionAU também fica intacto (é AU astronômico,
+ * usado para converter NEOs; a escala entra depois, em helioAUToSunCenteredScene).
+ */
+export function scaleEphemerisForLinear(ephemeris: SceneEphemeris): SceneEphemeris {
+    const k = LINEAR_SCALE_FACTOR;
+    const scaleVec = (v: [number, number, number]): [number, number, number] => [v[0] * k, v[1] * k, v[2] * k];
+    const out = { ...ephemeris } as Record<string, unknown>;
+    for (const key of Object.keys(out)) {
+        const value = out[key];
+        if (key.endsWith('ScenePosition') && Array.isArray(value)) {
+            out[key] = scaleVec(value as [number, number, number]);
+        } else if (key.endsWith('SemiMajorAU') && typeof value === 'number') {
+            out[key] = value * k;
+        }
+    }
+    return out as unknown as SceneEphemeris;
+}
 
 /**
  * Perifocal (x em direção ao periélio, y a +90° no sentido do movimento) → eclíptico heliocêntrico

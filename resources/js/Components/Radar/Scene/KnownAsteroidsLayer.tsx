@@ -38,6 +38,8 @@ type KnownAsteroidsLayerProps = {
     showLabels: boolean;
     /** Id do conhecido atualmente selecionado (formato knownAsteroidId), ou null. */
     selectedId?: string | null;
+    /** Escala AU própria (modo linear); default = ORBIT_AU_SCALE da régua normal. */
+    auScale?: number;
     /** Abre o card do conhecido clicado. */
     onSelect?: (known: KnownAsteroid) => void;
 };
@@ -47,8 +49,8 @@ type KnownAsteroidsLayerProps = {
  * cada um na região real onde está. As posições são recalculadas por render a partir da data atual
  * (barato: 5 propagações de Kepler).
  */
-export function KnownAsteroidsLayer({ showLabels, selectedId, onSelect }: KnownAsteroidsLayerProps) {
-    const placements = useMemo(() => knownAsteroidPlacements(new Date()), []);
+export function KnownAsteroidsLayer({ showLabels, selectedId, auScale, onSelect }: KnownAsteroidsLayerProps) {
+    const placements = useMemo(() => knownAsteroidPlacements(new Date(), auScale), [auScale]);
     const hasSelection = Boolean(selectedId);
 
     return (

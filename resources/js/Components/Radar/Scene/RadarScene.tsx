@@ -12,6 +12,7 @@ import { useMemo, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
+import { LINEAR_AU_SCALE, scaleEphemerisForLinear } from '@/lib/sceneEphemeris';
 import { OBJECT_PALETTE } from '@/lib/radar/palette';
 import { EARTH_RADIUS_DL } from '@/lib/radar/bodyScale';
 import { Sun } from '../Bodies/Sun/Sun';
@@ -94,7 +95,14 @@ function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
     return null;
 }
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, showKnownAsteroids = false, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris: ephemerisRaw, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, showKnownAsteroids = false, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
+    // No modo linear, a cena heliocêntrica usa a escala própria (LINEAR_AU_SCALE): reescalamos o
+    // ephemeris UMA vez aqui, e todos os consumidores (planetas, Terra, Lua, órbitas, câmera) herdam.
+    const linearScene = linearModeEnabled();
+    const ephemeris = useMemo(
+        () => (linearScene && ephemerisRaw ? scaleEphemerisForLinear(ephemerisRaw) : ephemerisRaw),
+        [linearScene, ephemerisRaw],
+    );
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
@@ -279,6 +287,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         <KnownAsteroidsLayer
                             showLabels={showLabels}
                             selectedId={selectedId}
+                            auScale={linearModeEnabled() ? LINEAR_AU_SCALE : undefined}
                             onSelect={(known) => {
                                 const object = closestNowObjects.find((o) => o.approach.id === knownAsteroidId(known));
                                 if (object) onSelect(object.approach);

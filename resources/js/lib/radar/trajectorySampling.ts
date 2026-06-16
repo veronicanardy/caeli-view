@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import type { AsteroidTrajectory, ClosestNowObject, TrajectoryPoint } from '@/types';
-import { KM_PER_LD, helioAUToSunCenteredScene } from '@/lib/sceneEphemeris';
+import { KM_PER_LD, LINEAR_AU_SCALE, helioAUToSunCenteredScene } from '@/lib/sceneEphemeris';
 import { KM_PER_AU } from '@/lib/physicalConstants';
 import { horizonsToScene } from './coordinates';
 
@@ -50,7 +50,9 @@ export function currentPositionInHelioScene(
         y: earthHelioAU.y + point.y / KM_PER_AU,
         z: earthHelioAU.z + (point.z ?? 0) / KM_PER_AU,
     };
-    return helioAUToSunCenteredScene(helio);
+    // Escala própria do modo linear (LINEAR_AU_SCALE): fonte única para calibrar todos os corpos
+    // do modo num lugar só.
+    return helioAUToSunCenteredScene(helio, LINEAR_AU_SCALE);
 }
 
 /** Converte um ponto de trajetória (km, eclíptico J2000, Terra como origem de medição) para THREE.Vector3 na cena. */

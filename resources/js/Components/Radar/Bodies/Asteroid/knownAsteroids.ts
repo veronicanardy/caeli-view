@@ -126,10 +126,11 @@ export type KnownAsteroidPlacement = {
 export function knownAsteroidScenePosition(
     known: KnownAsteroid,
     date: Date = new Date(),
+    scale?: number,
 ): [number, number, number] | null {
     const helio = heliocentricPositionAU(known.elements, date);
     if (!helio) return null;
-    return helioAUToSunCenteredScene(helio);
+    return helioAUToSunCenteredScene(helio, scale);
 }
 
 /**
@@ -151,11 +152,14 @@ export function knownAsteroidEarthDistanceKm(
     return Math.sqrt(dx * dx + dy * dy + dz * dz) * KM_PER_AU;
 }
 
-/** Posições de todos os conhecidos que puderam ser ancorados em `date`, na régua dos planetas. */
-export function knownAsteroidPlacements(date: Date = new Date()): KnownAsteroidPlacement[] {
+/**
+ * Posições de todos os conhecidos que puderam ser ancorados em `date`, na régua dos planetas.
+ * `scale` permite a escala própria do modo linear (default = ORBIT_AU_SCALE da régua normal).
+ */
+export function knownAsteroidPlacements(date: Date = new Date(), scale?: number): KnownAsteroidPlacement[] {
     return KNOWN_ASTEROIDS
         .map((known) => {
-            const scenePosition = knownAsteroidScenePosition(known, date);
+            const scenePosition = knownAsteroidScenePosition(known, date, scale);
             return scenePosition ? { known, scenePosition } : null;
         })
         .filter((p): p is KnownAsteroidPlacement => p !== null);
