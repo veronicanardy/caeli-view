@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import { symbolicRockRadiusForApproach } from '@/Components/Radar/Bodies/Asteroid/AsteroidMarker';
 import { EARTH_RADIUS_DL } from '@/lib/radar/bodyScale';
+import { MERCURY } from '@/lib/radar/planetData';
 import type { UnifiedApproach } from '@/types';
 
 /** Monta um UnifiedApproach mínimo com um diâmetro fixo (metros). */
@@ -45,10 +46,12 @@ describe('symbolicRockRadiusForApproach — invariantes da escala simbólica', (
         }
     });
 
-    it('o maior asteroide ainda é menor que a Terra na cena (teto de honestidade)', () => {
-        // Um corpo gigante (5 km) cai no maior degrau; deve ficar abaixo do raio visual da Terra,
-        // senão a cena sugeriria uma rocha maior que o planeta.
+    it('o maior asteroide ainda é menor que o MENOR planeta (Mercúrio) — teto de honestidade', () => {
+        // Um corpo gigante (5 km) cai no maior degrau; deve ficar abaixo do raio visual de Mercúrio,
+        // o menor planeta da cena. Antes só checávamos < Terra, que é frouxo: uma rocha podia ficar
+        // maior que Mercúrio/Vênus e ainda passar. Agora nenhuma rocha compete com planeta algum.
         const biggest = symbolicRockRadiusForApproach(approachWithDiameter(5000));
+        expect(biggest).toBeLessThan(MERCURY.visualRadiusDl);
         expect(biggest).toBeLessThan(EARTH_RADIUS_DL);
     });
 

@@ -1,25 +1,54 @@
 /**
  * Trava o contrato da escala visual dos asteroides conhecidos (régua "famosos").
  *
- * Decisão de produto: o tamanho 3D dos conhecidos é PADRONIZADO com os planetas ilustrativos, e não
- * proporcional ao diâmetro real. Como o RealAsteroidModel normaliza o GLB para "maior eixo = 2"
- * (raio ≈ 1), a escala aplicada é o raio visual em DL, ancorado no raio de Marte (MARS.visualRadiusDl)
- * para que o corpo fique coerente com a cena em vez de gigante.
+ * Decisão de produto (revisada): o tamanho 3D dos conhecidos usa a MESMA política simbólica dos
+ * asteroides do feed, agora a partir do diâmetro real de cada corpo. Antes era um tamanho fixo
+ * igual ao de Marte, que fazia rochas de centenas de metros parecerem planetas e igualava Ceres
+ * (939 km) a Bennu (490 m). Estes testes garantem que:
+ *  - o tamanho varia com o diâmetro real (Ceres > Vesta > Eros > Bennu ≥ Itokawa);
+ *  - nenhum conhecido ultrapassa o menor planeta (Mercúrio);
+ *  - o resultado é exatamente o da política central (sem regra paralela).
  */
 
 import { describe, expect, it } from 'vitest';
-import { knownAsteroidVisualScale } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
-import { MARS } from '@/lib/radar/planetData';
+import { KNOWN_ASTEROIDS, knownAsteroidVisualScale } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
+import { MAX_ROCK_RADIUS_DL, MIN_ROCK_RADIUS_DL, symbolicRockRadiusFromDiameter } from '@/lib/radar/asteroidScale';
+import { MERCURY } from '@/lib/radar/planetData';
+
+const byNumber = (n: string) => KNOWN_ASTEROIDS.find((k) => k.number === n)!;
 
 describe('knownAsteroidVisualScale', () => {
-    it('usa o raio visual de Marte como tamanho padrão (coerente com os planetas ilustrativos)', () => {
-        expect(knownAsteroidVisualScale()).toBe(MARS.visualRadiusDl);
+    it('usa a política central a partir do diâmetro real (sem regra paralela)', () => {
+        for (const known of KNOWN_ASTEROIDS) {
+            expect(knownAsteroidVisualScale(known)).toBe(symbolicRockRadiusFromDiameter(known.diameterMeters));
+        }
     });
 
-    it('é um raio visual pequeno, na faixa dos planetas ilustrativos (não gigante)', () => {
-        const scale = knownAsteroidVisualScale();
-        // Os planetas vão de ~0,028 (Mercúrio) a ~0,19 (Júpiter); o conhecido deve cair nessa faixa.
-        expect(scale).toBeGreaterThan(0.02);
-        expect(scale).toBeLessThan(0.2);
+    it('todos os conhecidos ficam dentro dos limites da escala simbólica', () => {
+        for (const known of KNOWN_ASTEROIDS) {
+            const scale = knownAsteroidVisualScale(known);
+            expect(scale).toBeGreaterThanOrEqual(MIN_ROCK_RADIUS_DL);
+            expect(scale).toBeLessThanOrEqual(MAX_ROCK_RADIUS_DL);
+        }
+    });
+
+    it('nenhum conhecido compete visualmente com um planeta (< Mercúrio)', () => {
+        for (const known of KNOWN_ASTEROIDS) {
+            expect(knownAsteroidVisualScale(known)).toBeLessThan(MERCURY.visualRadiusDl);
+        }
+    });
+
+    it('o tamanho reflete a ordem dos diâmetros reais: Ceres ≥ Vesta ≥ Eros ≥ Bennu ≥ Itokawa', () => {
+        const ceres = knownAsteroidVisualScale(byNumber('1'));      // 939 km
+        const vesta = knownAsteroidVisualScale(byNumber('4'));      // 525 km
+        const eros = knownAsteroidVisualScale(byNumber('433'));     // 17 km
+        const bennu = knownAsteroidVisualScale(byNumber('101955')); // 490 m
+        const itokawa = knownAsteroidVisualScale(byNumber('25143'));// 330 m
+        expect(ceres).toBeGreaterThanOrEqual(vesta);
+        expect(vesta).toBeGreaterThanOrEqual(eros);
+        expect(eros).toBeGreaterThanOrEqual(bennu);
+        expect(bennu).toBeGreaterThanOrEqual(itokawa);
+        // E os extremos são genuinamente diferentes (não tudo no mesmo degrau, como era antes).
+        expect(ceres).toBeGreaterThan(itokawa);
     });
 });
