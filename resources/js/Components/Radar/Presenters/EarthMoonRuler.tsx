@@ -24,10 +24,10 @@ type Props = {
 const VIEWBOX_WIDTH = 600;
 const VIEWBOX_HEIGHT = 110;
 const TRACK_Y = 60;
-const EARTH_X = 60;
-const MOON_X = 240;
-const RIGHT_EDGE = VIEWBOX_WIDTH - 30;
-const LINEAR_MAX = 5;
+export const EARTH_X = 60;
+export const MOON_X = 240;
+export const RIGHT_EDGE = VIEWBOX_WIDTH - 30;
+export const LINEAR_MAX = 5;
 const MOON_LEFT_PERCENT = (MOON_X / VIEWBOX_WIDTH) * 100;
 const MOON_TOP_PERCENT = (TRACK_Y / VIEWBOX_HEIGHT) * 100;
 
@@ -121,7 +121,7 @@ export function EarthMoonRuler({
     );
 }
 
-function positionForLunarDistance(lunarDistance: number): number {
+export function positionForLunarDistance(lunarDistance: number): number {
     if (lunarDistance <= 0) return EARTH_X;
     if (lunarDistance <= 1) {
         return EARTH_X + (MOON_X - EARTH_X) * lunarDistance;

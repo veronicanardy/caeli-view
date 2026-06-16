@@ -33,7 +33,7 @@ const LABEL_POSITION: [number, number, number] = [0, 0.04, 0];
  * relação padrão D[km] = 1329/√(albedo) · 10^(−H/5), com a faixa de albedo assumida pelo JPL
  * (0,25 para o limite inferior de diâmetro, 0,05 para o superior); × 1000 converte km → m.
  */
-function symbolicRockRadiusForApproach(a: UnifiedApproach): number {
+export function symbolicRockRadiusForApproach(a: UnifiedApproach): number {
     const dMin = a.estimatedDiameterMinMeters
         ?? (a.absoluteMagnitude != null ? (1329 / Math.sqrt(0.25)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000 : null);
     const dMax = a.estimatedDiameterMaxMeters
