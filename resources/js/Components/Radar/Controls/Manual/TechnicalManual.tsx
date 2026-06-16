@@ -29,12 +29,11 @@ export function TechnicalManual({ mode, locale, lunarDistanceKm }: { mode: Scene
     const auKm = nf.format(KM_PER_AU);
     const ldKm = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(lunarDistanceKm));
 
-    if (mode === 'radar') return <RadarTechnical en={en} ldKm={ldKm} lunarDistanceKm={lunarDistanceKm} locale={locale} auKm={auKm} />;
+    if (mode === 'radar') return <RadarTechnical en={en} ldKm={ldKm} locale={locale} auKm={auKm} />;
     return <OrbitTechnical en={en} locale={locale} />;
 }
 
-function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boolean; auKm: string; ldKm: string; lunarDistanceKm: number; locale: 'pt-BR' | 'en' }) {
-    const nf = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
+function RadarTechnical({ en, auKm, ldKm, locale }: { en: boolean; auKm: string; ldKm: string; locale: 'pt-BR' | 'en' }) {
     return (
         <div className="space-y-6">
             <div className="rounded-md border border-white/[0.08] bg-white/[0.03] px-4 py-3">
@@ -103,30 +102,29 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
 
                 <FormulaPanel
                     en={en}
-                    title={en ? '5. Radial log compression — asteroids and Moon' : '5. Compressão radial logarítmica — asteroides e Lua'}
+                    title={en ? '5. Single linear AU scale — asteroids and Moon' : '5. Escala linear única em UA — asteroides e Lua'}
                     formulas={[
-                        { expr: `R₀ = 40 DL`, comment: { en: `pivot = ${nf.format(40 * lunarDistanceKm)} km`, pt: `pivô = ${nf.format(40 * lunarDistanceKm)} km` } },
-                        { expr: 'K  = 1 / ln(1 + 1/R₀)', comment: { en: 'normalisation constant', pt: 'constante de normalização' } },
-                        { expr: 'f(r) = K · ln(1 + r/R₀)', comment: { en: 'compressed radius', pt: 'raio comprimido' } },
-                        { expr: 'r_scene = f(d_DL) · r̂', comment: { en: 'r̂ = r/‖r‖  (direction preserved)', pt: 'r̂ = r/‖r‖  (direção preservada)' } },
+                        { expr: 'p_helio = p_earth + r_geo / AU', comment: { en: 'asteroid heliocentric position [AU]', pt: 'posição heliocêntrica do asteroide [UA]' } },
+                        { expr: 'p_scene = (x, z, −y) · LINEAR_AU_SCALE', comment: { en: 'linear scale, no compression', pt: 'escala linear, sem compressão' } },
+                        { expr: 'moon_scene = d_DL · (LD / AU) · LINEAR_AU_SCALE', comment: { en: 'Moon on the same ruler', pt: 'Lua na mesma régua' } },
+                        { expr: 'closeness ← camera zoom', comment: { en: 'not a distorted scale', pt: 'não uma escala distorcida' } },
                     ]}
                     note={en
-                        ? 'R₀ = 40 DL is the compression pivot, chosen so the interplanetary range opens up without crushing the nearby NEOs. K is derived from R₀ by the constraint f(1) = 1, forcing the Moon to always land at exactly 1 scene unit. r̂ is preserved through compression so direction and trail shape are never distorted. Numbers in the UI are always the original, uncompressed values.'
-                        : 'R₀ = 40 DL é o pivô de compressão, escolhido para abrir a faixa interplanetária sem esmagar os NEOs próximos. K é derivado de R₀ pela restrição f(1) = 1, forçando a Lua a sempre cair em exatamente 1 unidade de cena. r̂ é preservado durante a compressão, então direção e forma da trilha nunca são distorcidos. Os números na interface são sempre os valores originais.'}
+                        ? 'Everything in the scene shares ONE strictly linear scale in AU: asteroids, Moon, planets and the Sun are placed at their true relative distances, with no compression. Because the scale is honest, a close approach is genuinely tiny next to the Earth-Sun gap, so the camera zooms toward Earth to reveal it. Closeness is shown by moving the camera, never by stretching the ruler. Direction, inclination and trail shape are exact. The numbers in the data panel are the real distances.'
+                        : 'Tudo na cena compartilha UMA escala estritamente linear em UA: asteroides, Lua, planetas e o Sol ficam nas suas distâncias relativas reais, sem compressão. Como a escala é honesta, uma aproximação é de fato minúscula perto do vão Terra-Sol, então a câmera dá zoom na Terra para revelá-la. A proximidade é mostrada movendo a câmera, nunca esticando a régua. Direção, inclinação e forma da trilha são exatas. Os números no painel de dados são as distâncias reais.'}
                 />
 
                 <FormulaPanel
                     en={en}
-                    title={en ? '5b. Linear AU scale — planets and their orbits' : '5b. Escala linear em UA — planetas e suas órbitas'}
+                    title={en ? '5b. Planets and their drawn orbits' : '5b. Planetas e suas órbitas desenhadas'}
                     formulas={[
-                        { expr: 'ORBIT_AU_SCALE = f(1 AU in DL)', comment: { en: 'same K·ln constant', pt: 'mesma constante K·ln' } },
-                        { expr: 'planet_scene = (ecl.x, ecl.z, −ecl.y) · scale', comment: { en: 'full 3D: inclination preserved', pt: '3D completo: inclinação preservada' } },
+                        { expr: 'planet_scene = (ecl.x, ecl.z, −ecl.y) · LINEAR_AU_SCALE', comment: { en: 'same ruler as the asteroids', pt: 'mesma régua dos asteroides' } },
                         { expr: 'position ← astronomy-engine HelioState()', comment: { en: 'real heliocentric vector', pt: 'vetor heliocêntrico real' } },
                         { expr: 'orbit ellipse ← perifocal(a, e, i, Ω, ω)', comment: { en: 'same source as position', pt: 'mesma fonte da posição' } },
                     ]}
                     note={en
-                        ? "Planets live in a separate heliocentric layer with strictly linear scale. The full 3D ecliptic mapping (x, z, −y) is used, so orbital inclination is preserved — planets and known asteroids share one coplanar space. Position and orbit ellipse come from the SAME geometry source (perifocal rotation from live osculating elements), so the planet always lands on its drawn line."
-                        : 'Os planetas vivem numa camada heliocêntrica separada com escala estritamente linear. O mapeamento eclíptico 3D completo (x, z, −y) é usado, então a inclinação orbital é preservada: planetas e asteroides conhecidos compartilham um único espaço coplanar. A posição e a elipse vêm da MESMA fonte de geometria (rotação perifocal dos elementos osculadores ao vivo), então o planeta sempre cai sobre a linha desenhada.'}
+                        ? 'Planets ride the SAME single linear scale as the asteroids and the Moon, so distances stay comparable across the whole scene. The full 3D ecliptic mapping (x, z, −y) preserves orbital inclination, and position and orbit ellipse come from the SAME geometry source (perifocal rotation from live osculating elements), so each planet always lands on its drawn line.'
+                        : 'Os planetas usam a MESMA escala linear única dos asteroides e da Lua, então as distâncias permanecem comparáveis em toda a cena. O mapeamento eclíptico 3D completo (x, z, −y) preserva a inclinação orbital, e a posição e a elipse vêm da MESMA fonte de geometria (rotação perifocal dos elementos osculadores ao vivo), então cada planeta sempre cai sobre a linha desenhada.'}
                 />
 
                 <FormulaPanel
@@ -137,11 +135,11 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                         { expr: en ? 'cone direction ← û' : 'direção do cone ← û', comment: { en: 'physically real direction', pt: 'direção fisicamente real' } },
                         { expr: en ? 'trail ← Horizons, −72 h to now' : 'trilha ← Horizons, −72 h até agora', comment: { en: 'adaptive step', pt: 'passo adaptativo' } },
                         { expr: en ? 'step: 1 h · 2 h · 4 h' : 'passo: 1 h · 2 h · 4 h', comment: { en: '< 50M km · < 500M km · farther', pt: '< 50M km · < 500M km · mais distante' } },
-                        { expr: en ? 'trail_scene = f() per point' : 'trilha_cena = f() por ponto', comment: { en: 'same log compression', pt: 'mesma compressão log' } },
+                        { expr: en ? 'trail_scene = linear AU per point' : 'trilha_cena = UA linear por ponto', comment: { en: 'same single scale', pt: 'mesma escala única' } },
                     ]}
                     note={en
-                        ? 'The cone points in the true geocentric velocity direction. The trail covers the past 72 hours of ephemeris, ending at the current moment, with the same log compression applied to each point. Step resolution adapts to distance: 1 h for close flybys, coarser for distant objects.'
-                        : 'O cone aponta na direção real da velocidade geocêntrica. A trilha cobre as últimas 72 horas de efeméride, terminando no momento atual, com a mesma compressão logarítmica por ponto. A resolução do passo é adaptativa: 1 h para passagens próximas, maior para objetos distantes.'}
+                        ? 'The cone points in the true geocentric velocity direction. The trail covers the past 72 hours of ephemeris, ending at the current moment, mapped through the same single linear scale as the rest of the scene. Step resolution adapts to distance: 1 h for close flybys, coarser for distant objects.'
+                        : 'O cone aponta na direção real da velocidade geocêntrica. A trilha cobre as últimas 72 horas de efeméride, terminando no momento atual, mapeada pela mesma escala linear única do resto da cena. A resolução do passo é adaptativa: 1 h para passagens próximas, maior para objetos distantes.'}
                 />
             </div>
 
@@ -168,8 +166,8 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                     <TechInterpretItem
                         label={en ? 'Visual distance vs. real distance' : 'Distância visual vs. distância real'}
                         text={en
-                            ? 'Log compression means "twice as far visually" can mean 10–20× farther physically. Perspective projection adds another layer: objects nearer to the camera appear larger. Always read the numbers in the data panel for the uncompressed distance.'
-                            : 'A compressão logarítmica faz com que "o dobro da distância visual" possa significar 10–20× mais longe fisicamente. A projeção em perspectiva adiciona outra camada: objetos mais próximos da câmera parecem maiores. Sempre leia os números no painel de dados para a distância sem compressão visual.'}
+                            ? 'The scene uses a linear scale, so visual distance is faithful to the real distance between bodies (body sizes are amplified separately, for legibility). What still shifts the look is perspective projection (objects nearer the camera appear larger) and the camera zoom used to reveal a close approach. The data panel always shows the real distance.'
+                            : 'A cena usa escala linear, então a distância visual é fiel à distância real entre os corpos (os tamanhos dos corpos são ampliados à parte, para legibilidade). O que ainda muda a aparência é a projeção em perspectiva (objetos mais próximos da câmera parecem maiores) e o zoom de câmera usado para revelar uma aproximação. O painel de dados sempre mostra a distância real.'}
                     />
                 </div>
             </TechGroup>
@@ -187,8 +185,8 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                             {(en ? [
                                 ['Positional accuracy', 'High for objects with long observational arcs (months–years). Lower for recent discoveries (days of data) — the solution can change significantly with more observations.'],
                                 ['Orbital model', 'Two-body Keplerian. Planetary perturbations are embedded in the Horizons state vectors at the query epoch, but are not re-integrated locally.'],
-                                ['Visual scale', 'Radially compressed (logarithmic). Direction and inclination faithfully preserved.'],
-                                ['Body size', 'Visual only — amplified 10,000–100,000× for legibility.'],
+                                ['Visual scale', 'Single linear AU scale, true to real distances. Direction and inclination faithfully preserved; a close approach is revealed by camera zoom, not by stretching the scale.'],
+                                ['Body size', 'Visual only. Amplified for legibility (a real asteroid would be sub-pixel).'],
                                 ['Earth illumination', 'Spherical model. Atmospheric refraction and polar flattening not modelled.'],
                                 ['Trail', 'Past 72 hours of ephemeris, ending at now. No future segment. Step resolution adapts to distance (1 h / 2 h / 4 h).'],
                                 ['Data freshness', 'Positions cached up to 15 min; trajectories up to 30 min.'],
@@ -196,8 +194,8 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                             ] : [
                                 ['Precisão posicional', 'Alta para objetos com arco observacional longo (meses–anos). Menor para descobertas recentes (dias de dados) — a solução pode mudar com mais observações.'],
                                 ['Modelo orbital', 'Kepleriano de dois corpos. Perturbações planetárias estão embutidas nos vetores de estado do Horizons na época da consulta, mas não são reintegradas localmente.'],
-                                ['Escala visual', 'Comprimida radialmente (logarítmica). Direção e inclinação preservadas fielmente.'],
-                                ['Tamanho dos corpos', 'Visual apenas — amplificado 10.000–100.000× para legibilidade.'],
+                                ['Escala visual', 'Escala linear única em UA, fiel às distâncias reais. Direção e inclinação preservadas fielmente; uma aproximação é revelada por zoom de câmera, não esticando a escala.'],
+                                ['Tamanho dos corpos', 'Visual apenas. Amplificado para legibilidade (um asteroide real seria sub-pixel).'],
                                 ['Iluminação da Terra', 'Modelo esférico. Refração atmosférica e achatamento polar não modelados.'],
                                 ['Trilha', 'Últimas 72 horas de efeméride, terminando agora. Sem trecho futuro. Passo adaptativo por distância (1 h / 2 h / 4 h).'],
                                 ['Atualização dos dados', 'Posições cacheadas até 15 min; trajetórias até 30 min.'],
@@ -285,15 +283,15 @@ function RadarTechnical({ en, auKm, ldKm, lunarDistanceKm, locale }: { en: boole
                                 { kind: 'observed', label: 'From NeoWs + CAD: approach list, distances, velocities, hazard flag' },
                                 { kind: 'observed', label: 'From SBDB: physical parameters, orbital elements, SPK-ID' },
                                 { kind: 'observed', label: 'From Horizons: asteroid position r, velocity v (per-object, for the 3D scene)' },
-                                { kind: 'calculated', label: 'Locally: Sun/Moon/Earth positions, subsolar point, distance units, log compression, cone direction, trail' },
-                                { kind: 'visual', label: 'Visual choice: body radii amplified ~10,000-100,000x; trail window -72 h / now' },
+                                { kind: 'calculated', label: 'Locally: Sun/Moon/Earth positions, subsolar point, distance units, linear scene scale, cone direction, trail' },
+                                { kind: 'visual', label: 'Visual choice: body radii amplified for legibility; trail window -72 h / now' },
                             ]
                             : [
                                 { kind: 'observed', label: 'NeoWs + CAD: lista de aproximações, distâncias, velocidades, flag de perigo' },
                                 { kind: 'observed', label: 'SBDB: parâmetros físicos, elementos orbitais, SPK-ID' },
                                 { kind: 'observed', label: 'Horizons: posição r e velocidade v do asteroide (por objeto, para a cena 3D)' },
-                                { kind: 'calculated', label: 'Localmente: posições do Sol/Lua/Terra, ponto subsolar, unidades de distância, compressão log, direção do cone, trilha' },
-                                { kind: 'visual', label: 'Escolha visual: raios dos corpos amplificados ~10.000-100.000x; janela da trilha -72 h / agora' },
+                                { kind: 'calculated', label: 'Localmente: posições do Sol/Lua/Terra, ponto subsolar, unidades de distância, escala linear da cena, direção do cone, trilha' },
+                                { kind: 'visual', label: 'Escolha visual: raios dos corpos amplificados para legibilidade; janela da trilha -72 h / agora' },
                             ]}
                     />
                 </div>
@@ -327,11 +325,11 @@ function OrbitTechnical({ en, locale }: { en: boolean; locale: 'pt-BR' | 'en' })
 
             {/* ── Contexto em duas colunas ──────────────────────────── */}
             <div className="grid gap-5 lg:grid-cols-2">
-                <TechSection prose title={en ? '1. Why a separate heliocentric view?' : '1. Por que uma vista heliocêntrica separada?'}>
+                <TechSection prose title={en ? '1. What the full-orbit view adds' : '1. O que a vista de órbita completa acrescenta'}>
                     <p className="text-sm leading-relaxed text-white/70">
                         {en
-                            ? 'The radar uses logarithmic compression (LD scale); the orbit view uses a linear AU scale. Mixing them would make the same ruler mean different distances depending on mode. Kept separate, each view has one consistent scale: the radar answers "how close right now?", the orbit view answers "does this path ever cross Earth\'s?"'
-                            : 'O radar usa compressão logarítmica (escala DL); a vista de órbita usa escala linear em UA. Misturá-las faria a mesma régua representar distâncias diferentes dependendo do modo. Separadas, cada vista tem uma escala consistente: o radar responde "quão perto agora?", a vista de órbita responde "esse caminho cruza o da Terra?"'}
+                            ? 'The whole scene uses one linear AU scale, so this view shares the same ruler as the radar — it just reveals the full Keplerian ellipse around the Sun instead of zooming in on the Earth neighbourhood. The radar answers "how close right now?"; the full-orbit view answers "does this path ever cross Earth\'s?"'
+                            : 'A cena inteira usa uma única escala linear em UA, então esta vista compartilha a mesma régua do radar. Ela apenas revela a elipse Kepleriana completa ao redor do Sol em vez de dar zoom na vizinhança da Terra. O radar responde "quão perto agora?"; a vista de órbita completa responde "esse caminho cruza o da Terra?"'}
                     </p>
                 </TechSection>
 
@@ -395,7 +393,7 @@ function OrbitTechnical({ en, locale }: { en: boolean; locale: 'pt-BR' | 'en' })
                     en={en}
                     title={en ? '5. Mapping to the 3D scene' : '5. Mapeamento para a cena 3D'}
                     formulas={[
-                        { expr: '1 AU = ORBIT_AU_SCALE', comment: { en: 'linear scale, no log compression', pt: 'escala linear, sem compressão log' } },
+                        { expr: '1 AU = LINEAR_AU_SCALE', comment: { en: 'one linear scale, no compression', pt: 'escala linear única, sem compressão' } },
                         { expr: 'body: (x_ecl, z_ecl, −y_ecl) · scale', comment: { en: 'full 3D, inclination preserved', pt: '3D completo, inclinação preservada' } },
                         { expr: 'ellipse ← perifocal(a, e, i, Ω, ω)', comment: { en: 'same rotation as the body', pt: 'mesma rotação do corpo' } },
                         { expr: en ? 'positions ← astronomy-engine HelioState()' : 'posições ← astronomy-engine HelioState()', comment: { en: 'real heliocentric vectors', pt: 'vetores heliocêntricos reais' } },

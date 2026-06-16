@@ -45,9 +45,30 @@ O plano eclíptico fica em XZ da cena; o norte eclíptico aponta para +Y.
 ## Relação com o radar 3D
 
 Os componentes de `Components/Radar/Bodies/`, `Scene/` e `Trajectory/` importam diretamente daqui.
-A escala logarítmica de distância (`compressSceneVector` em `sceneEphemeris.ts`) é o elo entre os
-vetores brutos do Horizons (km) e as posições na cena — toda distância passa por ela antes de chegar
-aqui.
+Os vetores brutos do Horizons (km, geocêntricos) viram posição heliocêntrica real e são projetados
+na cena pela escala linear única (ver "Política de escala" abaixo). A compressão logarítmica antiga
+(`compressSceneVector` em `sceneEphemeris.ts`) só é usada na régua de bastidor por trás de `?log`.
+
+## Política de escala (fonte única da verdade)
+
+A cena tem UMA régua de distância e uma política separada de tamanho de corpos. Quem mexer em escala
+deve ler isto antes.
+
+- **Distâncias: escala LINEAR única em UA** (`LINEAR_AU_SCALE`, em `sceneEphemeris.ts`). Asteroides,
+  Lua, planetas e Sol ficam nas distâncias relativas REAIS, sem compressão. A direção e a inclinação
+  são exatas. Como a régua é honesta, uma aproximação é de fato minúscula perto do vão Terra-Sol: a
+  proximidade é revelada por ZOOM de câmera na Terra, nunca esticando a régua.
+- **Régua log geocêntrica:** legada, só por trás de `?log` (`compressDistanceDl`/`compressSceneVector`).
+  Rede de comparação, invisível ao visitante. Não é o caminho padrão.
+- **Tamanho dos corpos: exagerado para legibilidade** (`bodyScale.ts`, `planetData.ts`). O diâmetro
+  real da Terra nessa escala seria sub-pixel. Os raios visuais preservam a ordem (Terra > Lua;
+  Júpiter > Terra) mas NÃO são fiéis à escala de distância.
+- **Asteroides do feed: raio SIMBÓLICO em degraus por classe de tamanho**
+  (`symbolicRockRadiusForApproach` em `AsteroidMarker.tsx`). Não é proporcional ao diâmetro real;
+  apenas pista grosseira de maior/menor, sempre menor que a Terra.
+- **Asteroides conhecidos: tamanho PADRONIZADO** no raio visual de Marte
+  (`knownAsteroidVisualScale` em `knownAsteroids.ts`). Diâmetro real só no painel de dados.
+- **O painel de dados sempre mostra as distâncias e diâmetros REAIS**, sem qualquer escala visual.
 
 ## Testes
 

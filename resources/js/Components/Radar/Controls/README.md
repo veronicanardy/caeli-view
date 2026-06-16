@@ -49,9 +49,9 @@ Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógi
 `FriendlyManual.tsx` e `TechnicalManual.tsx` cobrem avisos científicos obrigatórios:
 
 - **Órbita osculadora**: a elipse exibida no modo órbita é calculada a partir dos elementos atuais; não é simulação dinâmica nem previsão futura. Perturbações planetárias não são integradas localmente.
-- **Escala logarítmica**: distâncias são comprimidas radialmente (modo radar). Avisos inline na cena reforçam isso.
+- **Escala linear única**: distâncias estão em escala linear em UA (sem compressão), fiéis às proporções reais entre os corpos; a aproximação é revelada por zoom de câmera, não esticando a régua. Os tamanhos dos corpos são ampliados à parte. A régua log antiga só existe por trás de `?log`. Avisos inline na cena reforçam isso.
 - **Posições simbólicas**: objetos sem trajetória Horizons têm posição estimada pela distância da aproximação máxima; o ângulo na cena não tem significado físico.
-- **Tamanho dos corpos**: raios visuais amplificados ~10.000–100.000× para legibilidade.
+- **Tamanho dos corpos**: raios visuais amplificados para legibilidade (um asteroide real seria sub-pixel).
 
 Qualquer mudança de linguagem nesses manuais deve preservar esses quatro avisos.
 - `Manual/manualTypes.ts`: tipos locais compartilhados pelo manual e por controles relacionados.

@@ -16,11 +16,16 @@
  * (objetos/filtros) e a MobileActionBar é a porta de entrada; o card de foco
  * vira sheet com snaps dentro do PanelShell.
  *
- * Dois modos de visualização coexistem:
- *   - 'radar'  : escala logarítmica comprimida em DL, Sol na origem, Terra posicionada em ~1 UA.
- *   - 'orbit'  : escala linear em UA, Sol na origem, órbita Kepleriana completa visível.
- * A troca só ocorre quando um objeto selecionado tem elementos orbitais com época de
- * periélio válida (tpJd ≠ 0), sem isso a posição Kepleriana não é computável.
+ * Toda a cena usa UMA escala linear em UA (LINEAR_AU_SCALE): asteroides, Lua, planetas e Sol
+ * ficam nas distâncias relativas reais, sem compressão. A aproximação (minúscula perto do vão
+ * Terra-Sol) é revelada por ZOOM de câmera na Terra, não esticando a régua. A régua log
+ * geocêntrica antiga sobrevive apenas como rede de comparação por trás de `?log` (ver linearMode.ts).
+ *
+ * Dois recortes da MESMA cena coexistem:
+ *   - 'radar'  : vizinhança da Terra em foco; aproximação, direção e trilha do objeto.
+ *   - 'orbit'  : revela a elipse Kepleriana completa do objeto ao redor do Sol (sob demanda).
+ * O recorte 'orbit' só fica disponível quando o objeto selecionado tem elementos orbitais com
+ * época de periélio válida (tpJd ≠ 0), sem isso a posição Kepleriana não é computável.
  */
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';

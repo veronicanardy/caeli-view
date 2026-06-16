@@ -106,7 +106,7 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
             paragraphs: [
                 'CaeliView is an independent project and is not affiliated with, sponsored by, or endorsed by NASA, JPL, or Caltech.',
                 'Data sources: NASA/JPL CNEOS, NASA/JPL Horizons, and NASA public APIs, as indicated throughout the experience.',
-                'Visualizations are educational and may use scale compression, visual approximations, and fallbacks. For official information, consult the original sources.',
+                'Visualizations are educational and may use visual scale choices, approximations, and fallbacks. For official information, consult the original sources.',
             ],
         }
         : {
@@ -116,7 +116,7 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
             paragraphs: [
                 'CaeliView é um projeto independente e não é afiliado, patrocinado ou endossado pela NASA, JPL ou Caltech.',
                 'Fontes de dados: NASA/JPL CNEOS, NASA/JPL Horizons e APIs públicas da NASA, conforme indicado ao longo da experiência.',
-                'As visualizações são educativas e podem usar compressão de escala, aproximações visuais e fallbacks. Para informações oficiais, consulte as fontes originais.',
+                'As visualizações são educativas e podem usar escolhas visuais de escala, aproximações e fallbacks. Para informações oficiais, consulte as fontes originais.',
             ],
         };
 

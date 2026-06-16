@@ -11,6 +11,7 @@ import type { SceneMode } from '../Controls/Manual/manualTypes';
 import { Tooltip } from '../Controls/Tooltip';
 import { OrbitWelcomeToast, RadarWelcomeToast } from '../Controls/WelcomeToast';
 import type { PlanetId } from '../Scene/planetConfig';
+import { linearModeEnabled } from '../Scene/linearMode';
 import { UnifiedFocusCard } from './UnifiedFocusCard';
 import { SceneLegend } from './SceneLegend';
 
@@ -102,6 +103,8 @@ export function RadarFloatingOverlays({
     }, [radarLoading]);
 
     const elapsedLabel = useElapsedLabel(lastUpdated, en);
+    // Régua linear (escala real) é o padrão; a régua log só existe por trás de `?log`.
+    const linear = linearModeEnabled();
 
     return (
         <>
@@ -152,7 +155,7 @@ export function RadarFloatingOverlays({
                     </span>
                 ) : null}
                 </div>
-                {/* Badge de modo órbita: aparece apenas quando a cena muda para escala linear UA.
+                {/* Badge de modo órbita: aparece quando a elipse osculadora completa é revelada.
                     Os badges são pointer-events-auto só para o tooltip de hover funcionar. */}
                 {activeMode === 'orbit' ? (
                     <Tooltip
@@ -174,12 +177,18 @@ export function RadarFloatingOverlays({
                         wrap
                         hideDelay={150}
                         className="pointer-events-auto"
-                        content={en
-                            ? 'Distances are radially compressed (logarithmic scale). Visual separation does not reflect real distance. Read numbers in the data panel.'
-                            : 'Distâncias comprimidas radialmente (escala logarítmica). A separação visual não reflete distância real. Leia os números no painel de dados.'}
+                        content={linear
+                            ? (en
+                                ? 'Linear AU scale: distances reflect the real proportions between bodies (no compression). Body sizes are amplified for legibility. A close approach is revealed by zooming in.'
+                                : 'Escala linear em UA: as distâncias refletem as proporções reais entre os corpos (sem compressão). Os tamanhos são ampliados para legibilidade. A aproximação aparece com zoom.')
+                            : (en
+                                ? 'Distances are radially compressed (logarithmic scale). Visual separation does not reflect real distance. Read numbers in the data panel.'
+                                : 'Distâncias comprimidas radialmente (escala logarítmica). A separação visual não reflete distância real. Leia os números no painel de dados.')}
                     >
                         <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-white/10 bg-white/4 px-2 py-0.5 text-[9px] font-medium text-white/28">
-                            {en ? '~ log scale · visual only' : '~ escala log · visual apenas'}
+                            {linear
+                                ? (en ? '~ linear scale · AU' : '~ escala linear · UA')
+                                : (en ? '~ log scale · visual only' : '~ escala log · visual apenas')}
                         </span>
                     </Tooltip>
                 )}

@@ -21,7 +21,19 @@ const HITBOX_RADIUS = 0.14;
 const HITBOX_SEGMENTS = 16;
 const LABEL_POSITION: [number, number, number] = [0, 0.04, 0];
 
-function rockScaleFromDiameter(a: UnifiedApproach): number {
+/**
+ * Raio visual SIMBÓLICO de um asteroide do feed, em degraus por classe de tamanho.
+ *
+ * NÃO é proporcional ao diâmetro real: um asteroide real seria sub-pixel na escala da cena
+ * (a régua de distância é linear e fiel, ver lib/radar/README.md). Os degraus apenas dão uma
+ * pista grosseira de "maior/menor" mantendo todos visíveis e inequivocamente menores que a Terra.
+ * Maior diâmetro nunca produz raio menor (monotônico).
+ *
+ * O diâmetro de entrada vem do feed; quando ausente, é estimado da magnitude absoluta H pela
+ * relação padrão D[km] = 1329/√(albedo) · 10^(−H/5), com a faixa de albedo assumida pelo JPL
+ * (0,25 para o limite inferior de diâmetro, 0,05 para o superior); × 1000 converte km → m.
+ */
+function symbolicRockRadiusForApproach(a: UnifiedApproach): number {
     const dMin = a.estimatedDiameterMinMeters
         ?? (a.absoluteMagnitude != null ? (1329 / Math.sqrt(0.25)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000 : null);
     const dMax = a.estimatedDiameterMaxMeters
@@ -89,7 +101,7 @@ export function AsteroidMarker({
     const [hovered, setHovered] = useState(false);
     const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
 
-    const rockScale = rockScaleFromDiameter(object.approach);
+    const rockScale = symbolicRockRadiusForApproach(object.approach);
     const opacity = dimmed ? DIMMED_OPACITY : FULL_OPACITY;
 
     return (
