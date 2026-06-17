@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LINEAR_AU_SCALE, SUN_DISPLAY_DL, compressDistanceDl } from '@/lib/sceneEphemeris';
+import { LINEAR_AU_SCALE, SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { KM_PER_AU, LUNAR_DISTANCE_KM } from '@/lib/physicalConstants';
 import {
     computeEarthPosition,
@@ -79,39 +79,27 @@ describe('computeEarthPosition', () => {
 // ─── computeMoonGeoPosition ───────────────────────────────────────────────────
 
 describe('computeMoonGeoPosition', () => {
-    it('retorna fallback em [compressDistanceDl(1), 0, 0] quando efeméride é null', () => {
+    it('põe a Lua na régua heliocêntrica real (1 DL ≈ 0,77 unid), SEM compressão', () => {
+        // 1 DL = 384.400 km = 0,00257 UA; cada UA = LINEAR_AU_SCALE (300) unid → ~0,77 unid.
+        // A Lua DEVE ficar perto da Terra, na mesma régua dos NEOs.
+        const ephemeris = { moonScenePosition: [1, 0, 0] } as unknown as SceneEphemeris;
+        const pos = computeMoonGeoPosition(ephemeris);
+        const expected = (LUNAR_DISTANCE_KM / KM_PER_AU) * LINEAR_AU_SCALE;
+        expect(pos[0]).toBeCloseTo(expected, 6);
+        expect(expected).toBeLessThan(1); // ~0,77: perto da Terra, como esperado
+    });
+
+    it('retorna o fallback de 1 DL na régua real quando a efeméride é null', () => {
         const pos = computeMoonGeoPosition(null);
-        expect(pos[0]).toBeCloseTo(compressDistanceDl(1), 10);
+        const expected = (LUNAR_DISTANCE_KM / KM_PER_AU) * LINEAR_AU_SCALE;
+        expect(pos[0]).toBeCloseTo(expected, 6);
         expect(pos[1]).toBe(0);
         expect(pos[2]).toBe(0);
     });
 
-    it('retorna posição comprimida quando efeméride tem moonScenePosition', () => {
-        // Posição bruta em DL; compressSceneVector comprime a MAGNITUDE radial e preserva a
-        // direção — nunca cada eixo isolado (isso distorceria a direção). Ver compressRadial.test.ts.
-        const ephemeris = { moonScenePosition: [1, 0, 0] } as unknown as SceneEphemeris;
-        const pos = computeMoonGeoPosition(ephemeris);
-        // Resultado deve ser finito e não nulo.
-        expect(pos.every(Number.isFinite)).toBe(true);
-        expect(pos[0]).toBeGreaterThan(0);
-    });
-
-    it('[linear] põe a Lua na régua heliocêntrica real (1 DL ≈ 0,77 unid), SEM compressão', () => {
-        // 1 DL = 384.400 km = 0,00257 UA; cada UA = LINEAR_AU_SCALE (300) unid → ~0,77 unid.
-        // Trava o bug da "órbita lunar gigante" no linear: a Lua DEVE ficar perto da Terra, na
-        // mesma régua dos NEOs, não inflada pela compressão log (que daria valor bem maior).
-        const ephemeris = { moonScenePosition: [1, 0, 0] } as unknown as SceneEphemeris;
-        const linearPos = computeMoonGeoPosition(ephemeris, true);
-        const expected = (LUNAR_DISTANCE_KM / KM_PER_AU) * LINEAR_AU_SCALE;
-        expect(linearPos[0]).toBeCloseTo(expected, 6);
-        expect(expected).toBeLessThan(1); // ~0,77: perto da Terra, como esperado
-        // E é MENOR que a versão log (que inflava a órbita lunar e engolia os NEOs).
-        expect(linearPos[0]).toBeLessThan(computeMoonGeoPosition(ephemeris)[0]);
-    });
-
-    it('[linear] preserva a direção (escala uniforme, sem distorcer eixos)', () => {
+    it('preserva a direção (escala uniforme, sem distorcer eixos)', () => {
         const ephemeris = { moonScenePosition: [0.6, 0, 0.8] } as unknown as SceneEphemeris;
-        const pos = computeMoonGeoPosition(ephemeris, true);
+        const pos = computeMoonGeoPosition(ephemeris);
         // Razão entre eixos preservada: 0.8/0.6 = z/x.
         expect(pos[2] / pos[0]).toBeCloseTo(0.8 / 0.6, 10);
     });

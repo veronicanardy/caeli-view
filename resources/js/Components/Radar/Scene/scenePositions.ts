@@ -5,7 +5,7 @@
  * pela cena 3D, incluindo fallbacks leves de Sol/Terra/Lua.
  */
 
-import { compressDistanceDl, compressSceneVector, LINEAR_AU_SCALE, SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
+import { LINEAR_AU_SCALE, SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 import { KM_PER_AU, LUNAR_DISTANCE_KM as KM_PER_LD } from '@/lib/physicalConstants';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 
@@ -49,27 +49,17 @@ export function computeEarthPosition(ephemeris: SceneEphemeris | null, fallbackS
 }
 
 /**
- * Vetor geocêntrico da Lua em unidades de cena. `moonScenePosition` vem em DL (1 unid = 1 distância
- * lunar), cru da efeméride.
- *
- * - Régua LOG (radar padrão de bastidor): aplica a compressão logarítmica, como o resto da cena.
- * - Régua LINEAR (modo padrão): converte DL → unidades da régua heliocêntrica real (LINEAR_UNITS_PER_DL),
- *   SEM compressão. Assim a Lua fica na MESMA régua dos NEOs (a ~0,77 unid da Terra), e as distâncias
- *   relativas voltam a fazer sentido (Lua perto, NEOs a vários DL mais longe). Passar a compressão log
- *   aqui inflava a órbita lunar a ponto de engolir os NEOs.
- *
- * IMPORTANTE: recebe a posição CRUA (pré-`scaleEphemerisForLinear`); a régua linear é aplicada aqui,
- * para não sofrer dupla escala (o reescalonamento do ephemeris multiplica os `*ScenePosition`).
+ * Vetor geocêntrico da Lua na régua LINEAR heliocêntrica (única do radar). `moonScenePosition` vem em
+ * DL (1 unid = 1 distância lunar), cru da efeméride; aqui convertemos DL → unidades da régua real
+ * (LINEAR_UNITS_PER_DL), SEM compressão. Assim a Lua fica na MESMA régua dos NEOs (a ~0,77 unid da
+ * Terra), e as distâncias relativas fazem sentido (Lua perto, NEOs a vários DL mais longe).
  */
-export function computeMoonGeoPosition(ephemeris: SceneEphemeris | null, linear = false): SceneVector {
+export function computeMoonGeoPosition(ephemeris: SceneEphemeris | null): SceneVector {
     const p = ephemeris?.moonScenePosition;
     if (!p) {
-        return linear ? [LINEAR_UNITS_PER_DL, 0, 0] : [compressDistanceDl(1), 0, 0];
+        return [LINEAR_UNITS_PER_DL, 0, 0];
     }
-    if (linear) {
-        return [p[0] * LINEAR_UNITS_PER_DL, p[1] * LINEAR_UNITS_PER_DL, p[2] * LINEAR_UNITS_PER_DL];
-    }
-    return compressSceneVector(p);
+    return [p[0] * LINEAR_UNITS_PER_DL, p[1] * LINEAR_UNITS_PER_DL, p[2] * LINEAR_UNITS_PER_DL];
 }
 
 export function computeMoonPosition(earthPos: SceneVector, moonGeoPos: SceneVector): SceneVector {

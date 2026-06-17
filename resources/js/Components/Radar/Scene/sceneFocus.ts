@@ -1,8 +1,8 @@
 /**
  * Regras locais de foco, labels e oclusão da cena.
  *
- * Responsabilidade: decidir visibilidade de labels, oclusores e uso da cena
- * heliocêntrica a partir de estado já recebido. Não busca dados nem altera seleção.
+ * Responsabilidade: decidir visibilidade de labels e oclusores a partir de
+ * estado já recebido. Não busca dados nem altera seleção.
  */
 
 import * as THREE from 'three';
@@ -66,9 +66,4 @@ export function computeLabelOccluder({
     return focusedObjectPosition
         ? { center: new THREE.Vector3(...focusedObjectPosition), radius: 0.18 }
         : null;
-}
-
-export function shouldUseHelioScene(orbitMode: boolean, selectedHasOrbit: boolean, focusedObject: ClosestNowObject | null) {
-    const focusedElements = focusedObject?.trajectory?.orbitalElements ?? null;
-    return orbitMode && selectedHasOrbit && Boolean(focusedElements && Number.isFinite(focusedElements.tpJd) && focusedElements.tpJd !== 0);
 }

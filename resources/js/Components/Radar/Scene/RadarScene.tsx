@@ -133,7 +133,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     // real (mesma dos NEOs): computeMoonGeoPosition converte os DL crus de moonScenePosition para
     // unidades da régua única (LINEAR_UNITS_PER_DL).
     const moonGeoPos = useMemo(
-        () => computeMoonGeoPosition(ephemeris, true),
+        () => computeMoonGeoPosition(ephemeris),
         [ephemeris],
     );
 
