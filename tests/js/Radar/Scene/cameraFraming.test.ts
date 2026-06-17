@@ -107,27 +107,26 @@ function makeObjectWithPosition(): ClosestNowObject {
     } as unknown as ClosestNowObject;
 }
 
+const EARTH_HELIO = { x: 1, y: 0, z: 0 };
+
 describe('computeFocusFraming', () => {
     it('retorna null quando não há trajetória e orbitMode é false', () => {
-        expect(computeFocusFraming(makeObjectNoTrajectory())).toBeNull();
+        expect(computeFocusFraming(makeObjectNoTrajectory(), false, EARTH_HELIO)).toBeNull();
+    });
+
+    it('retorna null quando falta a posição heliocêntrica da Terra (efeméride não resolvida)', () => {
+        expect(computeFocusFraming(makeObjectWithPosition(), false, null)).toBeNull();
     });
 
     it('retorna close-up com transition "preserve_heading" quando objeto tem posição', () => {
-        const framing = computeFocusFraming(makeObjectWithPosition());
+        const framing = computeFocusFraming(makeObjectWithPosition(), false, EARTH_HELIO);
         expect(framing).not.toBeNull();
         expect(framing!.transition).toBe('preserve_heading');
+        expect(framing!.target.toArray().every(Number.isFinite)).toBe(true);
     });
 
-    it('o target do close-up inclui o earthScenePosition como offset', () => {
-        const earth: [number, number, number] = [10, 0, 0];
-        const framing = computeFocusFraming(makeObjectWithPosition(), false, null, earth);
-        expect(framing).not.toBeNull();
-        // O target deve estar em algum ponto próximo a x=10 (earthPos + geoPos comprimido)
-        expect(framing!.target.x).toBeGreaterThan(9);
-    });
-
-    it('com orbitMode true mas sem elementos orbitais cai para close-up', () => {
-        const framing = computeFocusFraming(makeObjectWithPosition(), true);
+    it('com orbitMode true mas sem elementos orbitais cai para o close-up heliocêntrico', () => {
+        const framing = computeFocusFraming(makeObjectWithPosition(), true, EARTH_HELIO);
         expect(framing).not.toBeNull();
         expect(framing!.transition).toBe('preserve_heading');
     });

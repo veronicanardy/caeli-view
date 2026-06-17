@@ -329,14 +329,12 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                             closestNowObjects={closestNowObjects}
                             selectedId={selectedId}
                             hasSelection={hasSelection}
-                            earthPos={earthPos}
                             onSelect={onSelect}
                             showLabels={showLabels}
                             showLabelForObject={showLabelForObject}
                             onFocusTrajectoryPoint={onFocusTrajectoryPoint}
                             panelBiasX={panelBiasX}
                             panelBiasY={panelBiasY}
-                            helioScene
                             earthHelioAU={ephemeris?.earthHelioPositionAU ?? null}
                             skipObjectId={focusBodyPosition ? focusedObject?.approach.id ?? null : null}
                         />

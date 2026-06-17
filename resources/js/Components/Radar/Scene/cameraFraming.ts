@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
 import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
-import { currentPositionInHelioScene, currentPositionInScene } from '@/lib/radar/trajectorySampling';
+import { currentPositionInHelioScene } from '@/lib/radar/trajectorySampling';
 import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
 import { CAMERA_FOV_DEG, CAMERA_VIEWS, MAX_CAMERA_DISTANCE } from './cameraConstants';
 
@@ -166,23 +166,23 @@ export function framingForTrajectorySegment({
 }
 
 /**
- * Enquadramento de câmera para um asteroide selecionado.
- *   - orbitMode = false: close-up no asteroide, modo radar com escala logarítmica.
- *   - orbitMode = true: enquadra a órbita Kepleriana completa ao redor do Sol na cena heliocêntrica.
+ * Enquadramento de câmera para um asteroide selecionado, na régua heliocêntrica única (Sol na origem).
+ *   - orbitMode = false: close-up na rocha, mirando a posição heliocêntrica absoluta.
+ *   - orbitMode = true: enquadra a órbita Kepleriana completa ao redor do Sol.
+ *
+ * Retorna null quando não há posição utilizável (efeméride da Terra ainda não resolvida); a câmera
+ * só reenquadra no tick seguinte, quando a posição chega.
  */
 export function computeFocusFraming(
     object: ClosestNowObject,
     orbitMode = false,
     earthHelioPositionAU: EarthHelioAU | null = null,
-    earthScenePosition: [number, number, number] = [0, 0, 0],
-    linearScale: number | null = null,
 ): FocusFraming | null {
-    // Modo linear: o objeto vive na régua heliocêntrica (Sol na origem), não offsetado pela Terra.
-    // Mira a posição heliocêntrica absoluta da rocha. A DISTÂNCIA é a mesma do close-up log
-    // (SELECTION_DISTANCE = 0.1): o MODELO da rocha tem o mesmo tamanho visual nas duas réguas (a
-    // escala da régua move posições, não corpos), então 0,1 dá zoom total na rocha E cai na faixa em
-    // que a lupa de "ver trajetória" aparece. Proporcional à régua (0.02×escala) afastava demais.
-    if (linearScale != null && earthHelioPositionAU && !orbitMode) {
+    // Close-up: o objeto vive na régua heliocêntrica (Sol na origem), não offsetado pela Terra.
+    // Mira a posição heliocêntrica absoluta da rocha. A DISTÂNCIA fixa (0.1) dá zoom total na rocha
+    // (o MODELO tem o mesmo tamanho visual independentemente da escala da régua, que move posições e
+    // não corpos) E cai na faixa em que a lupa de "ver trajetória" aparece.
+    if (earthHelioPositionAU && !orbitMode) {
         const helioPos = currentPositionInHelioScene(object, earthHelioPositionAU);
         if (helioPos) {
             const target = new THREE.Vector3(...helioPos);
@@ -229,14 +229,10 @@ export function computeFocusFraming(
         // Elementos rejeitados pelo construtor de órbita. Cai para o close-up para mostrar algo.
     }
 
-    // Close-up na rocha: vetor Horizons log-comprimido, offsetado pela Terra na cena.
-    const geoPos = currentPositionInScene(object);
-    if (!geoPos) return null;
-    const target = new THREE.Vector3(
-        earthScenePosition[0] + geoPos[0],
-        earthScenePosition[1] + geoPos[1],
-        earthScenePosition[2] + geoPos[2],
-    );
+    // Fallback de close-up (modo órbita sem elipse utilizável): mira a posição heliocêntrica absoluta.
+    const helioPos = earthHelioPositionAU ? currentPositionInHelioScene(object, earthHelioPositionAU) : null;
+    if (!helioPos) return null;
+    const target = new THREE.Vector3(...helioPos);
     const distance = 0.1;
     const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
     const position = target.clone().add(dir.multiplyScalar(distance));
