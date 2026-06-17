@@ -12,6 +12,7 @@ import type { Translator } from '@/i18n';
 import { compactKm, formatNumber, lunarDistanceLabel } from '@/lib/format';
 import type { RadarObject } from '@/lib/radarData';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
+import { Tooltip } from '../Controls/Tooltip';
 import { formatApproachDateTime } from './panelFormatters';
 
 type Props = {
@@ -203,12 +204,12 @@ function RadarCoverageBlock({
                     label={t('observatory.radar.quality.withHorizons')}
                     value={withHorizons}
                     highlight
-                    title={en ? 'Real position from JPL Horizons state vectors — calculated for right now.' : 'Posição real via vetores de estado JPL Horizons — calculada para agora.'}
+                    tooltip={en ? 'Real position from JPL Horizons state vectors, calculated for right now.' : 'Posição real via vetores de estado JPL Horizons, calculada para agora.'}
                 />
                 <CoverageRow
                     label={t('observatory.radar.quality.symbolic')}
                     value={symbolic}
-                    title={en ? 'Closest-approach distance only — no real-time spatial position available.' : 'Apenas distância da aproximação máxima — sem posição espacial em tempo real.'}
+                    tooltip={en ? 'Closest-approach distance only, no real-time spatial position available.' : 'Apenas distância da aproximação máxima, sem posição espacial em tempo real.'}
                 />
             </dl>
 
@@ -220,12 +221,20 @@ function RadarCoverageBlock({
     );
 }
 
-function CoverageRow({ label, value, highlight = false, title }: { label: string; value: number; highlight?: boolean; title?: string }) {
-    return (
-        <div className="flex items-center justify-between gap-2" title={title}>
+function CoverageRow({ label, value, highlight = false, tooltip }: { label: string; value: number; highlight?: boolean; tooltip?: string }) {
+    const row = (
+        <div className="flex w-full items-center justify-between gap-2">
             <dt className={`cursor-help text-white/${highlight ? '45' : '30'}`}>{label}</dt>
             <dd className={`tabular-nums font-semibold ${highlight ? 'text-white/75' : 'text-white/45'}`}>{value}</dd>
         </div>
+    );
+
+    if (!tooltip) return row;
+
+    return (
+        <Tooltip content={tooltip} wrap className="w-full">
+            {row}
+        </Tooltip>
     );
 }
 
