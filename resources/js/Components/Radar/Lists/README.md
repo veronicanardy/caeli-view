@@ -36,7 +36,6 @@ Se a logica passar a decidir comportamento cientifico, recalcular dados de domin
 
 ## Componentes atuais
 
-- `DailyProximityList.tsx`
 - `RadarSceneObjectListItem.tsx`
 - `UnifiedApproachTable.tsx`
 

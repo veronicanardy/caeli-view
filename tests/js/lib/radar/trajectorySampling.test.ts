@@ -36,7 +36,7 @@ function makeTrajectory(over: Partial<AsteroidTrajectory> = {}): AsteroidTraject
         objectName: 'Test',
         source: 'JPL Horizons',
         center: 'Earth',
-        projection: '2D simplified',
+        projection: '3D ecliptic J2000',
         closestApproachTime: null,
         points: [],
         pastPoints: [],

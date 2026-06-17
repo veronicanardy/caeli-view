@@ -1,17 +1,21 @@
 /**
- * Responsabilidade: construir e classificar os objetos exibidos no radar de aproximações.
- * Transforma listas de UnifiedApproach + resultados do Horizons em RadarObject prontos para
- * renderização — incluindo classificação por faixa de distância lunar, melhor distância disponível
- * e posição em coordenadas Horizons para o posicionamento no radar 2D e na cena 3D.
+ * Responsabilidade: derivar a leitura de QUALIDADE DE DADOS do radar a partir dos objetos do
+ * closest-now. Alimenta exclusivamente o RadarDataQualityCard (objeto do momento, vizinhança lunar,
+ * cobertura Horizons vs. simbólica).
+ *
+ * NÃO posiciona nada na cena 3D: o posicionamento real lê `object.trajectory.currentPoint` direto
+ * (ver Components/Radar/Scene/AsteroidSceneLayer + lib/radar/trajectorySampling). Este módulo derivava
+ * antes um segundo pipeline de posição (reempacotando a trajetória num shape que a cena nunca consumia);
+ * isso foi removido para não haver duas fontes de verdade sobre "esse objeto tem posição real?".
  */
-import { ClosestNowObject, HorizonsFailureKind, HorizonsPositionResult, UnifiedApproach } from '@/types';
+import { ClosestNowObject } from '@/types';
 import { LUNAR_DISTANCE_KM, lunarDistanceFromKm } from '@/lib/format';
-import { averageDiameterMeters } from '@/lib/approachAttention';
 
 export type RadarClassification = 'within-lunar' | 'near-moon' | 'beyond-moon' | 'far';
 
+/** Objeto enxuto consumido pelo card de qualidade. Sem geometria de cena — só leitura interpretativa. */
 export type RadarObject = {
-    approach: UnifiedApproach;
+    approach: ClosestNowObject['approach'];
 
     distanceKm: number | null;
     distanceLD: number | null;
@@ -19,27 +23,11 @@ export type RadarObject = {
 
     closestApproachTime: string | null;
     relativeVelocityKph: number | null;
-    diameterMeters: number | null;
 
+    /** Tem posição espacial real do Horizons agora (trajetória disponível com ponto atual). */
     hasHorizonsPosition: boolean;
+    /** Sem posição espacial: representado só pela distância (aproximação máxima nominal). */
     isSymbolicFallback: boolean;
-    positionKind: 'horizons_current' | 'symbolic_distance_only';
-
-    /** Velocity components (km/s) in the ecliptic XY frame. Null when no Horizons data. */
-    velocityKmS: { vx: number; vy: number } | null;
-    /** Geocentric ecliptic coordinates (km) of the object plus the 3D range distance.
-     *  The layout projects the marker via cylindrical-radar: angle from atan2(y, x), radius
-     *  from distanceKm (3D), so an inclined-orbit asteroid lands at the right DL ring. */
-    horizonsXY: { x: number; y: number; z: number | null; distanceKm: number | null } | null;
-
-    positionSource: HorizonsPositionResult['positionSource'];
-    distanceSource: HorizonsPositionResult['distanceSource'];
-    failureReason: HorizonsPositionResult['failureReason'];
-    horizonsFailureKind: HorizonsFailureKind | null;
-
-    currentPositionTime: string | null;
-
-    note: string | null;
 };
 
 /** Classifica a distância lunar em uma das quatro faixas visuais do radar. */
@@ -53,106 +41,50 @@ export function classifyDistance(distanceLD: number | null): RadarClassification
     return 'far';
 }
 
-/** Melhor distância em km disponível: prefere o valor do Horizons ao nominal da API. */
-export function bestDistanceKm(approach: UnifiedApproach, position?: HorizonsPositionResult): number | null {
-    if (position?.closestApproachDistanceKm !== undefined && position?.closestApproachDistanceKm !== null) {
-        return position.closestApproachDistanceKm;
-    }
-    return approach.nominalDistanceKm;
-}
-
-/** Melhor distância em DL disponível: prefere o valor do Horizons; calcula a partir de km como fallback. */
-export function bestDistanceLD(approach: UnifiedApproach, position?: HorizonsPositionResult): number | null {
-    if (position?.closestApproachDistanceLD !== undefined && position?.closestApproachDistanceLD !== null) {
-        return position.closestApproachDistanceLD;
-    }
-    const km = approach.nominalDistanceKm;
-    return km !== null ? km / LUNAR_DISTANCE_KM : (approach.lunarDistance ?? lunarDistanceFromKm(km));
-}
-
-/** Constrói a lista de RadarObject a partir das aproximações e dos resultados do Horizons. */
-export function buildRadarObjects(
-    approaches: UnifiedApproach[],
-    positionsById: Record<string, HorizonsPositionResult>,
-): RadarObject[] {
-    return approaches.map((approach) => {
-        const pos = positionsById[approach.id];
-        const hasHorizons = pos?.status === 'available' && pos?.x !== null && pos?.y !== null;
-
-        const distanceKm = bestDistanceKm(approach, pos);
-        const distanceLD = bestDistanceLD(approach, pos);
-        const classification = classifyDistance(distanceLD);
-
-        let velocityKmS: { vx: number; vy: number } | null = null;
-        let horizonsXY: { x: number; y: number; z: number | null; distanceKm: number | null } | null = null;
-
-        if (hasHorizons && pos) {
-            horizonsXY = {
-                x: pos.x as number,
-                y: pos.y as number,
-                z: typeof pos.z === 'number' ? pos.z : null,
-                distanceKm: pos.closestApproachDistanceKm ?? null,
-            };
-            if (pos.vx !== null && pos.vy !== null && (pos.vx !== 0 || pos.vy !== 0)) {
-                velocityKmS = { vx: pos.vx as number, vy: pos.vy as number };
-            }
-        }
-
-        return {
-            approach,
-            distanceKm,
-            distanceLD,
-            classification,
-            closestApproachTime: pos?.closestApproachTime ?? approach.approachDate ?? null,
-            relativeVelocityKph: approach.relativeVelocityKph,
-            diameterMeters: averageDiameterMeters(approach),
-            hasHorizonsPosition: hasHorizons,
-            isSymbolicFallback: !hasHorizons,
-            positionKind: hasHorizons ? 'horizons_current' : 'symbolic_distance_only',
-            velocityKmS,
-            horizonsXY,
-            positionSource: pos?.positionSource ?? 'unavailable',
-            distanceSource: pos?.distanceSource ?? 'fallback',
-            failureReason: pos?.failureReason ?? null,
-            horizonsFailureKind: pos?.horizonsFailureKind ?? null,
-            currentPositionTime: pos?.currentPositionTime ?? null,
-            note: pos?.note ?? null,
-        };
-    });
+/** O objeto tem posição espacial real do Horizons agora? (trajetória disponível com ponto atual) */
+export function hasCurrentHorizonsPosition(object: ClosestNowObject): boolean {
+    const traj = object.trajectory;
+    return traj?.status === 'available' && traj?.currentPoint != null;
 }
 
 /**
- * Converte um ClosestNowObject com trajetória disponível em HorizonsPositionResult, o contrato
- * que buildRadarObjects espera para posicionar o objeto na cena. Retorna null quando a trajetória
- * está ausente ou indisponível — nesses casos o objeto será tratado como fallback simbólico.
+ * Melhor distância em km disponível: prefere a distância atual já computada pelo backend
+ * (derivada do Horizons); cai para a distância nominal da aproximação como fallback.
  */
-export function trajectoryToPositionResult(
-    object: ClosestNowObject,
-): HorizonsPositionResult | null {
-    const traj = object.trajectory;
-    if (!traj || traj.status !== 'available' || !traj.currentPoint) return null;
+export function bestDistanceKm(object: ClosestNowObject): number | null {
+    if (object.currentDistanceKm != null) {
+        return object.currentDistanceKm;
+    }
+    return object.approach.nominalDistanceKm;
+}
 
-    const current = traj.currentPoint;
-    return {
-        id: object.approach.id,
-        status: 'available',
-        positionKind: 'horizons_current',
-        x: current.x,
-        y: current.y,
-        z: typeof current.z === 'number' ? current.z : null,
-        vx: typeof current.vx === 'number' ? current.vx : null,
-        vy: typeof current.vy === 'number' ? current.vy : null,
-        vz: typeof current.vz === 'number' ? current.vz : null,
-        currentPositionTime: current.timestamp ?? traj.anchorTime ?? null,
-        closestApproachTime: traj.closestApproachTime ?? object.approach.approachDate ?? null,
-        closestApproachDistanceKm: object.currentDistanceKm,
-        closestApproachDistanceLD: object.currentDistanceLD,
-        distanceSource: 'JPL Horizons',
-        positionSource: 'JPL Horizons',
-        failureReason: null,
-        horizonsFailureKind: traj.horizonsFailureKind ?? null,
-        note: traj.note ?? null,
-    };
+/** Melhor distância em DL disponível: prefere a do backend; deriva de km/nominal como fallback. */
+export function bestDistanceLD(object: ClosestNowObject): number | null {
+    if (object.currentDistanceLD != null) {
+        return object.currentDistanceLD;
+    }
+    const km = object.approach.nominalDistanceKm;
+    if (km !== null) return km / LUNAR_DISTANCE_KM;
+    return object.approach.lunarDistance ?? lunarDistanceFromKm(km);
+}
+
+/** Constrói a lista de RadarObject (qualidade de dados) a partir dos objetos do closest-now. */
+export function buildRadarObjects(objects: ClosestNowObject[]): RadarObject[] {
+    return objects.map((object) => {
+        const hasHorizons = hasCurrentHorizonsPosition(object);
+        const distanceLD = bestDistanceLD(object);
+
+        return {
+            approach: object.approach,
+            distanceKm: bestDistanceKm(object),
+            distanceLD,
+            classification: classifyDistance(distanceLD),
+            closestApproachTime: object.trajectory?.closestApproachTime ?? object.approach.approachDate ?? null,
+            relativeVelocityKph: object.approach.relativeVelocityKph,
+            hasHorizonsPosition: hasHorizons,
+            isSymbolicFallback: !hasHorizons,
+        };
+    });
 }
 
 /** Contagens de qualidade de dados: total, com posição Horizons, simbólicos, dentro da DL. */

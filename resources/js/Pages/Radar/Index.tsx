@@ -5,7 +5,7 @@ import { CompactConsoleBar } from '@/Components/Radar/Controls/CompactConsoleBar
 import { RadarDataQualityCard } from '@/Components/Radar/Panels/RadarDataQualityCard';
 import { RadarTutorialProvider } from '@/Components/Radar/Tutorial/RadarTutorialProvider';
 import { ErrorMessage } from '@/Components/ErrorMessage';
-import { buildRadarObjects, trajectoryToPositionResult } from '@/lib/radarData';
+import { buildRadarObjects } from '@/lib/radarData';
 import { useTranslation } from '@/i18n';
 import { useClosestNow } from '@/hooks/useClosestNow';
 import { useKnownAsteroidDetail } from '@/hooks/useKnownAsteroidDetail';
@@ -13,8 +13,6 @@ import { useRadarControls } from '@/hooks/useRadarControls';
 import { isKnownAsteroidId } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
 import {
     ApproachObservatoryFilters,
-    AsteroidTrajectory,
-    HorizonsPositionResult,
     PageProps,
     SunDirection,
     UnifiedApproach,
@@ -32,8 +30,6 @@ type Props = PageProps<{
 export default function ApproachObservatoryIndex({ filters, initialSunDirection }: Props) {
     const [radarFullscreen, setRadarFullscreen] = useState(false);
     const [selectedFocusId, setSelectedFocusId] = useState<string | null>(null);
-    const [trajectoryByKey, setTrajectoryByKey] = useState<Record<string, AsteroidTrajectory>>({});
-    const [trajectoryLoadingKey, setTrajectoryLoadingKey] = useState<string | null>(null);
     const { locale, t } = useTranslation();
 
     const { objectLimit, selectionMode, setObjectLimit, setSelectionMode } = useRadarControls();
@@ -68,30 +64,11 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
         return closestNowData.objects.map((object) => object.approach);
     }, [closestNowData]);
 
-    const closestNowPositionsById = useMemo<Record<string, HorizonsPositionResult>>(() => {
-        if (!closestNowData) return {};
-        const map: Record<string, HorizonsPositionResult> = {};
-        for (const object of closestNowData.objects) {
-            const pos = trajectoryToPositionResult(object);
-            if (pos) map[object.approach.id] = pos;
-        }
-        return map;
-    }, [closestNowData]);
-
-    const closestNowTrajectoriesByObjectId = useMemo<Record<string, AsteroidTrajectory>>(() => {
-        if (!closestNowData) return {};
-        const map: Record<string, AsteroidTrajectory> = {};
-        for (const object of closestNowData.objects) {
-            if (object.trajectory) map[object.approach.id] = object.trajectory;
-        }
-        return map;
-    }, [closestNowData]);
-
     const lunarReference = closestNowData?.lunarReference;
 
     const radarObjects = useMemo(
-        () => buildRadarObjects(closestNowApproaches, closestNowPositionsById),
-        [closestNowApproaches, closestNowPositionsById],
+        () => (closestNowData ? buildRadarObjects(closestNowData.objects) : []),
+        [closestNowData],
     );
 
     const focusApproach = useMemo(() => {
@@ -133,69 +110,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
             }),
         };
     }, [closestNowData, isFamous, knownDetail, focusApproach]);
-
-    const trajectoryKey = focusApproach ? `${focusApproach.id}:${focusApproach.approachDate ?? ''}` : null;
-
-    useEffect(() => {
-        if (!focusApproach || !trajectoryKey || !focusApproach.approachDate || trajectoryByKey[trajectoryKey]) {
-            return undefined;
-        }
-
-        if (closestNowTrajectoriesByObjectId[focusApproach.id]) {
-            return undefined;
-        }
-
-        const controller = new AbortController();
-        const params = new URLSearchParams({
-            id: focusApproach.id,
-            name: focusApproach.name,
-            displayName: focusApproach.displayName ?? focusApproach.name,
-            rawName: focusApproach.rawName ?? focusApproach.name,
-            designation: focusApproach.provisionalDesignation ?? focusApproach.designation ?? '',
-            detailIdentifier: focusApproach.detailIdentifier,
-            spkId: focusApproach.spkId ?? '',
-            approachTime: focusApproach.approachDate,
-        });
-
-        setTrajectoryLoadingKey(trajectoryKey);
-
-        fetch(`/radar/trajectory?${params.toString()}`, {
-            signal: controller.signal,
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
-        })
-            .then((response) => {
-                if (!response.ok) throw new Error('Trajectory unavailable.');
-                return response.json() as Promise<AsteroidTrajectory>;
-            })
-            .then((trajectory) => {
-                setTrajectoryByKey((current) => ({ ...current, [trajectoryKey]: trajectory }));
-            })
-            .catch((error: unknown) => {
-                if (error instanceof DOMException && error.name === 'AbortError') return;
-                setTrajectoryByKey((current) => ({
-                    ...current,
-                    [trajectoryKey]: {
-                        objectId: focusApproach.id,
-                        objectName: focusApproach.displayName ?? focusApproach.name,
-                        source: 'JPL Horizons',
-                        center: 'Earth',
-                        projection: '2D simplified',
-                        closestApproachTime: focusApproach.approachDate ?? '',
-                        points: [],
-                        referencePoint: null,
-                        motionState: 'unknown',
-                        status: 'fallback',
-                        note: 'Não foi possível calcular a posição atual deste objeto; mantendo dados de aproximação.',
-                    },
-                }));
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setTrajectoryLoadingKey(null);
-            });
-
-        return () => controller.abort();
-    }, [focusApproach, trajectoryKey, trajectoryByKey, closestNowTrajectoriesByObjectId]);
 
     return (
         <AppLayout hideHeader={radarFullscreen}>
