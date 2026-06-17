@@ -25,7 +25,6 @@ import { MoonOrbit } from '../Bodies/Moon/MoonOrbit';
 import { SceneRingsLayer } from '../Overlays/SceneRingsLayer';
 import { StarField } from '../Overlays/StarField';
 import { LabelOccluderContext, SceneObjectOccludersContext, useCompactLabelMode, useHideAsteroidLabelsMode } from '../Overlays/SceneLabels';
-import { HeliocentricScene } from './HeliocentricScene';
 import { AsteroidSceneLayer } from './AsteroidSceneLayer';
 import { CameraRig } from './CameraRig';
 import { MAX_CAMERA_DISTANCE } from './cameraConstants';
@@ -36,7 +35,7 @@ import { KeyboardPan } from './KeyboardPan';
 import { TouchGestures } from './TouchGestures';
 import { PlanetLayer } from './PlanetLayer';
 import { PlanetOrbitLayer } from './PlanetOrbitLayer';
-import { computeLabelOccluder, focusedObjectScenePosition, shouldShowLabelForObject, shouldUseHelioScene } from './sceneFocus';
+import { computeLabelOccluder, focusedObjectScenePosition, shouldShowLabelForObject } from './sceneFocus';
 import { SUN_RADIUS_SCENE } from '../Bodies/bodyRenderConstants';
 import { computeSceneObjectOccluders } from './sceneOcclusion';
 import { SceneWarmup } from './SceneWarmup';
@@ -45,7 +44,6 @@ import { computeEarthPosition, computeMoonGeoPosition, computeMoonPosition, comp
 import { useBodyFocus } from './useBodyFocus';
 import { KnownAsteroidsLayer } from './KnownAsteroidsLayer';
 import { knownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
-import { linearModeEnabled } from './linearMode';
 // --------------- Scene ---------------
 
 type RadarSceneProps = {
@@ -99,12 +97,11 @@ function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
 }
 
 export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris: ephemerisRaw, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, showKnownAsteroids = false, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
-    // No modo linear, a cena heliocêntrica usa a escala própria (LINEAR_AU_SCALE): reescalamos o
-    // ephemeris UMA vez aqui, e todos os consumidores (planetas, Terra, Lua, órbitas, câmera) herdam.
-    const linearScene = linearModeEnabled();
+    // A cena heliocêntrica usa a escala linear em UA (LINEAR_AU_SCALE): reescalamos o ephemeris UMA
+    // vez aqui, e todos os consumidores (planetas, Terra, Lua, órbitas, câmera) herdam.
     const ephemeris = useMemo(
-        () => (linearScene && ephemerisRaw ? scaleEphemerisForLinear(ephemerisRaw) : ephemerisRaw),
-        [linearScene, ephemerisRaw],
+        () => (ephemerisRaw ? scaleEphemerisForLinear(ephemerisRaw) : ephemerisRaw),
+        [ephemerisRaw],
     );
     const hasSelection = selectedId !== null;
     const focusedObject = useMemo(
@@ -136,12 +133,12 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     // Posição da Terra na cena heliocêntrica. Fallback: ~1 AU na direção oposta ao Sol do servidor.
     const earthPos = useMemo(() => computeEarthPosition(ephemeris, fallbackSunDirection), [ephemeris, fallbackSunDirection]);
 
-    // Vetor geocêntrico da Lua — usado por orientMoonTidal e MoonOrbit. No linear vai na régua
-    // heliocêntrica real (mesma dos NEOs); no log, comprimido. Recebe o ephemeris CRU para a régua
-    // linear ser aplicada uma única vez (evita a dupla escala de scaleEphemerisForLinear).
+    // Vetor geocêntrico da Lua — usado por orientMoonTidal e MoonOrbit. Vai na régua heliocêntrica
+    // real (mesma dos NEOs). Recebe o ephemeris CRU para a régua linear ser aplicada uma única vez
+    // (evita a dupla escala de scaleEphemerisForLinear).
     const moonGeoPos = useMemo(
-        () => computeMoonGeoPosition(linearScene ? ephemerisRaw : ephemeris, linearScene),
-        [linearScene, ephemerisRaw, ephemeris],
+        () => computeMoonGeoPosition(ephemerisRaw, true),
+        [ephemerisRaw],
     );
 
     // Posição absoluta da Lua em coordenadas de mundo (earthPos + geocêntrico).
@@ -190,21 +187,18 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         () => computeLabelOccluder({ bodyFocus, earthPos, moonPos, focusedObjectPosition }),
         [bodyFocus, earthPos, moonPos, focusedObjectPosition],
     );
-    // No modo linear NUNCA trocamos para a cena heliocêntrica isolada (HeliocentricScene): o linear
-    // já é a cena heliocêntrica real, com a Terra de contexto. Aqui `orbitMode` deixa de "trocar de
-    // cena" e passa a só REVELAR a órbita completa do NEO sobreposta (linearShowFullOrbit, abaixo).
-    const useHelioScene = !linearScene && shouldUseHelioScene(orbitMode, selectedHasOrbit, focusedObject);
-    // [Modo linear] Órbita heliocêntrica completa só sob demanda (botão "Ver a órbita ao redor do
-    // Sol"). Por padrão mostramos só a trajetória curta de aproximação (pergunta-radar).
-    const linearShowFullOrbit = linearScene && orbitMode;
+    // A cena nunca troca para a cena heliocêntrica isolada: a régua linear já É a cena heliocêntrica
+    // real, com a Terra de contexto. `orbitMode` apenas REVELA a órbita completa do NEO sobreposta
+    // (showFullOrbit, abaixo), sob demanda (botão "Ver a órbita ao redor do Sol").
+    const showFullOrbit = orbitMode;
     const sceneObjectOccluders = useMemo(
         () => computeSceneObjectOccluders({
-            useHelioScene,
+            useHelioScene: false,
             earthPos,
             moonPos,
             planetPositions,
         }),
-        [earthPos, moonPos, planetPositions, useHelioScene],
+        [earthPos, moonPos, planetPositions],
     );
 
     // Arbitragem de modo: a cena solar-orbital toma conta quando (a) o usuário pediu modo órbita
@@ -217,25 +211,25 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         ? OBJECT_PALETTE[Math.max(0, closestNowObjects.findIndex((o) => o.approach.id === focusedObject.approach.id)) % OBJECT_PALETTE.length]
         : OBJECT_PALETTE[0];
 
-    // [Modo linear] Órbita heliocêntrica COMPLETA do NEO selecionado, ao redor do Sol (como os
-    // planetas). Construída na escala normal (ORBIT_AU_SCALE) e reescalada pelo grupo abaixo para
-    // bater com a régua linear — reusa a mesma geometria dos planetas, sem duplicar matemática.
-    const linearFocusOrbit = useMemo(
-        () => (linearScene && focusedElements ? buildHeliocentricOrbit(focusedElements) : null),
-        [linearScene, focusedElements],
+    // Órbita heliocêntrica COMPLETA do NEO selecionado, ao redor do Sol (como os planetas).
+    // Construída na escala normal (ORBIT_AU_SCALE) e reescalada pelo grupo abaixo para bater com a
+    // régua linear — reusa a mesma geometria dos planetas, sem duplicar matemática.
+    const focusOrbit = useMemo(
+        () => (focusedElements ? buildHeliocentricOrbit(focusedElements) : null),
+        [focusedElements],
     );
 
-    // [Modo linear] Posição da rocha focada AMOSTRADA NA PRÓPRIA órbita desenhada (não no ponto
-    // Horizons), igual aos planetas: cai exatamente sobre a linha. Vem em ORBIT_AU_SCALE, então
-    // aplicamos LINEAR_SCALE_FACTOR aqui — a MESMA transformação que o <group> aplica à linha.
-    // Só vale quando a órbita está VISÍVEL (sob demanda): aí a rocha deve coincidir com a elipse.
-    // Sem a órbita, a rocha volta a vir do Horizons (AsteroidSceneLayer), no fim da trajetória curta.
-    const linearFocusBodyPosition = useMemo<[number, number, number] | null>(() => {
-        if (!linearShowFullOrbit || !focusedElements) return null;
+    // Posição da rocha focada AMOSTRADA NA PRÓPRIA órbita desenhada (não no ponto Horizons), igual
+    // aos planetas: cai exatamente sobre a linha. Vem em ORBIT_AU_SCALE, então aplicamos
+    // LINEAR_SCALE_FACTOR aqui — a MESMA transformação que o <group> aplica à linha. Só vale quando a
+    // órbita está VISÍVEL (sob demanda): aí a rocha deve coincidir com a elipse. Sem a órbita, a
+    // rocha volta a vir do Horizons (AsteroidSceneLayer), no fim da trajetória curta.
+    const focusBodyPosition = useMemo<[number, number, number] | null>(() => {
+        if (!showFullOrbit || !focusedElements) return null;
         const sample = focusedOrbitSamplePosition(focusedElements);
         if (!sample) return null;
         return [sample[0] * LINEAR_SCALE_FACTOR, sample[1] * LINEAR_SCALE_FACTOR, sample[2] * LINEAR_SCALE_FACTOR];
-    }, [linearShowFullOrbit, focusedElements]);
+    }, [showFullOrbit, focusedElements]);
 
     return (
         <SceneObjectOccludersContext.Provider value={sceneObjectOccluders}>
@@ -253,15 +247,6 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                 <pointLight position={[-1.6, -0.3, -1.2]} intensity={0.1} distance={3.1} color="#5a6a7a" />
                 <pointLight position={[-1.4, 0.9, 1.6]} intensity={0.18} distance={3.2} color="#8aa0b4" />
 
-            {useHelioScene && focusedElements && focusedObject ? (
-                <HeliocentricScene
-                    elements={focusedElements}
-                    asteroidName={focusedObject.approach.displayName ?? focusedObject.approach.name}
-                    color={focusedPalette.future}
-                    locale={locale}
-                />
-            ) : (
-                <>
                     {/* Sol na origem da cena heliocêntrica. */}
                     <Sun
                         position={[0, 0, 0]}
@@ -272,10 +257,10 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         isFocused={isSunFocused}
                         showLabel={showLabels}
                     />
-                    {/* [Modo linear] No modo órbita Kepler deixamos só o Sol e a rocha focada com sua
-                        elipse: Terra, Lua e os demais planetas (e suas órbitas) somem para a elipse do
-                        objeto ser lida sem ruído. Fora do modo órbita, a cena completa volta. */}
-                    {!linearShowFullOrbit ? (
+                    {/* No modo órbita Kepler deixamos só o Sol e a rocha focada com sua elipse: Terra,
+                        Lua e os demais planetas (e suas órbitas) somem para a elipse do objeto ser lida
+                        sem ruído. Fora do modo órbita, a cena completa volta. */}
+                    {!showFullOrbit ? (
                         <>
                             {/* Terra na posição heliocêntrica real. */}
                             <group position={earthPos}>
@@ -291,7 +276,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                                 <SceneRingsLayer onEarthFocus={focusEarth} showLabels={showLabels && !compactLabels && !orbitLabelsOnly} />
                             </group>
                             {/* Lua: position absoluto para o grupo 3D e labels; geocentricPosition para tidal lock. */}
-                            <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} illuminatedFraction={ephemeris?.moonIlluminatedFraction} radiusScale={linearScene ? 0.54 : 1} />
+                            <Moon onFocus={focusMoon} position={moonPos} geocentricPosition={moonGeoPos} compactLabel={compactLabels} showLabel={showLabels && !orbitLabelsOnly} protectLabelFromFocus={bodyFocus?.body !== 'moon'} isFocused={bodyFocus?.body === 'moon'} isApproximate={!ephemeris} locale={locale} illuminatedFraction={ephemeris?.moonIlluminatedFraction} radiusScale={0.54} />
                             {showLabels ? <MoonOrbit moonPos={moonPos} earthPos={earthPos} orbitNormal={moonOrbitNormal} /> : null}
                             {/* Planetas — posições heliocêntricas reais, Sol na origem. */}
                             <PlanetLayer
@@ -318,24 +303,23 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         </>
                     ) : null}
 
-                    {/* [Modo linear] Órbita completa do NEO ao redor do Sol — só sob demanda (botão
-                        "Ver a órbita ao redor do Sol" → orbitMode). Por padrão a cena mostra apenas a
-                        trajetória curta de aproximação. O grupo reescala a geometria (ORBIT_AU_SCALE)
-                        para a régua linear. */}
-                    {linearShowFullOrbit && linearFocusOrbit ? (
+                    {/* Órbita completa do NEO ao redor do Sol — só sob demanda (botão "Ver a órbita ao
+                        redor do Sol" → orbitMode). Por padrão a cena mostra apenas a trajetória curta de
+                        aproximação. O grupo reescala a geometria (ORBIT_AU_SCALE) para a régua linear. */}
+                    {showFullOrbit && focusOrbit ? (
                         <group scale={LINEAR_SCALE_FACTOR}>
-                            <OrbitLineHelio points={linearFocusOrbit} color={focusedPalette.future} opacity={0.5} />
+                            <OrbitLineHelio points={focusOrbit} color={focusedPalette.future} opacity={0.5} />
                         </group>
                     ) : null}
 
-                    {/* [Modo linear] Rocha focada SOBRE a própria órbita (amostrada da polilinha, não
-                        do ponto Horizons): cai exatamente na linha. Fora do <group> escalado porque a
-                        posição já leva o LINEAR_SCALE_FACTOR; assim o ponto coincide com a linha sem
-                        que a escala do grupo também aumente o tamanho do modelo. */}
-                    {linearFocusBodyPosition && focusedObject ? (
+                    {/* Rocha focada SOBRE a própria órbita (amostrada da polilinha, não do ponto
+                        Horizons): cai exatamente na linha. Fora do <group> escalado porque a posição já
+                        leva o LINEAR_SCALE_FACTOR; assim o ponto coincide com a linha sem que a escala do
+                        grupo também aumente o tamanho do modelo. */}
+                    {focusBodyPosition && focusedObject ? (
                         <AsteroidMarker
                             object={focusedObject}
-                            position={linearFocusBodyPosition}
+                            position={focusBodyPosition}
                             isSelected
                             dimmed={false}
                             onSelect={onSelect}
@@ -346,14 +330,12 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         />
                     ) : null}
 
-                    {/* Asteroides e trajetórias. No modo linear (padrão) os vetores Horizons caem na
-                        régua heliocêntrica linear (Sol na origem, sem compressão); só atrás de `?log`
-                        eles são log-comprimidos e offsetados pela Terra. O caminho é escolhido pelo
-                        prop helioScene de AsteroidSceneLayer abaixo.
+                    {/* Asteroides e trajetórias. Os vetores Horizons caem na régua heliocêntrica linear
+                        (Sol na origem, sem compressão).
                         No modo órbita Kepler (elipse visível) a camada inteira some: a rocha focada já é
-                        desenhada sobre a elipse (linearFocusBodyPosition acima), e queremos só ela + o Sol,
+                        desenhada sobre a elipse (focusBodyPosition acima), e queremos só ela + o Sol,
                         sem os demais objetos nem a trilha curta. */}
-                    {!(linearShowFullOrbit && linearFocusOrbit) ? (
+                    {!(showFullOrbit && focusOrbit) ? (
                         <AsteroidSceneLayer
                             closestNowObjects={closestNowObjects}
                             selectedId={selectedId}
@@ -365,9 +347,9 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                             onFocusTrajectoryPoint={onFocusTrajectoryPoint}
                             panelBiasX={panelBiasX}
                             panelBiasY={panelBiasY}
-                            helioScene={linearModeEnabled()}
+                            helioScene
                             earthHelioAU={ephemeris?.earthHelioPositionAU ?? null}
-                            skipObjectId={linearFocusBodyPosition ? focusedObject?.approach.id ?? null : null}
+                            skipObjectId={focusBodyPosition ? focusedObject?.approach.id ?? null : null}
                         />
                     ) : null}
 
@@ -375,11 +357,11 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         pelo AsteroidSceneLayer com posição real do Horizons. Esta camada só desenha
                         (via Kepler local) os famosos cujo Horizons falhou (trajectory null) — para que
                         nenhum famoso suma da cena. Os que têm posição real são pulados via skipIds. */}
-                    {showKnownAsteroids && !(linearShowFullOrbit && linearFocusOrbit) ? (
+                    {showKnownAsteroids && !(showFullOrbit && focusOrbit) ? (
                         <KnownAsteroidsLayer
                             showLabels={showLabels}
                             selectedId={selectedId}
-                            auScale={linearModeEnabled() ? LINEAR_AU_SCALE : undefined}
+                            auScale={LINEAR_AU_SCALE}
                             skipIds={knownWithRealPosition}
                             onSelect={(known) => {
                                 const object = closestNowObjects.find((o) => o.approach.id === knownAsteroidId(known));
@@ -387,14 +369,12 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                             }}
                         />
                     ) : null}
-                </>
-            )}
 
             {onFirstFrame && <FirstFrameNotifier onFirstFrame={onFirstFrame} />}
 
             {/* Pré-compila shaders e sobe texturas em momentos ociosos para que revelar
                 objetos novos ao rotacionar a câmera não congele o main thread. */}
-            <SceneWarmup revision={`${closestNowObjects.length}:${useHelioScene ? 'helio' : 'geo'}`} />
+            <SceneWarmup revision={`${closestNowObjects.length}:geo`} />
 
             {/* Suspende o backdrop-blur dos labels enquanto a câmera se move (caro de compor). */}
             <LabelBackdropGate />

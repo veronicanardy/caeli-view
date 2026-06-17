@@ -11,7 +11,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { LINEAR_SCALE_FACTOR } from '@/lib/sceneEphemeris';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
-import { linearModeEnabled } from './Scene/linearMode';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import type { CameraViewKey } from './Scene/cameraConstants';
@@ -22,7 +21,6 @@ import type { CameraIntent } from './Scene/cameraIntent';
 import { PLANET_CONFIG } from './Scene/planetConfig';
 import type { PlanetId } from './Scene/planetConfig';
 import { MOBILE_MEDIA_QUERY } from './radarLayoutConstants';
-import { knownAsteroidById, knownAsteroidScenePosition, knownAsteroidVisualScale } from './Bodies/Asteroid/knownAsteroids';
 
 export type Radar3DBodyCardTarget = 'earth' | 'moon' | 'sun' | PlanetId | null;
 
@@ -105,21 +103,10 @@ export function useRadar3DFocusActions({
         clearPlanetTargets();
         collapseNavigationForMobile();
 
-        // No modo linear os famosos vêm do Horizons (posição heliocêntrica real, igual aos NEOs),
-        // então seguem o cameraIntent 'object' habitual → useSelectionFocusFraming os enquadra. Só na
-        // régua log de bastidor (sem posição geocêntrica para eles) usamos o voo Kepler dedicado.
-        const known = !linearModeEnabled() ? knownAsteroidById(approach.id) : null;
-        const knownPos = known ? knownAsteroidScenePosition(known) : null;
-        if (known && knownPos) {
-            // Mesmo raio de enquadramento dos planetas (≈ raio visual): o corpo preenche o quadro
-            // sem ficar um ponto nem estourar a tela. O nonce é incrementado também aqui para que a
-            // troca entre conhecidos (ex.: Eros → Vesta) sempre re-dispare o voo da câmera.
-            setKnownFocusTarget(framingForBody(new THREE.Vector3(...knownPos), knownAsteroidVisualScale(known)));
-            setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
-        } else {
-            setKnownFocusTarget(null);
-            setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
-        }
+        // Os famosos vêm do Horizons (posição heliocêntrica real, igual aos NEOs), então seguem o
+        // cameraIntent 'object' habitual → useSelectionFocusFraming os enquadra.
+        setKnownFocusTarget(null);
+        setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
         onSelect(approach);
     }, [clearPlanetTargets, closestNowObjects, collapseNavigationForMobile, onSelect, orbitMode]);
 
@@ -171,9 +158,9 @@ export function useRadar3DFocusActions({
         onClearSelection?.();
         const cfg = PLANET_CONFIG[id];
         const rawPos = ephemeris?.[cfg.ephemerisKey];
-        // O ephemeris aqui é o CRU; no linear o planeta é DESENHADO em LINEAR_SCALE_FACTOR (RadarScene
-        // reescala). A câmera precisa mirar na MESMA posição escalada, senão voa para a posição antiga.
-        const pos = rawPos && linearModeEnabled()
+        // O ephemeris aqui é o CRU; o planeta é DESENHADO em LINEAR_SCALE_FACTOR (RadarScene reescala).
+        // A câmera precisa mirar na MESMA posição escalada, senão voa para a posição antiga.
+        const pos = rawPos
             ? ([rawPos[0] * LINEAR_SCALE_FACTOR, rawPos[1] * LINEAR_SCALE_FACTOR, rawPos[2] * LINEAR_SCALE_FACTOR] as [number, number, number])
             : rawPos;
         withOrbitExit(() => {
