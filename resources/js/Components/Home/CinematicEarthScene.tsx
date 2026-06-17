@@ -39,7 +39,7 @@ const ORBIT_ALTITUDE = 0.7;
 // fundo. No mobile a cena é mais alta e estreita e o console ocupa a base:
 // subir o horizonte traz o arco iluminado da Terra para a faixa visível
 // entre o CTA e o console, em vez de ele ficar escondido lá embaixo.
-const HORIZON_NDC_Y_DESKTOP = 0.30;
+const HORIZON_NDC_Y_DESKTOP = 0.25;
 const HORIZON_NDC_Y_MOBILE = 0.72;
 const MOBILE_HORIZON_MAX_WIDTH = 767;
 const resolveHorizonNdcY = () =>
@@ -216,13 +216,22 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
             // dia, ~40% em noite real à direita, onde as luzes de cidade do
             // Black Marble brilham. Sol totalmente frontal achata o planeta
             // (sem terminador não há drama); manter a noite visível.
-            const sunLight = new THREE.DirectionalLight(0xfff2e0, EARTH_DEBUG_MINIMAL ? 2.0 : 2.12);
-            // Sol NO TOPO, atrás do limbo (referência): a câmera olha para -y, então
-            // o limbo "longe" sobe na tela. Colocando o sol bem longe em -y e um pouco
-            // atrás em -z, ele nasce no alto da curvatura central. O hemisfério voltado
-            // para a câmera fica majoritariamente NOITE: as luzes de cidade do Black
-            // Marble dominam o disco e o brilho dourado fica só no arco do topo.
-            sunLight.position.set(0.0, -2.9, -2.2);
+            // Key light dourada de "golden hour" REALISTA (antes 0xffca7a âmbar forte
+            // dourava a Terra inteira, irreal). Este dourado é a cor da luz direta do
+            // sol baixo: quente o bastante para ler como pôr do sol, suave o bastante
+            // para a textura de DIA mostrar oceano azul e continentes naturais. O calor
+            // vem da LUZ, não de um filtro na cor da textura (jeito fisicamente correto).
+            const sunLight = new THREE.DirectionalLight(0xffc896, EARTH_DEBUG_MINIMAL ? 2.0 : 1.25);
+            // CREPÚSCULO HONESTO: o sol nasce no limbo e a Terra é majoritariamente
+            // NOITE (geometria coerente — não dá para ter sol no limbo E uma face de
+            // dia larga ao mesmo tempo, seria fisicamente falso). A câmera olha para -y;
+            // o limbo "longe" sobe na tela. Sub-ponto solar em (0, -y forte, -z): à frente
+            // atrás do limbo e abaixo do plano da câmera. z = -1.6 é o meio-termo: o
+            // terminador fica como um FIO de dia/dourado rente ao limbo (z mais negativo
+            // = sol mais posto = faixa de dia mais fina; -1.6 deixava a banda dourada
+            // larga demais). O hemisfério da câmera (~+z) tem dot(sunDir) negativo = noite,
+            // onde as cidades do Black Marble dominam.
+            sunLight.position.set(0.0, -2.9, -2.1);
             scene.add(sunLight);
 
             if (!EARTH_DEBUG_MINIMAL) {
@@ -239,10 +248,12 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                 const topLight = new THREE.DirectionalLight(0x5ab0d8, 0.08);
                 topLight.position.set(0, 5, 1);
                 scene.add(topLight);
-                // Cool terminator fill (recomeçado sem quente): suaviza a transição
-                // dia/noite com um tom neutro frio, sem brilho de pôr do sol.
-                const twilightFill = new THREE.DirectionalLight(0x8ab4d0, 0.18);
-                twilightFill.position.set(-3.0, -1.0, 1.5);
+                // Terminator fill QUENTE: a faixa iluminada/penumbra recebe o tom
+                // dourado do pôr do sol (casando com a atmosfera e o disco solar),
+                // em vez do azul-acinzentado morto de antes. Vem do lado do sol
+                // (-y, atrás) para reforçar o terminador, não o lado frio da câmera.
+                const twilightFill = new THREE.DirectionalLight(0xffb870, 0.30);
+                twilightFill.position.set(-2.0, -2.4, 0.4);
                 scene.add(twilightFill);
                 // Cool back-rim from below — separa do fundo sem aquecer.
                 const backLight = new THREE.DirectionalLight(0x6f9ec0, 0.08);
@@ -258,7 +269,10 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
 
             // ── Earth surface mesh ───────────────────────────────────────────
             const earthMaterial = new THREE.MeshStandardMaterial({
-                color: new THREE.Color(0xc0c8c8),
+                // Neutro real (antes 0xc0c8c8 cinza-azulado morto; depois 0xe0dccf creme
+                // que somava ao dourado e tornava a Terra monocromática). Branco levemente
+                // suave deixa a textura NASA mostrar a cor verdadeira sem tingir.
+                color: new THREE.Color(0xeceae6),
                 roughness: EARTH_DEBUG_MINIMAL ? 1.0 : 0.68,
                 metalness: EARTH_DEBUG_MINIMAL ? 0.0 : 0.04,
                 envMapIntensity: 0.0,
@@ -312,11 +326,16 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                         `#include <map_fragment>
                         vec3 surfaceNormal = normalize(vCloudShadowWorldNormal);
                         float surfaceSun = dot(surfaceNormal, normalize(cloudShadowSunDir));
-                        // Cor base só levemente trabalhada; o BRILHO do lado noturno é
-                        // adicionado via emissive (abaixo), porque a iluminação direcional
-                        // do material zera a cor difusa onde não bate sol — mexer só na
-                        // diffuseColor deixava a noite preta por mais clara que fosse.
-                        diffuseColor.rgb *= vec3(1.00, 1.02, 1.06);
+                        // TEXTURA DE DIA LIMPA: o lado iluminado mostra a cor real da
+                        // textura NASA (oceano azul, continentes verdes/ocres). NÃO tingir
+                        // de dourado aqui — antes o multiplicador quente encobria o dia e
+                        // tornava a Terra monocromática. O calor de pôr do sol vem da LUZ
+                        // (sunLight dourada) e do terminador, não de um filtro na cor.
+                        // Só uma leve saturação/contraste tira o aspecto lavado da textura,
+                        // sem mudar a matiz. O brilho noturno continua via emissive (abaixo).
+                        float lumDay = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+                        diffuseColor.rgb = mix(vec3(lumDay), diffuseColor.rgb, 1.14);
+                        diffuseColor.rgb = clamp((diffuseColor.rgb - 0.5) * 1.06 + 0.5, 0.0, 1.0);
                         // Profundidade/vinheta: escurece nas bordas (longe do sub-ponto da
                         // câmera) e mais ainda embaixo (normal.y baixo), clareando para
                         // cima/em direção ao sol. Dá volume ao globo em vez de disco chapado.
@@ -351,14 +370,25 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                         // alavanca certa — mexer na diffuseColor não clareava a noite.
                         vec3 nEm = normalize(vCloudShadowWorldNormal);
                         float sunEm = dot(nEm, normalize(cloudShadowSunDir));
-                        float nightMask = 1.0 - smoothstep(-0.18, 0.30, sunEm);
+                        // Luar/penumbra só na noite real: assim que o sol bate (sunEm > 0)
+                        // a máscara cai a zero, deixando a textura de DIA limpa no lado claro.
+                        float nightMask = 1.0 - smoothstep(-0.12, 0.06, sunEm);
                         vec3 baseTex = diffuseColor.rgb;
-                        // Luar azul frio SUTIL: noite ainda escura, mas com relevo e
-                        // oceanos visíveis em penumbra; as cidades brilham por cima.
-                        // Leve realce no terminador (penumbra um pouco mais clara).
+                        // Luar azul frio: noite VIVA (ainda escura, mas com relevo,
+                        // oceanos e continentes legíveis na penumbra), não um vazio preto.
+                        // Valores elevados em relação ao luar mínimo anterior para a noite
+                        // "respirar"; as cidades brilham por cima.
                         float terminatorEm = (1.0 - smoothstep(0.0, 0.34, abs(sunEm)));
-                        vec3 moonlight = baseTex * vec3(0.085, 0.125, 0.215) + vec3(0.004, 0.009, 0.018);
-                        moonlight += vec3(0.010, 0.024, 0.046) * terminatorEm;
+                        vec3 moonlight = baseTex * vec3(0.150, 0.205, 0.330) + vec3(0.008, 0.016, 0.030);
+                        // Banho DOURADO na penumbra do terminador: a faixa de transição
+                        // dia/noite recebe o calor do pôr do sol (casando com a atmosfera),
+                        // em vez do realce azul morto. Concentrado no lado voltado ao sol
+                        // (sunEm > 0) e mais aceso que o luar frio, para a noite "respirar".
+                        float warmTwilight = smoothstep(-0.05, 0.30, sunEm) * terminatorEm;
+                        moonlight += baseTex * vec3(0.085, 0.052, 0.022) * warmTwilight;
+                        moonlight += vec3(0.030, 0.018, 0.008) * warmTwilight;
+                        // Resíduo frio do lado oposto (sem dourar a noite profunda).
+                        moonlight += vec3(0.008, 0.018, 0.038) * terminatorEm * (1.0 - warmTwilight);
                         // Mesma vinheta de profundidade do lado dia: penumbra mais escura
                         // embaixo, clareando para cima.
                         float depthDownEm = smoothstep(-0.85, 0.35, nEm.y);
@@ -416,7 +446,11 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                         tex.colorSpace = THREE.NoColorSpace;
                         normalTexture = tex;
                         earthMaterial.normalMap = tex;
-                        earthMaterial.normalScale = new THREE.Vector2(0.85, 0.85);
+                        // Escala BAIXA (antes 0.85): com o sol rasante do crepúsculo, um
+                        // normal map forte vira sombra dura e exagerada, dando à Terra um
+                        // aspecto amassado/papel machê. 0.35 mantém só uma sugestão sutil
+                        // de relevo, sem o realce artificial.
+                        earthMaterial.normalScale = new THREE.Vector2(0.35, 0.35);
                         earthMaterial.needsUpdate = true;
                         console.debug('[earth] real normal map applied');
                     });
@@ -608,19 +642,22 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                                 );
 
                                 float sunDot = dot(n, normalize(sunDirection));
-                                // Sol no topo atrás do limbo: quase todo o disco visível é
-                                // penumbra/noite (sunDot baixo). Abrimos a janela para as
-                                // cidades acenderem já a partir da penumbra (sunDot ~0.40),
-                                // cobrindo o disco noturno como na referência; o dayPenalty
-                                // ainda apaga a faixa fina de dia no topo, perto do sol.
-                                float nightFactor = smoothstep(0.46, -0.10, sunDot);
-                                float dayPenalty = smoothstep(0.52, 0.20, sunDot);
+                                // Cidades SÓ na noite real: com o sol mais alto, a faixa
+                                // iluminada tem sunDot positivo e NÃO pode acender cidades
+                                // (era o que sujava o lado dia/dourado com luzes noturnas).
+                                // nightFactor sobe apenas onde já é noite/crepúsculo (sunDot
+                                // abaixo de ~0.04); dayPenalty apaga tudo assim que o sol
+                                // começa a bater (sunDot acima de 0).
+                                float nightFactor = smoothstep(0.04, -0.22, sunDot);
+                                float dayPenalty = smoothstep(0.12, -0.04, sunDot);
 
                                 // Apaga só a borda extrema do limbo (twinkle residual).
                                 float limbFade = smoothstep(0.015, 0.09, facing);
 
-                                float alpha = intensity * nightFactor * dayPenalty * limbFade * 1.75;
-                                gl_FragColor = vec4(cityColor * intensity * 2.1, clamp(alpha, 0.0, 1.0));
+                                // Cidades com mais presença (1.75 -> 2.2): a noite fica
+                                // viva, pontilhada de luz, sem deixar de ser noite.
+                                float alpha = intensity * nightFactor * dayPenalty * limbFade * 2.2;
+                                gl_FragColor = vec4(cityColor * intensity * 2.3, clamp(alpha, 0.0, 1.0));
                             }
                         `,
                     }),
@@ -697,6 +734,11 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                 // ciano e azul profundo; intensa no lado dia, quase ausente no
                 // lado noite (as luzes de cidade assumem a borda noturna).
                 // Banda larga e uniforme lê como "glow de filtro", evitar.
+                // Atmosfera VIVA: na faixa onde o sol nasce, o arco esquenta
+                // e ganha a cor do pôr do sol (laranja-dourado), transicionando
+                // suave para o ciano/azul nas laterais e no resto da borda. É a
+                // sensação de "atmosfera mudando com o pôr do sol", não um
+                // pontinho âmbar isolado nem o coral lavado de antes.
                 const atmosphere = new THREE.Mesh(
                     new THREE.SphereGeometry(1.018, 128, 128),
                     new THREE.ShaderMaterial({
@@ -707,10 +749,13 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                             sunDirection: { value: sunDirection },
                             uColorDay: { value: new THREE.Color(0x6fd2ec) },
                             uColorDeep: { value: new THREE.Color(0x1e55b0) },
-                            // Âmbar do nascer do sol casado com a corona do disco solar
-                            // (CSS rgba(255,158,46) = 0xff9e2e), para atmosfera e sol lerem
-                            // como uma luz só.
-                            uColorWarm: { value: new THREE.Color(0xff9e2e) },
+                            // Match com o disco solar CSS (#fff → rgba(255,238,196) →
+                            // rgba(255,204,130) → rgba(255,174,98)): o núcleo quente é o
+                            // dourado-creme luminoso do sol, não um laranja-tijolo (que em
+                            // blending aditivo vira vinho/vermelho). uColorEmber é o âmbar
+                            // de transição que costura o dourado ao ciano sem salto duro.
+                            uColorWarm: { value: new THREE.Color(0xffd58c) },
+                            uColorEmber: { value: new THREE.Color(0xffb060) },
                             uIntensity: { value: 1.75 },
                         },
                         vertexShader: `
@@ -730,34 +775,52 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                             uniform vec3 uColorDay;
                             uniform vec3 uColorDeep;
                             uniform vec3 uColorWarm;
+                            uniform vec3 uColorEmber;
                             uniform float uIntensity;
                             void main() {
                                 vec3 n = normalize(vWorldNormal);
                                 vec3 viewDir = normalize(cameraPosition - vWorldPosition);
                                 // Fresnel: 0 olhando o chão, 1 na tangência (limbo).
                                 float rim = 1.0 - max(dot(n, viewDir), 0.0);
-                                // Atmosfera majoritariamente azul: halo largo + filete ciano
-                                // rente ao limbo. O calor (âmbar) entra só no ponto do nascer
-                                // do sol, abaixo, via warmRim — o resto da borda fica frio.
+                                // Filete azul/ciano: halo largo + núcleo rente ao limbo.
                                 float blueHalo = pow(rim, 6.7);
                                 float blueCore = pow(rim, 13.0);
-                                float sunDot = dot(n, normalize(sunDirection));
+                                vec3 sunDir = normalize(sunDirection);
+                                float sunDot = dot(n, sunDir);
                                 // Dia brilha, noite quase some (realista).
                                 float lit = smoothstep(-0.35, 0.28, sunDot);
-                                // Âmbar do nascer do sol: concentrado no arco do limbo na
-                                // direção do sol. O sol nasce atrás/abaixo do limbo, então essa
-                                // região é penumbra (sunDot moderado, não alto) — a janela do
-                                // smoothstep cobre essa faixa em vez de exigir sol frontal.
-                                // Desbota para o ciano/azul nas laterais; largura do rim maior
-                                // que o filete azul para o tom quente vencer o aditivo.
-                                float sunGlow = smoothstep(-0.15, 0.55, sunDot);
-                                float warmRim = pow(rim, 6.0) * sunGlow;
+
+                                // ── Calor do pôr do sol, DIRECIONAL ao sol ────────────
+                                // Não uma banda larga uniforme: o brilho quente nasce ONDE
+                                // o sol está e decai angularmente pelo limbo, como o sol de
+                                // verdade empurrando luz pela atmosfera. Projetamos a direção
+                                // do sol no plano tangente do ponto (tira a componente
+                                // radial) e medimos o alinhamento lateral: 1 no arco voltado
+                                // para o sol, caindo rápido para os flancos.
+                                vec3 sunTangent = normalize(sunDir - n * dot(sunDir, n));
+                                vec3 viewTangent = normalize(viewDir - n * dot(viewDir, n));
+                                // O hot spot fica onde a tangente do limbo "olha" para o sol.
+                                float towardSun = dot(sunTangent, -viewTangent) * 0.5 + 0.5;
+                                // Foco do calor no ponto solar (expoente alto = mais concentrado);
+                                // ember mais largo costura o dourado ao ciano nos flancos.
+                                float warmFocus = pow(clamp(towardSun, 0.0, 1.0), 3.0);
+                                float emberFocus = pow(clamp(towardSun, 0.0, 1.0), 1.4);
+                                // Penumbra: o calor só existe perto do terminador/lado iluminado.
+                                float warmBand = smoothstep(-0.30, 0.55, sunDot) * warmFocus;
+                                float emberBand = smoothstep(-0.50, 0.65, sunDot) * emberFocus;
+                                // Perfil radial: largo o bastante para envolver o limbo.
+                                float warmRim = pow(rim, 4.0) * warmBand;
+                                float emberRim = pow(rim, 5.5) * emberBand;
+                                // Cor quente: dourado-creme no coração do hot spot solar,
+                                // desbotando para o âmbar (ember) e daí o frio assume.
+                                vec3 warmColor = mix(uColorEmber, uColorWarm, warmFocus);
                                 vec3 color =
                                     uColorDeep * blueHalo * 0.72 +
                                     uColorDay * blueCore * 0.92 +
-                                    uColorWarm * warmRim * 2.1;
+                                    warmColor * (warmRim * 2.4 + emberRim * 0.9);
                                 float alpha =
-                                    (blueHalo * 0.28 + blueCore * 0.26 + warmRim * 0.5) * (0.12 + lit * 0.88);
+                                    (blueHalo * 0.26 + blueCore * 0.24
+                                     + warmRim * 0.85 + emberRim * 0.34) * (0.12 + lit * 0.88);
                                 gl_FragColor = vec4(color, clamp(alpha * uIntensity, 0.0, 0.85));
                             }
                         `,
