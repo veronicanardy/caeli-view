@@ -12,7 +12,7 @@ import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 /**
  * Quantas unidades de cena vale 1 DL (distância Terra–Lua) na régua LINEAR heliocêntrica.
  * 1 DL = KM_PER_LD km = (KM_PER_LD / KM_PER_AU) UA; cada UA vale LINEAR_AU_SCALE unidades.
- * Usado para pôr a Lua na MESMA régua dos NEOs no modo linear (escala linear em UA, sem compressão log).
+ * Usado para pôr a Lua na MESMA régua única dos NEOs (escala linear em UA, sem compressão).
  */
 const LINEAR_UNITS_PER_DL = (KM_PER_LD / KM_PER_AU) * LINEAR_AU_SCALE;
 

@@ -15,13 +15,8 @@ import {
 } from '@/lib/sceneEphemeris';
 import { trueAnomalyNow } from '@/lib/keplerOrbit';
 import { KM_PER_AU } from '@/lib/physicalConstants';
-import { horizonsToScene } from './coordinates';
 
 export type EarthHelioAU = { x: number; y: number; z: number };
-
-/** Limite de snap (em unidades de cena) usado por closestApproachNearPosition. */
-export const CLOSEST_APPROACH_MERGE_DISTANCE_SCENE = 0.45;
-const CLOSEST_APPROACH_MERGE_DISTANCE_SQ = CLOSEST_APPROACH_MERGE_DISTANCE_SCENE * CLOSEST_APPROACH_MERGE_DISTANCE_SCENE;
 
 // NEOs podem chegar a algo perto de ~5 UA geocêntricas.
 // Acima de 750 milhões de km, o vetor do Horizons quase certamente está incorreto
@@ -29,17 +24,9 @@ const CLOSEST_APPROACH_MERGE_DISTANCE_SQ = CLOSEST_APPROACH_MERGE_DISTANCE_SCENE
 // em vez de posicionar o objeto em um lugar sem sentido.
 const MAX_GEOCENTRIC_KM = 750_000_000;
 
-export function currentPositionInScene(object: ClosestNowObject): [number, number, number] | null {
-    const point = object.trajectory?.currentPoint;
-    if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') return null;
-    const distKm = Math.hypot(point.x, point.y, point.z ?? 0);
-    if (distKm > MAX_GEOCENTRIC_KM) return null;
-    return horizonsToScene(point.x, point.y, point.z ?? 0);
-}
-
 /**
- * [Modo linear] Posição de cena de um objeto do feed na régua HELIOCÊNTRICA linear em UA (Sol na
- * origem), igual aos planetas/conhecidos — em vez da régua log geocêntrica.
+ * Posição de cena de um objeto do feed na régua HELIOCÊNTRICA linear em UA (Sol na origem), igual aos
+ * planetas e conhecidos (a régua única do radar).
  *
  * O ponto do Horizons é geocêntrico (km, eclíptico, Terra como origem). A posição heliocêntrica é
  * earthHelioAU + (ponto / KM_PER_AU), depois passada por helioAUToSunCenteredScene. Resultado é
@@ -58,8 +45,7 @@ export function currentPositionInHelioScene(
         y: earthHelioAU.y + point.y / KM_PER_AU,
         z: earthHelioAU.z + (point.z ?? 0) / KM_PER_AU,
     };
-    // Escala própria do modo linear (LINEAR_AU_SCALE): fonte única para calibrar todos os corpos
-    // do modo num lugar só.
+    // Escala da régua única (LINEAR_AU_SCALE): fonte única para calibrar todos os corpos num lugar só.
     return helioAUToSunCenteredScene(helio, LINEAR_AU_SCALE);
 }
 
@@ -85,21 +71,14 @@ export function focusedOrbitSamplePosition(
     return sampleHeliocentricEllipseAtNu(g, nu, ORBIT_ELLIPSE_SEGMENTS);
 }
 
-/** Converte um ponto de trajetória (km, eclíptico J2000, Terra como origem de medição) para THREE.Vector3 na cena. */
-export function toVec3(point: { x: number; y: number; z?: number | null }): THREE.Vector3 {
-    const [x, y, z] = horizonsToScene(point.x, point.y, point.z ?? 0);
-    return new THREE.Vector3(x, y, z);
-}
-
 /**
- * [Modo linear] Versão de toVec3 para a régua HELIOCÊNTRICA linear em UA: o ponto geocêntrico do
- * Horizons (km) é levado a heliocêntrico (earthHelioAU + ponto/KM_PER_AU) e projetado por
- * helioAUToSunCenteredScene na LINEAR_AU_SCALE. Resultado ABSOLUTO (Sol na origem), igual à rocha em
- * currentPositionInHelioScene — então a trajetória curta cai exatamente onde o corpo está, fiel à
- * escala (e por isso fisicamente pequena: é o movimento geocêntrico de poucos dias, sem esticar).
+ * Projetor da régua HELIOCÊNTRICA linear em UA: o ponto geocêntrico do Horizons (km) é levado a
+ * heliocêntrico (earthHelioAU + ponto/KM_PER_AU) e projetado por helioAUToSunCenteredScene na
+ * LINEAR_AU_SCALE. Resultado ABSOLUTO (Sol na origem), igual à rocha em currentPositionInHelioScene,
+ * então a trajetória curta cai exatamente onde o corpo está, fiel à escala (e por isso fisicamente
+ * pequena: é o movimento geocêntrico de poucos dias, sem esticar).
  *
- * Devolve um projetor pronto para um ponto, casando com a assinatura de toVec3 (point) usada pelo
- * hook de apresentação. earthHelioAU é fixo para a trajetória inteira (a Terra mal se move no intervalo).
+ * earthHelioAU é fixo para a trajetória inteira (a Terra mal se move no intervalo).
  */
 export function makeHelioLinearProjector(
     earthHelioAU: EarthHelioAU,
@@ -149,12 +128,12 @@ export type ClosestApproachSample = {
     timestamp: string;
 };
 
-/** Projetor de um ponto de trajetória para a cena. Default: régua log (toVec3). */
+/** Projetor de um ponto de trajetória para a cena (régua heliocêntrica via makeHelioLinearProjector). */
 export type PointProjector = (point: { x: number; y: number; z?: number | null }) => THREE.Vector3;
 
 export function findClosestApproachPoint(
     trajectory: AsteroidTrajectory,
-    project: PointProjector = toVec3,
+    project: PointProjector,
 ): ClosestApproachSample | null {
     const candidates: TrajectoryPoint[] = [
         ...(trajectory.pastPoints ?? []),
@@ -184,30 +163,17 @@ export function findClosestApproachPoint(
     };
 }
 
-export function closestApproachNearPosition(
-    trajectory: AsteroidTrajectory | null | undefined,
-    position: THREE.Vector3 | null,
-): ClosestApproachSample | null {
-    if (!trajectory || !position) return null;
-    const closest = findClosestApproachPoint(trajectory);
-    if (!closest) return null;
-
-    return closest.vec.distanceToSquared(position) <= CLOSEST_APPROACH_MERGE_DISTANCE_SQ
-        ? closest
-        : null;
-}
-
 /**
  * Trecho da trajetória que o zoom out de trajetória deve enquadrar: as amostras
  * do passado até `maxAgeHours` atrás (cobre o marcador −72h com a mesma
  * tolerância de 6h dos ticks) mais o ponto atual. Pontos sem timestamp legível
  * entram no trecho — descartá-los esconderia trajetória real.
- * Retorna posições na cena (relativas à Terra), em ordem cronológica.
+ * Retorna posições absolutas na cena (régua heliocêntrica), em ordem cronológica.
  */
 export function trajectoryFramePoints(
     trajectory: AsteroidTrajectory,
     maxAgeHours = 78,
-    project: PointProjector = toVec3,
+    project: PointProjector,
 ): THREE.Vector3[] {
     const now = trajectory.currentPoint?.timestamp ? new Date(trajectory.currentPoint.timestamp).getTime() : NaN;
     const cutoff = Number.isNaN(now) ? null : now - maxAgeHours * 3_600_000;
@@ -231,7 +197,7 @@ export function trajectoryFramePoints(
  */
 export function collectTimeTicks(
     trajectory: AsteroidTrajectory,
-    project: PointProjector = toVec3,
+    project: PointProjector,
 ): Array<{ vec: THREE.Vector3; label: string; tooltip: string; zOrder: number }> {
     const now = trajectory.currentPoint?.timestamp ? new Date(trajectory.currentPoint.timestamp).getTime() : NaN;
     if (Number.isNaN(now)) return [];

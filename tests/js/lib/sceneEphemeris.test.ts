@@ -7,8 +7,6 @@ import {
     ORBIT_AU_SCALE,
     SUN_DISPLAY_DL,
     buildHeliocentricOrbit,
-    compressDistanceDl,
-    compressSceneVector,
     helioAUToSunCenteredScene,
     perifocalToEclipticAU,
     runSceneEphemerisAssertions,
@@ -20,48 +18,14 @@ describe('runSceneEphemerisAssertions', () => {
     });
 });
 
-describe('compressDistanceDl', () => {
-    it('maps the Moon (1 DL) to exactly 1 scene unit', () => {
-        expect(compressDistanceDl(1)).toBeCloseTo(1, 9);
-    });
-
-    it('maps zero and negative inputs to zero', () => {
-        expect(compressDistanceDl(0)).toBe(0);
-        expect(compressDistanceDl(-5)).toBe(0);
-    });
-
-    it('is strictly monotonic across the full near-Earth-to-Sun range', () => {
-        const samples = [0.1, 0.5, 1, 2, 10, 50, 100, AU_IN_DL];
-        for (let i = 1; i < samples.length; i += 1) {
-            expect(compressDistanceDl(samples[i])).toBeGreaterThan(compressDistanceDl(samples[i - 1]));
-        }
-    });
-
+describe('régua única (LINEAR_AU_SCALE)', () => {
     it('SUN_DISPLAY_DL is an alias of the single linear ruler (LINEAR_AU_SCALE)', () => {
         // 1 AU in scene units = the single ruler. The legacy log value (~96) is gone.
         expect(SUN_DISPLAY_DL).toBeCloseTo(LINEAR_AU_SCALE, 9);
     });
-});
 
-describe('compressSceneVector', () => {
-    it('preserves direction — only magnitude is rescaled', () => {
-        const v: [number, number, number] = [10, 5, 2];
-        const c = compressSceneVector(v);
-        const r0 = Math.hypot(...v);
-        const r1 = Math.hypot(...c);
-        expect(c[0] / r1).toBeCloseTo(v[0] / r0, 12);
-        expect(c[1] / r1).toBeCloseTo(v[1] / r0, 12);
-        expect(c[2] / r1).toBeCloseTo(v[2] / r0, 12);
-    });
-
-    it('returns zero vector for zero input', () => {
-        expect(compressSceneVector([0, 0, 0])).toEqual([0, 0, 0]);
-    });
-
-    it('compressed magnitude equals compressDistanceDl of the input magnitude', () => {
-        const v: [number, number, number] = [3, 4, 0];
-        const c = compressSceneVector(v);
-        expect(Math.hypot(...c)).toBeCloseTo(compressDistanceDl(5), 12);
+    it('ORBIT_AU_SCALE is the same single ruler', () => {
+        expect(ORBIT_AU_SCALE).toBeCloseTo(LINEAR_AU_SCALE, 9);
     });
 });
 

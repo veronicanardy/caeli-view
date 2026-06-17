@@ -23,8 +23,8 @@ type NowTrajectoryProps = {
     /** Quando `true`, renderiza apenas o cone de direção, sem linhas de trajetória. */
     coneOnly?: boolean;
     onFocusPoint?: (vec: THREE.Vector3) => void;
-    /** Projetor dos pontos para a cena. Default: régua log. No linear, projeção heliocêntrica. */
-    project?: PointProjector;
+    /** Projetor dos pontos para a cena (régua heliocêntrica via makeHelioLinearProjector). */
+    project: PointProjector;
 };
 
 export function NowTrajectory({ trajectory, palette, emphasized, dimmed, coneOnly = false, onFocusPoint, project }: NowTrajectoryProps) {

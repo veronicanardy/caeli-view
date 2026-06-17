@@ -2,7 +2,7 @@
  * Responsabilidade: efemérides leves para iluminação, posicionamento da Lua e das órbitas
  * planetárias na cena 3D do radar.
  *
- * Contrato de referencial (consistente com horizonsToScene em lib/radar/coordinates.ts):
+ * Contrato de referencial:
  * - Astronomy Engine retorna dados do Sol/Lua em EQJ (equatorial J2000).
  * - Vetores de asteroides do JPL Horizons estão em coordenadas eclípticas J2000.
  * - A cena mapeia eclíptico (x, y, z) para Three.js (x, z, −y):
@@ -27,64 +27,12 @@ export const AU_IN_DL = KM_PER_AU / KM_PER_LD;
 export const LINEAR_AU_SCALE = 300;
 
 /**
- * Compressão logarítmica radial — regra de escala da régua LOG LEGADA (acessível só atrás de `?log`).
- * O caminho PADRÃO da cena é a régua linear em UA (LINEAR_AU_SCALE, mais abaixo); esta compressão é
- * mantida como rede de comparação de bastidor, não como a experiência principal.
- *
- * Uma escala puramente linear (1 DL = 1 unidade) é honesta mas inutilizável: 1 UA = 389 DL, então
- * o Sol ficaria a ~389 unidades da Terra enquanto a Lua estaria em 1, uma dispersão impossível de
- * visualizar ao mesmo tempo. Em vez disso, comprimimos a DISTÂNCIA radial via logaritmo, exatamente
- * como em um diagrama astronômico em escala log:
- *
- *     r_cena = K · ln(1 + r_dl / R0)
- *
- * Propriedades que mantêm isso cientificamente defensável:
- *  - Estritamente monotônico: uma distância real maior sempre mapeia para uma distância de cena
- *    maior — nada próximo/distante inverte a ordem.
- *  - Preserva direção: apenas a magnitude é comprimida; mantemos o vetor unitário, então ângulos,
- *    inclinação orbital e a forma de cada trajetória são não distorcidos (Z nunca é achatado em
- *    relação a X/Y — a promessa central da cena 3D).
- *  - Quase linear próximo à Terra: para r ≪ R0 a curva é ≈ r·K/R0, então a vizinhança
- *    Terra–Lua–asteroide próximo fica quase fiel à escala; o log só "dobra" o enorme vazio até o Sol.
- *
- * R0 é a distância de transição (DL) abaixo da qual o mapeamento é ~linear. K é fixo para que a
- * Lua (1 DL) caia exatamente em 1 unidade de cena.
- *
- * R0 escolhido = 40: dá "fôlego" à faixa interplanetária sem esmagar os NEOs próximos. Com R0 = 40,
- * os NEOs (0,01–0,05 UA) ficam até mais legíveis que com R0 = 8, e os distantes (Ceres ~2,6 UA,
- * Júpiter ~5,2 UA) se espalham ~5× mais — saindo do "anel apertado" logo após o Sol. O custo é a
- * cena ficar maior (o Sol vai a ~96 unidades em vez de ~33), exigindo um pouco mais de zoom out.
- * Como SUN_DISPLAY_DL e ORBIT_AU_SCALE derivam daqui, toda a cena reescalona de forma consistente:
- * a régua dos planetas e a do radar continuam se encontrando no Sol.
- */
-const COMPRESS_R0_DL = 40;
-const COMPRESS_K = 1 / Math.log(1 + 1 / COMPRESS_R0_DL);
-
-/**
  * Número de segmentos da polilinha de cada elipse orbital. A posição do planeta é amostrada DESTA
  * mesma discretização (sampleHeliocentricEllipseAtNu), então este valor é a fonte única: mudar aqui
  * muda a linha E a posição juntas, e o planeta nunca sai da linha. Mantido aqui (não em
  * trajectoryConstants) para que a camada de física não dependa da camada de componentes.
  */
 export const ORBIT_ELLIPSE_SEGMENTS = 192;
-
-/** Comprime uma distância radial em DL para unidades de cena via a regra logarítmica acima. */
-export function compressDistanceDl(rDl: number): number {
-    if (rDl <= 0) return 0;
-    return COMPRESS_K * Math.log(1 + rDl / COMPRESS_R0_DL);
-}
-
-/**
- * Aplica a compressão logarítmica radial a um vetor de eixo de cena expresso em DL LINEARES
- * (1 unidade = 1 DL). Preserva a direção, reescalona a magnitude. Este é o único funil pelo qual
- * toda distância passa: a Lua, os vetores de asteroides do Horizons e os pontos de órbita heliocêntrica.
- */
-export function compressSceneVector(v: [number, number, number]): [number, number, number] {
-    const r = Math.hypot(v[0], v[1], v[2]);
-    if (r < 1e-9) return [0, 0, 0];
-    const s = compressDistanceDl(r) / r;
-    return [v[0] * s, v[1] * s, v[2] * s];
-}
 
 /**
  * @deprecated "1 UA em unidades de cena" — hoje é apenas um alias de LINEAR_AU_SCALE (a régua única).
@@ -558,26 +506,6 @@ export function runSceneEphemerisAssertions(): void {
             throw new Error(`[sceneEphemeris] ${label}: esperado ${expected} ± ${tol}, obtido ${actual}`);
         }
     };
-
-    // A Lua (1 DL) cai exatamente em 1 unidade de cena por construção de COMPRESS_K.
-    approx(compressDistanceDl(1), 1, 1e-9, 'Lua em 1 DL → 1 unidade de cena');
-
-    // A compressão é estritamente monotônica em (0, ∞) — meia distância é mais próxima que a distância inteira.
-    if (!(compressDistanceDl(0.5) < compressDistanceDl(1))) {
-        throw new Error('[sceneEphemeris] compressão deve ser monotônica');
-    }
-    if (!(compressDistanceDl(10) < compressDistanceDl(100))) {
-        throw new Error('[sceneEphemeris] compressão deve ser monotônica em raios maiores');
-    }
-
-    // A compressão preserva a direção (apenas a magnitude é reescalonada).
-    const v: [number, number, number] = [10, 5, 2];
-    const c = compressSceneVector(v);
-    const r0 = Math.hypot(...v);
-    const r1 = Math.hypot(...c);
-    approx(c[0] / r1, v[0] / r0, 1e-12, 'compressão preserva direção x');
-    approx(c[1] / r1, v[1] / r0, 1e-12, 'compressão preserva direção y');
-    approx(c[2] / r1, v[2] / r0, 1e-12, 'compressão preserva direção z');
 
     // Régua única: 1 UA cai exatamente em LINEAR_AU_SCALE unidades de cena.
     approx(SUN_DISPLAY_DL, LINEAR_AU_SCALE, 1e-9, '1 UA mapeia para LINEAR_AU_SCALE unidades');

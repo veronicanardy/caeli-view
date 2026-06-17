@@ -18,8 +18,7 @@
  *
  * Toda a cena usa UMA escala linear em UA (LINEAR_AU_SCALE): asteroides, Lua, planetas e Sol
  * ficam nas distâncias relativas reais, sem compressão. A aproximação (minúscula perto do vão
- * Terra-Sol) é revelada por ZOOM de câmera na Terra, não esticando a régua. A régua log
- * geocêntrica antiga sobrevive apenas como rede de comparação por trás de `?log` (ver linearMode.ts).
+ * Terra-Sol) é revelada por ZOOM de câmera na Terra, não esticando a régua.
  *
  * Dois recortes da MESMA cena coexistem:
  *   - 'radar'  : vizinhança da Terra em foco; aproximação, direção e trilha do objeto.

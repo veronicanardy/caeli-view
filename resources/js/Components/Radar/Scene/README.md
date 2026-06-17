@@ -53,17 +53,15 @@ O voo em si é o lerp suave original (fator 0,055, com `controls.update()` por f
 
 Como o voo desabilita os OrbitControls, é obrigatório garantir a soltura. O foco de asteroide usa `transition: 'preserve_heading'` e mira um alvo distante (a rocha na escala da cena); com damping, o teste de proximidade `1e-4` pode oscilar e nunca cruzar, deixando os controles presos em `disabled` (o usuário não conseguiria mais girar/zoom depois de chegar). Por isso há o teto `MAX_TWEEN_FRAMES`: ao atingi-lo o tween encerra e reabilita os controles **sem mexer na câmera** (não teleporta, o lerp para onde já está, então sem tranco). É só rede de segurança, ~3,3s a 60fps, bem além de qualquer voo real.
 
-## Cena radar/geocêntrica
+## Régua única heliocêntrica
 
-A cena radar mantém asteroides e trajetórias em posições geocêntricas log-comprimidas, offsetadas pela posição atual da Terra. Terra, Lua, Sol e planetas usam posições já resolvidas pela efeméride ou fallbacks locais já definidos.
+A cena tem UMA régua: asteroides, trajetórias, Lua, Sol e planetas caem na escala linear heliocêntrica em UA (Sol na origem), nas distâncias relativas reais, sem compressão. Os NEOs do feed são projetados por `currentPositionInHelioScene` / `makeHelioLinearProjector` (posição absoluta, sem offset da Terra). Terra, Lua, Sol e planetas usam posições já resolvidas pela efeméride ou fallbacks locais já definidos. A régua log geocêntrica antiga (`?log`) foi removida.
 
-## Cena heliocêntrica
-
-A cena heliocêntrica aparece somente quando o modo órbita está ativo, há objeto selecionado com elementos orbitais e a época de periélio é utilizável. Ela não recalcula ranking nem cria fallback de dados.
+O modo órbita NÃO troca de cena: ele apenas REVELA a elipse Kepleriana completa do objeto selecionado, sobreposta à mesma régua única (sob demanda, no botão "Ver a órbita ao redor do Sol").
 
 ## Foco, labels e oclusão
 
-`sceneFocus.ts` concentra regras locais de label e oclusão. O oclusor da Lua usa a posição absoluta `moonPos`, porque `moonPos` já inclui `earthPos + moonGeoPos`.
+`sceneFocus.ts` concentra regras locais de label e oclusão. O oclusor da Lua usa a posição absoluta `moonPos`, porque `moonPos` já inclui `earthPos + moonGeoPos`. O oclusor do objeto focado usa `focusedObjectScenePosition`, que devolve a posição heliocêntrica ABSOLUTA da rocha (a mesma régua em que ela é desenhada), e não uma posição relativa à Terra.
 
 ## Padrões locais
 

@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react';
 import type { AsteroidTrajectory } from '@/types';
-import { collectTimeTicks, findClosestApproachPoint, toVec3, type PointProjector } from '@/lib/radar/trajectorySampling';
+import { collectTimeTicks, findClosestApproachPoint, type PointProjector } from '@/lib/radar/trajectorySampling';
 import {
     getMovementDirection,
     getTrajectoryOpacities,
@@ -21,13 +21,13 @@ export function useNowTrajectoryPresentation({
     trajectory,
     emphasized,
     dimmed,
-    project = toVec3,
+    project,
 }: {
     trajectory: AsteroidTrajectory;
     emphasized: boolean;
     dimmed: boolean;
-    /** Projetor dos pontos para a cena. Default: régua log (toVec3). No linear, projeção heliocêntrica. */
-    project?: PointProjector;
+    /** Projetor dos pontos para a cena (régua heliocêntrica via makeHelioLinearProjector). */
+    project: PointProjector;
 }) {
     const pastVecs = useMemo(
         () => (trajectory.pastPoints ?? []).map((point) => project(point)),

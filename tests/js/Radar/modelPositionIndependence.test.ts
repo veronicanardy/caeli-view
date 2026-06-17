@@ -1,20 +1,23 @@
 /**
  * Garante a separação entre POSIÇÃO (ciência) e MODELO (aparência) do asteroide.
  *
- * A posição de um asteroide vem sempre da pipeline científica (currentPositionInScene),
- * que só lê o vetor de trajetória do Horizons. Trocar o modelo 3D — genérico, real ou
- * fallback — não pode mover o objeto. Estes testes travam essa independência:
+ * A posição de um asteroide vem sempre da pipeline científica (currentPositionInHelioScene),
+ * que só lê o vetor de trajetória do Horizons (mais a posição da Terra). Trocar o modelo 3D,
+ * genérico, real ou fallback, não pode mover o objeto. Estes testes travam essa independência:
  *
  *  - a escolha do modelo (asteroidRenderableModelFor) só depende da IDENTIDADE;
- *  - a posição (currentPositionInScene) só depende da TRAJETÓRIA;
+ *  - a posição (currentPositionInHelioScene) só depende da TRAJETÓRIA (e da Terra, fixa aqui);
  *  - asteroide conhecido usa modelo exclusivo; sem identidade, cai no genérico.
  */
 
 import { describe, expect, it } from 'vitest';
 import { asteroidRenderableModelFor } from '@/Components/Radar/Bodies/Asteroid/asteroidModelRegistry';
-import { currentPositionInScene } from '@/lib/radar/trajectorySampling';
+import { currentPositionInHelioScene } from '@/lib/radar/trajectorySampling';
 import { KM_PER_LD } from '@/lib/sceneEphemeris';
 import type { ClosestNowObject } from '@/types';
+
+/** Posição heliocêntrica da Terra fixa (a mesma para todas as identidades comparadas). */
+const EARTH_HELIO = { x: 1, y: 0, z: 0 };
 
 /**
  * Constrói um objeto com uma trajetória mínima (currentPoint) e identidade configurável.
@@ -59,15 +62,15 @@ describe('modelo e posição são independentes', () => {
         expect(asteroidRenderableModelFor(known).asset.key).toBe('eros');
 
         // …mas a posição calculada é exatamente a mesma (depende só da trajetória).
-        const posGeneric = currentPositionInScene(generic);
-        const posKnown = currentPositionInScene(known);
+        const posGeneric = currentPositionInHelioScene(generic, EARTH_HELIO);
+        const posKnown = currentPositionInHelioScene(known, EARTH_HELIO);
         expect(posGeneric).not.toBeNull();
         expect(posKnown).toEqual(posGeneric);
     });
 
     it('mudar a identidade (e portanto o modelo) não altera a posição', () => {
-        const before = currentPositionInScene(makeObject({ name: 'anon', point }));
-        const after = currentPositionInScene(makeObject({ name: 'Bennu', permanentNumber: '101955', point }));
+        const before = currentPositionInHelioScene(makeObject({ name: 'anon', point }), EARTH_HELIO);
+        const after = currentPositionInHelioScene(makeObject({ name: 'Bennu', permanentNumber: '101955', point }), EARTH_HELIO);
         expect(after).toEqual(before);
     });
 
