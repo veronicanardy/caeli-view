@@ -35,13 +35,19 @@ type Controls = {
 const PERSPECTIVE_DISTANCE = 15.0;
 const PERSPECTIVE_ELEVATION = 5.5;
 
-/* Teto de frames de um voo. Rede de segurança para SEMPRE devolver o controle ao usuário:
-   com `controls.update()` + damping (e, no foco de asteroide, um alvo que ainda micro-desloca),
-   o teste de proximidade pode oscilar sem nunca cruzar o limiar `1e-4`. Como o voo desabilita os
-   OrbitControls, sem este teto eles ficariam presos em `disabled` e o usuário não conseguiria mais
-   girar/zoom depois de chegar. A ~60fps são ~3,3s, bem mais que qualquer voo real — não corta
-   movimento visível, só encerra o tween (NÃO teleporta a câmera: o lerp para onde já está). */
-const MAX_TWEEN_FRAMES = 200;
+/* Duração FIXA do voo de câmera, em segundos. O voo interpola de origem→destino por um parâmetro de
+   tempo (não por fração fixa por frame): com isso ele TERMINA no destino exato em ~TWEEN_DURATION_S,
+   sem a cauda assintótica do lerp antigo (que arrastava o trecho final e só devolvia o controle muito
+   depois). Mesma duração para voo curto e longo (previsível). Usa o delta de tempo real, então o ritmo
+   é estável em qualquer FPS. */
+const TWEEN_DURATION_S = 1.1;
+
+/* Ease-out cúbico: arranca firme e desacelera suave na chegada (aterrissagem macia, sem freada seca).
+   easeOutCubic(0)=0, easeOutCubic(1)=1, derivada → 0 no fim. */
+function easeOutCubic(t: number): number {
+    const u = 1 - t;
+    return 1 - u * u * u;
+}
 
 export function CameraRig({
     view,
@@ -112,8 +118,13 @@ export function CameraRig({
     const adHocTweening = useRef(false);
     const adHocDesired = useRef<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
 
-    // Frames decorridos no voo atual: alimenta o teto MAX_TWEEN_FRAMES (rede de segurança da soltura).
-    const tweenFrames = useRef(0);
+    // Tempo decorrido (s) no voo atual: avança o parâmetro de interpolação até TWEEN_DURATION_S.
+    const tweenElapsed = useRef(0);
+
+    // Snapshot de origem do voo (posição e target no instante em que ele começou). A interpolação é
+    // ABSOLUTA (lerpVectors(origem, destino, eased)), não incremental, então em t=1 a câmera está
+    // exatamente no destino — sem cauda assintótica. Capturado no primeiro frame de cada tween.
+    const tweenFrom = useRef<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
 
     const mounted = useRef(false);
     useEffect(() => {
@@ -121,7 +132,8 @@ export function CameraRig({
         // Não sobrescreve um tween avulso em andamento — a câmera fica onde o usuário a deixou.
         if (adHocTweening.current) return;
         tweening.current = true;
-        tweenFrames.current = 0;
+        tweenElapsed.current = 0;
+        tweenFrom.current = null; // recapturado no 1º frame do voo (origem real da câmera)
         /* Resolve o desired no momento da mudança, preservando o ângulo atual da câmera
            sem forçar virada — o usuário chega ao asteroide pelo heading que já tem. */
         if (focusTarget?.transition === 'preserve_heading' && controls?.target) {
@@ -146,7 +158,8 @@ export function CameraRig({
             adHocDesired.current = { position: position.clone(), target: target.clone() };
             adHocTweening.current = true;
             tweening.current = false;
-            tweenFrames.current = 0;
+            tweenElapsed.current = 0;
+            tweenFrom.current = null;
         };
     }, [tweenCtxRef]);
 
@@ -159,7 +172,37 @@ export function CameraRig({
         if (controls && controls.enabled !== enabled) controls.enabled = enabled;
     };
 
-    useFrame(({ camera: fc }) => {
+    /* Avança um voo de duração fixa: na primeira chamada captura a ORIGEM (posição/target atuais da
+       câmera) e a cada frame interpola origem→destino por um parâmetro de tempo com ease-out. Devolve
+       true quando o voo terminou (t ≥ 1, câmera EXATAMENTE no destino). dt é o delta de tempo real. */
+    const advanceTween = (
+        fc: THREE.Camera,
+        dest: { position: THREE.Vector3; target: THREE.Vector3 },
+        dt: number,
+    ): boolean => {
+        if (!tweenFrom.current) {
+            tweenFrom.current = {
+                position: fc.position.clone(),
+                target: controls?.target ? controls.target.clone() : dest.target.clone(),
+            };
+        }
+        tweenElapsed.current += dt;
+        const t = Math.min(1, tweenElapsed.current / TWEEN_DURATION_S);
+        const e = easeOutCubic(t);
+        const from = tweenFrom.current;
+        fc.position.lerpVectors(from.position, dest.position, e);
+        if (controls?.target) {
+            controls.target.lerpVectors(from.target, dest.target, e);
+            controls.update();
+        } else {
+            fc.lookAt(dest.target);
+        }
+        return t >= 1;
+    };
+
+    useFrame(({ camera: fc }, delta) => {
+        // delta pode disparar (aba em background, GC); limita o passo para o voo não "pular".
+        const dt = Math.min(delta, 1 / 30);
         // Compensação de painéis na projeção: o centro visual desloca para a área
         // livre (direita do trilho no desktop, acima do sheet no mobile) sem mexer
         // no alvo dos OrbitControls. Interpolada para transições suaves.
@@ -199,16 +242,7 @@ export function CameraRig({
         // Tween avulso tem prioridade — não altera focusTarget global.
         if (adHocTweening.current && adHocDesired.current) {
             setControlsEnabled(false);
-            const ad = adHocDesired.current;
-            tweenFrames.current++;
-            fc.position.lerp(ad.position, 0.055);
-            if (controls?.target) {
-                controls.target.lerp(ad.target, 0.055);
-                controls.update();
-            }
-            const posClose = fc.position.distanceToSquared(ad.position) < 1e-4;
-            const tgtClose = !controls?.target || controls.target.distanceToSquared(ad.target) < 1e-4;
-            if ((posClose && tgtClose) || tweenFrames.current >= MAX_TWEEN_FRAMES) {
+            if (advanceTween(fc, adHocDesired.current, dt)) {
                 adHocTweening.current = false;
                 setControlsEnabled(true);
             }
@@ -221,24 +255,10 @@ export function CameraRig({
             return;
         }
 
+        // Voo de foco/view: o alvo é o objeto real; a compensação de painéis acontece na projeção
+        // (acima), não aqui.
         setControlsEnabled(false);
-        const ed = effectiveDesired.current;
-        tweenFrames.current++;
-
-        /* Lerp com ease-out suave: fator baixo para movimento fluido, desacelera naturalmente
-           à medida que a distância ao destino diminui. O alvo é sempre o objeto real:
-           a compensação de painéis acontece na projeção (acima), não aqui. */
-        fc.position.lerp(ed.position, 0.055);
-        if (controls?.target) {
-            controls.target.lerp(ed.target, 0.055);
-            controls.update();
-        } else {
-            fc.lookAt(ed.target);
-        }
-
-        const posClose = fc.position.distanceToSquared(ed.position) < 1e-4;
-        const tgtClose = !controls?.target || controls.target.distanceToSquared(ed.target) < 1e-4;
-        if ((posClose && tgtClose) || tweenFrames.current >= MAX_TWEEN_FRAMES) {
+        if (advanceTween(fc, effectiveDesired.current, dt)) {
             tweening.current = false;
             setControlsEnabled(true);
         }
