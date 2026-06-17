@@ -1,12 +1,11 @@
 /**
  * Modo LINEAR: régua única heliocêntrica linear em UA, com a aproximação resolvida por zoom de
- * câmera. É a experiência PADRÃO do radar (a cara do CaeliView).
+ * câmera. É a ÚNICA régua do radar (a cara do CaeliView).
  *
- * Responsabilidade: dizer se o modo linear está ligado. Liga por padrão; só desliga quando a URL
- * pede explicitamente a régua log de bastidor via `?log`. A régua log fica acessível apenas por essa
- * flag, como rede de segurança/comparação, sem aparecer pro visitante. Não persiste.
+ * A antiga régua log de bastidor (`?log`) foi desativada: a flag não liga mais nada. A função
+ * permanece retornando sempre `true` enquanto os call sites condicionais são colapsados em etapas;
+ * será removida junto com o último deles.
  */
 export function linearModeEnabled(): boolean {
-    if (typeof window === 'undefined') return true;
-    return !new URLSearchParams(window.location.search).has('log');
+    return true;
 }
