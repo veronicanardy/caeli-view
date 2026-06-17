@@ -31,9 +31,16 @@ function makeObjectWithPosition(x: number, y: number, z: number): ClosestNowObje
 
 // ─── focusedObjectScenePosition ───────────────────────────────────────────────
 
+const EARTH_HELIO = { x: 1, y: 0, z: 0 };
+
 describe('focusedObjectScenePosition', () => {
     it('retorna null quando focusedObject é null', () => {
-        expect(focusedObjectScenePosition(null, [1, 2, 3])).toBeNull();
+        expect(focusedObjectScenePosition(null, EARTH_HELIO)).toBeNull();
+    });
+
+    it('retorna null quando falta a posição heliocêntrica da Terra (efeméride não resolvida)', () => {
+        const obj = makeObjectWithPosition(0.5, 0, 0);
+        expect(focusedObjectScenePosition(obj, null)).toBeNull();
     });
 
     it('retorna null quando o objeto não tem posição de cena', () => {
@@ -43,25 +50,24 @@ describe('focusedObjectScenePosition', () => {
             currentDistanceKm: null,
             currentDistanceLD: null,
         } as unknown as ClosestNowObject;
-        expect(focusedObjectScenePosition(obj, [0, 0, 0])).toBeNull();
+        expect(focusedObjectScenePosition(obj, EARTH_HELIO)).toBeNull();
     });
 
-    it('soma posição geocêntrica do objeto com earthPos', () => {
+    it('devolve a posição heliocêntrica ABSOLUTA do objeto (mesma régua dos NEOs)', () => {
+        // currentPositionInHelioScene leva o ponto geocêntrico (km) a heliocêntrico
+        // (earthHelioAU + ponto/KM_PER_AU) e projeta na régua linear — resultado absoluto, finito.
         const obj = makeObjectWithPosition(0.5, 0, 0);
-        const earth: [number, number, number] = [10, 0, 0];
-        const result = focusedObjectScenePosition(obj, earth);
+        const result = focusedObjectScenePosition(obj, EARTH_HELIO);
         expect(result).not.toBeNull();
-        // x deve ser ~earthPos.x + geoPos.x (comprimido)
-        expect(result![0]).toBeGreaterThan(10);
+        expect(result!.every(Number.isFinite)).toBe(true);
     });
 
-    it('com earthPos em zero a posição retornada é igual ao geoPos comprimido', () => {
-        const obj = makeObjectWithPosition(1, 0, 0);
-        const result = focusedObjectScenePosition(obj, [0, 0, 0]);
-        expect(result).not.toBeNull();
-        expect(result![0]).toBeGreaterThan(0);
-        expect(result![1]).toBeCloseTo(0, 6);
-        expect(result![2]).toBeCloseTo(0, 6);
+    it('move junto com a posição heliocêntrica da Terra (offset absoluto, não relativo)', () => {
+        const obj = makeObjectWithPosition(0.5, 0, 0);
+        const a = focusedObjectScenePosition(obj, { x: 1, y: 0, z: 0 })!;
+        const b = focusedObjectScenePosition(obj, { x: 2, y: 0, z: 0 })!;
+        // Terra mais longe do Sol ⇒ objeto também (posição absoluta na régua heliocêntrica).
+        expect(b[0]).not.toBeCloseTo(a[0], 3);
     });
 });
 

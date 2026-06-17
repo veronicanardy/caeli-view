@@ -8,7 +8,8 @@
 import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
 import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/radar/bodyScale';
-import { currentPositionInScene } from '@/lib/radar/trajectorySampling';
+import { currentPositionInHelioScene } from '@/lib/radar/trajectorySampling';
+import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
 import type { LabelOccluder } from '../Overlays/SceneLabels';
 import type { FocusFraming } from './cameraFraming';
 import type { SceneVector } from './scenePositions';
@@ -37,11 +38,18 @@ export function shouldShowLabelForObject({
     return !orbitLabelsOnly;
 }
 
-export function focusedObjectScenePosition(focusedObject: ClosestNowObject | null, earthPos: SceneVector): SceneVector | null {
-    const focusedObjectGeoPos = focusedObject ? currentPositionInScene(focusedObject) : null;
-    return focusedObjectGeoPos
-        ? [earthPos[0] + focusedObjectGeoPos[0], earthPos[1] + focusedObjectGeoPos[1], earthPos[2] + focusedObjectGeoPos[2]]
-        : null;
+/**
+ * Posição de cena ABSOLUTA do objeto focado, na régua heliocêntrica linear (Sol na origem) — a mesma
+ * em que os NEOs são desenhados (currentPositionInHelioScene). Alimenta o occluder de labels, que
+ * precisa do centro do corpo no espaço-mundo. Retorna null quando falta o objeto ou a posição
+ * heliocêntrica da Terra (efeméride ainda não resolvida).
+ */
+export function focusedObjectScenePosition(
+    focusedObject: ClosestNowObject | null,
+    earthHelioAU: EarthHelioAU | null,
+): SceneVector | null {
+    if (!focusedObject || !earthHelioAU) return null;
+    return currentPositionInHelioScene(focusedObject, earthHelioAU);
 }
 
 export function computeLabelOccluder({

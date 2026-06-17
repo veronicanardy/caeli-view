@@ -176,8 +176,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     // useMemo evita que novos objetos sejam criados a cada render, prevenindo
     // invalidação desnecessária dos contextos LabelOccluder e SceneObjectOccluders.
     const focusedObjectPosition = useMemo(
-        () => focusedObjectScenePosition(focusedObject, earthPos),
-        [focusedObject, earthPos],
+        () => focusedObjectScenePosition(focusedObject, ephemeris?.earthHelioPositionAU ?? null),
+        [focusedObject, ephemeris?.earthHelioPositionAU],
     );
     const labelOccluder = useMemo(
         () => computeLabelOccluder({ bodyFocus, earthPos, moonPos, focusedObjectPosition }),
