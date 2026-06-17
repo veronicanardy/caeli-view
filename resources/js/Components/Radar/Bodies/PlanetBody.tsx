@@ -108,17 +108,12 @@ export function PlanetBody({
         }
     }, [tiltQuaternion]);
 
+    // Apenas o spin precisa rodar por frame; sunDir é atualizado por efeito logo abaixo.
     useFrame(() => {
         if (!meshRef.current) return;
 
         const nowS = Date.now() / 1000;
         meshRef.current.rotation.y = spinRateRadPerS * (nowS - BODY_ROTATION_EPOCH_UNIX_S);
-
-        if (matRef.current) {
-            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
-                directionFromBodyToSceneSun(position),
-            );
-        }
     });
 
     const material = useMemo(() => {
@@ -155,6 +150,16 @@ export function PlanetBody({
             material.dispose();
         };
     }, [material]);
+
+    // sunDir depende apenas da posição heliocêntrica, que muda por tick de efeméride e não
+    // por frame. Em useFrame isso alocava 2 Vector3 por frame por planeta (7 planetas ambiente).
+    useEffect(() => {
+        if (matRef.current) {
+            (matRef.current.uniforms.sunDir.value as THREE.Vector3).copy(
+                directionFromBodyToSceneSun(position),
+            );
+        }
+    }, [material, position]);
 
     const labelPos: [number, number, number] = [0, config.body.visualRadiusDl + config.label.offset, 0];
 

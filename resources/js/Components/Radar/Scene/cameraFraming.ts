@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
 import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
-import { currentPositionInScene } from '@/lib/radar/trajectorySampling';
+import { currentPositionInHelioScene } from '@/lib/radar/trajectorySampling';
 import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
 import { CAMERA_FOV_DEG, CAMERA_VIEWS, MAX_CAMERA_DISTANCE } from './cameraConstants';
 
@@ -50,17 +50,147 @@ export function framingForOverview(): FocusFraming {
     return { target: new THREE.Vector3(0, 0, 0), position: CAMERA_VIEWS.perspective.clone(), transition: 'default' };
 }
 
+/** Quanto a seta de direção avança além da rocha (comprimento do cone + folga). */
+const TRAJECTORY_ARROW_LEAD = 0.3;
+
+/** Viés do alvo na direção da rocha: 0 = centro geométrico, 1 = a própria rocha. */
+const TRAJECTORY_TARGET_ROCK_BIAS = 0.3;
+
 /**
- * Enquadramento de câmera para um asteroide selecionado.
- *   - orbitMode = false: close-up no asteroide, modo radar com escala logarítmica.
- *   - orbitMode = true: enquadra a órbita Kepleriana completa ao redor do Sol na cena heliocêntrica.
+ * Enquadramento do zoom out de trajetória: encaixa confortavelmente o trecho da
+ * seta de direção até o marcador −72h no campo de visão visível.
+ *
+ * Decisões:
+ *  - o alvo é o centro do trecho puxado em direção à rocha (a protagonista
+ *    continua perto do centro sem perder as pontas do quadro);
+ *  - a direção de câmera parte do heading atual, mas é corrigida quando está
+ *    quase paralela à trajetória — vista de topo a linha viraria um ponto;
+ *  - a distância encaixa a esfera envolvente no menor ângulo visível do frustum,
+ *    descontando a área coberta por painéis (frações visíveis < 1).
+ */
+export function framingForTrajectorySegment({
+    points,
+    rockPosition,
+    currentCameraPosition,
+    fovDeg = CAMERA_FOV_DEG,
+    aspect = 1,
+    visibleWidthFraction = 1,
+    visibleHeightFraction = 1,
+}: {
+    /** Pontos absolutos (cena) do trecho a enquadrar; a rocha pode ou não estar incluída. */
+    points: THREE.Vector3[];
+    rockPosition: THREE.Vector3;
+    currentCameraPosition: THREE.Vector3;
+    fovDeg?: number;
+    /** Largura/altura do canvas. */
+    aspect?: number;
+    /** Fração da largura livre de painéis (1 − biasX). */
+    visibleWidthFraction?: number;
+    /** Fração da altura livre de painéis (1 − biasY). */
+    visibleHeightFraction?: number;
+}): FocusFraming {
+    // Sem trecho útil: recuo simples mantendo o heading, centrado na rocha.
+    if (points.length < 2) {
+        const dir = currentCameraPosition.clone().sub(rockPosition);
+        const fallbackDir = dir.lengthSq() > 1e-8 ? dir.normalize() : new THREE.Vector3(0.4, 0.45, 0.8).normalize();
+        return {
+            target: rockPosition.clone(),
+            position: rockPosition.clone().add(fallbackDir.multiplyScalar(3)),
+            transition: 'default',
+        };
+    }
+
+    // A seta de direção se projeta além da rocha: estende o trecho na direção do movimento.
+    const framed = [...points, rockPosition];
+    const lastBeforeRock = points[points.length - 1];
+    const motion = rockPosition.clone().sub(lastBeforeRock);
+    if (motion.lengthSq() > 1e-10) {
+        framed.push(rockPosition.clone().add(motion.normalize().multiplyScalar(TRAJECTORY_ARROW_LEAD)));
+    }
+
+    // Corda principal do trecho: da rocha ao ponto mais distante dela.
+    let farthest = framed[0];
+    let farthestDistSq = 0;
+    for (const point of framed) {
+        const d = point.distanceToSquared(rockPosition);
+        if (d > farthestDistSq) { farthestDistSq = d; farthest = point; }
+    }
+    const chordDir = rockPosition.clone().sub(farthest);
+    if (chordDir.lengthSq() > 1e-10) chordDir.normalize();
+
+    // Alvo: centro envolvente puxado em direção à rocha.
+    const box = new THREE.Box3().setFromPoints(framed);
+    const sphere = new THREE.Sphere();
+    box.getBoundingSphere(sphere);
+    const target = sphere.center.clone().lerp(rockPosition, TRAJECTORY_TARGET_ROCK_BIAS);
+    let radius = 0;
+    for (const point of framed) radius = Math.max(radius, point.distanceTo(target));
+
+    // Direção de câmera: heading atual, corrigido se quase paralelo à corda.
+    let viewDir = currentCameraPosition.clone().sub(target);
+    if (viewDir.lengthSq() < 1e-8) viewDir = new THREE.Vector3(0.4, 0.45, 0.8);
+    viewDir.normalize();
+    const perpendicular = viewDir.clone().addScaledVector(chordDir, -viewDir.dot(chordDir));
+    if (perpendicular.length() < 0.35) {
+        // Vista de topo da linha: cai para uma perpendicular estável, do lado mais
+        // próximo do heading atual para a câmera girar o mínimo possível.
+        const fallback = new THREE.Vector3().crossVectors(chordDir, new THREE.Vector3(0, 1, 0));
+        if (fallback.lengthSq() < 1e-6) fallback.crossVectors(chordDir, new THREE.Vector3(1, 0, 0));
+        fallback.normalize();
+        if (fallback.dot(viewDir) < 0) fallback.negate();
+        perpendicular.copy(fallback);
+    } else {
+        perpendicular.normalize();
+    }
+    // Elevação leve: trajetórias vivem perto do plano eclíptico; um pouco de
+    // altura evita ler a linha rente ao horizonte da cena.
+    const finalDir = perpendicular.add(new THREE.Vector3(0, 0.3, 0)).normalize();
+
+    // Distância: encaixa a esfera no menor semiângulo visível (largura × altura),
+    // descontando painéis. Margem de 12% espelha o enquadramento do modo órbita.
+    const halfFovRad = THREE.MathUtils.degToRad(fovDeg) * 0.5;
+    const safeWidthFraction = THREE.MathUtils.clamp(visibleWidthFraction, 0.3, 1);
+    const safeHeightFraction = THREE.MathUtils.clamp(visibleHeightFraction, 0.3, 1);
+    const tanVisible = Math.min(
+        Math.tan(halfFovRad) * safeHeightFraction,
+        Math.tan(halfFovRad) * aspect * safeWidthFraction,
+    );
+    const halfVisibleRad = Math.atan(tanVisible);
+    const distance = THREE.MathUtils.clamp(
+        (radius / Math.sin(halfVisibleRad)) * 1.12,
+        0.8,
+        MAX_CAMERA_DISTANCE,
+    );
+
+    return { target, position: target.clone().add(finalDir.multiplyScalar(distance)), transition: 'default' };
+}
+
+/**
+ * Enquadramento de câmera para um asteroide selecionado, na régua heliocêntrica única (Sol na origem).
+ *   - orbitMode = false: close-up na rocha, mirando a posição heliocêntrica absoluta.
+ *   - orbitMode = true: enquadra a órbita Kepleriana completa ao redor do Sol.
+ *
+ * Retorna null quando não há posição utilizável (efeméride da Terra ainda não resolvida); a câmera
+ * só reenquadra no tick seguinte, quando a posição chega.
  */
 export function computeFocusFraming(
     object: ClosestNowObject,
     orbitMode = false,
     earthHelioPositionAU: EarthHelioAU | null = null,
-    earthScenePosition: [number, number, number] = [0, 0, 0],
 ): FocusFraming | null {
+    // Close-up: o objeto vive na régua heliocêntrica (Sol na origem), não offsetado pela Terra.
+    // Mira a posição heliocêntrica absoluta da rocha. A DISTÂNCIA fixa (0.1) dá zoom total na rocha
+    // (o MODELO tem o mesmo tamanho visual independentemente da escala da régua, que move posições e
+    // não corpos) E cai na faixa em que a lupa de "ver trajetória" aparece.
+    if (earthHelioPositionAU && !orbitMode) {
+        const helioPos = currentPositionInHelioScene(object, earthHelioPositionAU);
+        if (helioPos) {
+            const target = new THREE.Vector3(...helioPos);
+            const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
+            const distance = 0.1;
+            return { target, position: target.clone().add(dir.multiplyScalar(distance)), transition: 'preserve_heading' };
+        }
+    }
     if (orbitMode && object.trajectory?.orbitalElements) {
         const elements = object.trajectory.orbitalElements;
         const orbitPoints = buildHeliocentricOrbit(elements, 256);
@@ -99,15 +229,11 @@ export function computeFocusFraming(
         // Elementos rejeitados pelo construtor de órbita. Cai para o close-up para mostrar algo.
     }
 
-    // Close-up na rocha: vetor Horizons log-comprimido, offsetado pela Terra na cena.
-    const geoPos = currentPositionInScene(object);
-    if (!geoPos) return null;
-    const target = new THREE.Vector3(
-        earthScenePosition[0] + geoPos[0],
-        earthScenePosition[1] + geoPos[1],
-        earthScenePosition[2] + geoPos[2],
-    );
-    const distance = 0.35;
+    // Fallback de close-up (modo órbita sem elipse utilizável): mira a posição heliocêntrica absoluta.
+    const helioPos = earthHelioPositionAU ? currentPositionInHelioScene(object, earthHelioPositionAU) : null;
+    if (!helioPos) return null;
+    const target = new THREE.Vector3(...helioPos);
+    const distance = 0.1;
     const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
     const position = target.clone().add(dir.multiplyScalar(distance));
     return { target, position, transition: 'preserve_heading' };

@@ -7,11 +7,14 @@
  */
 
 import { useMemo, useState } from 'react';
+import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
+import { estimateAsteroidDiameterMeters, symbolicRockRadiusFromDiameter } from '@/lib/radar/asteroidScale';
 import { ScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import RealAsteroidModel from './RealAsteroidModel';
 import { asteroidRenderableModelFor } from './asteroidModelRegistry';
+import { ZoomHint } from './ZoomHint';
 
 const DIMMED_OPACITY = 0.4;
 const FULL_OPACITY = 1;
@@ -19,21 +22,16 @@ const HITBOX_RADIUS = 0.14;
 const HITBOX_SEGMENTS = 16;
 const LABEL_POSITION: [number, number, number] = [0, 0.04, 0];
 
-function rockScaleFromDiameter(a: UnifiedApproach): number {
-    const dMin = a.estimatedDiameterMinMeters
-        ?? (a.absoluteMagnitude != null ? (1329 / Math.sqrt(0.25)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000 : null);
-    const dMax = a.estimatedDiameterMaxMeters
-        ?? (a.absoluteMagnitude != null ? (1329 / Math.sqrt(0.05)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000 : null);
-    const d = a.diameterMeters
-        ?? (dMin != null && dMax != null ? Math.round((dMin + dMax) / 2) : dMax ?? dMin)
-        ?? null;
-    if (d == null) return 0.013;
-    if (d < 10)   return 0.006;
-    if (d < 50)   return 0.008;
-    if (d < 150)  return 0.010;
-    if (d < 500)  return 0.013;
-    if (d < 1000) return 0.017;
-    return 0.022;
+/**
+ * Raio visual SIMBÓLICO de um asteroide do feed.
+ *
+ * Adaptador fino sobre a política central (lib/radar/asteroidScale): estima o diâmetro a partir
+ * do que o feed traz (diâmetro, faixa estimada ou magnitude absoluta H) e mapeia para o raio
+ * visual em degraus. A mesma política é usada pelos asteroides conhecidos, garantindo que o
+ * MESMO corpo tenha o MESMO tamanho independente do pipeline que o desenha.
+ */
+export function symbolicRockRadiusForApproach(a: UnifiedApproach): number {
+    return symbolicRockRadiusFromDiameter(estimateAsteroidDiameterMeters(a));
 }
 
 /**
@@ -49,6 +47,11 @@ type AsteroidMarkerProps = {
     protectLabelFromFocus: boolean;
     paletteColor: string;
     showLabels: boolean;
+    /** Trecho absoluto da trajetória que o zoom out deve enquadrar (vazio = sem trajetória). */
+    zoomFramePoints?: THREE.Vector3[];
+    zoomWorldPosition?: THREE.Vector3;
+    panelBiasX?: number;
+    panelBiasY?: number;
 };
 
 /**
@@ -74,11 +77,15 @@ export function AsteroidMarker({
     protectLabelFromFocus,
     paletteColor,
     showLabels,
+    zoomFramePoints,
+    zoomWorldPosition,
+    panelBiasX = 0,
+    panelBiasY = 0,
 }: AsteroidMarkerProps) {
     const [hovered, setHovered] = useState(false);
     const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
 
-    const rockScale = rockScaleFromDiameter(object.approach);
+    const rockScale = symbolicRockRadiusForApproach(object.approach);
     const opacity = dimmed ? DIMMED_OPACITY : FULL_OPACITY;
 
     return (
@@ -99,6 +106,15 @@ export function AsteroidMarker({
             {/* Mostra label quando: (a) sempre visível por config, ou (b) hover — mesmo com labels suprimidos.
                 Apenas o nome: identificação rápida. Detalhes (posição estimada, máxima aproximação)
                 pertencem ao card do painel lateral, não à cena 3D. */}
+            {isSelected && showLabels && zoomFramePoints && zoomWorldPosition ? (
+                <ZoomHint
+                    worldPosition={zoomWorldPosition}
+                    zoomFramePoints={zoomFramePoints}
+                    panelBiasX={panelBiasX}
+                    panelBiasY={panelBiasY}
+                />
+            ) : null}
+
             {(showLabel || hovered) ? (
                 <ScreenLabel
                     position={LABEL_POSITION}
@@ -106,7 +122,6 @@ export function AsteroidMarker({
                     protectFromFocus={protectLabelFromFocus}
                     allowSceneOverlap={isSelected}
                     onClick={() => onSelect(object.approach)}
-                    title={`Focar ${object.approach.displayName ?? object.approach.name}`}
                     tooltip={isSelected && object.currentDistanceKm != null ? (
                         <><span>O asteroide está aqui agora</span><br /><span className="text-white/50">{new Intl.NumberFormat('pt-BR').format(Math.round(object.currentDistanceKm))} km da Terra</span></>
                     ) : undefined}

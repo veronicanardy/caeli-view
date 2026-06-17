@@ -103,7 +103,7 @@ Todas as integrações com APIs externas ficam no backend Laravel. As páginas R
   │  2026 LD   1.603.590 km │       │   ♀    ☿       ♄            │
   │  2026 LT   2.089.967 km │       │              ☀              │
   │  2026 LX   2.098.544 km │       └──────────────────────────────┘
-  │  2026 KM3  2.578.161 km │       escala log. visual apenas
+  │  2026 KM3  2.578.161 km │       escala linear · UA
   └─────────────────────────┘
   NASA NeoWs + JPL CAD (mesclados)
 ```
@@ -111,8 +111,8 @@ Todas as integrações com APIs externas ficam no backend Laravel. As páginas R
 - Combina **NASA NeoWs** e **JPL CAD** em paralelo, deduplica e mescla por identidade
 - Visão padrão com zoom na vizinhança da Terra; painel de referências permite alternar para Sol, Lua ou visão completa com planetas
 - Posições dos asteroides via consultas de efemérides à **API JPL Horizons** com vetores de estado reais
-- Linhas de trajetória com gradiente, cones de direção, marcadores de aproximação e compressão logarítmica de distâncias
-- Rodapé da cena sempre exibe "escala log. visual apenas" para deixar a convenção de escala explícita
+- Linhas de trajetória com gradiente, cones de direção, marcadores de aproximação; distâncias em **escala linear única em UA** (sem compressão), com a aproximação revelada por zoom de câmera
+- Badge da cena exibe "escala linear · UA" por padrão; a régua logarítmica legada fica atrás de `?log`, apenas como comparação de bastidor
 - Modo de foco trava a câmera em qualquer corpo; pan e zoom por teclado e toque
 - Painel de navegação com lista de objetos, card de qualidade de dados e abas de dados técnicos
 - Legenda de escala (1 DL / 1 UA) no canto; guia interativo (manual) explica a representação

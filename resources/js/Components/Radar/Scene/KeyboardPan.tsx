@@ -29,7 +29,7 @@ const KEYS: Record<string, [number, number]> = {
     S:          [ 0, -1],
 };
 
-type Controls = { target: THREE.Vector3; update: () => void };
+type Controls = { target: THREE.Vector3; enabled: boolean; update: () => void };
 
 export function KeyboardPan() {
     const { camera } = useThree();
@@ -59,7 +59,8 @@ export function KeyboardPan() {
     }, []);
 
     useFrame((_, dt) => {
-        if (!controls || pressed.current.size === 0) return;
+        // Câmera em voo (controls desabilitados): navegação ininterrupta, ignora o teclado.
+        if (!controls || !controls.enabled || pressed.current.size === 0) return;
 
         let dx = 0;
         let dy = 0;

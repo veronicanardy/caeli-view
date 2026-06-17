@@ -8,14 +8,23 @@
  *
  * Este componente mantém a intenção global da experiência: seleção, foco de corpos,
  * modo órbita, fullscreen, overlays e critérios de lista. A renderização pesada fica
- * delegada para RadarSceneCanvas, RadarNavigationPanel, SceneToolbar e
- * RadarFloatingOverlays.
+ * delegada para RadarSceneCanvas, RadarNavigationPanel, SceneToolbar,
+ * MobileActionBar e RadarFloatingOverlays.
  *
- * Dois modos de visualização coexistem:
- *   - 'radar'  : escala logarítmica comprimida em DL, Sol na origem, Terra posicionada em ~1 UA.
- *   - 'orbit'  : escala linear em UA, Sol na origem, órbita Kepleriana completa visível.
- * A troca só ocorre quando um objeto selecionado tem elementos orbitais com época de
- * periélio válida (tpJd ≠ 0), sem isso a posição Kepleriana não é computável.
+ * Mobile (abaixo de lg:): a interface usa bottom sheets em vez de painéis
+ * flutuantes. `mobileSheet` controla qual sheet de navegação está aberto
+ * (objetos/filtros) e a MobileActionBar é a porta de entrada; o card de foco
+ * vira sheet com snaps dentro do PanelShell.
+ *
+ * Toda a cena usa UMA escala linear em UA (LINEAR_AU_SCALE): asteroides, Lua, planetas e Sol
+ * ficam nas distâncias relativas reais, sem compressão. A aproximação (minúscula perto do vão
+ * Terra-Sol) é revelada por ZOOM de câmera na Terra, não esticando a régua.
+ *
+ * Dois recortes da MESMA cena coexistem:
+ *   - 'radar'  : vizinhança da Terra em foco; aproximação, direção e trilha do objeto.
+ *   - 'orbit'  : revela a elipse Kepleriana completa do objeto ao redor do Sol (sob demanda).
+ * O recorte 'orbit' só fica disponível quando o objeto selecionado tem elementos orbitais com
+ * época de periélio válida (tpJd ≠ 0), sem isso a posição Kepleriana não é computável.
  */
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
@@ -23,10 +32,11 @@ import { usePanelBias } from './Scene/usePanelBias';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
 import { sunDirectionFromIncoming } from '@/lib/radar/coordinates';
 import type { SceneMode } from './Controls/Manual/manualTypes';
+import { MobileActionBar } from './Controls/MobileActionBar';
 import { SceneToolbar } from './Controls/SceneToolbar';
-import type { MobilePanelSection } from './Panels/MobilePanelControls';
 import { RadarFloatingOverlays } from './Panels/RadarFloatingOverlays';
 import { RadarNavigationPanel } from './Panels/RadarNavigationPanel';
+import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import { RadarSceneCanvas } from './Scene/RadarSceneCanvas';
 import { deriveActiveMode } from './Scene/sceneMode';
 import { useLabelNoGoRects } from './Scene/useLabelNoGoRects';
@@ -103,9 +113,11 @@ export function DailyOrbitalRadar3D({
     const setFullscreen = (value: boolean) => { setFullscreenState(value); onFullscreenChange?.(value); };
     const [showLabels, setShowLabels] = useState(true);
     const [planetsOpen, setPlanetsOpen] = useState(false);
-    // Em mobile o painel começa colapsado para não cobrir o canvas.
-    const [panelCollapsed, setPanelCollapsed] = useState(true);
-    const [mobilePanelSection, setMobilePanelSection] = useState<MobilePanelSection>('objects');
+    // Sheet mobile aberto (objetos ou filtros). Null = nenhum, cena livre.
+    const [mobileSheet, setMobileSheet] = useState<MobileSheetSection | null>(null);
+    // Desktop: painel de navegação recolhido em pill (modo explorar). O card
+    // do trilho esquerdo sobe junto via desktopRailClasses no UnifiedFocusCard.
+    const [desktopPanelCollapsed, setDesktopPanelCollapsed] = useState(false);
     const {
         bodyCardOpen,
         cameraIntent,
@@ -115,6 +127,8 @@ export function DailyOrbitalRadar3D({
         focusBody,
         focusPlanet,
         focusSun,
+        frameFamousBelt,
+        knownFocusTarget,
         orbitMode,
         planetFocusTargets,
         resetView,
@@ -129,11 +143,9 @@ export function DailyOrbitalRadar3D({
         closestNowObjects,
         focusedObject,
         ephemeris,
-        mobilePanelSection,
         onClearSelection,
         onSelect,
-        setMobilePanelSection,
-        setPanelCollapsed,
+        setMobileSheet,
         setPlanetsOpen,
         triggerTransition,
     });
@@ -143,7 +155,6 @@ export function DailyOrbitalRadar3D({
         cameraIntent.kind === 'object' ? cameraIntent.nonce : 0,
         orbitMode,
         ephemeris?.earthHelioPositionAU ?? null,
-        ephemeris?.earthScenePosition ?? null,
     );
 
     const [trajectoryPointFocus, setTrajectoryPointFocus] = useState<FocusFraming | null>(null);
@@ -151,7 +162,18 @@ export function DailyOrbitalRadar3D({
     // Limpa o foco de trajetória quando o usuário interage com outra coisa.
     useEffect(() => { setTrajectoryPointFocus(null); }, [focusTarget, bodyCardOpen]);
 
+    // Ao entrar no critério "Asteroides famosos", recua a câmera para enquadrar a régua dos planetas,
+    // onde os conhecidos vivem (a ~100–270 unidades do Sol). Sem isso, eles ficam fora do quadro
+    // inicial e o usuário precisaria dar zoom out manual para achá-los.
+    useEffect(() => {
+        if (selectionMode === 'famous') frameFamousBelt();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectionMode]);
+
     const activeMode: SceneMode = deriveActiveMode(orbitMode, focusedObject);
+    // Famosos (Ceres, Bennu, etc.) só aparecem no critério dedicado "Asteroides famosos", em qualquer
+    // régua. Fora dele, a cena mostra apenas o feed de aproximações, sem misturar os dois conjuntos.
+    const showKnownAsteroidsInScene = selectionMode === 'famous';
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const planetFlyoutRef = useRef<HTMLDivElement>(null);
     const focusCardRef = useRef<HTMLDivElement>(null);
@@ -167,8 +189,7 @@ export function DailyOrbitalRadar3D({
         planetsOpen,
         focusedObjectId: focusedObject?.approach.id ?? null,
         bodyCardOpen,
-        panelCollapsed,
-        mobilePanelSection,
+        mobileSheet,
     });
 
     const { biasX: panelBiasX, biasY: panelBiasY } = usePanelBias({
@@ -176,7 +197,6 @@ export function DailyOrbitalRadar3D({
         sidePanelRef,
         focusCardRef,
         bodyCardRef,
-        panelCollapsed,
         activeCardVisible: Boolean(visibleFocusedObject || bodyCardOpen),
     });
 
@@ -194,6 +214,10 @@ export function DailyOrbitalRadar3D({
             )}
             <div
                 ref={canvasContainerRef}
+                data-tutorial="radar-canvas"
+                /* Sinaliza o modo tela cheia para o tutorial: com ele ativo, ESC sai
+                   do fullscreen (handler acima) e não deve encerrar o tutorial junto. */
+                data-fullscreen={fullscreen ? 'true' : undefined}
                 /* Gradiente radial: ponto focal levemente acima do centro cria profundidade
                    atmosférica sem competir com os objetos científicos da cena. */
                 className={fullscreen
@@ -212,11 +236,13 @@ export function DailyOrbitalRadar3D({
                     cameraIntent={cameraIntent}
                     focusTarget={trajectoryPointFocus ?? focusTarget}
                     sunFocusTarget={sunFocusTarget}
+                    knownFocusTarget={knownFocusTarget}
                     planetFocusTargets={planetFocusTargets}
                     ephemeris={ephemeris}
                     fallbackSunDirection={fallbackSunDirection}
                     locale={locale}
                     showLabels={showLabels}
+                    showKnownAsteroids={showKnownAsteroidsInScene}
                     bodyCardOpen={bodyCardOpen}
                     onBodyCardOpenChange={setBodyCardOpen}
                     onClearPlanetTargets={clearPlanetTargets}
@@ -237,20 +263,27 @@ export function DailyOrbitalRadar3D({
                     onModeChange={onModeChange}
                     radarLoading={radarLoading}
                     onRefresh={onRefresh}
-                    panelCollapsed={panelCollapsed}
-                    onPanelCollapsedChange={setPanelCollapsed}
-                    mobilePanelSection={mobilePanelSection}
-                    onMobilePanelSectionChange={setMobilePanelSection}
+                    mobileSheet={mobileSheet}
+                    onMobileSheetChange={setMobileSheet}
+                    desktopCollapsed={desktopPanelCollapsed}
+                    onDesktopCollapsedChange={setDesktopPanelCollapsed}
                     planetsOpen={planetsOpen}
                     onPlanetsOpenChange={setPlanetsOpen}
                     bodyCardOpen={bodyCardOpen}
                     sidePanelRef={sidePanelRef}
                     planetFlyoutRef={planetFlyoutRef}
-                    onShowNavigationPanel={showNavigationPanel}
                     onSelectObject={selectObject}
                     onFocusBody={focusBody}
                     onFocusPlanet={focusPlanet}
                     onFocusSun={focusSun}
+                />
+                {/* Barra de ações mobile: some enquanto um sheet ou card ocupa o rodapé. */}
+                <MobileActionBar
+                    en={en}
+                    hidden={mobileSheet !== null || Boolean(visibleFocusedObject) || Boolean(bodyCardOpen)}
+                    onOpenObjects={showNavigationPanel}
+                    onOpenFilters={() => setMobileSheet('filters')}
+                    onOpenGuide={() => setManualOpen(true)}
                 />
                 <SceneToolbar
                     en={en}
@@ -264,6 +297,7 @@ export function DailyOrbitalRadar3D({
                 <RadarFloatingOverlays
                     en={en}
                     locale={locale}
+                    desktopPanelCollapsed={desktopPanelCollapsed}
                     visibleFocusedObject={visibleFocusedObject}
                     onOpenFocus={onOpenFocus}
                     onCloseFocusedObject={closeFocusedObject}

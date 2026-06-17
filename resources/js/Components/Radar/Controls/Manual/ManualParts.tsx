@@ -225,30 +225,6 @@ export function InteractionHint({ icon, label, desc }: { icon: string; label: st
     );
 }
 
-export function SwitchModeHint({ en, targetMode }: { en: boolean; targetMode: 'radar' | 'orbit' }) {
-    const isRadar = targetMode === 'radar';
-    const Icon = isRadar ? Radar : Orbit;
-    return (
-        <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-4">
-            <p className="inline-flex items-center gap-2 text-[13px] font-semibold text-signal-cyan">
-                <Icon className="size-3.5" aria-hidden />
-                {isRadar
-                    ? (en ? 'Back to radar' : 'Voltar ao radar')
-                    : (en ? 'Explore the full orbit' : 'Explorar a órbita completa')}
-            </p>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-white/65">
-                {isRadar
-                    ? (en
-                        ? 'Switch to radar to see how close this object actually is to Earth right now, which direction it is heading, and km / LD / AU readings.'
-                        : 'Mude para o radar para ver o quanto esse objeto está perto da Terra agora, para onde está indo e as leituras em km / DL / UA.')
-                    : (en
-                        ? "Switch to orbit mode to see the full ellipse at true proportional scale and understand whether this asteroid's path ever crosses Earth's."
-                        : 'Mude para o modo órbita para ver a elipse completa em escala linear, proporcional ao sistema solar, e entender se o caminho deste asteroide cruza o da Terra.')}
-            </p>
-        </div>
-    );
-}
-
 export function TechLegend({ items, en }: { items: { kind: 'observed' | 'calculated' | 'visual'; label: string }[]; en: boolean }) {
     const colors: Record<string, string> = {
         observed: 'bg-emerald-400/20 border-emerald-400/30 text-emerald-300',

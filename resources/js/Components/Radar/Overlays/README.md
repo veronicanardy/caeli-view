@@ -39,6 +39,11 @@ Overlays/
 
 Por performance, cada label resolve seus três estados de visibilidade (foco, zona proibida, oclusão por corpos) em um único `useFrame` via `useLabelFrameState`, com uma única projeção de posição reaproveitada e buffers `Vector3` reutilizáveis (sem `.clone()` no loop). O tamanho do label é medido por `ResizeObserver`, não por `getBoundingClientRect()` a cada frame, evitando reflow de layout com dezenas de labels visíveis.
 
+Dois cuidados adicionais de performance:
+
+- **Ocultação via CSS, não unmount:** labels ocultos por foco, zona proibida ou oclusão permanecem montados com `visibility: hidden`. Montar/desmontar o portal `<Html>` a cada cruzamento de fronteira força layout e GC exatamente durante o movimento de câmera, que é o gatilho das micro-travadas. A remoção em massa de labels com zoom muito afastado continua sendo por unmount (`DistanceCulledScreenLabel` e `useHideAsteroidLabelsMode`), pois ali o objetivo é zerar o custo por frame de dezenas de labels.
+- **Limiares booleanos com histerese:** `useCompactLabelMode` e `useHideAsteroidLabelsMode` publicam apenas o boolean "abaixo do limiar?" (via `useLunarRadiusBelow`), com histerese de 2px. Publicar o raio numérico re-renderizava todos os consumidores a cada ~4 frames durante qualquer zoom contínuo.
+
 ## Guias 3D
 
 [`SceneRingsLayer.tsx`](./SceneRingsLayer.tsx) contém guias visuais 3D da cena `three.js`.

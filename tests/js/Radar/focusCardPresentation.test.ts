@@ -81,13 +81,13 @@ function makeApproach(hazardFlag: boolean): UnifiedApproach {
 describe('riskAssessment', () => {
     it('retorna ícone de aviso e classe amber para objetos perigosos', () => {
         const result = riskAssessment(makeApproach(true), false);
-        expect(result.icon).toBe('⚠️');
+        expect(result.icon).toBe('alert');
         expect(result.className).toContain('amber');
     });
 
     it('retorna ícone de check e classe emerald para objetos seguros', () => {
         const result = riskAssessment(makeApproach(false), false);
-        expect(result.icon).toBe('✓');
+        expect(result.icon).toBe('check');
         expect(result.className).toContain('emerald');
     });
 
@@ -126,11 +126,12 @@ describe('motionLabel', () => {
         expect(motionLabel('near_closest', true)?.text).toBe('Near closest approach');
     });
 
-    it('cada estado tem uma className de cor diferente', () => {
+    it('estados neutros compartilham cor; máxima aproximação tem destaque próprio', () => {
         const approaching = motionLabel('approaching', false)?.className;
         const receding = motionLabel('receding', false)?.className;
         const near = motionLabel('near_closest', false)?.className;
-        expect(new Set([approaching, receding, near]).size).toBe(3);
+        expect(approaching).toBe(receding);
+        expect(near).not.toBe(approaching);
     });
 });
 
@@ -172,7 +173,7 @@ describe('trajectoryStatusBadge', () => {
     it('retorna badge âmbar para Horizons temporariamente indisponível', () => {
         const badge = trajectoryStatusBadge({ status: 'fallback', horizonsFailureKind: 'horizons_transient' } as any, false);
         expect(badge).not.toBeNull();
-        expect(badge!.icon).toBe('⚡');
+        expect(badge!.icon).toBe('zap');
         expect(badge!.className).toContain('amber');
     });
 
@@ -185,12 +186,12 @@ describe('trajectoryStatusBadge', () => {
     it('retorna badge neutro para objeto sem identificador Horizons', () => {
         const badge = trajectoryStatusBadge({ status: 'fallback', horizonsFailureKind: 'no_orbital_data' } as any, false);
         expect(badge).not.toBeNull();
-        expect(badge!.icon).toBe('—');
+        expect(badge!.icon).toBe('minus');
     });
 
     it('retorna badge de posição simbólica para fallback sem kind específico', () => {
         const badge = trajectoryStatusBadge({ status: 'fallback', horizonsFailureKind: null } as any, false);
         expect(badge).not.toBeNull();
-        expect(badge!.icon).toBe('○');
+        expect(badge!.icon).toBe('circle');
     });
 });

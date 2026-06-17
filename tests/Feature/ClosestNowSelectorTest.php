@@ -286,4 +286,49 @@ class ClosestNowSelectorTest extends TestCase
             'A expansão 5→15 fez mais chamadas ao Horizons do que o esperado (máximo 20).',
         );
     }
+
+    // -------------------------------------------------------------------------
+    // Falha transitória das fontes não pode envenenar o cache
+    // -------------------------------------------------------------------------
+
+    public function test_resultado_vazio_por_falha_das_fontes_nao_fica_preso_no_cache(): void
+    {
+        // Flag mutável: Http::fake não permite substituir stubs já registrados,
+        // então o mesmo stub alterna entre "fora do ar" e "ok" conforme a fase do teste.
+        $apisForaDoAr = true;
+
+        Http::fake([
+            'api.nasa.gov/neo/rest/v1/feed*' => function () use (&$apisForaDoAr) {
+                if ($apisForaDoAr) {
+                    throw new \Illuminate\Http\Client\ConnectionException('NASA fora do ar');
+                }
+                return Http::response(NasaResponses::neoWsFeed());
+            },
+            'ssd-api.jpl.nasa.gov/cad.api*' => function () use (&$apisForaDoAr) {
+                if ($apisForaDoAr) {
+                    throw new \Illuminate\Http\Client\ConnectionException('JPL fora do ar');
+                }
+                return Http::response(JplResponses::cadApproaches());
+            },
+            'ssd.jpl.nasa.gov/api/horizons.api*' => Http::response(JplResponses::horizonsVectorsText()),
+        ]);
+
+        // Primeira requisição: CAD e NeoWs fora do ar (falha de conexão) → radar vazio.
+        $this->getJson('/radar/closest-now?date_min=2026-05-20&date_max=2026-05-21&limit=5&mode=nearest')
+            ->assertOk()
+            ->assertJsonPath('objects', []);
+
+        // Segunda requisição: APIs voltaram. Sem a proteção contra cache envenenado,
+        // o vazio anterior ficaria preso por 15 min (closest-now) e 6 h (observatory).
+        $apisForaDoAr = false;
+
+        $objects = $this->getJson('/radar/closest-now?date_min=2026-05-20&date_max=2026-05-21&limit=5&mode=nearest')
+            ->assertOk()
+            ->json('objects');
+
+        $this->assertNotEmpty(
+            $objects,
+            'O resultado vazio causado por falha das fontes ficou preso no cache — a recuperação das APIs não refletiu no radar.',
+        );
+    }
 }

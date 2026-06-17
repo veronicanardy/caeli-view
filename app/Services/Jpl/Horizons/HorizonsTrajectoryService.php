@@ -20,16 +20,13 @@ use Illuminate\Support\Facades\Log;
 final class HorizonsTrajectoryService
 {
     /** Versões de cache por tipo de consulta — incrementar ao mudar o formato da resposta. */
-    private const TRAJECTORY_CACHE_VERSION = 'command-v4';
-    private const POSITION_CACHE_VERSION = 'reftime-v3';
-    private const NOW_TRAJECTORY_CACHE_VERSION = 'now-traj-v4-past-72h';
+    private const TRAJECTORY_CACHE_VERSION = 'command-v5';
+    private const NOW_TRAJECTORY_CACHE_VERSION = 'now-traj-v5-3d-ecliptic';
 
     /** Arredondamento de tempo para cache compartilhado entre objetos no mesmo tick. */
-    private const CURRENT_MODE_BUCKET_MINUTES = 15;
     private const NOW_TRAJECTORY_BUCKET_MINUTES = 30;
 
     /** TTLs de cache para respostas bem-sucedidas (segundos). */
-    private const CURRENT_MODE_SUCCESS_TTL_SECONDS = 900;   // 15 min
     private const NOW_TRAJECTORY_SUCCESS_TTL_SECONDS = 1800; // 30 min
 
     /** TTL de cache negativo (falha): muito curto — o Horizons costuma encontrar na próxima tentativa. */
@@ -89,33 +86,6 @@ final class HorizonsTrajectoryService
     }
 
     /**
-     * Posição de cada aproximação em um horário de referência, em lote.
-     *
-     * Modos:
-     *   - 'current': usa o instante compartilhado (agora, arredondado em 15 min) para todos.
-     *   - 'closest_approach': usa o horário de máxima aproximação de cada objeto.
-     *
-     * @param  array<int, array<string, mixed>>  $approaches
-     * @return array<string, array<string, mixed>>
-     */
-    public function positionsAtReferenceTimeBatch(array $approaches, string $mode = 'current', ?CarbonImmutable $referenceTime = null): array
-    {
-        $mode = in_array($mode, ['current', 'closest_approach'], true) ? $mode : 'current';
-        $sharedReferenceTime = $mode === 'current'
-            ? $this->bucketTime($referenceTime ?? CarbonImmutable::now('UTC'), self::CURRENT_MODE_BUCKET_MINUTES)
-            : null;
-
-        $results = [];
-
-        foreach ($approaches as $approach) {
-            $id = (string) ($approach['id'] ?? $this->identity->resolveId($approach));
-            $results[$id] = $this->positionAtReferenceTime($approach, $mode, $sharedReferenceTime);
-        }
-
-        return $results;
-    }
-
-    /**
      * Trajetória ancorada no instante atual (UTC), segmentada em passado/presente/futuro.
      *
      * Usada pelo radar "5 mais próximos agora": mostra onde cada objeto está AGORA
@@ -125,7 +95,7 @@ final class HorizonsTrajectoryService
      * @param  array{startOffsetHours: int, stopOffsetHours: int, stepSize: string}  $window
      *         Ex.: ['startOffsetHours' => -24, 'stopOffsetHours' => 72, 'stepSize' => '1 hours']
      */
-    public function trajectoryAroundNow(array $object, array $window): array
+    public function trajectoryAroundNow(array $object, array $window, bool $forceRefresh = false): array
     {
         $startOffset = (int) ($window['startOffsetHours'] ?? -24);
         $stopOffset = (int) ($window['stopOffsetHours'] ?? 72);
@@ -142,6 +112,13 @@ final class HorizonsTrajectoryService
             $stepSize,
             self::NOW_TRAJECTORY_CACHE_VERSION,
         ]));
+
+        // force_refresh do endpoint precisa chegar até aqui: o cache externo do selector sozinho não
+        // cura uma trajetória envenenada (valor absurdo gravado por código antigo), porque ela vive
+        // nesta chave interna. Esquecê-la força uma releitura limpa do Horizons.
+        if ($forceRefresh) {
+            Cache::forget($key);
+        }
 
         $cached = Cache::get($key);
         if (is_array($cached)) {
@@ -207,97 +184,6 @@ final class HorizonsTrajectoryService
     // =========================================================================
     // Lógica interna de orquestração
     // =========================================================================
-
-    /**
-     * Posição de um único objeto no horário de referência determinado pelo modo.
-     *
-     * Janela estreita (±15 min, passo 3 min) mantém o uso de quota baixo
-     * enquanto garante um ponto próximo o suficiente do instante solicitado.
-     *
-     * @param  array<string, mixed>  $object
-     */
-    private function positionAtReferenceTime(array $object, string $mode, ?CarbonImmutable $sharedReferenceTime): array
-    {
-        $id = (string) ($object['id'] ?? $this->identity->resolveId($object));
-        $approachTime = $this->parseTime($object['approachTime'] ?? null);
-
-        $referenceTime = $mode === 'current' ? $sharedReferenceTime : $approachTime;
-
-        if ($referenceTime === null) {
-            $reason = $mode === 'current'
-                ? 'Horário de referência indisponível para projeção Horizons.'
-                : 'Horário de aproximação indisponível para projeção Horizons.';
-
-            return $this->factory->symbolicPosition($id, $object, $reason, 'no_reference_time', $approachTime);
-        }
-
-        $objectId = $this->identity->resolveId($object);
-        $key = 'horizons_reftime_pos_'.md5(implode('|', [
-            $objectId,
-            $mode,
-            $referenceTime->toIso8601String(),
-            self::POSITION_CACHE_VERSION,
-        ]));
-
-        $cached = Cache::get($key);
-        if (is_array($cached)) {
-            return $cached;
-        }
-
-        ['commands' => $commands, 'identity' => $identity] = $this->identity->buildCommandCandidatesWithIdentity($object);
-        $designation = $this->identity->resolveDesignation($object, $identity);
-
-        $fetch = $this->retrier->fetch(
-            $commands,
-            $referenceTime->subMinutes(15)->format('Y-M-d H:i'),
-            $referenceTime->addMinutes(15)->format('Y-M-d H:i'),
-            '3 minutes',
-            $designation,
-        );
-        $points = $fetch->pointsToArray();
-
-        if ($points === null || count($points) === 0) {
-            $reason = $fetch->failureReason ?? 'no_ephemeris';
-            Log::info('[Horizons positions] fallback para simbólico', [
-                'objectId' => $objectId,
-                'mode' => $mode,
-                'reason' => $reason,
-            ]);
-            $result = $this->factory->symbolicPosition(
-                $id,
-                $object,
-                $this->factory->noteForFailure($reason, $mode),
-                $reason,
-                $approachTime,
-            );
-            Cache::put($key, $result, $this->negativeCacheTtl());
-
-            return $result;
-        }
-
-        $chosen = $this->closestPointTo($points, $referenceTime);
-        if ($chosen === null) {
-            Log::info('[Horizons positions] nenhum ponto próximo do horário de referência', [
-                'objectId' => $objectId,
-                'mode' => $mode,
-            ]);
-            $result = $this->factory->symbolicPosition(
-                $id,
-                $object,
-                'Sem ponto Horizons próximo do horário de referência. Representação simbólica baseada na distância.',
-                'no_point_near_reference',
-                $approachTime,
-            );
-            Cache::put($key, $result, $this->negativeCacheTtl());
-
-            return $result;
-        }
-
-        $result = $this->factory->availablePosition($id, $object, $chosen, $mode, $referenceTime, $approachTime);
-        Cache::put($key, $result, $this->successCacheTtl($mode));
-
-        return $result;
-    }
 
     /**
      * Monta o resultado completo de trajetória ±2 dias.
@@ -479,15 +365,6 @@ final class HorizonsTrajectoryService
     // =========================================================================
     // Utilitários de cache
     // =========================================================================
-
-    private function successCacheTtl(string $mode): int
-    {
-        if ($mode === 'current') {
-            return self::CURRENT_MODE_SUCCESS_TTL_SECONDS;
-        }
-
-        return (int) config('services.jpl.horizons_cache_ttl', 86400);
-    }
 
     private function negativeCacheTtl(): int
     {

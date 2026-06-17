@@ -106,9 +106,9 @@ class RadarTrajectoryAndModelTest extends TestCase
     // asteroidModel — hierarquia N1/N2/N3/N5
     // -------------------------------------------------------------------------
 
-    public function test_asteroid_model_returns_n2_for_catalogued_object_without_glb(): void
+    public function test_asteroid_model_returns_n1_for_catalogued_object_with_glb(): void
     {
-        // Bennu está no catálogo mas sem modelUrl → N2
+        // Bennu está no catálogo COM modelUrl (bennu.glb) → N1, modelo real de forma.
         $this->getJson('/radar/asteroid-model?' . http_build_query([
             'id'          => 'cad:101955',
             'name'        => '101955 Bennu',
@@ -117,9 +117,117 @@ class RadarTrajectoryAndModelTest extends TestCase
             'spkId'       => '2101955',
         ]))
             ->assertOk()
+            ->assertJsonPath('fidelityLevel', 'N1')
+            ->assertJsonPath('modelKind', 'real_shape')
+            ->assertJsonPath('status', 'available')
+            ->assertJsonPath('modelUrl', '/models/asteroids/bennu.glb');
+    }
+
+    public function test_asteroid_model_returns_n2_for_catalogued_object_without_glb(): void
+    {
+        // Ryugu está no catálogo mas sem modelUrl (GLB ainda não incluído) → N2.
+        $this->getJson('/radar/asteroid-model?' . http_build_query([
+            'id'          => 'cad:162173',
+            'name'        => '162173 Ryugu',
+            'displayName' => 'Ryugu',
+            'designation' => '162173',
+        ]))
+            ->assertOk()
             ->assertJsonPath('fidelityLevel', 'N2')
             ->assertJsonPath('modelKind', 'catalog_reference')
-            ->assertJsonPath('status', 'fallback');
+            ->assertJsonPath('status', 'fallback')
+            ->assertJsonPath('modelUrl', null);
+    }
+
+    public function test_asteroid_model_matches_catalogued_object_by_proper_name(): void
+    {
+        // Eros pelo nome próprio (alias por palavra inteira), sem número no payload.
+        // Eros tem GLB (eros.glb) → N1.
+        $this->getJson('/radar/asteroid-model?' . http_build_query([
+            'id'          => 'cad:433',
+            'name'        => '433 Eros (1898 DQ)',
+            'displayName' => 'Eros',
+        ]))
+            ->assertOk()
+            ->assertJsonPath('fidelityLevel', 'N1')
+            ->assertJsonPath('modelKind', 'real_shape')
+            ->assertJsonPath('modelUrl', '/models/asteroids/eros.glb');
+    }
+
+    public function test_asteroid_model_matches_catalogued_object_by_exact_number(): void
+    {
+        // Eros pelo número exato 433 presente na designação — token exato, não substring.
+        $this->getJson('/radar/asteroid-model?' . http_build_query([
+            'id'          => 'cad:433',
+            'name'        => 'Object 433',
+            'displayName' => 'Object 433',
+            'designation' => '433',
+        ]))
+            ->assertOk()
+            ->assertJsonPath('fidelityLevel', 'N1')
+            ->assertJsonPath('modelKind', 'real_shape');
+    }
+
+    public function test_asteroid_model_does_not_match_number_as_substring(): void
+    {
+        // "2000433" CONTÉM "433", mas não é o asteroide 433. O critério antigo (str_contains)
+        // casava por engano; o novo exige token exato, então isto NÃO deve resolver para Eros.
+        // Sem dados físicos → cai para N5 (placeholder), provando que o catálogo não casou.
+        $this->getJson('/radar/asteroid-model?' . http_build_query([
+            'id'          => 'neows:4337',
+            'name'        => 'Object 2000433',
+            'displayName' => 'Object 2000433',
+            'designation' => '2000433',
+        ]))
+            ->assertOk()
+            ->assertJsonPath('fidelityLevel', 'N5')
+            ->assertJsonPath('modelKind', 'size_placeholder');
+    }
+
+    public function test_asteroid_model_does_not_match_alias_as_substring(): void
+    {
+        // "Heros" CONTÉM "eros", mas não é Eros. Palavra inteira evita o falso positivo.
+        // Sem dados físicos → N5, provando que o alias do catálogo não casou.
+        $this->getJson('/radar/asteroid-model?' . http_build_query([
+            'id'          => 'neows:5550',
+            'name'        => 'Heros',
+            'displayName' => 'Heros',
+        ]))
+            ->assertOk()
+            ->assertJsonPath('fidelityLevel', 'N5')
+            ->assertJsonPath('modelKind', 'size_placeholder');
+    }
+
+    public function test_asteroid_model_low_catalog_number_does_not_match_designation_fragment(): void
+    {
+        // Ceres é o número 1 e Vesta o 4. Uma designação provisória como "2001 AB1" contém o dígito
+        // "1", mas NÃO é Ceres. A igualdade do campo inteiro (não fragmento) impede esse falso
+        // positivo. Sem dados físicos → N5, provando que o catálogo não casou.
+        $this->getJson('/radar/asteroid-model?' . http_build_query([
+            'id'          => 'neows:1234',
+            'name'        => 'Asteroid AB',
+            'displayName' => 'Asteroid AB',
+            'designation' => '2001 AB1',
+        ]))
+            ->assertOk()
+            ->assertJsonPath('fidelityLevel', 'N5')
+            ->assertJsonPath('modelKind', 'size_placeholder');
+    }
+
+    public function test_asteroid_model_does_not_match_number_via_spk_id_prefix(): void
+    {
+        // O SPK-ID de Bennu é 2101955 (= 2000000 + 101955). Ele NÃO deve casar com o número 101955:
+        // números são buscados em name/designation, nunca no spkId. Aqui só o spkId carrega o dígito,
+        // e não há alias "bennu" no payload → cai para N5.
+        $this->getJson('/radar/asteroid-model?' . http_build_query([
+            'id'          => 'neows:8888',
+            'name'        => 'Mystery Rock',
+            'displayName' => 'Mystery Rock',
+            'spkId'       => '2101955',
+        ]))
+            ->assertOk()
+            ->assertJsonPath('fidelityLevel', 'N5')
+            ->assertJsonPath('modelKind', 'size_placeholder');
     }
 
     public function test_asteroid_model_returns_n3_for_object_with_diameter_and_orbit_identity(): void

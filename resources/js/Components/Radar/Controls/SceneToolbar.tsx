@@ -36,10 +36,10 @@ export function SceneToolbar({
 }: Props) {
     return (
         <div className="pointer-events-none absolute right-3 top-3 z-20">
-            <div className="pointer-events-auto flex items-center gap-1.5 cursor-auto">
+            <div className="pointer-events-auto flex items-center gap-1.5 cursor-auto" data-tutorial="camera-controls">
                 {activeMode !== 'orbit' ? (
-                    <Tooltip content={en ? 'Reset view' : 'Resetar vista'} align="right">
-                        <IconButton onClick={onResetView} aria-label={en ? 'Reset view' : 'Resetar vista'}>
+                    <Tooltip content={en ? 'Reset view' : 'Resetar vista'} align="right" hideDelay={150}>
+                        <IconButton onClick={onResetView} dataTutorial="reset-view" aria-label={en ? 'Reset view' : 'Resetar vista'}>
                             <RotateCcw className="size-3.5" />
                         </IconButton>
                     </Tooltip>
@@ -49,9 +49,11 @@ export function SceneToolbar({
                         ? (en ? 'Hide markers' : 'Ocultar marcações')
                         : (en ? 'Show markers' : 'Mostrar marcações')}
                     align="right"
+                    hideDelay={150}
                 >
                     <IconButton
                         onClick={() => onShowLabelsChange((v) => !v)}
+                        dataTutorial="toggle-labels"
                         aria-label={showLabels ? (en ? 'Hide markers' : 'Ocultar marcações') : (en ? 'Show markers' : 'Mostrar marcações')}
                     >
                         {showLabels ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
@@ -62,9 +64,11 @@ export function SceneToolbar({
                         ? (en ? 'Exit fullscreen' : 'Sair da tela cheia')
                         : (en ? 'Fullscreen' : 'Tela cheia')}
                     align="right"
+                    hideDelay={150}
                 >
                     <IconButton
                         onClick={() => onFullscreenChange((v) => !v)}
+                        dataTutorial="toggle-fullscreen"
                         aria-label={fullscreen ? (en ? 'Exit fullscreen' : 'Sair da tela cheia') : (en ? 'Fullscreen' : 'Tela cheia')}
                     >
                         {fullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
@@ -75,12 +79,13 @@ export function SceneToolbar({
     );
 }
 
-function IconButton({ onClick, children, 'aria-label': ariaLabel }: { onClick: () => void; children: ReactNode; 'aria-label': string }) {
+function IconButton({ onClick, children, 'aria-label': ariaLabel, dataTutorial }: { onClick: () => void; children: ReactNode; 'aria-label': string; dataTutorial?: string }) {
     return (
         <button
             type="button"
             onClick={onClick}
             aria-label={ariaLabel}
+            data-tutorial={dataTutorial}
             /* p-2.5 no mobile garante área de toque ~44px; p-1.5 mantém o visual compacto no desktop */
             className="flex items-center justify-center rounded-full border border-white/10 bg-space-950/80 p-2.5 text-white/50 backdrop-blur transition outline-none hover:border-white/20 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-signal-cyan lg:p-1.5"
         >

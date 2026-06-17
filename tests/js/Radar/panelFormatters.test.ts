@@ -95,7 +95,7 @@ describe('formatApproachDateTime', () => {
     });
 
     it('formata ISO incluindo dia, mês, hora e timezone', () => {
-        // panelFormatters inclui dia/mês além de hora (diferente da versão de dailyProximityPresentation).
+        // panelFormatters inclui dia/mês além de hora.
         // O locale 'en' pode usar formato 12h (AM/PM), por isso validamos '30' (minuto) e a presença
         // de dia/mês em vez de assumir formato 24h.
         const result = formatApproachDateTime('2025-06-15T14:30:00Z', 'en');

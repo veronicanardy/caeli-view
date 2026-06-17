@@ -18,27 +18,26 @@ export function useSelectionFocusFraming(
     selectionFocusNonce: number,
     orbitMode: boolean,
     earthHelioPositionAU: { x: number; y: number; z: number } | null,
-    earthScenePosition: [number, number, number] | null,
 ): FocusFraming | null {
     const [framing, setFraming] = useState<FocusFraming | null>(null);
     const latestEarthHelio = useRef(earthHelioPositionAU);
-    const latestEarthScene = useRef(earthScenePosition);
 
     useEffect(() => { latestEarthHelio.current = earthHelioPositionAU; }, [earthHelioPositionAU]);
-    useEffect(() => { latestEarthScene.current = earthScenePosition; }, [earthScenePosition]);
 
     useEffect(() => {
         if (!focusedObject) {
             setFraming(null);
             return;
         }
+        // Conhecidos (régua dos planetas) têm enquadramento próprio (knownFocusTarget, voo
+        // heliocêntrico) tratado à parte no RadarSceneCanvas; aqui os NEOs do feed e os conhecidos
+        // compartilham a mesma régua heliocêntrica, então computeFocusFraming serve a ambos.
         setFraming(computeFocusFraming(
             focusedObject,
             orbitMode,
             latestEarthHelio.current,
-            latestEarthScene.current ?? [0, 0, 0],
         ));
-        // refs lidas intencionalmente fora das dependências.
+        // ref lida intencionalmente fora das dependências.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [focusedObject?.approach.id, selectionFocusNonce, orbitMode]);
 

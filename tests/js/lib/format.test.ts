@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     LUNAR_DISTANCE_KM,
+    approxKm,
     compactKm,
     compactMeters,
     formatNumber,
@@ -44,6 +45,30 @@ describe('formatNumber', () => {
     it('retorna "Indisponível" para null', () => expect(formatNumber(null)).toBe('Indisponível'));
     it('retorna "Indisponível" para undefined', () => expect(formatNumber(undefined)).toBe('Indisponível'));
     it('retorna "Indisponível" para NaN', () => expect(formatNumber(NaN)).toBe('Indisponível'));
+});
+
+// ─── approxKm ─────────────────────────────────────────────────────────────────
+
+describe('approxKm', () => {
+    it('arredonda milhões para 3 algarismos com "de km" em pt-BR', () => {
+        expect(approxKm(1_089_819)).toBe('1,09 milhão de km');
+    });
+
+    it('arredonda centenas de milhares para "mil km" sem preposição', () => {
+        expect(approxKm(464_969)).toBe('465 mil km');
+    });
+
+    it('usa "de km" quando o arredondamento promove mil para milhão', () => {
+        expect(approxKm(999_999)).toBe('1 milhão de km');
+    });
+
+    it('mantém valor exato abaixo de 10 000 km', () => {
+        expect(approxKm(8_432)).toBe(compactKm(8_432));
+    });
+
+    it('retorna "Indisponível" para null', () => expect(approxKm(null)).toBe('Indisponível'));
+    it('retorna "Indisponível" para undefined', () => expect(approxKm(undefined)).toBe('Indisponível'));
+    it('retorna "Indisponível" para NaN', () => expect(approxKm(NaN)).toBe('Indisponível'));
 });
 
 // ─── compactKm ────────────────────────────────────────────────────────────────

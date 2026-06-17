@@ -11,6 +11,10 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { SUN_DISPLAY_DL } from '@/lib/sceneEphemeris';
 
+// Buffers reutilizáveis do loop de zoom — alocar Vector3 por frame gera pressão de GC.
+const _zoomFallbackTarget = new THREE.Vector3();
+const _zoomToTarget = new THREE.Vector3();
+
 /**
  * Zoom inercial e ajustes opcionais do alvo orbital dos controles da cena.
  */
@@ -18,7 +22,7 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
     const { camera } = useThree();
     const gl = useThree((s) => s.gl);
     const controls = useThree((s) => s.controls) as unknown as
-        | { target: THREE.Vector3; update: () => void; dispatchEvent?: (e: { type: string }) => void }
+        | { target: THREE.Vector3; enabled: boolean; update: () => void; dispatchEvent?: (e: { type: string }) => void }
         | null;
 
     // Velocidade de zoom acumulada em unidades de log-distância (negativo = aproximando).
@@ -30,9 +34,9 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
         const onWheel = (event: WheelEvent) => {
             event.preventDefault(); // impede scroll da página durante zoom na cena
 
-            // Tratar scroll como interação do usuário para que o CameraRig (que escuta 'start')
-            // devolva o controle durante uma transição em andamento, evitando conflito com o dolly.
-            controls?.dispatchEvent?.({ type: 'start' });
+            // Enquanto a câmera está em voo (CameraRig desabilita os controls), o zoom fica
+            // inerte: a navegação é ininterrupta e a roda não deve desviar o dolly.
+            if (controls && !controls.enabled) return;
 
             // deltaY é ~±100 por clique; escala para um incremento suave de velocidade por clique.
             // Normalizar pelo modo de delta (linha/página) mantém trackpads e mouses comparáveis.
@@ -51,11 +55,11 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
             return;
         }
 
-        const target = controls?.target ?? new THREE.Vector3();
+        const target = controls?.target ?? _zoomFallbackTarget;
 
         // Dolly ao longo do raio câmera → alvo. Passo exponencial para sensação uniforme em
         // qualquer escala (um clique amplia a mesma % independente de estar perto ou longe).
-        const toTarget = camera.position.clone().sub(target);
+        const toTarget = _zoomToTarget.copy(camera.position).sub(target);
         const dist = toTarget.length();
         const newDist = THREE.MathUtils.clamp(dist * Math.exp(velocity.current), minDistance, maxDistance);
         if (dist > 1e-6) {

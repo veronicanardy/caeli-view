@@ -8,8 +8,10 @@
 
 import type { RefObject } from 'react';
 import type { ClosestNowObject, ObjectLimit, SelectionMode, UnifiedApproach } from '@/types';
-import type { MobilePanelSection } from './MobilePanelControls';
 import type { PlanetId } from '../Scene/planetConfig';
+
+/** Sheets mobile da navegação: lista de objetos ou filtros. Null = nenhum aberto. */
+export type MobileSheetSection = 'objects' | 'filters';
 
 export type RadarNavigationPanelProps = {
     en: boolean;
@@ -23,16 +25,16 @@ export type RadarNavigationPanelProps = {
     onModeChange: (mode: SelectionMode) => void;
     radarLoading: boolean;
     onRefresh?: () => void;
-    panelCollapsed: boolean;
-    onPanelCollapsedChange: (collapsed: boolean) => void;
-    mobilePanelSection: MobilePanelSection;
-    onMobilePanelSectionChange: (section: MobilePanelSection) => void;
+    mobileSheet: MobileSheetSection | null;
+    onMobileSheetChange: (sheet: MobileSheetSection | null) => void;
+    /** Desktop: painel recolhido em pill para dar protagonismo total à cena. */
+    desktopCollapsed: boolean;
+    onDesktopCollapsedChange: (collapsed: boolean) => void;
     planetsOpen: boolean;
     onPlanetsOpenChange: (open: boolean) => void;
     bodyCardOpen: 'earth' | 'moon' | 'sun' | PlanetId | null;
     sidePanelRef: RefObject<HTMLDivElement | null>;
     planetFlyoutRef: RefObject<HTMLDivElement | null>;
-    onShowNavigationPanel: () => void;
     onSelectObject: (approach: UnifiedApproach) => void;
     onFocusBody: (body: 'earth' | 'moon') => void;
     onFocusPlanet: (id: PlanetId) => void;

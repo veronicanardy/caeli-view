@@ -6,8 +6,11 @@
  * ranking nem aplica filtros — recebe o objeto já resolvido.
  */
 
+import { TriangleAlert } from 'lucide-react';
 import type { ClosestNowObject, SelectionMode, UnifiedApproach } from '@/types';
-import { formatObjectListTrailingLabel, objectListItemTitle } from './radarSceneObjectPresentation';
+import { Tooltip } from '../Controls/Tooltip';
+import { isKnownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
+import { formatObjectListTrailingLabel } from './radarSceneObjectPresentation';
 
 type ObjectListItemProps = {
     object: ClosestNowObject;
@@ -23,20 +26,23 @@ type ObjectListItemProps = {
 // Representa um item interativo da lista do radar sem alterar regras globais de selecao.
 export function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, selectionMode, compact = false, orbitMode = false }: ObjectListItemProps) {
     const en = locale === 'en';
-    const hasScenePosition = Boolean(o.trajectory?.currentPoint);
+    // Conhecidos (famosos) são plotados na régua dos planetas via Kepler, sem trajetória geocêntrica:
+    // têm posição, só não a do feed. Não marcar "sem pos." para eles.
+    const isKnown = isKnownAsteroidId(o.approach.id);
+    const hasScenePosition = isKnown || Boolean(o.trajectory?.currentPoint);
     const hasOrbit = Boolean(o.trajectory?.orbitalElements);
     const orbitBlocked = orbitMode && !hasOrbit;
     const hazard = o.approach.hazardFlag;
     const trailingLabel = formatObjectListTrailingLabel(selectionMode, o.approach.approachDate, o.currentDistanceKm, locale);
-    const title = objectListItemTitle(orbitBlocked, hasScenePosition, locale);
 
     return (
         <li>
+            {/* Estados indisponíveis ("sem órbita", "sem pos.") já aparecem como texto na
+               própria linha; sem title nativo (regra do sistema: tooltips só via <Tooltip>). */}
             <button
                 type="button"
                 disabled={orbitBlocked}
                 onClick={() => onSelect(o.approach)}
-                title={title}
                 className={[
                     'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-xl text-left text-[13.5px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                     compact ? 'px-2 py-1.5' : 'px-2.5 py-2',
@@ -64,7 +70,12 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                 <span className="col-start-2 row-start-1 flex min-w-0 items-center gap-1 font-medium">
                     <span className={`min-w-0 truncate ${isSelected ? 'text-white' : ''}`}>{o.approach.displayName ?? o.approach.name}</span>
                     {hazard ? (
-                        <span className="shrink-0 text-[11px]" title={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} aria-hidden>{'\u26A0\uFE0F'}</span>
+                        <Tooltip content={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'} hideDelay={150}>
+                            <TriangleAlert
+                                className="size-3 shrink-0 text-amber-300/75"
+                                aria-label={en ? 'Monitored by NASA/JPL' : 'Monitorado pela NASA/JPL'}
+                            />
+                        </Tooltip>
                     ) : null}
                 </span>
                 {orbitBlocked ? (

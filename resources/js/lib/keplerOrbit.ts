@@ -69,6 +69,33 @@ export function heliocentricPositionAU(
 }
 
 /**
+ * Anomalia verdadeira ν (rad, em [0, 2π)) do objeto em `date`. É o ângulo, medido a partir do
+ * periélio, que indexa o ponto na órbita. Usada para amostrar a posição SOBRE A POLILINHA desenhada
+ * (sampleHeliocentricEllipseAtNu), em vez de avaliar a curva ideal — assim o corpo cai exatamente
+ * sobre a linha da órbita, com desvio zero em qualquer distância. Retorna null nos mesmos casos
+ * degenerados de heliocentricPositionAU (sem época de periélio, hiperbólico, etc.).
+ */
+export function trueAnomalyNow(elements: OrbitalElements, date: Date = new Date()): number | null {
+    const { ec, qrAu, tpJd } = elements;
+    if (!Number.isFinite(ec) || !(ec >= 0 && ec < 1)) return null;
+    if (!Number.isFinite(qrAu) || !(qrAu > 0)) return null;
+    if (!Number.isFinite(tpJd) || tpJd === 0) return null;
+
+    const a = qrAu / (1 - ec);
+    if (!(a > 0) || !Number.isFinite(a)) return null;
+
+    const n = Math.sqrt(GM_SUN_AU3_PER_DAY2 / (a * a * a));
+    const M = n * (julianDayUtc(date) - tpJd);
+    const E = solveKeplerEquation(M, ec);
+    // ν a partir de E: tan(ν/2) = √((1+e)/(1−e))·tan(E/2). atan2 mantém o quadrante correto.
+    const nu = 2 * Math.atan2(
+        Math.sqrt(1 + ec) * Math.sin(E / 2),
+        Math.sqrt(1 - ec) * Math.cos(E / 2),
+    );
+    return ((nu % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+}
+
+/**
  * Arco curto de posições heliocentricas (UA) em torno de uma data âncora — `pastDays` antes até
  * `futureDays` depois, amostrado em `samples` pontos. Usa a mesma propagação de Kepler do helper
  * de posição única, então cada ponto está na órbita por construção.

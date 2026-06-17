@@ -1,5 +1,5 @@
-import { Link, usePage } from '@inertiajs/react';
-import { Earth, Image, Info, Menu, Rocket, Telescope, X } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { Earth, Image, Info, LoaderCircle, Menu, Rocket, Telescope, X } from 'lucide-react';
 import { PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { Locale, useTranslation } from '@/i18n';
 import { PageProps } from '@/types';
@@ -12,12 +12,92 @@ const navItems = [
     { href: '/sobre', labelKey: 'nav.about', icon: Info },
 ] as const;
 
+const minNavigationProgressMs = 320;
+const navigationProgressFadeMs = 180;
+
+function NavigationProgress() {
+    const [phase, setPhase] = useState<'hidden' | 'visible' | 'leaving'>('hidden');
+    const { locale } = useTranslation();
+    const startedAtRef = useRef(0);
+    const finishTimeoutRef = useRef<number | null>(null);
+    const hideTimeoutRef = useRef<number | null>(null);
+    const label = locale === 'en' ? 'Loading screen...' : 'Carregando tela...';
+    const detail = locale === 'en' ? 'Synchronizing view' : 'Sincronizando visualização';
+
+    useEffect(() => {
+        const clearTimers = () => {
+            if (finishTimeoutRef.current !== null) {
+                window.clearTimeout(finishTimeoutRef.current);
+                finishTimeoutRef.current = null;
+            }
+
+            if (hideTimeoutRef.current !== null) {
+                window.clearTimeout(hideTimeoutRef.current);
+                hideTimeoutRef.current = null;
+            }
+        };
+
+        const start = () => {
+            clearTimers();
+            startedAtRef.current = window.performance.now();
+            setPhase('visible');
+        };
+
+        const finish = () => {
+            const elapsed = window.performance.now() - startedAtRef.current;
+            const remaining = Math.max(0, minNavigationProgressMs - elapsed);
+
+            if (finishTimeoutRef.current !== null) {
+                window.clearTimeout(finishTimeoutRef.current);
+            }
+
+            finishTimeoutRef.current = window.setTimeout(() => {
+                setPhase('leaving');
+                hideTimeoutRef.current = window.setTimeout(() => {
+                    setPhase('hidden');
+                }, navigationProgressFadeMs);
+            }, remaining);
+        };
+
+        const removeStartListener = router.on('start', start);
+        const removeFinishListener = router.on('finish', finish);
+
+        return () => {
+            removeStartListener();
+            removeFinishListener();
+            clearTimers();
+        };
+    }, []);
+
+    if (phase === 'hidden') {
+        return null;
+    }
+
+    return (
+        <div
+            className={`pointer-events-none absolute inset-x-0 bottom-0 translate-y-full px-4 pt-2 transition duration-200 sm:px-6 lg:px-8 ${
+                phase === 'leaving' ? 'opacity-0' : 'opacity-100'
+            }`}
+            aria-hidden="true"
+        >
+            <div className="mx-auto flex max-w-7xl justify-start">
+                <div className="app-navigation-loader">
+                    <LoaderCircle className="size-4 animate-spin text-signal-cyan" aria-hidden="true" />
+                    <span className="font-medium text-white/85">{label}</span>
+                    <span className="hidden text-white/40 sm:inline">{detail}</span>
+                    <span className="app-navigation-loader-bar" aria-hidden="true" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ hideHeader?: boolean }>) {
     const { url, props } = usePage<PageProps>();
     const { locale, setLocale, t } = useTranslation();
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const appTagline = locale === 'en' ? 'Observatory with public NASA/JPL data' : 'Observatório com dados públicos NASA/JPL';
+    const appTagline = t('app.tagline');
     const footerCopy = locale === 'en'
         ? {
             label: 'Transparency',
@@ -26,7 +106,7 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
             paragraphs: [
                 'CaeliView is an independent project and is not affiliated with, sponsored by, or endorsed by NASA, JPL, or Caltech.',
                 'Data sources: NASA/JPL CNEOS, NASA/JPL Horizons, and NASA public APIs, as indicated throughout the experience.',
-                'Visualizations are educational and may use scale compression, visual approximations, and fallbacks. For official information, consult the original sources.',
+                'Visualizations are educational and may use visual scale choices, approximations, and fallbacks. For official information, consult the original sources.',
             ],
         }
         : {
@@ -36,7 +116,7 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
             paragraphs: [
                 'CaeliView é um projeto independente e não é afiliado, patrocinado ou endossado pela NASA, JPL ou Caltech.',
                 'Fontes de dados: NASA/JPL CNEOS, NASA/JPL Horizons e APIs públicas da NASA, conforme indicado ao longo da experiência.',
-                'As visualizações são educativas e podem usar compressão de escala, aproximações visuais e fallbacks. Para informações oficiais, consulte as fontes originais.',
+                'As visualizações são educativas e podem usar escolhas visuais de escala, aproximações e fallbacks. Para informações oficiais, consulte as fontes originais.',
             ],
         };
 
@@ -64,11 +144,14 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
 
     return (
         <div className="flex min-h-screen flex-col">
-            <header className={`sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${hideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
+            <header className={`app-header sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${hideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
+                {/* Hairline ciano de assinatura, espelha a linha do footer */}
+                <div className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-signal-cyan/25 to-transparent" aria-hidden="true" />
+                <NavigationProgress />
                 <div ref={menuRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between lg:h-auto lg:py-4">
-                        <Link href="/" prefetch className="flex items-center gap-3">
-                            <span className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-signal-cyan to-signal-mint text-space-950 shadow-glow">
+                        <Link href="/" prefetch className="app-brand group flex items-center gap-3">
+                            <span className="app-brand-mark flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-signal-cyan to-signal-mint text-space-950 shadow-glow">
                                 <Rocket className="size-5" aria-hidden="true" />
                             </span>
                             <span>
@@ -78,7 +161,7 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                         </Link>
 
                         <div className="hidden items-center gap-2 lg:flex">
-                            <nav className="flex gap-2">
+                            <nav className="app-nav-shell flex gap-1.5">
                                 {navItems.map((item) => {
                                     const active = url === item.href || (item.href !== '/' && url.startsWith(item.href));
                                     const Icon = item.icon;
@@ -87,10 +170,10 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                                             key={item.href}
                                             href={item.href}
                                             prefetch
-                                            className={`inline-flex items-center gap-2 rounded px-3 py-2 text-sm transition ${
+                                            className={`app-nav-link inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
                                                 active
-                                                    ? 'border border-signal-cyan/30 bg-signal-cyan/15 text-signal-cyan shadow-[0_0_12px_rgba(84,214,214,0.15)]'
-                                                    : 'border border-transparent bg-white/5 text-white/65 hover:bg-white/8 hover:text-white/90'
+                                                    ? 'app-nav-link-active border border-signal-cyan/30 bg-signal-cyan/15 text-signal-cyan shadow-[0_0_12px_rgba(84,214,214,0.15)]'
+                                                    : 'border border-transparent text-white/60 hover:bg-white/[0.06] hover:text-white'
                                             }`}
                                         >
                                             <Icon className="size-4" aria-hidden="true" />
@@ -99,12 +182,12 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                                     );
                                 })}
                             </nav>
-                            <div className="ml-1 inline-flex rounded border border-white/10 bg-white/[0.04] p-1" aria-label={t('language.label')}>
+                            <div className="app-locale-switch ml-1 inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-1" aria-label={t('language.label')}>
                                 {(['pt-BR', 'en'] as Locale[]).map((item) => (
                                     <button
                                         key={item}
                                         type="button"
-                                        className={`rounded px-2.5 py-1 text-xs font-semibold transition ${
+                                        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                                             locale === item ? 'bg-signal-cyan text-space-950' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'
                                         }`}
                                         onClick={() => setLocale(item)}
@@ -116,12 +199,12 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                         </div>
 
                         <div className="flex items-center gap-2 lg:hidden">
-                            <div className="inline-flex rounded border border-white/10 bg-white/[0.04] p-1" aria-label={t('language.label')}>
+                            <div className="app-locale-switch inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-1" aria-label={t('language.label')}>
                                 {(['pt-BR', 'en'] as Locale[]).map((item) => (
                                     <button
                                         key={item}
                                         type="button"
-                                        className={`rounded px-2.5 py-1 text-xs font-semibold transition ${
+                                        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                                             locale === item ? 'bg-signal-cyan text-space-950' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'
                                         }`}
                                         onClick={() => setLocale(item)}
@@ -135,7 +218,7 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                                 aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
                                 aria-expanded={menuOpen}
                                 aria-controls="mobile-nav"
-                                className="inline-flex items-center justify-center rounded p-2 text-white/70 transition hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                                className="app-icon-button inline-flex items-center justify-center rounded-lg p-2 text-white/70 transition hover:bg-white/8 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan"
                                 onClick={() => setMenuOpen((value) => !value)}
                             >
                                 {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}

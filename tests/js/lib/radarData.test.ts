@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import type { HorizonsPositionResult, UnifiedApproach } from '@/types';
+import type { AsteroidTrajectory, ClosestNowObject, TrajectoryPoint, UnifiedApproach } from '@/types';
 import {
     bestDistanceKm,
     bestDistanceLD,
     buildRadarObjects,
     classifyDistance,
+    hasCurrentHorizonsPosition,
     radarQualityCounts,
 } from '@/lib/radarData';
 import { LUNAR_DISTANCE_KM } from '@/lib/physicalConstants';
 
 /**
- * `radarData` transforma aproximações brutas em RadarObjects prontos para a cena 3D.
- * Os testes protegem as fronteiras de classificação, a prioridade Horizons > nominal e
- * o comportamento de fallback simbólico — qualquer regressão aqui muda o que aparece no radar.
+ * `radarData` deriva a leitura de QUALIDADE DE DADOS do radar (objeto do momento, vizinhança lunar,
+ * cobertura Horizons vs. simbólica) a partir dos objetos do closest-now. Não posiciona nada na cena.
+ * Os testes protegem as fronteiras de classificação, a prioridade distância-real > nominal e o
+ * comportamento de fallback simbólico — qualquer regressão muda o card de qualidade.
  */
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -63,27 +65,42 @@ function makeApproach(over: Partial<UnifiedApproach> = {}): UnifiedApproach {
     } as UnifiedApproach;
 }
 
-function makePosition(over: Partial<HorizonsPositionResult> = {}): HorizonsPositionResult {
+function makeTrajectory(over: Partial<AsteroidTrajectory> = {}): AsteroidTrajectory {
+    const currentPoint: TrajectoryPoint = { timestamp: '2026-06-15T00:00:00Z', x: 100_000, y: 200_000, z: 50_000 };
     return {
-        id: 'test-id',
-        status: 'available',
-        positionKind: 'horizons_current',
-        x: 100_000,
-        y: 200_000,
-        z: 50_000,
-        vx: 10,
-        vy: -5,
-        vz: 1,
-        currentPositionTime: '2026-06-15T00:00:00Z',
+        objectId: 'test-id',
+        objectName: 'Test Asteroid',
+        source: 'JPL Horizons',
+        center: 'Earth',
+        projection: '3D ecliptic J2000',
         closestApproachTime: '2026-06-15T06:00:00Z',
-        closestApproachDistanceKm: 300_000,
-        closestApproachDistanceLD: 300_000 / LUNAR_DISTANCE_KM,
-        distanceSource: 'JPL Horizons',
-        positionSource: 'JPL Horizons',
-        failureReason: null,
-        horizonsFailureKind: null,
-        note: null,
+        points: [currentPoint],
+        currentPoint,
+        status: 'available',
         ...over,
+    };
+}
+
+/** Monta um ClosestNowObject com (ou sem) trajetória/distância real do Horizons. */
+function makeObject(over: Partial<ClosestNowObject> = {}): ClosestNowObject {
+    return {
+        approach: makeApproach(),
+        trajectory: makeTrajectory(),
+        currentDistanceKm: 300_000,
+        currentDistanceLD: 300_000 / LUNAR_DISTANCE_KM,
+        hasRealCurrentDistance: true,
+        ...over,
+    };
+}
+
+/** Objeto simbólico: sem trajetória, só distância nominal na aproximação. */
+function makeSymbolicObject(over: Partial<UnifiedApproach> = {}): ClosestNowObject {
+    return {
+        approach: makeApproach(over),
+        trajectory: null,
+        currentDistanceKm: null,
+        currentDistanceLD: null,
+        hasRealCurrentDistance: false,
     };
 }
 
@@ -129,135 +146,123 @@ describe('classifyDistance', () => {
 // ─── bestDistanceKm ───────────────────────────────────────────────────────────
 
 describe('bestDistanceKm', () => {
-    it('prefere o valor Horizons quando disponível', () => {
-        const approach = makeApproach({ nominalDistanceKm: 500_000 });
-        const pos = makePosition({ closestApproachDistanceKm: 300_000 });
-        expect(bestDistanceKm(approach, pos)).toBe(300_000);
+    it('prefere a distância atual (Horizons) quando disponível', () => {
+        const object = makeObject({ currentDistanceKm: 300_000, approach: makeApproach({ nominalDistanceKm: 500_000 }) });
+        expect(bestDistanceKm(object)).toBe(300_000);
     });
 
-    it('cai para nominalDistanceKm quando Horizons não tem valor', () => {
-        const approach = makeApproach({ nominalDistanceKm: 500_000 });
-        const pos = makePosition({ closestApproachDistanceKm: null });
-        expect(bestDistanceKm(approach, pos)).toBe(500_000);
+    it('cai para nominalDistanceKm quando não há distância atual', () => {
+        const object = makeSymbolicObject({ nominalDistanceKm: 500_000 });
+        expect(bestDistanceKm(object)).toBe(500_000);
     });
 
     it('retorna null quando nenhum dado está disponível', () => {
-        const approach = makeApproach({ nominalDistanceKm: null });
-        expect(bestDistanceKm(approach, undefined)).toBeNull();
-    });
-
-    it('retorna null quando position é undefined', () => {
-        const approach = makeApproach({ nominalDistanceKm: null });
-        expect(bestDistanceKm(approach)).toBeNull();
+        const object = makeSymbolicObject({ nominalDistanceKm: null });
+        expect(bestDistanceKm(object)).toBeNull();
     });
 });
 
 // ─── bestDistanceLD ───────────────────────────────────────────────────────────
 
 describe('bestDistanceLD', () => {
-    it('prefere o valor Horizons quando disponível', () => {
-        const approach = makeApproach({ nominalDistanceKm: 500_000 });
-        const pos = makePosition({ closestApproachDistanceLD: 1.5 });
-        expect(bestDistanceLD(approach, pos)).toBe(1.5);
+    it('prefere a distância atual (Horizons) quando disponível', () => {
+        const object = makeObject({ currentDistanceLD: 1.5, approach: makeApproach({ nominalDistanceKm: 500_000 }) });
+        expect(bestDistanceLD(object)).toBe(1.5);
     });
 
-    it('calcula a partir de nominalDistanceKm quando Horizons não tem LD', () => {
-        const approach = makeApproach({ nominalDistanceKm: LUNAR_DISTANCE_KM * 2 });
-        const pos = makePosition({ closestApproachDistanceLD: null });
-        expect(bestDistanceLD(approach, pos)).toBeCloseTo(2, 10);
+    it('calcula a partir de nominalDistanceKm quando não há LD atual', () => {
+        const object = makeSymbolicObject({ nominalDistanceKm: LUNAR_DISTANCE_KM * 2 });
+        expect(bestDistanceLD(object)).toBeCloseTo(2, 10);
     });
 
-    it('usa lunarDistance direto quando nominalDistanceKm é null e Horizons não tem valor', () => {
-        const approach = makeApproach({ nominalDistanceKm: null, lunarDistance: 3.5 });
-        expect(bestDistanceLD(approach, undefined)).toBe(3.5);
+    it('usa lunarDistance direto quando nominalDistanceKm é null e não há valor atual', () => {
+        const object = makeSymbolicObject({ nominalDistanceKm: null, lunarDistance: 3.5 });
+        expect(bestDistanceLD(object)).toBe(3.5);
     });
 
     it('retorna null quando nenhum dado está disponível', () => {
-        const approach = makeApproach({ nominalDistanceKm: null, lunarDistance: null });
-        expect(bestDistanceLD(approach, undefined)).toBeNull();
+        const object = makeSymbolicObject({ nominalDistanceKm: null, lunarDistance: null });
+        expect(bestDistanceLD(object)).toBeNull();
     });
 
     it('é consistente com LUNAR_DISTANCE_KM: 1 DL de km → 1 DL', () => {
-        const approach = makeApproach({ nominalDistanceKm: LUNAR_DISTANCE_KM });
-        const pos = makePosition({ closestApproachDistanceLD: null });
-        expect(bestDistanceLD(approach, pos)).toBeCloseTo(1, 10);
+        const object = makeSymbolicObject({ nominalDistanceKm: LUNAR_DISTANCE_KM });
+        expect(bestDistanceLD(object)).toBeCloseTo(1, 10);
+    });
+});
+
+// ─── hasCurrentHorizonsPosition ─────────────────────────────────────────────────
+
+describe('hasCurrentHorizonsPosition', () => {
+    it('true quando a trajetória está disponível com ponto atual', () => {
+        expect(hasCurrentHorizonsPosition(makeObject())).toBe(true);
+    });
+
+    it('false quando não há trajetória', () => {
+        expect(hasCurrentHorizonsPosition(makeSymbolicObject())).toBe(false);
+    });
+
+    it('false quando a trajetória existe mas está indisponível', () => {
+        const object = makeObject({ trajectory: makeTrajectory({ status: 'unavailable', currentPoint: null }) });
+        expect(hasCurrentHorizonsPosition(object)).toBe(false);
+    });
+
+    it('false quando a trajetória está disponível mas sem ponto atual', () => {
+        const object = makeObject({ trajectory: makeTrajectory({ currentPoint: null }) });
+        expect(hasCurrentHorizonsPosition(object)).toBe(false);
     });
 });
 
 // ─── buildRadarObjects ────────────────────────────────────────────────────────
 
 describe('buildRadarObjects', () => {
-    it('com Horizons disponível: hasHorizonsPosition=true, positionKind=horizons_current', () => {
-        const approach = makeApproach({ id: 'a1', nominalDistanceKm: 500_000 });
-        const pos = makePosition({ id: 'a1' });
-        const [obj] = buildRadarObjects([approach], { a1: pos });
+    it('com Horizons disponível: hasHorizonsPosition=true, isSymbolicFallback=false', () => {
+        const [obj] = buildRadarObjects([makeObject()]);
 
         expect(obj.hasHorizonsPosition).toBe(true);
         expect(obj.isSymbolicFallback).toBe(false);
-        expect(obj.positionKind).toBe('horizons_current');
-        expect(obj.horizonsXY).not.toBeNull();
-        expect(obj.horizonsXY?.x).toBe(100_000);
-        expect(obj.horizonsXY?.y).toBe(200_000);
     });
 
-    it('sem Horizons: isSymbolicFallback=true, horizonsXY=null', () => {
-        const approach = makeApproach({ id: 'a2', nominalDistanceKm: 500_000 });
-        const [obj] = buildRadarObjects([approach], {});
-
-        expect(obj.hasHorizonsPosition).toBe(false);
-        expect(obj.isSymbolicFallback).toBe(true);
-        expect(obj.positionKind).toBe('symbolic_distance_only');
-        expect(obj.horizonsXY).toBeNull();
-    });
-
-    it('Horizons com status unavailable → trata como fallback simbólico', () => {
-        const approach = makeApproach({ id: 'a3', nominalDistanceKm: 500_000 });
-        const pos = makePosition({ id: 'a3', status: 'unavailable', x: null, y: null });
-        const [obj] = buildRadarObjects([approach], { a3: pos });
+    it('sem Horizons: isSymbolicFallback=true', () => {
+        const [obj] = buildRadarObjects([makeSymbolicObject({ nominalDistanceKm: 500_000 })]);
 
         expect(obj.hasHorizonsPosition).toBe(false);
         expect(obj.isSymbolicFallback).toBe(true);
     });
 
-    it('classifica corretamente a partir da distância Horizons', () => {
-        const approach = makeApproach({ id: 'a4', nominalDistanceKm: 1_000_000 });
-        const pos = makePosition({ id: 'a4', closestApproachDistanceKm: LUNAR_DISTANCE_KM * 0.5, closestApproachDistanceLD: 0.5 });
-        const [obj] = buildRadarObjects([approach], { a4: pos });
+    it('trajetória unavailable → trata como fallback simbólico', () => {
+        const object = makeObject({
+            trajectory: makeTrajectory({ status: 'unavailable', currentPoint: null }),
+            currentDistanceKm: null,
+            currentDistanceLD: null,
+        });
+        const [obj] = buildRadarObjects([object]);
+
+        expect(obj.hasHorizonsPosition).toBe(false);
+        expect(obj.isSymbolicFallback).toBe(true);
+    });
+
+    it('classifica corretamente a partir da distância atual', () => {
+        const object = makeObject({ currentDistanceLD: 0.5, currentDistanceKm: LUNAR_DISTANCE_KM * 0.5 });
+        const [obj] = buildRadarObjects([object]);
 
         expect(obj.classification).toBe('within-lunar');
         expect(obj.distanceLD).toBeCloseTo(0.5, 10);
     });
 
-    it('velocidade xy preenchida quando vx/vy não-zero', () => {
-        const approach = makeApproach({ id: 'a5' });
-        const pos = makePosition({ id: 'a5', vx: 10, vy: -5 });
-        const [obj] = buildRadarObjects([approach], { a5: pos });
+    it('herda velocidade e horário da aproximação/trajetória', () => {
+        const object = makeObject({
+            approach: makeApproach({ relativeVelocityKph: 42_000 }),
+            trajectory: makeTrajectory({ closestApproachTime: '2026-06-15T06:00:00Z' }),
+        });
+        const [obj] = buildRadarObjects([object]);
 
-        expect(obj.velocityKmS).toEqual({ vx: 10, vy: -5 });
-    });
-
-    it('velocidade null quando vx=0 e vy=0 (vetor degenerado)', () => {
-        const approach = makeApproach({ id: 'a6' });
-        const pos = makePosition({ id: 'a6', vx: 0, vy: 0 });
-        const [obj] = buildRadarObjects([approach], { a6: pos });
-
-        expect(obj.velocityKmS).toBeNull();
+        expect(obj.relativeVelocityKph).toBe(42_000);
+        expect(obj.closestApproachTime).toBe('2026-06-15T06:00:00Z');
     });
 
     it('lista vazia → array vazio', () => {
-        expect(buildRadarObjects([], {})).toHaveLength(0);
-    });
-
-    it('usa averageDiameterMeters: prefere diameterMeters direto', () => {
-        const approach = makeApproach({ id: 'a7', diameterMeters: 250, estimatedDiameterMinMeters: 100, estimatedDiameterMaxMeters: 400 });
-        const [obj] = buildRadarObjects([approach], {});
-        expect(obj.diameterMeters).toBe(250);
-    });
-
-    it('usa averageDiameterMeters: calcula média quando diameterMeters é null', () => {
-        const approach = makeApproach({ id: 'a8', diameterMeters: null, estimatedDiameterMinMeters: 100, estimatedDiameterMaxMeters: 300 });
-        const [obj] = buildRadarObjects([approach], {});
-        expect(obj.diameterMeters).toBe(200);
+        expect(buildRadarObjects([])).toHaveLength(0);
     });
 });
 
@@ -265,11 +270,10 @@ describe('buildRadarObjects', () => {
 
 describe('radarQualityCounts', () => {
     it('conta corretamente objetos com Horizons, simbólicos e sub-lunares', () => {
-        const a1 = makeApproach({ id: 'q1', nominalDistanceKm: LUNAR_DISTANCE_KM * 0.5 });
-        const a2 = makeApproach({ id: 'q2', nominalDistanceKm: LUNAR_DISTANCE_KM * 5 });
-        const pos1 = makePosition({ id: 'q1', closestApproachDistanceKm: LUNAR_DISTANCE_KM * 0.5, closestApproachDistanceLD: 0.5 });
+        const withHorizons = makeObject({ currentDistanceKm: LUNAR_DISTANCE_KM * 0.5, currentDistanceLD: 0.5 });
+        const symbolic = makeSymbolicObject({ id: 'q2', nominalDistanceKm: LUNAR_DISTANCE_KM * 5 });
 
-        const objects = buildRadarObjects([a1, a2], { q1: pos1 });
+        const objects = buildRadarObjects([withHorizons, symbolic]);
         const counts = radarQualityCounts(objects);
 
         expect(counts.total).toBe(2);

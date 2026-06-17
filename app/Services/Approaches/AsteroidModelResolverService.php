@@ -127,21 +127,47 @@ final class AsteroidModelResolverService
 
     /**
      * Verifica se algum identificador do objeto bate com uma entrada do catálogo interno.
-     * A busca é por substring em minúsculas para tolerar variações de formatação dos nomes.
+     *
+     * O critério espelha o registry do front (asteroidModelRegistry.ts): a identidade só é
+     * aceita quando é inequívoca, evitando os falsos positivos do `str_contains` anterior:
+     *   - aliases batem por PALAVRA INTEIRA (ex.: "eros" não combina com "Heros"/"Erosita");
+     *   - números batem por IGUALDADE DO CAMPO INTEIRO, tolerando "(N)" (ex.: o campo "433" casa
+     *     com 433, mas "2000433", "2001 AB1" e "4337" não — o que protege números baixos como
+     *     Ceres=1 e Vesta=4 de casar com fragmentos de designação tipo "2001 AB1").
+     *
+     * Números são buscados só em designation/detailIdentifier (campos de identificador), nunca em
+     * name (texto livre) nem spkId. O SPK-ID de um asteroide numerado é 2000000 + número
+     * (Bennu = 2101955), então casá-lo geraria correspondência incorreta.
      */
     private function catalogMatch(array $object): ?array
     {
-        $haystack = strtolower(implode(' ', array_filter([
+        $textFields = array_values(array_filter([
             $object['name'],
             $object['displayName'],
             $object['designation'],
             $object['detailIdentifier'],
-            $object['spkId'],
-        ])));
+        ], static fn (string $value): bool => $value !== ''));
 
-        foreach ($this->catalog() as $needle => $entry) {
-            if (str_contains($haystack, $needle)) {
-                return $entry;
+        $numberFields = array_values(array_filter([
+            $object['designation'],
+            $object['detailIdentifier'],
+        ], static fn (string $value): bool => $value !== ''));
+
+        foreach ($this->catalog() as $entry) {
+            foreach ($entry['aliases'] as $alias) {
+                foreach ($textFields as $field) {
+                    if ($this->fieldContainsWord($field, $alias)) {
+                        return $entry;
+                    }
+                }
+            }
+
+            foreach ($entry['numbers'] as $number) {
+                foreach ($numberFields as $field) {
+                    if ($this->fieldEqualsCatalogNumber($field, $number)) {
+                        return $entry;
+                    }
+                }
             }
         }
 
@@ -149,45 +175,96 @@ final class AsteroidModelResolverService
     }
 
     /**
+     * Verifica se `$needle` aparece como palavra inteira em `$field` (case-insensitive).
+     * Fronteiras são qualquer caractere que não seja [a-z0-9], evitando falsos positivos
+     * por substring como "ceres" dentro de "cerebral". Espelha fieldContainsWord do front.
+     */
+    private function fieldContainsWord(string $field, string $needle): bool
+    {
+        $escaped = preg_quote($needle, '/');
+
+        return preg_match('/(^|[^a-z0-9])' . $escaped . '([^a-z0-9]|$)/i', $field) === 1;
+    }
+
+    /**
+     * Verifica se `$field` é exatamente o número de catálogo `$number` (campo inteiro),
+     * tolerando o formato "(NNN)" entre parênteses. Espelha fieldEqualsCatalogNumber do front:
+     * exige igualdade do campo todo, não correspondência parcial — assim "433" casa com 433,
+     * mas "2000433", "2001 AB1" e "4337" não.
+     */
+    private function fieldEqualsCatalogNumber(string $field, string $number): bool
+    {
+        $trimmed = preg_replace('/^\((\d+)\)$/', '$1', trim($field));
+
+        return $trimmed === $number;
+    }
+
+    /**
      * Catálogo de asteroides com modelos 3D conhecidos ou referências de missões espaciais.
      *
-     * Cada chave é um identificador em minúsculas (nome, designação ou SPK-ID).
-     * O campo `modelUrl` recebe a URL do GLB quando o arquivo estiver disponível;
-     * enquanto `null`, o nível cai para N2 (referência catalogada sem modelo carregável).
+     * Cada entrada declara separadamente:
+     *   - `aliases`: nomes válidos, batidos por PALAVRA INTEIRA (sempre em minúsculas);
+     *   - `numbers`: números de catálogo, batidos por TOKEN EXATO.
+     * Espelha a estrutura de REAL_ASTEROID_MODELS no front (asteroidModelRegistry.ts) para que
+     * os dois lados usem o mesmo critério de identidade.
+     *
+     * O campo `modelUrl` recebe a URL do GLB quando o arquivo estiver disponível; enquanto `null`,
+     * o nível cai para N2 (referência catalogada sem modelo carregável).
+     *
+     * @return array<int, array{aliases: array<int, string>, numbers: array<int, string>, sourceName: string, sourceUrl: string, modelUrl: ?string}>
      */
     private function catalog(): array
     {
+        // Caminho público dos GLBs (servidos de public/models/asteroids/). As mesmas URLs que o
+        // front usa em asteroidModelRegistry.ts — manter os dois lados em sincronia.
+        $glb = '/models/asteroids/';
+
         return [
-            // Bennu — explorado pela missão OSIRIS-REx (NASA)
-            '101955' => [
+            // Bennu — explorado pela missão OSIRIS-REx (NASA). GLB disponível → N1.
+            [
+                'aliases'    => ['bennu', 'rq36'],
+                'numbers'    => ['101955'],
                 'sourceName' => 'NASA 3D Resources / OSIRIS-REx shape model reference',
                 'sourceUrl'  => 'https://science.nasa.gov/mission/osiris-rex/',
-                'modelUrl'   => null,
+                'modelUrl'   => $glb . 'bennu.glb',
             ],
-            'bennu' => [
-                'sourceName' => 'NASA 3D Resources / OSIRIS-REx shape model reference',
-                'sourceUrl'  => 'https://science.nasa.gov/mission/osiris-rex/',
-                'modelUrl'   => null,
-            ],
-            // Ryugu — explorado pela missão Hayabusa2 (JAXA)
-            '162173' => [
-                'sourceName' => 'JAXA / PDS small-body shape model reference',
-                'sourceUrl'  => 'https://pds-smallbodies.astro.umd.edu/',
-                'modelUrl'   => null,
-            ],
-            'ryugu' => [
-                'sourceName' => 'JAXA / PDS small-body shape model reference',
-                'sourceUrl'  => 'https://pds-smallbodies.astro.umd.edu/',
-                'modelUrl'   => null,
-            ],
-            // Eros — explorado pela missão NEAR Shoemaker (NASA)
-            '433' => [
+            // Eros — explorado pela missão NEAR Shoemaker (NASA). GLB disponível → N1.
+            [
+                'aliases'    => ['eros'],
+                'numbers'    => ['433'],
                 'sourceName' => 'NEAR Shoemaker / PDS small-body shape model reference',
                 'sourceUrl'  => 'https://pds-smallbodies.astro.umd.edu/',
-                'modelUrl'   => null,
+                'modelUrl'   => $glb . 'eros.glb',
             ],
-            'eros' => [
-                'sourceName' => 'NEAR Shoemaker / PDS small-body shape model reference',
+            // Itokawa — explorado pela missão Hayabusa (JAXA). GLB disponível → N1.
+            [
+                'aliases'    => ['itokawa'],
+                'numbers'    => ['25143'],
+                'sourceName' => 'JAXA / PDS small-body shape model reference',
+                'sourceUrl'  => 'https://pds-smallbodies.astro.umd.edu/',
+                'modelUrl'   => $glb . 'itokawa.glb',
+            ],
+            // Vesta — mapeado pela missão Dawn (NASA). GLB disponível → N1.
+            [
+                'aliases'    => ['vesta'],
+                'numbers'    => ['4'],
+                'sourceName' => 'NASA / Dawn / PDS small-body shape model reference',
+                'sourceUrl'  => 'https://pds-smallbodies.astro.umd.edu/',
+                'modelUrl'   => $glb . 'vesta.glb',
+            ],
+            // Ceres — mapeado pela missão Dawn (NASA). GLB disponível → N1.
+            [
+                'aliases'    => ['ceres'],
+                'numbers'    => ['1'],
+                'sourceName' => 'NASA / Dawn / PDS small-body shape model reference',
+                'sourceUrl'  => 'https://pds-smallbodies.astro.umd.edu/',
+                'modelUrl'   => $glb . 'ceres.glb',
+            ],
+            // Ryugu — explorado pela Hayabusa2 (JAXA). Sem GLB no projeto ainda → permanece N2.
+            [
+                'aliases'    => ['ryugu'],
+                'numbers'    => ['162173'],
+                'sourceName' => 'JAXA / PDS small-body shape model reference',
                 'sourceUrl'  => 'https://pds-smallbodies.astro.umd.edu/',
                 'modelUrl'   => null,
             ],

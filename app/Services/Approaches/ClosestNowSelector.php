@@ -156,8 +156,15 @@ final class ClosestNowSelector
         $full = Cache::flexible(
             $cacheKey,
             [self::RESULT_CACHE_TTL_SECONDS, self::RESULT_CACHE_TTL_SECONDS + 900],
-            fn (): array => $this->resolve($dateMin, $dateMax, $mode, $limit, $anchor),
+            fn (): array => $this->resolve($dateMin, $dateMax, $mode, $limit, $anchor, $forceRefresh),
         );
+
+        // Resultado vazio causado por falha das fontes (não por ausência real de objetos)
+        // não pode ficar preso no cache: a próxima requisição deve tentar as APIs de novo.
+        if (($full['objects'] ?? []) === [] && ($full['sourcesFailed'] ?? false) === true) {
+            Cache::forget($cacheKey);
+            Cache::forget("illuminate:cache:flexible:created:{$cacheKey}");
+        }
 
         // Fatia o resultado já ordenado para o limite solicitado (todos os modos).
         if (is_array($full['objects'] ?? null)) {
@@ -186,7 +193,7 @@ final class ClosestNowSelector
      * `$limit + HORIZONS_MARGIN` primeiros têm posição real do Horizons. O slice
      * final para o $limit pedido é aplicado pelo chamador (select).
      */
-    private function resolve(string $dateMin, string $dateMax, string $mode, int $limit = self::TOP_RESULT_LIMIT, string $anchor = ''): array
+    private function resolve(string $dateMin, string $dateMax, string $mode, int $limit = self::TOP_RESULT_LIMIT, string $anchor = '', bool $forceRefresh = false): array
     {
         // Âncora para filtros por data (modo 'upcoming'): usa o valor fornecido ou cai para $dateMin.
         $anchorDate = $anchor !== '' ? $anchor : $dateMin;
@@ -218,7 +225,11 @@ final class ClosestNowSelector
         $approaches = is_array($data['approaches'] ?? null) ? $data['approaches'] : [];
 
         if ($approaches === []) {
-            return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato encontrado no período.');
+            // Distingue "fontes falharam" de "janela realmente sem objetos": o primeiro caso
+            // marca sourcesFailed para que select() não persista o vazio no cache.
+            $sourcesFailed = is_array($data['errorsBySource'] ?? null) && $data['errorsBySource'] !== [];
+
+            return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato encontrado no período.', $sourcesFailed);
         }
 
         // Passo 2: filtra e seleciona candidatos de acordo com o modo.
@@ -247,7 +258,7 @@ final class ClosestNowSelector
 
         // Passo 4: busca trajetórias do Horizons apenas para os candidatos prioritários.
         $started      = microtime(true);
-        $trajectories = $this->fetchTrajectoriesParallel($priorityCandidates);
+        $trajectories = $this->fetchTrajectoriesParallel($priorityCandidates, $forceRefresh);
         $elapsed      = round((microtime(true) - $started) * 1000);
 
         $horizonsOk    = count(array_filter($trajectories, fn ($t) => ($t['status'] ?? null) === 'available'));
@@ -443,10 +454,13 @@ final class ClosestNowSelector
      * mantêm a concorrência útil sem saturar a conexão com o JPL.
      * Entre lotes há uma pausa de 300ms para não bater no rate-limit da API.
      *
+     * $forceRefresh chega até o cache interno de cada trajetória (trajectoryAroundNow), curando
+     * valores envenenados que o cache externo do select() sozinho não alcança.
+     *
      * @param  array<int, array<string, mixed>>   $candidates
      * @return array<string, array<string, mixed>>
      */
-    private function fetchTrajectoriesParallel(array $candidates): array
+    private function fetchTrajectoriesParallel(array $candidates, bool $forceRefresh = false): array
     {
         $tasks = [];
 
@@ -458,7 +472,7 @@ final class ClosestNowSelector
             $payload    = $this->toHorizonsPayload($approach);
             $distKm     = isset($approach['nominalDistanceKm']) ? (float) $approach['nominalDistanceKm'] : null;
             $window     = $this->trajectoryWindowFor($distKm);
-            $tasks[$id] = fn () => $this->horizons->trajectoryAroundNow($payload, $window);
+            $tasks[$id] = fn () => $this->horizons->trajectoryAroundNow($payload, $window, $forceRefresh);
         }
 
         if ($tasks === []) {
@@ -614,8 +628,12 @@ final class ClosestNowSelector
 
     /**
      * Resultado vazio padronizado para quando não há candidatos viáveis.
+     *
+     * `$sourcesFailed = true` indica que o vazio veio de falha das fontes (CAD/NeoWs
+     * indisponíveis), não de uma janela legitimamente sem objetos. select() usa essa
+     * flag para não persistir o resultado no cache.
      */
-    private function emptyResult(string $dateMin, string $dateMax, int $limit, string $mode, string $note): array
+    private function emptyResult(string $dateMin, string $dateMax, int $limit, string $mode, string $note, bool $sourcesFailed = false): array
     {
         return [
             'mode'                => 'closest_now',
@@ -626,6 +644,7 @@ final class ClosestNowSelector
             'candidatesEvaluated' => 0,
             'objects'             => [],
             'note'                => $note,
+            'sourcesFailed'       => $sourcesFailed,
             'lunarReference'      => [
                 'distanceKm'           => DistancePresenter::LUNAR_DISTANCE_KM,
                 'earthDiametersApprox' => 30.0,
@@ -642,8 +661,9 @@ final class ClosestNowSelector
     /**
      * O radar de proximidade usa uma janela retrospectiva longa e adaptativa.
      *
-     * Como a cena já aplica a mesma compressão logarítmica ao rastro e à posição atual,
-     * podemos trazer mais histórico sem quebrar a coerência visual do radar.
+     * A cena renderiza o rastro e a posição atual na régua linear única em UA (escala fiel,
+     * sem compressão), então a janela é escolhida só por distância/resolução de amostragem,
+     * não por restrição visual de escala.
      */
     private function trajectoryWindowFor(?float $distanceKm): array
     {

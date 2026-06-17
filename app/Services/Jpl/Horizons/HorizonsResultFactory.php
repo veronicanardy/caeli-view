@@ -31,7 +31,7 @@ final class HorizonsResultFactory
             'objectName' => (string) ($object['displayName'] ?? $object['name'] ?? 'Objeto monitorado'),
             'source' => 'JPL Horizons',
             'center' => 'Earth',
-            'projection' => '2D simplified',
+            'projection' => '3D ecliptic J2000',
             'closestApproachTime' => $approachTime?->toIso8601String() ?? (string) ($object['approachTime'] ?? ''),
             'points' => [],
             'referencePoint' => null,
@@ -39,91 +39,6 @@ final class HorizonsResultFactory
             'status' => 'unavailable',
             'horizonsFailureKind' => $this->failureKind($failureReason),
             'note' => $note,
-        ];
-    }
-
-    /**
-     * Resultado de posição simbólica — usado quando não há coordenadas reais disponíveis
-     * mas ainda podemos exibir a distância de aproximação mais próxima registrada.
-     *
-     * @param  array<string, mixed>  $object
-     */
-    public function symbolicPosition(
-        string $id,
-        array $object,
-        string $note,
-        string $failureReason,
-        ?CarbonImmutable $approachTime = null,
-    ): array {
-        $approachTime ??= $this->parseTime($object['approachTime'] ?? null);
-        $distanceKm = $this->approachDistanceKm($object);
-        $distanceLd = $distanceKm !== null ? $distanceKm / DistancePresenter::LUNAR_DISTANCE_KM : null;
-
-        return [
-            'id' => $id,
-            'status' => 'unavailable',
-            'positionKind' => 'symbolic_distance_only',
-            'x' => null,
-            'y' => null,
-            'z' => null,
-            'vx' => null,
-            'vy' => null,
-            'vz' => null,
-            'currentPositionTime' => null,
-            'closestApproachTime' => $approachTime?->toIso8601String(),
-            'closestApproachDistanceKm' => $distanceKm,
-            'closestApproachDistanceLD' => $distanceLd,
-            'distanceSource' => $this->distanceSourceFor($object, $distanceKm),
-            'positionSource' => 'unavailable',
-            'failureReason' => $failureReason,
-            'horizonsFailureKind' => $this->failureKind($failureReason),
-            'note' => $note,
-        ];
-    }
-
-    /**
-     * Resultado de posição real — coordenadas cartesianas obtidas do Horizons,
-     * enriquecidas com a distância de aproximação e a fonte dos dados.
-     *
-     * @param  array<string, mixed>  $chosen  ponto escolhido via closestPointTo
-     * @param  array<string, mixed>  $object
-     */
-    public function availablePosition(
-        string $id,
-        array $object,
-        array $chosen,
-        string $mode,
-        CarbonImmutable $referenceTime,
-        ?CarbonImmutable $approachTime,
-    ): array {
-        $closestApproachDistanceKm = $mode === 'current'
-            ? $this->floatOrNull($chosen['distanceKm'] ?? null)
-            : $this->approachDistanceKm($object);
-
-        $closestApproachDistanceLd = $closestApproachDistanceKm !== null
-            ? $closestApproachDistanceKm / DistancePresenter::LUNAR_DISTANCE_KM
-            : null;
-
-        return [
-            'id' => $id,
-            'status' => 'available',
-            'positionKind' => 'horizons_current',
-            'x' => $this->floatOrNull($chosen['x'] ?? null),
-            'y' => $this->floatOrNull($chosen['y'] ?? null),
-            'z' => $this->floatOrNull($chosen['z'] ?? null),
-            'vx' => $this->floatOrNull($chosen['vx'] ?? null),
-            'vy' => $this->floatOrNull($chosen['vy'] ?? null),
-            'vz' => $this->floatOrNull($chosen['vz'] ?? null),
-            'currentPositionTime' => (string) ($chosen['timestamp'] ?? $referenceTime->toIso8601String()),
-            'closestApproachTime' => $approachTime?->toIso8601String(),
-            'closestApproachDistanceKm' => $closestApproachDistanceKm,
-            'closestApproachDistanceLD' => $closestApproachDistanceLd,
-            'distanceSource' => $mode === 'current' && $closestApproachDistanceKm !== null
-                ? 'JPL Horizons'
-                : $this->distanceSourceFor($object, $closestApproachDistanceKm),
-            'positionSource' => 'JPL Horizons',
-            'failureReason' => null,
-            'note' => null,
         ];
     }
 
@@ -149,13 +64,13 @@ final class HorizonsResultFactory
             'objectName' => (string) ($object['displayName'] ?? $object['name'] ?? $objectId),
             'source' => 'JPL Horizons',
             'center' => 'Earth',
-            'projection' => '2D simplified',
+            'projection' => '3D ecliptic J2000',
             'closestApproachTime' => $approachTime->toIso8601String(),
             'points' => $points,
             'referencePoint' => $referencePoint,
             'motionState' => $motionState,
             'status' => 'available',
-            'note' => 'Trajetória baseada em efemérides JPL Horizons e projetada em 2D para visualização.',
+            'note' => 'Trajetória baseada em efemérides JPL Horizons em coordenadas eclípticas J2000 (3D).',
         ];
     }
 
@@ -198,7 +113,7 @@ final class HorizonsResultFactory
             'objectName' => (string) ($object['displayName'] ?? $object['name'] ?? $objectId),
             'source' => 'JPL Horizons',
             'center' => 'Earth',
-            'projection' => '2D simplified',
+            'projection' => '3D ecliptic J2000',
             'anchor' => 'now',
             'anchorTime' => $now->toIso8601String(),
             'closestApproachTime' => $approachTime?->toIso8601String(),
@@ -233,65 +148,9 @@ final class HorizonsResultFactory
         };
     }
 
-    /**
-     * Retorna a mensagem de nota para o usuário de acordo com o motivo da falha.
-     */
-    public function noteForFailure(string $reason, string $mode): string
-    {
-        return match ($reason) {
-            'timeout', 'http_error', 'rate_limit'
-                => 'Horizons temporariamente indisponível para este objeto. Representação simbólica baseada na distância.',
-            'invalid_target', 'no_command_candidates'
-                => 'Sem identificador Horizons válido para este objeto. Representação simbólica baseada na distância.',
-            'no_ephemeris'
-                => 'Objeto sem efemérides publicadas no Horizons neste momento. Pode ser muito recente. Representação simbólica baseada na distância.',
-            default => $mode === 'current'
-                ? 'Sem efemérides Horizons disponíveis para o horário atual. Representação simbólica baseada na distância.'
-                : 'Sem efemérides Horizons disponíveis para o instante da máxima aproximação. Representação simbólica baseada na distância.',
-        };
-    }
-
     // -------------------------------------------------------------------------
     // Helpers privados
     // -------------------------------------------------------------------------
-
-    private function approachDistanceKm(array $object): ?float
-    {
-        $value = $object['nominalDistanceKm'] ?? $object['distanceKm'] ?? null;
-
-        return is_numeric($value) ? (float) $value : null;
-    }
-
-    private function distanceSourceFor(array $object, ?float $distanceKm): string
-    {
-        if ($distanceKm === null) {
-            return 'fallback';
-        }
-
-        $sourceLabel = strtolower((string) ($object['source'] ?? $object['sourceLabel'] ?? ''));
-
-        if (str_contains($sourceLabel, 'cad')) {
-            return 'CAD';
-        }
-        if (str_contains($sourceLabel, 'neows') || str_contains($sourceLabel, 'neo')) {
-            return 'NeoWs';
-        }
-
-        return 'fallback';
-    }
-
-    private function parseTime(mixed $value): ?CarbonImmutable
-    {
-        if (! is_string($value) || trim($value) === '') {
-            return null;
-        }
-
-        try {
-            return CarbonImmutable::parse($value, 'UTC');
-        } catch (\Throwable) {
-            return null;
-        }
-    }
 
     private function floatOrNull(mixed $value): ?float
     {

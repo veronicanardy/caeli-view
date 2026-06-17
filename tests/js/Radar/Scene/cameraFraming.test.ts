@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { framingForBody, framingForOverview, computeFocusFraming } from '@/Components/Radar/Scene/cameraFraming';
+import { framingForBody, framingForOverview, framingForTrajectorySegment, computeFocusFraming } from '@/Components/Radar/Scene/cameraFraming';
 import type { ClosestNowObject } from '@/types';
 
 /**
@@ -107,28 +107,97 @@ function makeObjectWithPosition(): ClosestNowObject {
     } as unknown as ClosestNowObject;
 }
 
+const EARTH_HELIO = { x: 1, y: 0, z: 0 };
+
 describe('computeFocusFraming', () => {
     it('retorna null quando não há trajetória e orbitMode é false', () => {
-        expect(computeFocusFraming(makeObjectNoTrajectory())).toBeNull();
+        expect(computeFocusFraming(makeObjectNoTrajectory(), false, EARTH_HELIO)).toBeNull();
+    });
+
+    it('retorna null quando falta a posição heliocêntrica da Terra (efeméride não resolvida)', () => {
+        expect(computeFocusFraming(makeObjectWithPosition(), false, null)).toBeNull();
     });
 
     it('retorna close-up com transition "preserve_heading" quando objeto tem posição', () => {
-        const framing = computeFocusFraming(makeObjectWithPosition());
+        const framing = computeFocusFraming(makeObjectWithPosition(), false, EARTH_HELIO);
+        expect(framing).not.toBeNull();
+        expect(framing!.transition).toBe('preserve_heading');
+        expect(framing!.target.toArray().every(Number.isFinite)).toBe(true);
+    });
+
+    it('com orbitMode true mas sem elementos orbitais cai para o close-up heliocêntrico', () => {
+        const framing = computeFocusFraming(makeObjectWithPosition(), true, EARTH_HELIO);
         expect(framing).not.toBeNull();
         expect(framing!.transition).toBe('preserve_heading');
     });
+});
 
-    it('o target do close-up inclui o earthScenePosition como offset', () => {
-        const earth: [number, number, number] = [10, 0, 0];
-        const framing = computeFocusFraming(makeObjectWithPosition(), false, null, earth);
-        expect(framing).not.toBeNull();
-        // O target deve estar em algum ponto próximo a x=10 (earthPos + geoPos comprimido)
-        expect(framing!.target.x).toBeGreaterThan(9);
+
+// ─── framingForTrajectorySegment ──────────────────────────────────────────────
+
+describe('framingForTrajectorySegment', () => {
+    const rock = new THREE.Vector3(2, 0, 0);
+    const trail = [
+        new THREE.Vector3(-4, 0, 0),
+        new THREE.Vector3(-2, 0, 0.2),
+        new THREE.Vector3(0, 0, 0.1),
+        rock.clone(),
+    ];
+    const cameraAbove = new THREE.Vector3(0, 5, 5);
+
+    function frame(over: Partial<Parameters<typeof framingForTrajectorySegment>[0]> = {}) {
+        return framingForTrajectorySegment({
+            points: trail.map((p) => p.clone()),
+            rockPosition: rock.clone(),
+            currentCameraPosition: cameraAbove.clone(),
+            fovDeg: 55,
+            aspect: 16 / 9,
+            ...over,
+        });
+    }
+
+    it('todos os pontos do trecho cabem no cone de visão a partir da posição calculada', () => {
+        const { position, target } = frame();
+        const viewDir = target.clone().sub(position).normalize();
+        const halfFovRad = THREE.MathUtils.degToRad(55) * 0.5;
+        for (const point of trail) {
+            const toPoint = point.clone().sub(position).normalize();
+            const angle = Math.acos(THREE.MathUtils.clamp(viewDir.dot(toPoint), -1, 1));
+            expect(angle).toBeLessThanOrEqual(halfFovRad + 1e-6);
+        }
     });
 
-    it('com orbitMode true mas sem elementos orbitais cai para close-up', () => {
-        const framing = computeFocusFraming(makeObjectWithPosition(), true);
-        expect(framing).not.toBeNull();
-        expect(framing!.transition).toBe('preserve_heading');
+    it('o alvo fica entre o centro do trecho e a rocha (viés na protagonista)', () => {
+        const { target } = frame();
+        const box = new THREE.Box3().setFromPoints(trail);
+        const sphere = new THREE.Sphere();
+        box.getBoundingSphere(sphere);
+        expect(target.distanceTo(rock)).toBeLessThan(sphere.center.distanceTo(rock));
+    });
+
+    it('a direção de vista nunca fica quase paralela à corda da trajetória', () => {
+        // Câmera alinhada com a corda (olhando a linha de topo): deve ser corrigida.
+        const { position, target } = frame({ currentCameraPosition: new THREE.Vector3(20, 0.1, 0) });
+        const viewDir = position.clone().sub(target).normalize();
+        const chord = rock.clone().sub(trail[0]).normalize();
+        expect(Math.abs(viewDir.dot(chord))).toBeLessThan(0.9);
+    });
+
+    it('painéis abertos (frações visíveis menores) afastam mais a câmera', () => {
+        const full = frame();
+        const withSheet = frame({ visibleHeightFraction: 0.55 });
+        expect(withSheet.position.distanceTo(withSheet.target))
+            .toBeGreaterThan(full.position.distanceTo(full.target));
+    });
+
+    it('com menos de 2 pontos, recua da rocha mantendo um enquadramento utilizável', () => {
+        const { position, target } = frame({ points: [] });
+        expect(target.distanceTo(rock)).toBeCloseTo(0, 9);
+        expect(position.distanceTo(rock)).toBeCloseTo(3, 6);
+    });
+
+    it('a câmera ganha elevação para não ler a linha rente ao plano da cena', () => {
+        const { position, target } = frame();
+        expect(position.y).toBeGreaterThan(target.y);
     });
 });

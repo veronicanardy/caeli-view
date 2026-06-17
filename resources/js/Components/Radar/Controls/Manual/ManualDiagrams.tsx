@@ -101,8 +101,8 @@ export function RadarGuideDiagram({ locale, technical = false }: { locale: 'pt-B
                         <line x1={EX} y1={EY} x2={AX} y2={AY} stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.85" strokeDasharray="3 4" />
                         <text x={(EX + AX) / 2 + 8} y={(EY + AY) / 2 - 10} fill="#fef3c7" fontSize="11" fontStyle="italic" textAnchor="middle">r = (x, y, z)</text>
                         <rect x="12" y="222" width="232" height="48" rx="5" fill="#0a1628" fillOpacity="0.92" stroke="#22d3ee" strokeOpacity="0.25" strokeWidth="1" />
-                        <text x="22" y="242" fill="#bae6fd" fontSize="11" fontFamily="monospace">r_scene = f(d_DL) · r̂</text>
-                        <text x="22" y="260" fill="#bae6fd" fontSize="10" fontFamily="monospace" opacity="0.75">f(r) = K · ln(1 + r/R₀)</text>
+                        <text x="22" y="242" fill="#bae6fd" fontSize="11" fontFamily="monospace">p_helio = p_earth + r / AU</text>
+                        <text x="22" y="260" fill="#bae6fd" fontSize="10" fontFamily="monospace" opacity="0.75">p_scene = (x, z, −y) · LINEAR_AU_SCALE</text>
                     </>
                 )}
             </svg>

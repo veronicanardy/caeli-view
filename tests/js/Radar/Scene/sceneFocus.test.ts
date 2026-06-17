@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { shouldShowLabelForObject, shouldUseHelioScene } from '@/Components/Radar/Scene/sceneFocus';
-import type { ClosestNowObject } from '@/types';
+import { shouldShowLabelForObject } from '@/Components/Radar/Scene/sceneFocus';
 
 /**
- * `sceneFocus` decide visibilidade de labels e modo heliocêntrico a partir de
- * flags já resolvidas. Os testes abaixo cobrem as combinações críticas de cada
- * função — condições que, se invertidas, mudam o comportamento visual silenciosamente.
+ * `sceneFocus` decide visibilidade de labels a partir de flags já resolvidas. Os
+ * testes abaixo cobrem as combinações críticas de cada função, condições que, se
+ * invertidas, mudam o comportamento visual silenciosamente.
  */
 
 // ─── shouldShowLabelForObject ──────────────────────────────────────────────────
@@ -56,86 +55,5 @@ describe('shouldShowLabelForObject', () => {
         expect(shouldShowLabelForObject({
             id: 'A', selectedId: null, showLabels: true, orbitLabelsOnly: false, hideAsteroidLabels: false,
         })).toBe(true);
-    });
-});
-
-// ─── shouldUseHelioScene ───────────────────────────────────────────────────────
-
-/** Constrói um ClosestNowObject mínimo com os campos de órbita necessários. */
-function makeObjectWithOrbit(tpJd: number): ClosestNowObject {
-    return {
-        approach: { id: 'X', name: 'X', displayName: null, objectType: 'asteroid', hazardFlag: false, approachDate: null, nominalDistanceKm: null, lunarDistance: null, absoluteMagnitude: null, diameterMeters: null, estimatedDiameterMinMeters: null, estimatedDiameterMaxMeters: null, relativeVelocityKph: null, subtitle: null },
-        trajectory: {
-            status: 'available',
-            horizonsFailureKind: null,
-            currentVelocityKph: null,
-            motionState: null,
-            pastPoints: [],
-            currentPoint: null,
-            futurePoints: [],
-            orbitalElements: {
-                tpJd,
-                eccentricity: 0.5,
-                semiMajorAxisAU: 1.5,
-                inclinationDeg: 10,
-                longitudeAscendingNodeDeg: 0,
-                argumentOfPerihelionDeg: 0,
-                epochJd: 2451545.0,
-            },
-        },
-        currentDistanceKm: 100000,
-        currentDistanceLD: 0.26,
-    } as unknown as ClosestNowObject;
-}
-
-function makeObjectWithoutOrbit(): ClosestNowObject {
-    return {
-        approach: { id: 'Y', name: 'Y', displayName: null, objectType: 'asteroid', hazardFlag: false, approachDate: null, nominalDistanceKm: null, lunarDistance: null, absoluteMagnitude: null, diameterMeters: null, estimatedDiameterMinMeters: null, estimatedDiameterMaxMeters: null, relativeVelocityKph: null, subtitle: null },
-        trajectory: { status: 'available', horizonsFailureKind: null, currentVelocityKph: null, motionState: null, pastPoints: [], currentPoint: null, futurePoints: [], orbitalElements: null },
-        currentDistanceKm: 100000,
-        currentDistanceLD: 0.26,
-    } as unknown as ClosestNowObject;
-}
-
-describe('shouldUseHelioScene', () => {
-    it('retorna true quando todas as condições são satisfeitas', () => {
-        const obj = makeObjectWithOrbit(2460000.5);
-        expect(shouldUseHelioScene(true, true, obj)).toBe(true);
-    });
-
-    it('retorna false quando orbitMode está desligado', () => {
-        const obj = makeObjectWithOrbit(2460000.5);
-        expect(shouldUseHelioScene(false, true, obj)).toBe(false);
-    });
-
-    it('retorna false quando selectedHasOrbit é false', () => {
-        const obj = makeObjectWithOrbit(2460000.5);
-        expect(shouldUseHelioScene(true, false, obj)).toBe(false);
-    });
-
-    it('retorna false quando focusedObject é null', () => {
-        expect(shouldUseHelioScene(true, true, null)).toBe(false);
-    });
-
-    it('retorna false quando o objeto não tem elementos orbitais', () => {
-        const obj = makeObjectWithoutOrbit();
-        expect(shouldUseHelioScene(true, true, obj)).toBe(false);
-    });
-
-    it('retorna false quando tpJd é zero — época de periélio ausente', () => {
-        // tpJd = 0 indica que a época de periélio não foi preenchida pelo pipeline.
-        // Sem ela a posição Kepleriana não é computável, então a cena helio não pode ser usada.
-        const obj = makeObjectWithOrbit(0);
-        expect(shouldUseHelioScene(true, true, obj)).toBe(false);
-    });
-
-    it('retorna false quando tpJd é NaN', () => {
-        const obj = makeObjectWithOrbit(NaN);
-        expect(shouldUseHelioScene(true, true, obj)).toBe(false);
-    });
-
-    it('retorna false quando tpJd é Infinity', () => {
-        const obj = makeObjectWithOrbit(Infinity);
-        expect(shouldUseHelioScene(true, true, obj)).toBe(false);
     });
 });

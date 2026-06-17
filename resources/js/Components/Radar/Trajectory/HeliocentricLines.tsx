@@ -7,8 +7,8 @@
 
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
-import { DEFAULT_ORBIT_LINE_OPACITY, ORBIT_LINE_SEGMENTS } from './trajectoryConstants';
+import { buildHeliocentricEllipse, ORBIT_ELLIPSE_SEGMENTS } from '@/lib/sceneEphemeris';
+import { DEFAULT_ORBIT_LINE_OPACITY } from './trajectoryConstants';
 
 /**
  * Utilitários visuais para linhas heliocêntricas já amostradas ou descritas por
@@ -44,56 +44,30 @@ function disposeOrbitLine(lineObject: THREE.Line) {
 }
 
 /**
- * Elipse orbital heliocêntrica no plano eclíptico.
- *
- * Constrói a elipse em coordenadas eclípticas (x, y) e depois converte para
- * coordenadas de cena (scene_x = ecl_x, scene_z = -ecl_y), o mesmo mapeamento
- * de `helioToScene` em `sceneEphemeris`. O Sol fica no foco (deslocamento c = a * e).
+ * Elipse orbital heliocêntrica planetária. A geometria 3D vive em buildHeliocentricEllipse
+ * (sceneEphemeris) — a mesma fonte que posiciona o planeta, garantindo que ele caia sobre a
+ * linha mesmo com a órbita inclinada. Este componente só monta a geometria THREE e o material.
  */
-function buildEllipsePoints(
-    semiMajorAU: number,
-    eccentricity: number,
-    lonPerihelionDeg: number,
-    segments = ORBIT_LINE_SEGMENTS,
-) {
-    const a = semiMajorAU * ORBIT_AU_SCALE;
-    const e = eccentricity;
-    const b = a * Math.sqrt(Math.max(0, 1 - e * e));
-    const c = a * e;
-    const w = lonPerihelionDeg * Math.PI / 180;
-    const cosW = Math.cos(w);
-    const sinW = Math.sin(w);
-    const points: number[] = [];
-
-    for (let index = 0; index <= segments; index += 1) {
-        const t = (index / segments) * Math.PI * 2;
-        const xP = a * Math.cos(t) - c;
-        const yP = b * Math.sin(t);
-        const eclX = xP * cosW - yP * sinW;
-        const eclY = xP * sinW + yP * cosW;
-
-        points.push(eclX, 0, -eclY);
-    }
-
-    return new Float32Array(points);
-}
-
 export function PlanetOrbitEllipseHelio({
     semiMajorAU,
     eccentricity,
     lonPerihelionDeg,
+    inclinationDeg,
+    lonAscNodeDeg,
     color,
     opacity,
 }: {
     semiMajorAU: number;
     eccentricity: number;
     lonPerihelionDeg: number;
+    inclinationDeg: number;
+    lonAscNodeDeg: number;
     color: string;
     opacity: number;
 }) {
     const points = useMemo(
-        () => buildEllipsePoints(semiMajorAU, eccentricity, lonPerihelionDeg),
-        [semiMajorAU, eccentricity, lonPerihelionDeg],
+        () => buildHeliocentricEllipse(semiMajorAU, eccentricity, lonPerihelionDeg, inclinationDeg, lonAscNodeDeg, ORBIT_ELLIPSE_SEGMENTS),
+        [semiMajorAU, eccentricity, lonPerihelionDeg, inclinationDeg, lonAscNodeDeg],
     );
     const lineObject = useMemo(() => createOrbitLine(points, color, opacity), [points, color, opacity]);
 

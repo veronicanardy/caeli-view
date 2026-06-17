@@ -45,6 +45,15 @@ final class HorizonsTextParser
     private const MIN_COLUMNS     = 5;
 
     /**
+     * Teto físico da distância geocêntrica (km) aceita para um ponto de efeméride: 750 milhões de km
+     * (≈ 5 UA). Nenhum objeto deste radar chega perto disso. Os famosos mais distantes (Ceres, no
+     * cinturão externo) ficam em ~3,7 UA da Terra; os NEOs, muito menos. Eros, por exemplo, tem afélio
+     * ≈ 1,78 UA, então a distância máxima à Terra é ≈ 1,78 + 1 = 2,78 UA ≈ 418 M km. Acima do teto, o
+     * ponto não pode ser o objeto pedido e é descartado em parseVectorPoints.
+     */
+    private const MAX_GEOCENTRIC_DISTANCE_KM = 750_000_000.0;
+
+    /**
      * Verifica se a resposta contém um bloco de efemérides válido.
      *
      * A API Horizons delimita o bloco de dados com $$SOE (Start Of Ephemeris)
@@ -92,17 +101,21 @@ final class HorizonsTextParser
             $euclideanKm  = sqrt($x ** 2 + $y ** 2 + $z ** 2);
             $distanceKm   = $rangeKm ?? $euclideanKm;
 
-            // Sanity check: geocentric distance > 750 M km (≈ 5 AU) is physically impossible for
-            // any inner-system object (Eros aphelion ≈ 1.78 AU + Earth ≈ 1 AU ≈ 418 M km max).
-            // Log when this happens so we can inspect the raw Horizons response.
-            if ($distanceKm > 750_000_000) {
-                \Illuminate\Support\Facades\Log::warning('[HorizonsTextParser] distância geocêntrica suspeita', [
+            // Sanity check: distância geocêntrica acima de MAX_GEOCENTRIC_DISTANCE_KM é fisicamente
+            // impossível para qualquer objeto deste radar (NEOs e os famosos do cinturão interno).
+            // Quando acontece, o ponto está corrompido (já vimos efemérides de outro corpo entrarem
+            // sob o id errado): DESCARTAMOS o ponto em vez de só logar, para que um valor absurdo nunca
+            // seja propagado ao card nem gravado no cache de trajetória e fique preso lá.
+            if ($distanceKm > self::MAX_GEOCENTRIC_DISTANCE_KM) {
+                \Illuminate\Support\Facades\Log::warning('[HorizonsTextParser] ponto descartado: distância geocêntrica impossível', [
                     'distanceKm'  => $distanceKm,
                     'rangeKm'     => $rangeKm,
                     'euclideanKm' => $euclideanKm,
                     'x' => $x, 'y' => $y, 'z' => $z,
                     'raw_line'    => $line,
                 ]);
+
+                continue;
             }
 
             $points[] = new HorizonsVectorPointData(

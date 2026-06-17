@@ -32,8 +32,8 @@ Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógi
 
 ### Shell E Ajuda
 
-- `MapManualModal.tsx`: shell do modal do manual, com arraste, resize, abas e fechamento.
-- `WelcomeToast.tsx`: toast de primeira visita para radar e órbita.
+- `MapManualModal.tsx`: shell do modal do manual, com arraste, resize, abas e fechamento. Quando a página tem o tutorial interativo (`Tutorial/RadarTutorialProvider`), o header exibe o botão "Rever tutorial", que fecha o guia e reinicia o tutorial.
+- `WelcomeToast.tsx`: toast de primeira visita para radar e órbita. Fica suprimido enquanto o tutorial interativo está ativo ou prestes a abrir; ao concluir/pular, o tutorial marca as chaves legadas para os toasts não reaparecerem de forma redundante.
 
 ### Manual
 
@@ -49,24 +49,25 @@ Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógi
 `FriendlyManual.tsx` e `TechnicalManual.tsx` cobrem avisos científicos obrigatórios:
 
 - **Órbita osculadora**: a elipse exibida no modo órbita é calculada a partir dos elementos atuais; não é simulação dinâmica nem previsão futura. Perturbações planetárias não são integradas localmente.
-- **Escala logarítmica**: distâncias são comprimidas radialmente (modo radar). Avisos inline na cena reforçam isso.
+- **Escala linear única**: distâncias estão em escala linear em UA (sem compressão), fiéis às proporções reais entre os corpos; a aproximação é revelada por zoom de câmera, não esticando a régua. Os tamanhos dos corpos são ampliados à parte. A régua log antiga só existe por trás de `?log`. Avisos inline na cena reforçam isso.
 - **Posições simbólicas**: objetos sem trajetória Horizons têm posição estimada pela distância da aproximação máxima; o ângulo na cena não tem significado físico.
-- **Tamanho dos corpos**: raios visuais amplificados ~10.000–100.000× para legibilidade.
+- **Tamanho dos corpos**: raios visuais amplificados para legibilidade (um asteroide real seria sub-pixel).
 
 Qualquer mudança de linguagem nesses manuais deve preservar esses quatro avisos.
 - `Manual/manualTypes.ts`: tipos locais compartilhados pelo manual e por controles relacionados.
 
 ### Controles Principais Da Cena
 
-- `SceneToolbar.tsx`: toolbar com Reset de vista, toggle de labels e fullscreen. Usa `Tooltip` para os três botões.
-- `ReferenceControls.tsx`: atalhos de foco para Sol, Terra, Lua e planetas, exibidos com símbolos astronômicos Unicode (☉ ♁ ☽ ✦).
+- `SceneToolbar.tsx`: toolbar com Reset de vista, toggle de labels e fullscreen. Usa `Tooltip` para os três botões. Carrega os marcadores `data-tutorial` `camera-controls`, `toggle-labels`, `toggle-fullscreen` e `reset-view` usados pelo tutorial interativo (contrato em `../Tutorial/README.md`).
+- `MobileActionBar.tsx`: barra de ações inferior do mobile (abaixo de lg:), com as três portas de entrada da interface: Objetos, Filtros e Guia. Oculta enquanto um sheet ou card ocupa o rodapé. Os botões espelham os marcadores `data-tutorial` do desktop (`object-list-toggle`, `radar-filters`, `radar-guide`); o tutorial resolve por visibilidade.
+- `ReferenceControls.tsx`: atalhos de foco para Sol, Terra, Lua e planetas, exibidos com símbolos astronômicos Unicode (☉ ♁ ☽ ✦). O cluster de botões carrega `data-tutorial="reference-controls"` para o passo de referências do tutorial. A prop `labelsAlwaysVisible` força os rótulos de texto abaixo de sm: (uso nos sheets mobile, onde há largura).
 - `Tooltip.tsx`: tooltip customizado do observatório — aparece imediatamente no hover e some após 2 s. Suporta `side` (bottom/top), `align` (center/left/right) e `hideDelay`.
 
 ### Filtros E Formulários
 
 - `ObservationControls.tsx`: formulário principal de data, tipo e busca.
-- `CompactConsoleBar.tsx`: versão condensada dos controles para espaços menores.
-- `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D.
+- `CompactConsoleBar.tsx`: barra de filtros do topo da página, somente desktop (a página esconde abaixo de lg:). No mobile os mesmos filtros vivem no bottom sheet aberto pela `MobileActionBar`. Marcada com `data-tutorial="radar-filters"`.
+- `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D. Os grupos carregam `data-tutorial="radar-filter-criterion"` e `data-tutorial="radar-filter-limit"`; o sheet mobile de filtros (`../Panels/MobileFiltersSheetContent.tsx`) duplica esses marcadores e o tutorial resolve o alvo filtrando por visibilidade real.
 
 ## Remoção do radar 2D
 

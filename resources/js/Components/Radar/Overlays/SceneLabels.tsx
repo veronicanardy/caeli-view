@@ -48,6 +48,26 @@ const LABEL_OBJECT_MIN_OCCLUDER_RADIUS_PX = 18;
 export type LabelOccluder = { center: THREE.Vector3; radius: number } | null;
 
 /**
+ * Localiza em runtime o elemento onde o drei <Html> portala os labels da cena.
+ *
+ * A estrutura de wrappers do R3F varia entre versões, então o host é descoberto
+ * subindo a partir do canvas até encontrar filhos div com position:absolute
+ * inline (assinatura dos portais do drei). Usado pelo LabelBackdropGate para
+ * alternar classes de estilo sobre todos os labels sem passar pelo React.
+ */
+export function findLabelPortalHost(canvas: HTMLCanvasElement): HTMLElement | null {
+    let node: HTMLElement | null = canvas.parentElement;
+    while (node && node !== document.body) {
+        const hasPortal = Array.from(node.children).some(
+            (el) => el instanceof HTMLDivElement && el.style.position === 'absolute',
+        );
+        if (hasPortal) return node;
+        node = node.parentElement;
+    }
+    return null;
+}
+
+/**
  * Informa a <SceneLabel> / <ScreenLabel> / <FocusProtectedHtml> qual corpo 3D, se algum, está
  * com a atenção total da câmera. Labels dentro da silhueta projetada do oclusor + margem são
  * ocultados para que o corpo em foco nunca apareça como uma pilha confusa de nomes.
@@ -101,29 +121,32 @@ export function SceneLabel({
                   onClick ? 'pointer-events-auto cursor-pointer transition hover:bg-space-950/80 hover:text-white' : 'pointer-events-none',
               ].join(' ');
 
+    // Oculta via CSS em vez de desmontar o <Html>: montar/desmontar o portal DOM a cada
+    // cruzamento de zona proibida ou silhueta de foco força layout e GC durante o movimento
+    // de câmera — exatamente o gatilho das micro-travadas. visibility é só uma troca de estilo.
+    const hidden = hiddenByFocus || hiddenByNoGo || hiddenByObjects;
+
     return (
         <group ref={labelRef} position={position}>
-            {!hiddenByFocus && !hiddenByNoGo ? (
-                <Html position={[0, 0, 0]} center distanceFactor={distanceFactor} zIndexRange={[7, 0]}>
-                    <button
-                        type="button"
-                        className={cls}
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            onClick?.();
-                        }}
-                        onPointerEnter={() => { if (onClick) cursorPointerEnter(); }}
-                        onPointerLeave={() => { if (onClick) cursorPointerLeave(); }}
-                        title={title}
-                        aria-label={title}
-                        disabled={!onClick}
-                        ref={buttonRef}
-                        style={hiddenByObjects ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
-                    >
-                        {children}
-                    </button>
-                </Html>
-            ) : null}
+            <Html position={[0, 0, 0]} center distanceFactor={distanceFactor} zIndexRange={[7, 0]}>
+                <button
+                    type="button"
+                    className={cls}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onClick?.();
+                    }}
+                    onPointerEnter={() => { if (onClick) cursorPointerEnter(); }}
+                    onPointerLeave={() => { if (onClick) cursorPointerLeave(); }}
+                    title={title}
+                    aria-label={title}
+                    disabled={!onClick}
+                    ref={buttonRef}
+                    style={hidden ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+                >
+                    {children}
+                </button>
+            </Html>
         </group>
     );
 }
@@ -159,41 +182,42 @@ export function ScreenLabel({
     const { hiddenByFocus, hiddenByNoGo, hiddenByObjects } = useLabelFrameState(
         labelRef, buttonRef, protectFromFocus ? focusOccluder : null, allowSceneOverlap,
     );
+    // Mesma razão do SceneLabel: ocultar via CSS evita montar/desmontar o portal DOM
+    // durante o movimento de câmera.
+    const hidden = hiddenByFocus || hiddenByNoGo || hiddenByObjects;
 
     return (
         <group ref={labelRef} position={position}>
-            {!hiddenByFocus && !hiddenByNoGo ? (
-                <Html position={[0, 0, 0]} center zIndexRange={[12, 0]} style={{ pointerEvents: onClick || tooltip ? 'auto' : 'none' }}>
-                    {(() => {
-                        const btn = (
-                            <button
-                                type="button"
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    onClick?.();
-                                }}
-                                onPointerEnter={() => { if (onClick) cursorPointerEnter(); }}
-                                onPointerLeave={() => { if (onClick) cursorPointerLeave(); }}
-                                title={title}
-                                aria-label={title}
-                                disabled={!onClick}
-                                ref={buttonRef}
-                                style={hiddenByObjects ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
-                                className={[
-                                    '-translate-y-[55%] max-w-[18ch] truncate rounded-lg border px-2 py-0.5 text-[12px] font-semibold leading-snug backdrop-blur',
-                                    emphasized
-                                        ? 'border-signal-cyan/55 bg-space-950/95 text-white shadow-[0_0_16px_rgba(34,211,238,0.18)]'
-                                        : 'border-white/10 bg-space-950/85 text-white/80',
-                                    onClick ? 'pointer-events-auto cursor-pointer text-left transition hover:border-signal-cyan/50 hover:bg-space-950' : 'pointer-events-none',
-                                ].join(' ')}
-                            >
-                                {children}
-                            </button>
-                        );
-                        return tooltip ? <Tooltip content={tooltip} side="top" hideDelay={200} offset={28}>{btn}</Tooltip> : btn;
-                    })()}
-                </Html>
-            ) : null}
+            <Html position={[0, 0, 0]} center zIndexRange={[12, 0]} style={{ pointerEvents: onClick || tooltip ? 'auto' : 'none' }}>
+                {(() => {
+                    const btn = (
+                        <button
+                            type="button"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onClick?.();
+                            }}
+                            onPointerEnter={() => { if (onClick) cursorPointerEnter(); }}
+                            onPointerLeave={() => { if (onClick) cursorPointerLeave(); }}
+                            title={title}
+                            aria-label={title}
+                            disabled={!onClick}
+                            ref={buttonRef}
+                            style={hidden ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+                            className={[
+                                '-translate-y-[55%] max-w-[18ch] truncate rounded-lg border px-2 py-0.5 text-[12px] font-semibold leading-snug backdrop-blur',
+                                emphasized
+                                    ? 'border-signal-cyan/55 bg-space-950/95 text-white shadow-[0_0_16px_rgba(34,211,238,0.18)]'
+                                    : 'border-white/10 bg-space-950/85 text-white/80',
+                                onClick ? 'pointer-events-auto cursor-pointer text-left transition hover:border-signal-cyan/50 hover:bg-space-950' : 'pointer-events-none',
+                            ].join(' ')}
+                        >
+                            {children}
+                        </button>
+                    );
+                    return tooltip ? <Tooltip content={tooltip} side="top" hideDelay={200} offset={28}>{btn}</Tooltip> : btn;
+                })()}
+            </Html>
         </group>
     );
 }
@@ -242,34 +266,42 @@ export function FocusProtectedHtml({
 
     return (
         <group ref={labelRef} position={position}>
-            {!hiddenByFocus ? (
-                <Html position={[0, 0, 0]} center={center} distanceFactor={distanceFactor} zIndexRange={zIndexRange} style={style}>
-                    {children}
-                </Html>
-            ) : null}
+            <Html
+                position={[0, 0, 0]}
+                center={center}
+                distanceFactor={distanceFactor}
+                zIndexRange={zIndexRange}
+                style={hiddenByFocus ? { ...style, visibility: 'hidden', pointerEvents: 'none' } : style}
+            >
+                {children}
+            </Html>
         </group>
     );
 }
 
-/**
- * Retorna true quando a órbita projetada da Lua (anel de 1 DL) encolhe abaixo de
- * COMPACT_LABEL_THRESHOLD_PX na tela — ou seja, o usuário afastou o suficiente para que os
- * labels primários longos entulhem a vizinhança Terra-Lua. Os labels mudam para forma compacta.
- */
-/**
- * Hook base compartilhado: projeta o raio orbital da Lua (1 DL) em pixels uma única vez por frame.
- * useCompactLabelMode e useHideAsteroidLabelsMode consomem o resultado sem duplicar a projeção.
- */
 // Recalcula o raio lunar projetado a cada N frames em vez de todo frame. O valor só alimenta
 // limiares de modo de label (compacto / esconder), que toleram um atraso de poucos frames; isso
 // corta 3/4 do custo desta projeção sem efeito visível.
 const LUNAR_RADIUS_FRAME_INTERVAL = 4;
 
-function useLunarRadiusPx(): number {
+// Histerese em pixels em torno do limiar: evita que o boolean oscile (e re-renderize todos os
+// labels consumidores) quando o raio projetado fica parado exatamente na fronteira.
+const LUNAR_THRESHOLD_HYSTERESIS_PX = 2;
+
+/**
+ * Hook base compartilhado: projeta o raio orbital da Lua (1 DL) em pixels e devolve apenas o
+ * boolean "está abaixo do limiar?", com histerese.
+ *
+ * O estado é booleano de propósito: a versão anterior publicava o raio numérico via setState,
+ * o que re-renderizava todos os consumidores a cada ~4 frames durante qualquer zoom contínuo.
+ * Como os consumidores só comparam contra um limiar, o componente agora só re-renderiza nos
+ * cruzamentos de fronteira (2 vezes por gesto de zoom, em vez de dezenas).
+ */
+function useLunarRadiusBelow(thresholdPx: number): boolean {
     const { camera, size } = useThree();
     const controls = useThree((s) => s.controls) as unknown as { target?: THREE.Vector3 } | null;
-    const [radiusPx, setRadiusPx] = useState(0);
-    const radiusPxRef = useRef(0);
+    const [below, setBelow] = useState(false);
+    const belowRef = useRef(false);
     const frameCount = useRef(0);
     const _target = useRef(new THREE.Vector3());
     const _center = useRef(new THREE.Vector3());
@@ -282,21 +314,30 @@ function useLunarRadiusPx(): number {
         _oneDl.current.copy(target);
         _oneDl.current.x += 1;
         _oneDl.current.project(camera);
-        const next = Math.hypot(
+        const radiusPx = Math.hypot(
             (_oneDl.current.x - _center.current.x) * size.width * 0.5,
             (_oneDl.current.y - _center.current.y) * size.height * 0.5,
         );
-        if (Math.abs(next - radiusPxRef.current) > 0.5) {
-            radiusPxRef.current = next;
-            setRadiusPx(next);
+        // Histerese: para sair do estado atual é preciso cruzar o limiar com folga.
+        const next = belowRef.current
+            ? radiusPx < thresholdPx + LUNAR_THRESHOLD_HYSTERESIS_PX
+            : radiusPx < thresholdPx - LUNAR_THRESHOLD_HYSTERESIS_PX;
+        if (next !== belowRef.current) {
+            belowRef.current = next;
+            setBelow(next);
         }
     });
 
-    return radiusPx;
+    return below;
 }
 
+/**
+ * Retorna true quando a órbita projetada da Lua (anel de 1 DL) encolhe abaixo de
+ * COMPACT_LABEL_THRESHOLD_PX na tela — ou seja, o usuário afastou o suficiente para que os
+ * labels primários longos entulhem a vizinhança Terra-Lua. Os labels mudam para forma compacta.
+ */
 export function useCompactLabelMode(): boolean {
-    return useLunarRadiusPx() < COMPACT_LABEL_THRESHOLD_PX;
+    return useLunarRadiusBelow(COMPACT_LABEL_THRESHOLD_PX);
 }
 
 /**
@@ -306,7 +347,7 @@ export function useCompactLabelMode(): boolean {
  * labels de rochas devem ser ocultados (exceto o objeto selecionado, responsabilidade do chamador).
  */
 export function useHideAsteroidLabelsMode(): boolean {
-    return useLunarRadiusPx() < HIDE_ASTEROID_LABELS_THRESHOLD_PX;
+    return useLunarRadiusBelow(HIDE_ASTEROID_LABELS_THRESHOLD_PX);
 }
 
 /**

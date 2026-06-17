@@ -32,8 +32,13 @@ const PINCH_SENSITIVITY = 0.008;
 /** Decaimento inercial do zoom por pinça (mesmo valor que InertialZoom). */
 const PINCH_DECAY = 0.82;
 
+// Buffers reutilizáveis do loop de pinça — alocar Vector3 por frame gera pressão de GC.
+const _pinchFallbackTarget = new THREE.Vector3();
+const _pinchToTarget = new THREE.Vector3();
+
 type Controls = {
     target: THREE.Vector3;
+    enabled: boolean;
     update: () => void;
     dispatchEvent?: (e: { type: string }) => void;
 };
@@ -57,6 +62,8 @@ export function TouchGestures({ minDistance, maxDistance }: { minDistance: numbe
         const el = gl.domElement;
 
         const onTouchStart = (e: TouchEvent) => {
+            // Câmera em voo (controls desabilitados): navegação ininterrupta, ignora o gesto.
+            if (controls && !controls.enabled) return;
             touchCount.current = e.touches.length;
             isDragging.current = false;
 
@@ -75,6 +82,7 @@ export function TouchGestures({ minDistance, maxDistance }: { minDistance: numbe
         };
 
         const onTouchMove = (e: TouchEvent) => {
+            if (controls && !controls.enabled) return;
             touchCount.current = e.touches.length;
 
             if (e.touches.length === 1 && primaryStart.current) {
@@ -138,8 +146,8 @@ export function TouchGestures({ minDistance, maxDistance }: { minDistance: numbe
             return;
         }
 
-        const target = controls?.target ?? new THREE.Vector3();
-        const toTarget = camera.position.clone().sub(target);
+        const target = controls?.target ?? _pinchFallbackTarget;
+        const toTarget = _pinchToTarget.copy(camera.position).sub(target);
         const dist = toTarget.length();
         const newDist = THREE.MathUtils.clamp(
             dist * Math.exp(pinchVelocity.current),

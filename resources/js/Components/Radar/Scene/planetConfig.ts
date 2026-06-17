@@ -6,6 +6,9 @@
  */
 
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
+import {
+    JUPITER, MARS, MERCURY, NEPTUNE, SATURN, URANUS, VENUS, type PlanetDatum,
+} from '@/lib/radar/planetData';
 
 /**
  * Mapeia cada planeta focalizável para sua posição de efeméride e raio de enquadramento.
@@ -16,15 +19,38 @@ type PlanetCfg = {
     ephemerisKey: keyof Pick<SceneEphemeris,
         'mercuryScenePosition' | 'venusScenePosition' | 'marsScenePosition' |
         'jupiterScenePosition' | 'saturnScenePosition' | 'uranusScenePosition' | 'neptuneScenePosition'>;
+    /**
+     * Raio usado pelo enquadramento de câmera (framingForBody → distância = raio × multiplicador).
+     * É DERIVADO de planetData.visualRadiusDl, nunca repetido à mão: uma cópia manual ficou para trás
+     * uma vez (Vênus em 0,038 enquanto o globo já renderizava 0,10), enquadrando o planeta colado.
+     * Travado por planetConfig.test.ts contra futura dessincronização.
+     */
     framingRadius: number;
 };
 
-export const PLANET_CONFIG: Record<PlanetId, PlanetCfg> = {
-    mercury: { ephemerisKey: 'mercuryScenePosition', framingRadius: 0.028 },
-    venus: { ephemerisKey: 'venusScenePosition', framingRadius: 0.038 },
-    mars: { ephemerisKey: 'marsScenePosition', framingRadius: 0.048 },
-    jupiter: { ephemerisKey: 'jupiterScenePosition', framingRadius: 0.19 },
-    saturn: { ephemerisKey: 'saturnScenePosition', framingRadius: 0.16 },
-    uranus: { ephemerisKey: 'uranusScenePosition', framingRadius: 0.13 },
-    neptune: { ephemerisKey: 'neptuneScenePosition', framingRadius: 0.12 },
+const PLANET_DATA: Record<PlanetId, PlanetDatum> = {
+    mercury: MERCURY,
+    venus: VENUS,
+    mars: MARS,
+    jupiter: JUPITER,
+    saturn: SATURN,
+    uranus: URANUS,
+    neptune: NEPTUNE,
 };
+
+const EPHEMERIS_KEY: Record<PlanetId, PlanetCfg['ephemerisKey']> = {
+    mercury: 'mercuryScenePosition',
+    venus: 'venusScenePosition',
+    mars: 'marsScenePosition',
+    jupiter: 'jupiterScenePosition',
+    saturn: 'saturnScenePosition',
+    uranus: 'uranusScenePosition',
+    neptune: 'neptuneScenePosition',
+};
+
+export const PLANET_CONFIG: Record<PlanetId, PlanetCfg> = Object.fromEntries(
+    (Object.keys(EPHEMERIS_KEY) as PlanetId[]).map((id) => [
+        id,
+        { ephemerisKey: EPHEMERIS_KEY[id], framingRadius: PLANET_DATA[id].visualRadiusDl },
+    ]),
+) as Record<PlanetId, PlanetCfg>;

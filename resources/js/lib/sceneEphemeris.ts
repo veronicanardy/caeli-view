@@ -2,7 +2,7 @@
  * Responsabilidade: efemérides leves para iluminação, posicionamento da Lua e das órbitas
  * planetárias na cena 3D do radar.
  *
- * Contrato de referencial (consistente com horizonsToScene em lib/radar/coordinates.ts):
+ * Contrato de referencial:
  * - Astronomy Engine retorna dados do Sol/Lua em EQJ (equatorial J2000).
  * - Vetores de asteroides do JPL Horizons estão em coordenadas eclípticas J2000.
  * - A cena mapeia eclíptico (x, y, z) para Three.js (x, z, −y):
@@ -16,55 +16,29 @@ import { KM_PER_AU, LUNAR_DISTANCE_KM as KM_PER_LD } from '@/lib/physicalConstan
 export const AU_IN_DL = KM_PER_AU / KM_PER_LD;
 
 /**
- * Compressão logarítmica radial — A ÚNICA regra de escala de toda a cena.
+ * Escala da régua ÚNICA do radar: quantas unidades de cena correspondem a 1 UA de distância
+ * heliocêntrica real. Escala LINEAR, então o SHAPE da órbita é exato — o Sol no foco real da elipse,
+ * excentricidade/periélio/afélio fiéis. Asteroides, Lua, planetas e Sol caem todos nesta régua; a
+ * proximidade de uma aproximação é revelada por ZOOM de câmera, nunca distorcendo a escala.
  *
- * Uma escala puramente linear (1 DL = 1 unidade) é honesta mas inutilizável: 1 UA = 389 DL, então
- * o Sol ficaria a ~389 unidades da Terra enquanto a Lua estaria em 1, uma dispersão impossível de
- * visualizar ao mesmo tempo. Em vez disso, comprimimos a DISTÂNCIA radial via logaritmo, exatamente
- * como em um diagrama astronômico em escala log:
- *
- *     r_cena = K · ln(1 + r_dl / R0)
- *
- * Propriedades que mantêm isso cientificamente defensável:
- *  - Estritamente monotônico: uma distância real maior sempre mapeia para uma distância de cena
- *    maior — nada próximo/distante inverte a ordem.
- *  - Preserva direção: apenas a magnitude é comprimida; mantemos o vetor unitário, então ângulos,
- *    inclinação orbital e a forma de cada trajetória são não distorcidos (Z nunca é achatado em
- *    relação a X/Y — a promessa central da cena 3D).
- *  - Quase linear próximo à Terra: para r ≪ R0 a curva é ≈ r·K/R0, então a vizinhança
- *    Terra–Lua–asteroide próximo fica quase fiel à escala; o log só "dobra" o enorme vazio até o Sol.
- *
- * R0 é a distância de transição (DL) abaixo da qual o mapeamento é ~linear. K é fixo para que a
- * Lua (1 DL) caia exatamente em 1 unidade de cena. Com R0 = 8, o Sol (389 DL) fica a ~33 unidades:
- * claramente mais longe que todo o resto, mas ainda na tela junto com a Lua.
+ * 300 dá aos NEOs bom respiro da Terra (≈ 2,4–6 unid), ao custo de empurrar cinturão/planetas mais
+ * longe (Ceres a ~831 unid). Fonte ÚNICA da escala da cena: mudar aqui recalibra todos os corpos.
  */
-const COMPRESS_R0_DL = 8;
-const COMPRESS_K = 1 / Math.log(1 + 1 / COMPRESS_R0_DL);
-
-/** Comprime uma distância radial em DL para unidades de cena via a regra logarítmica acima. */
-export function compressDistanceDl(rDl: number): number {
-    if (rDl <= 0) return 0;
-    return COMPRESS_K * Math.log(1 + rDl / COMPRESS_R0_DL);
-}
+export const LINEAR_AU_SCALE = 300;
 
 /**
- * Aplica a compressão logarítmica radial a um vetor de eixo de cena expresso em DL LINEARES
- * (1 unidade = 1 DL). Preserva a direção, reescalona a magnitude. Este é o único funil pelo qual
- * toda distância passa: a Lua, os vetores de asteroides do Horizons e os pontos de órbita heliocêntrica.
+ * Número de segmentos da polilinha de cada elipse orbital. A posição do planeta é amostrada DESTA
+ * mesma discretização (sampleHeliocentricEllipseAtNu), então este valor é a fonte única: mudar aqui
+ * muda a linha E a posição juntas, e o planeta nunca sai da linha. Mantido aqui (não em
+ * trajectoryConstants) para que a camada de física não dependa da camada de componentes.
  */
-export function compressSceneVector(v: [number, number, number]): [number, number, number] {
-    const r = Math.hypot(v[0], v[1], v[2]);
-    if (r < 1e-9) return [0, 0, 0];
-    const s = compressDistanceDl(r) / r;
-    return [v[0] * s, v[1] * s, v[2] * s];
-}
+export const ORBIT_ELLIPSE_SEGMENTS = 192;
 
 /**
- * Onde o marcador do Sol é desenhado, em unidades de cena: sua distância real de 1 UA passa pela
- * mesma compressão logarítmica de tudo o mais. Derivado, não escolhido à mão, para que o gap
- * Terra→Sol permaneça honesto em ORDEM em relação ao gap Terra→Lua (apenas comprimido, nunca reordenado).
+ * @deprecated "1 UA em unidades de cena" — hoje é apenas um alias de LINEAR_AU_SCALE (a régua única).
+ * Mantido enquanto os consumidores (fallback de Terra/Sol, thresholds de câmera) são migrados.
  */
-export const SUN_DISPLAY_DL = compressDistanceDl(AU_IN_DL);
+export const SUN_DISPLAY_DL = LINEAR_AU_SCALE;
 
 export type SceneEphemeris = {
     /** Vetor unitário apontando DA Terra PARA o Sol, nos eixos da cena. Usado como direção de luz. */
@@ -95,19 +69,23 @@ export type SceneEphemeris = {
     earthHelioPositionAU: { x: number; y: number; z: number };
     /** Posição heliocêntrica da Terra em unidades de cena (Sol na origem). Âncora para Lua, asteroides e visual da Terra. */
     earthScenePosition: [number, number, number];
-    /** Longitude do periélio da Terra derivada da posição real (graus). Usada para a elipse de órbita terrestre. */
-    earthLonPerihelionDeg: number;
+    /**
+     * Elementos osculadores da Terra derivados do state vector real (não fixados). i e Ω são ~0 por
+     * definição do eclíptico, mas derivados, então a elipse desenhada e a posição amostrada usam
+     * EXATAMENTE os mesmos elementos — a Terra cai sobre a própria linha como os demais planetas.
+     */
+    earthLonPerihelionDeg: number; earthInclinationDeg: number; earthLonAscNodeDeg: number; earthSemiMajorAU: number; earthEccentricity: number;
     /**
      * Posição heliocêntrica de Mercúrio em unidades de cena (Sol na origem, 1 UA = ORBIT_AU_SCALE).
      * Nulo até que a efeméride assíncrona seja resolvida.
      */
-    mercuryScenePosition: [number, number, number]; mercuryLonPerihelionDeg: number; mercurySemiMajorAU: number; mercuryEccentricity: number;
-    venusScenePosition:   [number, number, number]; venusLonPerihelionDeg:   number; venusSemiMajorAU:   number; venusEccentricity:   number;
-    marsScenePosition:    [number, number, number]; marsLonPerihelionDeg:    number; marsSemiMajorAU:    number; marsEccentricity:    number;
-    jupiterScenePosition: [number, number, number]; jupiterLonPerihelionDeg: number; jupiterSemiMajorAU: number; jupiterEccentricity: number;
-    saturnScenePosition:  [number, number, number]; saturnLonPerihelionDeg:  number; saturnSemiMajorAU:  number; saturnEccentricity:  number;
-    uranusScenePosition:  [number, number, number]; uranusLonPerihelionDeg:  number; uranusSemiMajorAU:  number; uranusEccentricity:  number;
-    neptuneScenePosition: [number, number, number]; neptuneLonPerihelionDeg: number; neptuneSemiMajorAU: number; neptuneEccentricity: number;
+    mercuryScenePosition: [number, number, number]; mercuryLonPerihelionDeg: number; mercuryInclinationDeg: number; mercuryLonAscNodeDeg: number; mercurySemiMajorAU: number; mercuryEccentricity: number;
+    venusScenePosition:   [number, number, number]; venusLonPerihelionDeg:   number; venusInclinationDeg:   number; venusLonAscNodeDeg:   number; venusSemiMajorAU:   number; venusEccentricity:   number;
+    marsScenePosition:    [number, number, number]; marsLonPerihelionDeg:    number; marsInclinationDeg:    number; marsLonAscNodeDeg:    number; marsSemiMajorAU:    number; marsEccentricity:    number;
+    jupiterScenePosition: [number, number, number]; jupiterLonPerihelionDeg: number; jupiterInclinationDeg: number; jupiterLonAscNodeDeg: number; jupiterSemiMajorAU: number; jupiterEccentricity: number;
+    saturnScenePosition:  [number, number, number]; saturnLonPerihelionDeg:  number; saturnInclinationDeg:  number; saturnLonAscNodeDeg:  number; saturnSemiMajorAU:  number; saturnEccentricity:  number;
+    uranusScenePosition:  [number, number, number]; uranusLonPerihelionDeg:  number; uranusInclinationDeg:  number; uranusLonAscNodeDeg:  number; uranusSemiMajorAU:  number; uranusEccentricity:  number;
+    neptuneScenePosition: [number, number, number]; neptuneLonPerihelionDeg: number; neptuneInclinationDeg: number; neptuneLonAscNodeDeg: number; neptuneSemiMajorAU: number; neptuneEccentricity: number;
 };
 
 let modulePromise: Promise<typeof Astronomy> | null = null;
@@ -213,38 +191,38 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
         const earthHelioEcl = A.RotateVector(eqjToEclMatrix(A), earthHelioEqj);
         const earthHelioPositionAU = { x: earthHelioEcl.x, y: earthHelioEcl.y, z: earthHelioEcl.z };
 
-        // Terra: posição heliocêntrica real — âncora dos asteroides e da Lua.
-        // Todos os planetas e a Terra: posição heliocêntrica real no plano eclíptico.
-        // ecl.x → scene X, -ecl.y → scene Z (orientação anti-horária), Y=0 (plano flat).
-        function helioToScene(ecl: { x: number; y: number; z: number }): [number, number, number] {
-            return [ecl.x * ORBIT_AU_SCALE, 0, -ecl.y * ORBIT_AU_SCALE];
-        }
+        // earthHelioPositionAU (acima) é o vetor heliocêntrico EXATO (HelioVector). É a âncora da Lua,
+        // dos asteroides e do enquadramento de câmera, então preserva a posição astronômica fiel, sem
+        // idealizar. A posição RENDERIZADA da Terra (earthScenePosition), porém, é amostrada na mesma
+        // polilinha da sua elipse — ver planetData abaixo — para que a Terra caia exatamente sobre a
+        // linha como todos os outros planetas. As duas diferem por ~0,02% (desvio de discretização),
+        // irrelevante para direção de luz e enquadramento.
 
-        const earthScenePosition = helioToScene(earthHelioPositionAU);
-        // Longitude do periélio da Terra J2000 (Ω + ω) — elemento orbital estável.
-        const earthLonPerihelionDeg = 102.94;
-
-        // Para cada planeta: posição de cena + longitude do periélio derivada da efeméride.
+        // Para cada planeta E a Terra: posição de cena 3D + elementos osculadores completos (a, e, i, Ω, ω),
+        // derivados dos vetores de estado heliocêntricos do astronomy-engine.
         //
-        // A elipse é desenhada no plano eclíptico com buildEllipsePoints, que usa:
-        //   periélio em (a-c)*cos(w), (a-c)*sin(w)  — i.e. o ângulo no plano eclíptico x/y
+        // FONTE ÚNICA DE GEOMETRIA: a posição do planeta E a elipse desenhada (buildHeliocentricEllipse)
+        // passam ambas por ellipseVertexAtNu a partir dos MESMOS i, Ω, ω. A posição é amostrada na
+        // polilinha (sampleHeliocentricEllipseAtNu), não na curva ideal, então cai exatamente sobre a
+        // linha visível — sem dois modelos de elipse para conciliar, que era a causa de Mercúrio
+        // (e alto), Urano e Netuno (longe) "saírem da linha".
         //
-        // A posição na cena vem de helioToScene: (ecl.x * scale, 0, -ecl.y * scale).
-        // O ângulo no plano da cena é portanto atan2(ecl.y, ecl.x) — mesmo frame que a elipse.
+        // i (inclinação) e Ω (nó ascendente) vêm do vetor momento angular h = r × v:
+        //   cos i = h_z / |h| ;  Ω = atan2(h_x, −h_y).
+        // ω (argumento do periélio) e ν (anomalia verdadeira) vêm do vetor de excentricidade no
+        // plano orbital. A altura eclíptica (z) é preservada na cena — inclinação real visível.
         //
-        // Para que o ponto caia na elipse:
-        //   rProj = sqrt(ecl.x² + ecl.y²)   — distância no plano (ignora ecl.z = inclinação)
-        //   ν calculado de rProj = a(1-e²)/(1+e·cosν)
-        //   sinal de ν pelo produto cruzado (ecl.x·vEclY - ecl.y·vEclX) > 0 → ν positivo
-        //   lonPerihelion = atan2(ecl.y, ecl.x) - ν
-        //
-        // Para e < 0.02 (Vênus, Netuno): a elipse é visualmente um círculo perfeito.
-        // Nesse caso a distância real oscila só ±0.3% em torno de 'a', então definir
-        // lonPerihelion = atan2(ecl.y, ecl.x) (ν=0) coloca o planeta exatamente no periélio
-        // da elipse, que tem raio 'a*(1-e) ≈ a'. O desvio visual é < 1px em qualquer zoom.
+        // ESTABILIDADE NUMÉRICA: os guardas (eccentricity || 1) e (hypot(nx,ny) || 1) impedem divisão
+        // por zero quando e→0 (ω indefinido) ou i→0 (Ω indefinido). Nesses casos isolados a posição
+        // permanece correta porque ν absorve a referência arbitrária de ω. ATENÇÃO: se e→0 E i→0
+        // SIMULTANEAMENTE, ω e ν viram arbitrários de forma independente e a posição QUEBRA. Nenhum
+        // corpo real chega nesse ponto (todos têm e ≳ 0,007 e i ≳ 0,8°), mas não alimente este caminho
+        // com uma órbita perfeitamente circular e coplanar.
         function planetData(body: Astronomy.Body): {
             scenePosition: [number, number, number];
             lonPerihelionDeg: number;
+            inclinationDeg: number;
+            lonAscNodeDeg: number;
             semiMajorAU: number;
             eccentricity: number;
         } {
@@ -253,34 +231,67 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             const eclPos = A.RotateVector(eclMatrix, new A.Vector(state.x, state.y, state.z, state.t));
             const eclVel = A.RotateVector(eclMatrix, new A.Vector(state.vx, state.vy, state.vz, state.t));
 
-            // Elementos osculadores — todos no plano eclíptico (x,y), consistente com a elipse desenhada.
+            // Elementos osculadores 3D completos (eclíptico J2000, UA / UA·dia⁻¹).
             const GM = 2.959122082855911e-4;
             const r3d = Math.hypot(eclPos.x, eclPos.y, eclPos.z);
             const v2 = eclVel.x ** 2 + eclVel.y ** 2 + eclVel.z ** 2;
             const semiMajorAU = 1 / (2 / r3d - v2 / GM);
             const rdotv = eclPos.x * eclVel.x + eclPos.y * eclVel.y + eclPos.z * eclVel.z;
-            // Vetor de excentricidade projetado no plano — define ângulo e magnitude do periélio visual.
-            const ex = (v2 / GM - 1 / r3d) * eclPos.x - (rdotv / GM) * eclVel.x;
-            const ey = (v2 / GM - 1 / r3d) * eclPos.y - (rdotv / GM) * eclVel.y;
-            const eccentricity = Math.hypot(ex, ey);
 
-            // lonPerihelionDeg: ângulo do periélio no plano — direto do vetor de excentricidade.
-            const perihelionRad = Math.atan2(ey, ex);
-            const lonPerihelionDeg = perihelionRad * 180 / Math.PI;
+            // Vetor de excentricidade 3D: aponta para o periélio, magnitude = e.
+            const exv = (v2 / GM - 1 / r3d) * eclPos.x - (rdotv / GM) * eclVel.x;
+            const eyv = (v2 / GM - 1 / r3d) * eclPos.y - (rdotv / GM) * eclVel.y;
+            const ezv = (v2 / GM - 1 / r3d) * eclPos.z - (rdotv / GM) * eclVel.z;
+            const eccentricity = Math.hypot(exv, eyv, ezv);
 
-            // Posição do planeta: ângulo planar real + raio da elipse r(ν) — alinha planeta e elipse.
-            const planeAngleRad = Math.atan2(eclPos.y, eclPos.x);
-            const nuRad = planeAngleRad - perihelionRad;
-            const p = semiMajorAU * (1 - eccentricity * eccentricity);
-            const rEllipse = p / (1 + eccentricity * Math.cos(nuRad));
-            const scenePosition: [number, number, number] = [
-                Math.cos(planeAngleRad) * rEllipse * ORBIT_AU_SCALE,
-                0,
-                -Math.sin(planeAngleRad) * rEllipse * ORBIT_AU_SCALE,
-            ];
+            // Momento angular h = r × v → inclinação i e nó ascendente Ω.
+            const hx = eclPos.y * eclVel.z - eclPos.z * eclVel.y;
+            const hy = eclPos.z * eclVel.x - eclPos.x * eclVel.z;
+            const hz = eclPos.x * eclVel.y - eclPos.y * eclVel.x;
+            const hLen = Math.hypot(hx, hy, hz) || 1;
+            const inclinationRad = Math.acos(Math.min(1, Math.max(-1, hz / hLen)));
+            // Nó ascendente: direção n = ẑ × h = (−h_y, h_x, 0).
+            const lonAscNodeRad = Math.atan2(hx, -hy);
 
-            return { scenePosition, lonPerihelionDeg, semiMajorAU, eccentricity };
+            // ω (argumento do periélio): ângulo do vetor de excentricidade medido a partir do nó
+            // ascendente, dentro do plano orbital. Mede via cos (n·e) e sin (componente fora do nó).
+            const nx = -hy;
+            const ny = hx;
+            const nLen = Math.hypot(nx, ny) || 1;
+            const cosArgP = (nx * exv + ny * eyv) / (nLen * (eccentricity || 1));
+            // sin: usa (n × e)·ĥ para o sinal correto (periélio acima/abaixo do nó).
+            const nCrossE_z = nx * eyv - ny * exv; // componente z de n × e (n tem z=0)
+            const sinArgP = (nCrossE_z * (hz / hLen)) / (nLen * (eccentricity || 1));
+            const argPerihelionRad = Math.atan2(sinArgP, cosArgP);
+
+            const inclinationDeg = inclinationRad * 180 / Math.PI;
+            const lonAscNodeDeg = ((lonAscNodeRad * 180 / Math.PI) % 360 + 360) % 360;
+            const argPerihelionDeg = ((argPerihelionRad * 180 / Math.PI) % 360 + 360) % 360;
+            // Longitude do periélio ϖ = Ω + ω (mantida para a API existente / labels).
+            const lonPerihelionDeg = (lonAscNodeDeg + argPerihelionDeg) % 360;
+
+            // Anomalia verdadeira ν: ângulo r medido a partir do periélio, no plano orbital.
+            const cosNu = (exv * eclPos.x + eyv * eclPos.y + ezv * eclPos.z) / ((eccentricity || 1) * r3d);
+            const nuSignDot = rdotv; // r·v > 0 → afastando do periélio → ν ∈ (0, π)
+            const nuRad = Math.atan2(nuSignDot >= 0 ? Math.sqrt(Math.max(0, 1 - cosNu * cosNu)) : -Math.sqrt(Math.max(0, 1 - cosNu * cosNu)), Math.min(1, Math.max(-1, cosNu)));
+
+            // Posição AMOSTRADA NA MESMA POLILINHA desenhada (a corda entre vértices, não a curva
+            // ideal), com o mesmo número de segmentos da elipse renderizada. Assim o planeta cai
+            // exatamente sobre a linha visível, com desvio zero em qualquer distância — a correção
+            // definitiva do sintoma "planeta passa pela linha" que reaparecia em Júpiter/Urano/Netuno.
+            const geom: OrbitGeometry = { semiMajorAU, eccentricity, lonPerihelionDeg, inclinationDeg, lonAscNodeDeg };
+            const scenePosition = sampleHeliocentricEllipseAtNu(geom, nuRad, ORBIT_ELLIPSE_SEGMENTS);
+
+            return { scenePosition, lonPerihelionDeg, inclinationDeg, lonAscNodeDeg, semiMajorAU, eccentricity };
         }
+
+        // Terra derivada como qualquer planeta: a, e, i, Ω, ν reais do state vector, posição amostrada
+        // na polilinha. i e Ω da Terra são ~0 por definição do eclíptico (mas derivados, não fixados),
+        // então a elipse fica praticamente no plano. earthHelioPositionAU acima permanece o vetor
+        // exato (âncora); earthScenePosition aqui é a posição renderizada, sobre a linha.
+        const earth = planetData(A.Body.Earth);
+        const earthScenePosition = earth.scenePosition;
+        const earthLonPerihelionDeg = earth.lonPerihelionDeg;
 
         const mercury = planetData(A.Body.Mercury);
         const venus    = planetData(A.Body.Venus);
@@ -309,14 +320,14 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
             subsolarLonDeg,
             earthHelioPositionAU,
             earthScenePosition,
-            earthLonPerihelionDeg,
-            mercuryScenePosition, mercuryLonPerihelionDeg: mercury.lonPerihelionDeg, mercurySemiMajorAU: mercury.semiMajorAU, mercuryEccentricity: mercury.eccentricity,
-            venusScenePosition,   venusLonPerihelionDeg:   venus.lonPerihelionDeg,   venusSemiMajorAU:   venus.semiMajorAU,   venusEccentricity:   venus.eccentricity,
-            marsScenePosition,    marsLonPerihelionDeg:    mars.lonPerihelionDeg,    marsSemiMajorAU:    mars.semiMajorAU,    marsEccentricity:    mars.eccentricity,
-            jupiterScenePosition, jupiterLonPerihelionDeg: jupiter.lonPerihelionDeg, jupiterSemiMajorAU: jupiter.semiMajorAU, jupiterEccentricity: jupiter.eccentricity,
-            saturnScenePosition,  saturnLonPerihelionDeg:  saturn.lonPerihelionDeg,  saturnSemiMajorAU:  saturn.semiMajorAU,  saturnEccentricity:  saturn.eccentricity,
-            uranusScenePosition,  uranusLonPerihelionDeg:  uranus.lonPerihelionDeg,  uranusSemiMajorAU:  uranus.semiMajorAU,  uranusEccentricity:  uranus.eccentricity,
-            neptuneScenePosition, neptuneLonPerihelionDeg: neptune.lonPerihelionDeg, neptuneSemiMajorAU: neptune.semiMajorAU, neptuneEccentricity: neptune.eccentricity,
+            earthLonPerihelionDeg, earthInclinationDeg: earth.inclinationDeg, earthLonAscNodeDeg: earth.lonAscNodeDeg, earthSemiMajorAU: earth.semiMajorAU, earthEccentricity: earth.eccentricity,
+            mercuryScenePosition, mercuryLonPerihelionDeg: mercury.lonPerihelionDeg, mercuryInclinationDeg: mercury.inclinationDeg, mercuryLonAscNodeDeg: mercury.lonAscNodeDeg, mercurySemiMajorAU: mercury.semiMajorAU, mercuryEccentricity: mercury.eccentricity,
+            venusScenePosition,   venusLonPerihelionDeg:   venus.lonPerihelionDeg,   venusInclinationDeg:   venus.inclinationDeg,   venusLonAscNodeDeg:   venus.lonAscNodeDeg,   venusSemiMajorAU:   venus.semiMajorAU,   venusEccentricity:   venus.eccentricity,
+            marsScenePosition,    marsLonPerihelionDeg:    mars.lonPerihelionDeg,    marsInclinationDeg:    mars.inclinationDeg,    marsLonAscNodeDeg:    mars.lonAscNodeDeg,    marsSemiMajorAU:    mars.semiMajorAU,    marsEccentricity:    mars.eccentricity,
+            jupiterScenePosition, jupiterLonPerihelionDeg: jupiter.lonPerihelionDeg, jupiterInclinationDeg: jupiter.inclinationDeg, jupiterLonAscNodeDeg: jupiter.lonAscNodeDeg, jupiterSemiMajorAU: jupiter.semiMajorAU, jupiterEccentricity: jupiter.eccentricity,
+            saturnScenePosition,  saturnLonPerihelionDeg:  saturn.lonPerihelionDeg,  saturnInclinationDeg:  saturn.inclinationDeg,  saturnLonAscNodeDeg:  saturn.lonAscNodeDeg,  saturnSemiMajorAU:  saturn.semiMajorAU,  saturnEccentricity:  saturn.eccentricity,
+            uranusScenePosition,  uranusLonPerihelionDeg:  uranus.lonPerihelionDeg,  uranusInclinationDeg:  uranus.inclinationDeg,  uranusLonAscNodeDeg:  uranus.lonAscNodeDeg,  uranusSemiMajorAU:  uranus.semiMajorAU,  uranusEccentricity:  uranus.eccentricity,
+            neptuneScenePosition, neptuneLonPerihelionDeg: neptune.lonPerihelionDeg, neptuneInclinationDeg: neptune.inclinationDeg, neptuneLonAscNodeDeg: neptune.lonAscNodeDeg, neptuneSemiMajorAU: neptune.semiMajorAU, neptuneEccentricity: neptune.eccentricity,
         };
     } catch {
         return null;
@@ -324,16 +335,13 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
 }
 
 /**
- * Escala linear UA da camada heliocêntrica: quantas unidades de cena correspondem a 1 UA de distância
- * heliocêntrica real. Definida igual a SUN_DISPLAY_DL para que 1 UA (distância Terra–Sol) caia
- * exatamente sobre o Sol desenhado — ou seja, a referência de órbita de 1 UA fecha de volta na Terra
- * na origem.
- *
- * Crucialmente esta é uma escala LINEAR, então o SHAPE da órbita é exato: o Sol está no foco real da
- * elipse, excentricidade/periélio/afélio são todos fiéis. A camada do modo radar (Lua, asteroides
- * próximos) é a que usa a compressão log — as duas camadas se encontram no Sol.
+ * @deprecated Aliases da régua única (LINEAR_AU_SCALE), mantidos enquanto os consumidores são
+ * migrados. ORBIT_AU_SCALE era a escala log-derivada (≈96) que a matemática gerava antes de ser
+ * reescalada; agora a matemática já gera direto na régua única, então ambos valem LINEAR_AU_SCALE
+ * e LINEAR_SCALE_FACTOR é 1 (sem reescalonamento).
  */
-export const ORBIT_AU_SCALE = SUN_DISPLAY_DL;
+export const ORBIT_AU_SCALE = LINEAR_AU_SCALE;
+export const LINEAR_SCALE_FACTOR = 1;
 
 /**
  * Perifocal (x em direção ao periélio, y a +90° no sentido do movimento) → eclíptico heliocêntrico
@@ -363,49 +371,37 @@ export function perifocalToEclipticAU(
     return { x, y, z };
 }
 
-/**
- * Constrói a órbita heliocêntrica completa do asteroide como um loop fechado de pontos no espaço de
- * cena, com o Sol na origem e escala LINEAR em UA (1 UA = ORBIT_AU_SCALE unidades). Fiel à forma:
- * excentricidade, periélio e orientação orbital são exatos — sem distorção logarítmica da curva.
- *
- * Usado na cena órbita-solar junto com o propagador de Kepler de lib/keplerOrbit. Como ambos
- * compartilham perifocalToEclipticAU abaixo, o ponto propagado "agora" cai NA elipse desenhada por construção.
- */
-export function buildHeliocentricOrbit(
-    elements: {
-        ec: number;
-        qrAu: number;
-        inDeg: number;
-        omDeg: number;
-        wDeg: number;
-    },
-    segments = 256,
-): Float32Array | null {
+/** Converte elementos com periélio (q, ω, Ω) na OrbitGeometry usada pela elipse (a, ϖ=Ω+ω). */
+export function orbitGeometryFromElements(elements: {
+    ec: number; qrAu: number; inDeg: number; omDeg: number; wDeg: number;
+}): OrbitGeometry | null {
     const { ec, qrAu, inDeg, omDeg, wDeg } = elements;
     if (!Number.isFinite(ec) || ec < 0 || ec >= 1) return null;     // apenas órbitas ligadas
     if (!Number.isFinite(qrAu) || !(qrAu > 0)) return null;          // periélio válido
     if (!Number.isFinite(inDeg) || !Number.isFinite(omDeg) || !Number.isFinite(wDeg)) return null;
+    return {
+        semiMajorAU: qrAu / (1 - ec),
+        eccentricity: ec,
+        lonPerihelionDeg: omDeg + wDeg, // ϖ = Ω + ω
+        inclinationDeg: inDeg,
+        lonAscNodeDeg: omDeg,
+    };
+}
 
-    const a = qrAu / (1 - ec);          // semieixo maior, UA
-    const p = a * (1 - ec * ec);        // semilatus rectum, UA
-
-    const out: number[] = [];
-    for (let s = 0; s <= segments; s += 1) {
-        const nu = (s / segments) * Math.PI * 2; // anomalia verdadeira
-        const r = p / (1 + ec * Math.cos(nu));   // UA
-        const xp = r * Math.cos(nu);
-        const yp = r * Math.sin(nu);
-
-        const ecl = perifocalToEclipticAU(xp, yp, inDeg, omDeg, wDeg);
-
-        // UA → cena (LINEAR, forma exata); eclíptico (x, y, z) → cena (x, z, −y).
-        out.push(
-            ecl.x * ORBIT_AU_SCALE,
-            ecl.z * ORBIT_AU_SCALE,
-            -ecl.y * ORBIT_AU_SCALE,
-        );
-    }
-    return new Float32Array(out);
+/**
+ * Constrói a órbita heliocêntrica completa do asteroide como loop fechado no espaço de cena.
+ * Delega a buildHeliocentricEllipse — a MESMA fonte de geometria dos planetas — para que asteroide,
+ * planeta e a posição amostrada compartilhem um único gerador de vértice (ellipseVertexAtNu).
+ * Assim a posição "agora" (sampleHeliocentricEllipseAtNu no ν atual) cai exatamente sobre esta
+ * polilinha, com desvio zero em qualquer distância (afélio de cometa inclusive).
+ */
+export function buildHeliocentricOrbit(
+    elements: { ec: number; qrAu: number; inDeg: number; omDeg: number; wDeg: number },
+    segments = ORBIT_ELLIPSE_SEGMENTS,
+): Float32Array | null {
+    const g = orbitGeometryFromElements(elements);
+    if (!g) return null;
+    return buildHeliocentricEllipse(g.semiMajorAU, g.eccentricity, g.lonPerihelionDeg, g.inclinationDeg, g.lonAscNodeDeg, segments);
 }
 
 /**
@@ -413,8 +409,87 @@ export function buildHeliocentricOrbit(
  * Convenção de eixos: eclíptico (x, y, z) → cena (x, z, −y).
  * Norte eclíptico (z > 0) aponta para +Y da cena; plano XZ da cena é o plano eclíptico.
  */
-export function helioAUToSunCenteredScene(p: { x: number; y: number; z: number }): [number, number, number] {
-    return [p.x * ORBIT_AU_SCALE, p.z * ORBIT_AU_SCALE, -p.y * ORBIT_AU_SCALE];
+export function helioAUToSunCenteredScene(
+    p: { x: number; y: number; z: number },
+    scale: number = ORBIT_AU_SCALE,
+): [number, number, number] {
+    return [p.x * scale, p.z * scale, -p.y * scale];
+}
+
+export type OrbitGeometry = {
+    semiMajorAU: number;
+    eccentricity: number;
+    /** Longitude do periélio ϖ = Ω + ω (graus). */
+    lonPerihelionDeg: number;
+    inclinationDeg: number;
+    lonAscNodeDeg: number;
+};
+
+/**
+ * Vértice EXATO da órbita na anomalia verdadeira ν, em unidades de cena. Único ponto onde a
+ * geometria orbital vira coordenada de cena: tanto a polilinha desenhada quanto a amostragem da
+ * posição do planeta passam por aqui, então não existe segunda fórmula que possa divergir.
+ */
+function ellipseVertexAtNu(g: OrbitGeometry, nu: number): [number, number, number] {
+    const a = g.semiMajorAU;
+    const e = g.eccentricity;
+    const p = a * (1 - e * e);                       // semilatus rectum, UA
+    const argPerihelionDeg = g.lonPerihelionDeg - g.lonAscNodeDeg; // ω = ϖ − Ω
+    const r = p / (1 + e * Math.cos(nu));            // UA, medido a partir do foco (Sol)
+    const ecl = perifocalToEclipticAU(r * Math.cos(nu), r * Math.sin(nu), g.inclinationDeg, g.lonAscNodeDeg, argPerihelionDeg);
+    return [ecl.x * ORBIT_AU_SCALE, ecl.z * ORBIT_AU_SCALE, -ecl.y * ORBIT_AU_SCALE];
+}
+
+/**
+ * Elipse orbital heliocêntrica 3D como loop fechado de pontos no espaço de cena (Sol na origem,
+ * escala LINEAR em UA). Varre a anomalia verdadeira ν em `segments` passos uniformes.
+ *
+ * A inclinação é preservada (3D), o Sol fica no foco (r(ν) mede a partir do foco). Como
+ * sampleHeliocentricEllipseAtNu amostra ESTA MESMA polilinha (a corda entre vértices, não a curva
+ * ideal), o planeta cai EXATAMENTE sobre a linha desenhada — desvio zero em qualquer distância,
+ * escala ou número de segmentos. Era a causa de Júpiter/Urano/Netuno "passarem pela linha":
+ * a posição estava na curva contínua, a linha era um polígono, e a diferença crescia com o raio.
+ *
+ * Função pura (sem THREE/DOM) para ser testável diretamente. O componente de linha a consome.
+ */
+export function buildHeliocentricEllipse(
+    semiMajorAU: number,
+    eccentricity: number,
+    lonPerihelionDeg: number,
+    inclinationDeg: number,
+    lonAscNodeDeg: number,
+    segments = 192,
+): Float32Array {
+    const g: OrbitGeometry = { semiMajorAU, eccentricity, lonPerihelionDeg, inclinationDeg, lonAscNodeDeg };
+    const out = new Float32Array((segments + 1) * 3);
+    for (let index = 0; index <= segments; index += 1) {
+        const v = ellipseVertexAtNu(g, (index / segments) * Math.PI * 2);
+        const base = index * 3;
+        out[base] = v[0];
+        out[base + 1] = v[1];
+        out[base + 2] = v[2];
+    }
+    return out;
+}
+
+/**
+ * Ponto SOBRE A POLILINHA desenhada (não sobre a curva ideal) na anomalia verdadeira ν, com o mesmo
+ * `segments` da elipse renderizada. Interpola linearmente na corda entre os dois vértices que cercam
+ * ν — exatamente o que o renderizador de linha faz entre os pontos. Resultado: a posição do corpo
+ * coincide com a aresta visível, com desvio zero independente da distância. É a forma mais forte da
+ * "fonte única": não só a mesma fórmula, mas o mesmo polígono.
+ */
+export function sampleHeliocentricEllipseAtNu(g: OrbitGeometry, nu: number, segments = 192): [number, number, number] {
+    const twoPi = Math.PI * 2;
+    const norm = ((nu % twoPi) + twoPi) % twoPi;     // ν em [0, 2π)
+    const f = (norm / twoPi) * segments;             // posição fracionária no anel de vértices
+    const i0 = Math.floor(f);
+    const t = f - i0;                                // fração dentro do segmento [i0, i0+1]
+    const nu0 = (i0 / segments) * twoPi;
+    const nu1 = ((i0 + 1) / segments) * twoPi;
+    const a = ellipseVertexAtNu(g, nu0);
+    const b = ellipseVertexAtNu(g, nu1);
+    return [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]), a[2] + t * (b[2] - a[2])];
 }
 
 export { LUNAR_DISTANCE_KM as KM_PER_LD, KM_PER_AU } from '@/lib/physicalConstants';
@@ -432,30 +507,8 @@ export function runSceneEphemerisAssertions(): void {
         }
     };
 
-    // A Lua (1 DL) cai exatamente em 1 unidade de cena por construção de COMPRESS_K.
-    approx(compressDistanceDl(1), 1, 1e-9, 'Lua em 1 DL → 1 unidade de cena');
-
-    // A compressão é estritamente monotônica em (0, ∞) — meia distância é mais próxima que a distância inteira.
-    if (!(compressDistanceDl(0.5) < compressDistanceDl(1))) {
-        throw new Error('[sceneEphemeris] compressão deve ser monotônica');
-    }
-    if (!(compressDistanceDl(10) < compressDistanceDl(100))) {
-        throw new Error('[sceneEphemeris] compressão deve ser monotônica em raios maiores');
-    }
-
-    // A compressão preserva a direção (apenas a magnitude é reescalonada).
-    const v: [number, number, number] = [10, 5, 2];
-    const c = compressSceneVector(v);
-    const r0 = Math.hypot(...v);
-    const r1 = Math.hypot(...c);
-    approx(c[0] / r1, v[0] / r0, 1e-12, 'compressão preserva direção x');
-    approx(c[1] / r1, v[1] / r0, 1e-12, 'compressão preserva direção y');
-    approx(c[2] / r1, v[2] / r0, 1e-12, 'compressão preserva direção z');
-
-    // 1 UA deve dobrar para uma distância de cena claramente maior que a Lua, mas não absurdamente.
-    if (!(SUN_DISPLAY_DL > 20 && SUN_DISPLAY_DL < 60)) {
-        throw new Error(`[sceneEphemeris] SUN_DISPLAY_DL fora da faixa esperada: ${SUN_DISPLAY_DL}`);
-    }
+    // Régua única: 1 UA cai exatamente em LINEAR_AU_SCALE unidades de cena.
+    approx(SUN_DISPLAY_DL, LINEAR_AU_SCALE, 1e-9, '1 UA mapeia para LINEAR_AU_SCALE unidades');
 
     // Perifocal para eclíptico com i = Ω = ω = 0: periélio cai em +x eclíptico.
     const p = perifocalToEclipticAU(1, 0, 0, 0, 0);

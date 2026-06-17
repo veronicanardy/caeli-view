@@ -28,19 +28,17 @@ export function RadarNavigationDesktopContent({
 }: NavigationContentProps) {
     return (
         <>
-            <div className="hidden lg:block">
-                <ReferenceSection
-                    en={en}
-                    orbitMode={orbitMode}
-                    planetsOpen={planetsOpen}
-                    onPlanetsOpenChange={onPlanetsOpenChange}
-                    onFocusEarth={() => onFocusBody('earth')}
-                    onFocusMoon={() => onFocusBody('moon')}
-                    onFocusSun={onFocusSun}
-                />
-            </div>
+            <ReferenceSection
+                en={en}
+                orbitMode={orbitMode}
+                planetsOpen={planetsOpen}
+                onPlanetsOpenChange={onPlanetsOpenChange}
+                onFocusEarth={() => onFocusBody('earth')}
+                onFocusMoon={() => onFocusBody('moon')}
+                onFocusSun={onFocusSun}
+            />
 
-            <div className="hidden min-h-0 flex-1 flex-col px-2 py-1.5 lg:flex border-t border-white/[0.07] mt-1">
+            <div className="mt-1 flex min-h-0 flex-1 flex-col border-t border-white/[0.07] px-2 py-1.5">
                 <div className="flex items-center justify-between border-b border-white/[0.07] px-1 pb-1.5 mb-1 pt-1.5">
                     <span className="text-[10px] font-medium uppercase tracking-widest text-white/50">
                         {listTitle(closestNowObjects.length, selectionMode, en)}

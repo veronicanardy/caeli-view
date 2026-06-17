@@ -6,17 +6,22 @@
  */
 
 import { Canvas } from '@react-three/fiber';
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import { LabelNoGoContext } from '../Overlays/SceneLabels';
 import type { NoGoRect } from '../Overlays/SceneLabels';
-import { CAMERA_FOV_DEG, CAMERA_VIEWS, MAX_CAMERA_DISTANCE } from './cameraConstants';
+import { CAMERA_FOV_DEG, CAMERA_NEAR, CAMERA_VIEWS, MAX_CAMERA_DISTANCE } from './cameraConstants';
+import { CameraTweenContext } from './CameraTweenContext';
+import type { TweenTo } from './CameraTweenContext';
 import type { FocusFraming } from './cameraFraming';
 import type { PlanetId } from './planetConfig';
 import type { CameraIntent } from './cameraIntent';
 import { RadarScene } from './RadarScene';
 import { preloadRealAsteroidModels } from '../Bodies/Asteroid/asteroidModelRegistry';
+import { ZoomHintContext, type ZoomHintState } from '../Bodies/Asteroid/ZoomHintContext';
+import { ZoomHintOverlay } from '../Bodies/Asteroid/ZoomHintOverlay';
+import { PerfProbe, isPerfProbeEnabled } from '../Dev/PerfProbe';
 
 type Props = {
     noGoRects: NoGoRect[];
@@ -29,11 +34,15 @@ type Props = {
     cameraIntent: CameraIntent;
     focusTarget: FocusFraming | null;
     sunFocusTarget: FocusFraming | null;
+    /** Enquadramento dos asteroides famosos (voo a um conhecido ou panorama da régua dos planetas). */
+    knownFocusTarget: FocusFraming | null;
     planetFocusTargets: Partial<Record<PlanetId, FocusFraming>>;
     ephemeris: SceneEphemeris | null;
     fallbackSunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
     showLabels: boolean;
+    /** Mostra os asteroides conhecidos na régua dos planetas (critério "famosos"). */
+    showKnownAsteroids: boolean;
     bodyCardOpen: 'earth' | 'moon' | 'sun' | PlanetId | null;
     onBodyCardOpenChange: (body: 'earth' | 'moon' | 'sun' | PlanetId | null) => void;
     onClearPlanetTargets: () => void;
@@ -60,11 +69,13 @@ export function RadarSceneCanvas({
     cameraIntent,
     focusTarget,
     sunFocusTarget,
+    knownFocusTarget,
     planetFocusTargets,
     ephemeris,
     fallbackSunDirection,
     locale,
     showLabels,
+    showKnownAsteroids,
     bodyCardOpen,
     onBodyCardOpenChange,
     onClearPlanetTargets,
@@ -73,12 +84,16 @@ export function RadarSceneCanvas({
     onFocusBody,
     onFocusTrajectoryPoint,
 }: Props) {
-    // Prioridade de foco: seleção de objeto > foco no Sol > foco em planeta.
+    // Prioridade de foco: seleção de objeto > foco no Sol > conhecido (famosos) > foco em planeta.
     // Garante que a câmera siga a seleção do usuário antes de qualquer alvo secundário.
-    const activeFocusTarget = focusTarget ?? sunFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
+    const activeFocusTarget = focusTarget ?? sunFocusTarget ?? knownFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
     const [sceneReady, setSceneReady] = useState(false);
+    const tweenToRef = useRef<TweenTo>(() => {});
+    const [zoomHintState, setZoomHintState] = useState<ZoomHintState | null>(null);
 
     return (
+        <ZoomHintContext.Provider value={{ state: zoomHintState, setState: setZoomHintState }}>
+        <CameraTweenContext.Provider value={tweenToRef}>
         <LabelNoGoContext.Provider value={noGoRects}>
             {!sceneReady && (
                 <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
@@ -89,10 +104,12 @@ export function RadarSceneCanvas({
                 </div>
             )}
             <Canvas
-                camera={{ position: CAMERA_VIEWS.perspective.toArray(), fov: CAMERA_FOV_DEG, near: 0.01, far: MAX_CAMERA_DISTANCE * 3 }}
+                camera={{ position: CAMERA_VIEWS.perspective.toArray(), fov: CAMERA_FOV_DEG, near: CAMERA_NEAR, far: MAX_CAMERA_DISTANCE * 3 }}
                 dpr={[1, 1.6]}
                 gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
             >
+                {/* Sonda de performance dev-only (?perf na URL). Remoção: apagar a pasta Dev/ e estas linhas. */}
+                {isPerfProbeEnabled() ? <PerfProbe /> : null}
                 <Suspense fallback={null}>
                     <RadarScene
                         closestNowObjects={closestNowObjects}
@@ -111,6 +128,7 @@ export function RadarSceneCanvas({
                         fallbackSunDirection={fallbackSunDirection}
                         locale={locale}
                         showLabels={showLabels}
+                        showKnownAsteroids={showKnownAsteroids}
                         onFirstFrame={() => {
                             setSceneReady(true);
                             // Adia o preload dos modelos reais para depois do primeiro frame:
@@ -139,5 +157,8 @@ export function RadarSceneCanvas({
                 </Suspense>
             </Canvas>
         </LabelNoGoContext.Provider>
+        </CameraTweenContext.Provider>
+        <ZoomHintOverlay />
+        </ZoomHintContext.Provider>
     );
 }

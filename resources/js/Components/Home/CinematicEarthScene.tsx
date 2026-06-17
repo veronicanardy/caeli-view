@@ -1,4 +1,15 @@
-﻿import { useEffect, useRef, useState } from 'react';
+/**
+ * Responsabilidade: horizonte orbital da Home, a Terra vista de órbita baixa.
+ *
+ * Monta a cena Three.js do planeta como um horizonte colossal na base da
+ * tela: câmera posicionada logo acima da superfície (estilo ISS), texturas
+ * reais NASA com cascata de fallback, nuvens com sombra projetada, luzes
+ * noturnas Black Marble, brilho oceânico e o arco atmosférico no limbo,
+ * que é a assinatura visual do CaeliView. Controla os estados ready/failed
+ * com fallback em CSS.
+ */
+
+import { useEffect, useRef, useState } from 'react';
 import type { CanvasTexture } from 'three';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -9,7 +20,33 @@ import type { CanvasTexture } from 'three';
 // ─────────────────────────────────────────────────────────────────────────────
 const EARTH_DEBUG_MINIMAL = false;
 
-const EARTH_CANVAS_BLEED = 0.07;
+// ── Enquadramento "horizonte orbital" ────────────────────────────────────────
+// A câmera fica a ORBIT_ALTITUDE acima da superfície (esfera de raio 1) e
+// inclina para baixo até a linha do horizonte cair em HORIZON_NDC_Y no canvas
+// (0 = centro vertical, positivo = acima do centro).
+//
+// IMPORTANTE: altitudes baixas (< ~0.4) esticam a textura 8K além de 1:1 na
+// tela e o resultado fica borrado. Em 0.7 o domo mostra ~108° de longitude
+// (~2.450px de textura) ocupando ~76% da largura da tela, ou seja, a textura
+// chega com ~1.26x de superamostragem: nítido em monitores 2560px, com o
+// limbo curvo inteiro no quadro e flancos de céu menores (menos "bola",
+// mais "horizonte"). Não descer de ~0.65 sem reavaliar essa conta.
+// HORIZON_NDC_Y moderado: o topo do arco fica abaixo do CTA, deixando o
+// nascer do sol respirar como fundo cinematografico em vez de competir com a UI.
+const ORBIT_ALTITUDE = 0.7;
+// Altura da linha do horizonte no canvas (0 = centro, positivo = acima).
+// No desktop o limbo fica no terço inferior, deixando o nascer do sol como
+// fundo. No mobile a cena é mais alta e estreita e o console ocupa a base:
+// subir o horizonte traz o arco iluminado da Terra para a faixa visível
+// entre o CTA e o console, em vez de ele ficar escondido lá embaixo.
+const HORIZON_NDC_Y_DESKTOP = 0.30;
+const HORIZON_NDC_Y_MOBILE = 0.72;
+const MOBILE_HORIZON_MAX_WIDTH = 767;
+const resolveHorizonNdcY = () =>
+    typeof window !== 'undefined' && window.matchMedia(`(max-width: ${MOBILE_HORIZON_MAX_WIDTH}px)`).matches
+        ? HORIZON_NDC_Y_MOBILE
+        : HORIZON_NDC_Y_DESKTOP;
+const CAMERA_FOV = 38;
 
 // Cascade of Earth daymap textures, tried in order. First success wins.
 // MAX_TEXTURE_SIZE is checked at runtime; entries larger than the GPU limit are skipped.
@@ -53,14 +90,22 @@ const CLOUD_FRAGMENT_SHADER = `
     void main() {
         vec4 c = texture2D(cloudsMap, vUv);
         float lum = dot(c.rgb, vec3(0.299, 0.587, 0.114));
-        float softLum = smoothstep(0.04, 0.92, lum);
+        // Faixa mais estreita = nuvens mais definidas/contrastadas (mais evidentes).
+        float softLum = smoothstep(0.10, 0.80, lum);
         float baseAlpha = mix(softLum, c.a, alphaFromAlpha);
         float ndot = dot(normalize(vWorldNormal), normalize(sunDirection));
         float lit = max(ndot, 0.0);
         float terminator = smoothstep(-0.18, 0.22, ndot);
         float lightFactor = lit * 0.82 + terminator * terminatorBoost;
-        vec3 cloudColor = vec3(1.0, 0.985, 0.97) * (0.22 + lightFactor * 0.88);
-        gl_FragColor = vec4(cloudColor, baseAlpha * cloudOpacity * (0.32 + lightFactor * 0.78));
+        // Lado dia: nuvens brancas brilhantes. Lado noite: um resíduo azulado de
+        // luar (não some de todo), dando textura à penumbra noturna.
+        vec3 dayCloud = vec3(1.0, 0.985, 0.97) * (0.30 + lightFactor * 0.92);
+        vec3 nightCloud = vec3(0.16, 0.22, 0.34);
+        float nightAmount = 1.0 - smoothstep(-0.05, 0.20, ndot);
+        vec3 cloudColor = mix(dayCloud, nightCloud, nightAmount);
+        float dayAlpha = baseAlpha * cloudOpacity * (0.40 + lightFactor * 0.80);
+        float nightAlpha = baseAlpha * cloudOpacity * 0.22;
+        gl_FragColor = vec4(cloudColor, mix(dayAlpha, nightAlpha, nightAmount));
     }
 `;
 
@@ -97,9 +142,40 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
             let nightLightsTexture: import('three').Texture | null = null;
 
             const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
-            const CAMERA_BASE_Z = 4.4;
-            camera.position.set(0, 0, CAMERA_BASE_Z);
+            // Near/far apertados ao redor da esfera unitária: melhor precisão
+            // de profundidade entre as cascas (superfície, oceano, luzes, nuvens).
+            const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 10);
+            camera.position.set(0, 0, 1 + ORBIT_ALTITUDE);
+
+            // Orientação por lookAt com a vertical local (+z, direção radial da
+            // câmera) como "cima". A câmera fica sobre o equador da textura e
+            // olha na horizontal (-y) inclinada para baixo até o horizonte cair
+            // em HORIZON_NDC_Y. O dip do horizonte abaixo da horizontal local é
+            // acos(1/(1+h)). NUNCA usar rotation.x direto aqui: o eixo de pitch
+            // de Euler não coincide com a horizontal local desta posição (foi o
+            // bug que jogava o planeta para fora do quadro).
+            const horizonDip = Math.acos(1 / (1 + ORBIT_ALTITUDE));
+            const fovHalfRad = THREE.MathUtils.degToRad(CAMERA_FOV * 0.5);
+            // Recalculável: o enquadramento do horizonte muda entre mobile e
+            // desktop. Um listener de matchMedia (abaixo) atualiza isto quando o
+            // breakpoint cruza, sem remontar a cena, evitando que o valor de um
+            // viewport fique "grudado" ao alternar largura.
+            const computeBaseDownTilt = () =>
+                horizonDip + Math.atan(resolveHorizonNdcY() * Math.tan(fovHalfRad));
+            let baseDownTilt = computeBaseDownTilt();
+            const viewTarget = new THREE.Vector3();
+            const applyCameraView = (extraPitch: number, yaw: number) => {
+                const tilt = baseDownTilt + extraPitch;
+                const cosTilt = Math.cos(tilt);
+                viewTarget.set(
+                    camera.position.x - Math.sin(yaw) * cosTilt,
+                    camera.position.y - Math.cos(yaw) * cosTilt,
+                    camera.position.z - Math.sin(tilt),
+                );
+                camera.up.set(0, 0, 1);
+                camera.lookAt(viewTarget);
+            };
+            applyCameraView(0, 0);
 
             const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
             renderer.setClearColor(0x000000, 0);
@@ -126,48 +202,64 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
             const surfaceGroup = new THREE.Group();
             earthGroup.add(surfaceGroup);
 
+            // Enquadramento inicial do globo: América do Sul no centro do domo.
+            // A rotação própria (y = -0.70) coloca a longitude ~50°W de frente
+            // para a câmera; o tombo do conjunto (x = 0.42, ~24° para o norte)
+            // traz a faixa equatorial à vista em vez do oceano Austral. Sem
+            // isso a câmera nasce mirando o Pacífico Sul, que é um vazio azul.
+            earthGroup.rotation.x = 0.42;
+            surfaceGroup.rotation.y = -0.70;
+
             // ── Lighting ────────────────────────────────────────────────────
-            // Key light: sun positioned to the right — keeps the wide night side
-            // visible on the LEFT half of the disc, where the Black Marble lights
-            // shine through. This is the angle that revealed the city lights.
-            const sunLight = new THREE.DirectionalLight(0xfff2e0, EARTH_DEBUG_MINIMAL ? 2.0 : 2.4);
-            sunLight.position.set(5.2, 1.6, 2.2);
+            // Key light: sol pela esquerda com componente frontal moderada.
+            // O terminador cruza o domo à direita do centro: ~60% do disco em
+            // dia, ~40% em noite real à direita, onde as luzes de cidade do
+            // Black Marble brilham. Sol totalmente frontal achata o planeta
+            // (sem terminador não há drama); manter a noite visível.
+            const sunLight = new THREE.DirectionalLight(0xfff2e0, EARTH_DEBUG_MINIMAL ? 2.0 : 2.12);
+            // Sol NO TOPO, atrás do limbo (referência): a câmera olha para -y, então
+            // o limbo "longe" sobe na tela. Colocando o sol bem longe em -y e um pouco
+            // atrás em -z, ele nasce no alto da curvatura central. O hemisfério voltado
+            // para a câmera fica majoritariamente NOITE: as luzes de cidade do Black
+            // Marble dominam o disco e o brilho dourado fica só no arco do topo.
+            sunLight.position.set(0.0, -2.9, -2.2);
             scene.add(sunLight);
 
             if (!EARTH_DEBUG_MINIMAL) {
                 // Cool fill from the dark side — kept very subtle so the night side
                 // stays genuinely dark and the Black Marble lights pop.
-                const rimLight = new THREE.DirectionalLight(0x2a8ec8, 0.18);
+                const rimLight = new THREE.DirectionalLight(0x2a8ec8, 0.16);
                 rimLight.position.set(-4.0, 0.2, -2.8);
                 scene.add(rimLight);
                 // Cyan back-light — thin luminous contour on the dark side limb
-                const cyanBackLight = new THREE.DirectionalLight(0x4ac8e8, 0.10);
+                const cyanBackLight = new THREE.DirectionalLight(0x4ac8e8, 0.21);
                 cyanBackLight.position.set(-3.2, 0.4, -2.0);
                 scene.add(cyanBackLight);
                 // Subtle blue scatter from above (skylight)
-                const topLight = new THREE.DirectionalLight(0x5ab0d8, 0.16);
+                const topLight = new THREE.DirectionalLight(0x5ab0d8, 0.08);
                 topLight.position.set(0, 5, 1);
                 scene.add(topLight);
-                // Warm twilight fill — softens the day/night terminator with sunset glow
-                const twilightFill = new THREE.DirectionalLight(0xff9050, 0.18);
-                twilightFill.position.set(2.0, 0.4, -1.0);
+                // Cool terminator fill (recomeçado sem quente): suaviza a transição
+                // dia/noite com um tom neutro frio, sem brilho de pôr do sol.
+                const twilightFill = new THREE.DirectionalLight(0x8ab4d0, 0.18);
+                twilightFill.position.set(-3.0, -1.0, 1.5);
                 scene.add(twilightFill);
-                // Warm back-rim from below — adds drama and separates from background
-                const backLight = new THREE.DirectionalLight(0xff8040, 0.08);
+                // Cool back-rim from below — separa do fundo sem aquecer.
+                const backLight = new THREE.DirectionalLight(0x6f9ec0, 0.08);
                 backLight.position.set(-2.0, -3.0, -1.5);
                 scene.add(backLight);
                 // Hemisphere: deep space below, faint blue sky above
-                scene.add(new THREE.HemisphereLight(0x7ac8e8, 0x010306, 0.10));
+                scene.add(new THREE.HemisphereLight(0x7ac8e8, 0x010306, 0.06));
                 // Very low ambient so night side stays dark and city lights pop
-                scene.add(new THREE.AmbientLight(0x060c14, 0.025));
+                scene.add(new THREE.AmbientLight(0x050a12, 0.008));
             } else {
                 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
             }
 
             // ── Earth surface mesh ───────────────────────────────────────────
             const earthMaterial = new THREE.MeshStandardMaterial({
-                color: new THREE.Color(0xffffff),
-                roughness: EARTH_DEBUG_MINIMAL ? 1.0 : 0.72,
+                color: new THREE.Color(0xc0c8c8),
+                roughness: EARTH_DEBUG_MINIMAL ? 1.0 : 0.68,
                 metalness: EARTH_DEBUG_MINIMAL ? 0.0 : 0.04,
                 envMapIntensity: 0.0,
             });
@@ -181,7 +273,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                 cloudShadowEnabled: { value: 0.0 },
                 cloudRotationY: { value: 0.0 },
                 cloudShadowSunDir: { value: sunDirection.clone() },
-                cloudShadowStrength: { value: 0.55 },
+                cloudShadowStrength: { value: 0.62 },
             };
 
             if (!EARTH_DEBUG_MINIMAL) {
@@ -218,10 +310,23 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                     ).replace(
                         '#include <map_fragment>',
                         `#include <map_fragment>
+                        vec3 surfaceNormal = normalize(vCloudShadowWorldNormal);
+                        float surfaceSun = dot(surfaceNormal, normalize(cloudShadowSunDir));
+                        // Cor base só levemente trabalhada; o BRILHO do lado noturno é
+                        // adicionado via emissive (abaixo), porque a iluminação direcional
+                        // do material zera a cor difusa onde não bate sol — mexer só na
+                        // diffuseColor deixava a noite preta por mais clara que fosse.
+                        diffuseColor.rgb *= vec3(1.00, 1.02, 1.06);
+                        // Profundidade/vinheta: escurece nas bordas (longe do sub-ponto da
+                        // câmera) e mais ainda embaixo (normal.y baixo), clareando para
+                        // cima/em direção ao sol. Dá volume ao globo em vez de disco chapado.
+                        float depthDown = smoothstep(-0.85, 0.35, surfaceNormal.y);
+                        float depthVignette = 0.40 + 0.60 * depthDown;
+                        diffuseColor.rgb *= depthVignette;
                         if (cloudShadowEnabled > 0.5) {
                             // Offset the cloud lookup slightly toward the sun in surface space —
                             // approximates a shadow cast a small distance toward the light source.
-                            vec3 nrm = normalize(vCloudShadowWorldNormal);
+                            vec3 nrm = surfaceNormal;
                             vec3 sunTangent = normalize(cloudShadowSunDir - nrm * dot(cloudShadowSunDir, nrm));
                             // Convert tangential offset into UV space. Magnitudes are tiny because
                             // the cloud layer sits just above the surface (~0.020 above radius 1).
@@ -236,6 +341,29 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                             float shadow = smoothstep(0.18, 0.78, cloudDensity) * cloudShadowStrength * lit;
                             diffuseColor.rgb *= (1.0 - shadow);
                         }`,
+                    ).replace(
+                        '#include <emissivemap_fragment>',
+                        `#include <emissivemap_fragment>
+                        // Brilho do lado NOTURNO via emissive: independe da luz do sol,
+                        // então o lado escuro deixa de ser preto. A luz de luar azulada
+                        // aparece só onde NÃO bate sol (nightMask) e usa a própria textura
+                        // (map) para revelar continentes/oceanos em penumbra. Esta é a
+                        // alavanca certa — mexer na diffuseColor não clareava a noite.
+                        vec3 nEm = normalize(vCloudShadowWorldNormal);
+                        float sunEm = dot(nEm, normalize(cloudShadowSunDir));
+                        float nightMask = 1.0 - smoothstep(-0.18, 0.30, sunEm);
+                        vec3 baseTex = diffuseColor.rgb;
+                        // Luar azul frio SUTIL: noite ainda escura, mas com relevo e
+                        // oceanos visíveis em penumbra; as cidades brilham por cima.
+                        // Leve realce no terminador (penumbra um pouco mais clara).
+                        float terminatorEm = (1.0 - smoothstep(0.0, 0.34, abs(sunEm)));
+                        vec3 moonlight = baseTex * vec3(0.085, 0.125, 0.215) + vec3(0.004, 0.009, 0.018);
+                        moonlight += vec3(0.010, 0.024, 0.046) * terminatorEm;
+                        // Mesma vinheta de profundidade do lado dia: penumbra mais escura
+                        // embaixo, clareando para cima.
+                        float depthDownEm = smoothstep(-0.85, 0.35, nEm.y);
+                        moonlight *= (0.40 + 0.60 * depthDownEm);
+                        totalEmissiveRadiance += moonlight * nightMask;`,
                     );
                 };
             }
@@ -457,15 +585,21 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                             uniform sampler2D lightsMap;
                             uniform vec3 sunDirection;
                             void main() {
-                                // Real Black Marble: RGB JPG, no alpha.
-                                // Use a forced positive LOD bias so the GPU picks a smaller mip
-                                // level than its derivatives suggest. Near the limb the texture
-                                // is foreshortened heavily — without this bias, single bright
-                                // pixels alias frame-to-frame and twinkle like stars.
-                                vec3 raw = texture2D(lightsMap, vUv, 0.6).rgb;
+                                vec3 n = normalize(vWorldNormal);
+                                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+                                float facing = max(dot(n, viewDir), 0.0);
+
+                                // Anti-twinkle: LOD bias positivo cresce perto do limbo, onde a
+                                // textura é foreshortened e pixels isolados aliasingam quadro a
+                                // quadro (piscam como estrelas). Amostrar um mip menor borra essa
+                                // cintilação. Base 1.1 + reforço quando facing é baixo (limbo).
+                                float lodBias = 1.1 + (1.0 - smoothstep(0.04, 0.45, facing)) * 1.4;
+                                vec3 raw = texture2D(lightsMap, vUv, lodBias).rgb;
 
                                 float lum = dot(raw, vec3(0.299, 0.587, 0.114));
-                                float intensity = smoothstep(0.025, 0.78, lum);
+                                // Piso mais alto: não acende os pixels muito fracos (ruído de
+                                // aliasing). Só luzes de cidade reais, estáveis entre quadros.
+                                float intensity = smoothstep(0.085, 0.62, lum);
 
                                 vec3 cityColor = mix(
                                     vec3(1.0, 0.78, 0.42),
@@ -473,21 +607,20 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                                     intensity
                                 );
 
-                                vec3 n = normalize(vWorldNormal);
                                 float sunDot = dot(n, normalize(sunDirection));
-                                float nightFactor = smoothstep(-0.05, -0.32, sunDot);
-                                float dayPenalty = smoothstep(0.05, -0.10, sunDot);
+                                // Sol no topo atrás do limbo: quase todo o disco visível é
+                                // penumbra/noite (sunDot baixo). Abrimos a janela para as
+                                // cidades acenderem já a partir da penumbra (sunDot ~0.40),
+                                // cobrindo o disco noturno como na referência; o dayPenalty
+                                // ainda apaga a faixa fina de dia no topo, perto do sol.
+                                float nightFactor = smoothstep(0.46, -0.10, sunDot);
+                                float dayPenalty = smoothstep(0.52, 0.20, sunDot);
 
-                                // Limb fade: when the surface normal turns tangent to the camera,
-                                // texture sampling stretches across many texels and aliases badly.
-                                // Fade out night lights as we approach the silhouette so the twinkle
-                                // disappears at the disc edge.
-                                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-                                float facing = max(dot(n, viewDir), 0.0);
-                                float limbFade = smoothstep(0.12, 0.34, facing);
+                                // Apaga só a borda extrema do limbo (twinkle residual).
+                                float limbFade = smoothstep(0.015, 0.09, facing);
 
-                                float alpha = intensity * nightFactor * dayPenalty * limbFade * 1.05;
-                                gl_FragColor = vec4(cityColor * intensity * 1.30, clamp(alpha, 0.0, 1.0));
+                                float alpha = intensity * nightFactor * dayPenalty * limbFade * 1.75;
+                                gl_FragColor = vec4(cityColor * intensity * 2.1, clamp(alpha, 0.0, 1.0));
                             }
                         `,
                     }),
@@ -548,7 +681,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                         (tex) => {
                             if (disposed) { tex.dispose(); return; }
                             console.debug(`[earth] cloud texture loaded: ${url}`);
-                            applyCloudTexture(tex, isPng ? 0.7 : 0.65, isPng ? 1.0 : 0.0);
+                            applyCloudTexture(tex, isPng ? 0.92 : 0.88, isPng ? 1.0 : 0.0);
                         },
                         undefined,
                         () => tryLoadCloud(index + 1),
@@ -556,30 +689,107 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                 };
 
                 if (cloudsEnabled) tryLoadCloud(0);
+
+                // ── Arco atmosférico no limbo ────────────────────────────────
+                // Casca FrontSide fina (2.5% acima da superfície), aditiva.
+                // Atmosfera REAL vista de órbita: uma linha fina e brilhante
+                // de núcleo quase branco rente ao limbo, decaindo rápido para
+                // ciano e azul profundo; intensa no lado dia, quase ausente no
+                // lado noite (as luzes de cidade assumem a borda noturna).
+                // Banda larga e uniforme lê como "glow de filtro", evitar.
+                const atmosphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(1.018, 128, 128),
+                    new THREE.ShaderMaterial({
+                        transparent: true,
+                        depthWrite: false,
+                        blending: THREE.AdditiveBlending,
+                        uniforms: {
+                            sunDirection: { value: sunDirection },
+                            uColorDay: { value: new THREE.Color(0x6fd2ec) },
+                            uColorDeep: { value: new THREE.Color(0x1e55b0) },
+                            // Âmbar do nascer do sol casado com a corona do disco solar
+                            // (CSS rgba(255,158,46) = 0xff9e2e), para atmosfera e sol lerem
+                            // como uma luz só.
+                            uColorWarm: { value: new THREE.Color(0xff9e2e) },
+                            uIntensity: { value: 1.75 },
+                        },
+                        vertexShader: `
+                            varying vec3 vWorldNormal;
+                            varying vec3 vWorldPosition;
+                            void main() {
+                                vec4 wp = modelMatrix * vec4(position, 1.0);
+                                vWorldPosition = wp.xyz;
+                                vWorldNormal = normalize(mat3(modelMatrix) * normal);
+                                gl_Position = projectionMatrix * viewMatrix * wp;
+                            }
+                        `,
+                        fragmentShader: `
+                            varying vec3 vWorldNormal;
+                            varying vec3 vWorldPosition;
+                            uniform vec3 sunDirection;
+                            uniform vec3 uColorDay;
+                            uniform vec3 uColorDeep;
+                            uniform vec3 uColorWarm;
+                            uniform float uIntensity;
+                            void main() {
+                                vec3 n = normalize(vWorldNormal);
+                                vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+                                // Fresnel: 0 olhando o chão, 1 na tangência (limbo).
+                                float rim = 1.0 - max(dot(n, viewDir), 0.0);
+                                // Atmosfera majoritariamente azul: halo largo + filete ciano
+                                // rente ao limbo. O calor (âmbar) entra só no ponto do nascer
+                                // do sol, abaixo, via warmRim — o resto da borda fica frio.
+                                float blueHalo = pow(rim, 6.7);
+                                float blueCore = pow(rim, 13.0);
+                                float sunDot = dot(n, normalize(sunDirection));
+                                // Dia brilha, noite quase some (realista).
+                                float lit = smoothstep(-0.35, 0.28, sunDot);
+                                // Âmbar do nascer do sol: concentrado no arco do limbo na
+                                // direção do sol. O sol nasce atrás/abaixo do limbo, então essa
+                                // região é penumbra (sunDot moderado, não alto) — a janela do
+                                // smoothstep cobre essa faixa em vez de exigir sol frontal.
+                                // Desbota para o ciano/azul nas laterais; largura do rim maior
+                                // que o filete azul para o tom quente vencer o aditivo.
+                                float sunGlow = smoothstep(-0.15, 0.55, sunDot);
+                                float warmRim = pow(rim, 6.0) * sunGlow;
+                                vec3 color =
+                                    uColorDeep * blueHalo * 0.72 +
+                                    uColorDay * blueCore * 0.92 +
+                                    uColorWarm * warmRim * 2.1;
+                                float alpha =
+                                    (blueHalo * 0.28 + blueCore * 0.26 + warmRim * 0.5) * (0.12 + lit * 0.88);
+                                gl_FragColor = vec4(color, clamp(alpha * uIntensity, 0.0, 0.85));
+                            }
+                        `,
+                    }),
+                );
+                atmosphere.renderOrder = 5;
+                earthGroup.add(atmosphere);
             }
 
             // ── Resize ───────────────────────────────────────────────────────
             const resize = () => {
-                const visualRect = shell.getBoundingClientRect();
                 const renderRect = mount.getBoundingClientRect();
                 const width = Math.max(1, renderRect.width);
                 const height = Math.max(1, renderRect.height);
-                const visualHeight = Math.max(1, visualRect.height);
-
-                camera.aspect = Math.max(0.8, width / Math.max(height, 1));
+                camera.aspect = width / height;
                 camera.updateProjectionMatrix();
                 renderer.setSize(Math.max(1, Math.round(width)), Math.max(1, Math.round(height)), false);
-
-                const visibleHeight = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
-                const visualToRenderRatio = visualHeight / height;
-                const coverScale = visibleHeight * 0.5 * visualToRenderRatio;
-                earthGroup.scale.setScalar(coverScale);
             };
 
             const observer = new ResizeObserver(resize);
             observer.observe(mount);
-            observer.observe(shell);
             resize();
+
+            // Reorienta a câmera quando a largura cruza o breakpoint mobile,
+            // sem remontar: o horizonte sobe no mobile e volta no desktop ao
+            // vivo, em vez de ficar preso ao viewport da montagem.
+            const horizonQuery = window.matchMedia(`(max-width: ${MOBILE_HORIZON_MAX_WIDTH}px)`);
+            const onHorizonChange = () => {
+                baseDownTilt = computeBaseDownTilt();
+                applyCameraView(0, 0);
+            };
+            horizonQuery.addEventListener('change', onHorizonChange);
 
             // ── Pointer parallax ─────────────────────────────────────────────
             const onPointerMove = (event: PointerEvent) => {
@@ -591,17 +801,20 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
 
             // ── Animation loop ───────────────────────────────────────────────
             const timer = new THREE.Timer();
+            const smoothedMouse = { x: 0, y: 0 };
             const animate = () => {
                 timer.update();
                 const delta = timer.getDelta();
                 const elapsed = timer.getElapsed();
-                earthGroup.position.set(0, 0, 0);
 
                 if (!reducedMotion) {
-                    surfaceGroup.rotation.y += delta * 0.044;
+                    // Rotação lenta para LESTE (decrementando): a vista percorre
+                    // Atlântico → África → Ásia em vez de mergulhar no vazio do
+                    // Pacífico. Velocidades de globo seriam vertiginosas aqui.
+                    surfaceGroup.rotation.y -= delta * 0.012;
                     if (!EARTH_DEBUG_MINIMAL && clouds) {
-                        clouds.rotation.y += delta * 0.038;
-                        clouds.rotation.x = Math.sin(elapsed * 0.04) * 0.01;
+                        clouds.rotation.y -= delta * 0.0145;
+                        clouds.rotation.x = Math.sin(elapsed * 0.04) * 0.004;
                         // Pass the cloud/surface rotation delta to the surface shader so
                         // shadows track the actual cloud positions as they rotate.
                         const surfaceRotY = surfaceGroup.rotation.y;
@@ -613,14 +826,15 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                     if (!EARTH_DEBUG_MINIMAL && oceanSheen) {
                         oceanSheen.material.uniforms.uTime.value = elapsed;
                     }
-                    earthGroup.rotation.x += ((mouse.y * 0.025) - earthGroup.rotation.x) * 0.03;
-                    earthGroup.rotation.z += ((-mouse.x * 0.02) - earthGroup.rotation.z) * 0.03;
 
-                    // Cinematic camera drift: slow zoom + minute lateral float
-                    const t = elapsed;
-                    camera.position.z = CAMERA_BASE_Z + Math.sin(t * 0.18) * 0.05;
-                    camera.position.x = Math.sin(t * 0.11) * 0.018;
-                    camera.position.y = Math.cos(t * 0.09) * 0.012;
+                    // Parallax suave de "estação": a câmera inclina levemente com o
+                    // mouse e flutua devagar em altitude, como deriva orbital.
+                    // Posição primeiro; applyCameraView deriva o alvo dela.
+                    smoothedMouse.x += (mouse.x - smoothedMouse.x) * 0.03;
+                    smoothedMouse.y += (mouse.y - smoothedMouse.y) * 0.03;
+                    camera.position.z = 1 + ORBIT_ALTITUDE + Math.sin(elapsed * 0.12) * 0.006;
+                    camera.position.x = Math.sin(elapsed * 0.07) * 0.008;
+                    applyCameraView(0, 0);
                 }
 
                 renderer.render(scene, camera);
@@ -650,6 +864,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                 disposed = true;
                 window.cancelAnimationFrame(frame);
                 window.removeEventListener('pointermove', onPointerMove);
+                horizonQuery.removeEventListener('change', onHorizonChange);
                 observer.disconnect();
                 earthTexture?.dispose();
                 normalTexture?.dispose();
@@ -688,31 +903,24 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
         <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden" aria-hidden="true">
             <div
                 ref={shellRef}
-                className="cinematic-earth-shell absolute right-0 top-1/2 aspect-square -translate-y-1/2 translate-x-[18%] opacity-100 md:translate-x-[2%] lg:translate-x-[-14%] xl:translate-x-[-18%] 2xl:translate-x-[-20%]"
+                className={`cinematic-earth-shell ${ready && !failed ? 'cinematic-earth-shell-ready' : ''}`}
             >
                 <div
                     ref={mountRef}
-                    className="absolute h-auto w-auto"
+                    className="absolute inset-0"
                     style={{
-                        inset: `${EARTH_CANVAS_BLEED * -100}%`,
                         opacity: ready && !failed ? 1 : 0,
                         visibility: ready && !failed ? 'visible' : 'hidden',
-                        pointerEvents: ready && !failed ? 'auto' : 'none',
+                        pointerEvents: 'none',
                     }}
                 />
 
                 {failed ? (
-                    <>
-                        <div className="absolute -inset-[18%] rounded-full bg-signal-cyan/13 blur-3xl" />
-                        <div className="absolute -inset-[9%] rounded-full border border-signal-cyan/12" />
-                        <div className="earth-css-fallback absolute inset-0 rounded-full" />
-                        <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_34%_26%,rgba(255,255,255,0.11),transparent_16%),linear-gradient(135deg,rgba(3,8,18,0),rgba(3,8,18,0.48))]" />
-                        <div className="absolute inset-0 rounded-full shadow-[inset_38px_18px_58px_rgba(255,255,255,0.05),inset_-96px_-72px_120px_rgba(0,0,0,0.5),0_0_92px_rgba(84,214,214,0.16),0_0_220px_rgba(84,214,214,0.13)]" />
-                    </>
+                    <div className="earth-horizon-fallback" aria-hidden="true" />
                 ) : null}
 
                 {!ready && !failed ? (
-                    <div className="earth-loading-spinner absolute inset-0 rounded-full" aria-hidden="true" />
+                    <div className="earth-loading-spinner absolute inset-0" aria-hidden="true" />
                 ) : null}
             </div>
         </div>

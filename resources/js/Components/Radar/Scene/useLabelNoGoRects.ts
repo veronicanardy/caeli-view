@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import type { NoGoRect } from '../Overlays/SceneLabels';
-import type { MobilePanelSection } from '../Panels/MobilePanelControls';
+import type { MobileSheetSection } from '../Panels/radarNavigationTypes';
 import type { PlanetId } from './planetConfig';
 
 type UseLabelNoGoRectsArgs = {
@@ -21,8 +21,7 @@ type UseLabelNoGoRectsArgs = {
     planetsOpen: boolean;
     focusedObjectId: string | null;
     bodyCardOpen: 'earth' | 'moon' | 'sun' | PlanetId | null;
-    panelCollapsed: boolean;
-    mobilePanelSection: MobilePanelSection;
+    mobileSheet: MobileSheetSection | null;
 };
 
 /**
@@ -41,8 +40,7 @@ export function useLabelNoGoRects({
     planetsOpen,
     focusedObjectId,
     bodyCardOpen,
-    panelCollapsed,
-    mobilePanelSection,
+    mobileSheet,
 }: UseLabelNoGoRectsArgs): NoGoRect[] {
     const [noGoRects, setNoGoRects] = useState<NoGoRect[]>([]);
 
@@ -68,7 +66,18 @@ export function useLabelNoGoRects({
                 bodyCardRef.current,
             ].filter((element): element is HTMLDivElement => Boolean(element));
 
-            setNoGoRects(elements.map((element) => toCanvasRect(element, canvasRect)));
+            const next = elements.map((element) => toCanvasRect(element, canvasRect));
+
+            // O listener de scroll (capture) dispara para qualquer scroll da página, inclusive
+            // de painéis internos que não movem os cards. Publicar um array novo idêntico
+            // re-renderizaria todos os labels consumidores do contexto; compara antes.
+            setNoGoRects((current) => {
+                const unchanged = current.length === next.length && current.every((rect, i) =>
+                    rect.left === next[i].left && rect.top === next[i].top
+                    && rect.right === next[i].right && rect.bottom === next[i].bottom,
+                );
+                return unchanged ? current : next;
+            });
         };
 
         update();
@@ -92,8 +101,7 @@ export function useLabelNoGoRects({
         focusCardRef,
         focusedObjectId,
         fullscreen,
-        mobilePanelSection,
-        panelCollapsed,
+        mobileSheet,
         planetFlyoutRef,
         planetsOpen,
         sidePanelRef,

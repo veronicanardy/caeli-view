@@ -1,13 +1,15 @@
-// Single-canvas cosmic backdrop for the hero.
-//
-// Renders, in one Three.js scene behind the Earth:
-//   1. A distant nebula shell — procedural FBM noise in cool blue tones.
-//   2. Two static star layers (dust + mid) — no twinkle, drift only with the mouse.
-//   3. A thin atmospheric halo that physically tracks the Earth disc on screen.
-//
-// Why one file: previous setup had Earth, atmosphere, stars and CSS glow
-// scattered across 4+ places. Consolidating means tweaking the look only
-// requires editing the TUNING block below.
+/**
+ * Responsabilidade: fundo cósmico do hero da Home em um único canvas Three.js.
+ *
+ * Renderiza atrás do horizonte da Terra:
+ *   1. Uma concha de nebulosa distante (ruído FBM em azuis frios).
+ *   2. Três camadas de estrelas estáticas (poeira, meio, primeiro plano),
+ *      sem twinkle; profundidade vem do parallax suave com o mouse.
+ *   3. Um cometa cinematográfico raro cruzando o céu superior.
+ *
+ * O brilho atmosférico da Terra NÃO vive aqui: é um shader de limbo dentro
+ * de CinematicEarthScene, fisicamente preso ao planeta.
+ */
 
 import { useEffect, useRef } from 'react';
 
@@ -15,58 +17,38 @@ import { useEffect, useRef } from 'react';
 const TUNING = {
     nebula: {
         colorVoid: 0x02050d,
-        colorBase: 0x0a1a3a,
-        colorAccent: 0x1b4470,
-        colorHighlight: 0x2c6e9a,
-        cloudIntensity: 0.38,
+        colorBase: 0x0b1b38,
+        colorAccent: 0x1a426c,
+        colorHighlight: 0x31799f,
+        cloudIntensity: 0.34,
         noiseScale: 1.4,
     },
     stars: {
-        // Three depths read as real space. Farther = more numerous + dimmer + smaller.
-        farCount: 4200,          // distant dust — fills the void
-        midCount: 1500,          // mid-field
-        nearCount: 360,          // foreground stars
+        // Três profundidades leem como espaço real. Mais longe = mais
+        // numerosas + menores + mais fracas.
+        farCount: 3900,          // poeira distante — preenche o vazio
+        midCount: 1320,          // campo médio
+        nearCount: 300,          // estrelas de primeiro plano
         baseRadius: 22,
-    },
-    // Atmospheric halo behind Earth — sized and positioned at runtime to
-    // match the .cinematic-earth-shell bounding box. Values here only shape
-    // the falloff, not where it lives on screen.
-    halo: {
-        color: 0x7fb8d8,         // cooler, less saturated blue — less "cyan ring"
-        // Inner edge sits exactly at Earth's visual radius; outer fades long.
-        innerScale: 1.00,        // 1.0 = right at the Earth limb
-        outerScale: 1.85,        // longer fade for elegance
-        intensity: 0.22,         // much subtler peak
-        falloffPower: 3.6,       // steeper drop = thin elegant edge, not a wash
     },
     parallax: {
         nebulaStrength: 0.03,
         starsStrength: 0.10,
-        haloStrength: 0.04,      // Earth itself parallaxes; halo follows gently
         easing: 0.06,
     },
     comet: {
-        // Rare cinematic event — a streak crosses the sky every so often.
-        minIntervalSec: 25,      // soonest the next comet can appear
-        maxIntervalSec: 60,      // latest it might wait
-        durationSec: 2.2,        // seconds from spawn to disappear
-        headSizePx: 3.5,         // bright leading point
-        trailLengthPx: 220,      // how long the tail draws
-        color: 0xeaf4ff,         // cool, almost-white
+        // Evento cinematográfico raro — um risco cruza o céu de tempos em tempos.
+        minIntervalSec: 45,      // intervalo mínimo até o próximo cometa
+        maxIntervalSec: 90,      // espera máxima
+        durationSec: 2.2,        // segundos do spawn ao desaparecimento
+        headSizePx: 3.5,         // ponto brilhante da cabeça
+        trailLengthPx: 220,      // comprimento da cauda
+        color: 0xeaf4ff,         // branco frio
     },
 } as const;
 
-// The Earth's outer container — we read its bounding rect each frame so the
-// halo stays glued to wherever CSS has placed the Earth (varies by breakpoint).
-// We measure the inner mount (which holds the actual WebGL canvas) rather than
-// the shell: the mount has a -7% bleed inset, so it's exactly the canvas box,
-// and the Earth sphere fills that canvas symmetrically.
-const EARTH_SHELL_SELECTOR = '.cinematic-earth-shell';
-
-export function CinematicSpaceBackdrop({ earthReady = false }: { earthReady?: boolean }) {
+export function CinematicSpaceBackdrop() {
     const mountRef = useRef<HTMLDivElement | null>(null);
-    const earthReadyRef = useRef(earthReady);
-    earthReadyRef.current = earthReady;
 
     useEffect(() => {
         const mount = mountRef.current;
@@ -96,8 +78,7 @@ export function CinematicSpaceBackdrop({ earthReady = false }: { earthReady?: bo
             // ── Groups for independent parallax ──────────────────────────────
             const nebulaGroup = new THREE.Group();
             const starsGroup = new THREE.Group();
-            const haloGroup = new THREE.Group();
-            scene.add(nebulaGroup, starsGroup, haloGroup);
+            scene.add(nebulaGroup, starsGroup);
 
             // ── Layers ───────────────────────────────────────────────────────
             const nebula = buildNebula(THREE);
@@ -126,10 +107,6 @@ export function CinematicSpaceBackdrop({ earthReady = false }: { earthReady?: bo
             });
             starsGroup.add(far, mid, near);
 
-            const halo = buildHalo(THREE);
-            haloGroup.add(halo);
-            haloGroup.visible = false;
-
             // ── Comet (rare cinematic streak) ────────────────────────────────
             const comet = buildComet(THREE);
             scene.add(comet);
@@ -146,68 +123,22 @@ export function CinematicSpaceBackdrop({ earthReady = false }: { earthReady?: bo
                 cometState.nextSpawnAt = now + wait;
             };
             const launchComet = () => {
-                // Pick a random edge to start from, end on the opposite-ish side.
-                // Bias trajectories to NOT cross the Earth disc on the right side.
+                // Trajetórias confinadas ao céu superior (y ≤ ~0.5): a metade de
+                // baixo da tela pertence ao horizonte da Terra.
                 const fromTop = Math.random() < 0.5;
                 if (fromTop) {
-                    cometState.startX = 0.05 + Math.random() * 0.45;   // left half
+                    cometState.startX = 0.05 + Math.random() * 0.6;
                     cometState.startY = -0.05;
-                    cometState.endX = cometState.startX + 0.25 + Math.random() * 0.3;
-                    cometState.endY = 0.55 + Math.random() * 0.35;
+                    cometState.endX = cometState.startX + 0.2 + Math.random() * 0.3;
+                    cometState.endY = 0.25 + Math.random() * 0.22;
                 } else {
                     cometState.startX = -0.05;
-                    cometState.startY = 0.05 + Math.random() * 0.55;
-                    cometState.endX = 0.35 + Math.random() * 0.25;
-                    cometState.endY = cometState.startY + 0.35 + Math.random() * 0.35;
+                    cometState.startY = 0.04 + Math.random() * 0.2;
+                    cometState.endX = 0.4 + Math.random() * 0.3;
+                    cometState.endY = cometState.startY + 0.12 + Math.random() * 0.18;
                 }
                 cometState.active = true;
                 cometState.startTime = performance.now() / 1000;
-            };
-
-            // ── Halo placement: track the Earth shell's bounding box ─────────
-            // The shell is positioned with CSS translates that differ per breakpoint,
-            // so we sample its rect and convert to UV coordinates inside the canvas.
-            const haloUniforms = halo.material.uniforms;
-
-            const placeHalo = () => {
-                const mountRect = mount.getBoundingClientRect();
-                const w = mountRect.width;
-                const h = mountRect.height;
-                if (w === 0 || h === 0) return;
-
-                // Prefer measuring the actual Earth <canvas> element — that's where
-                // the sphere pixels are. The shell can be partially off-screen due
-                // to CSS translates, which would skew a shell-based measurement.
-                const earthShell = document.querySelector(EARTH_SHELL_SELECTOR);
-                const earthCanvas = earthShell?.querySelector('canvas');
-                const target = earthCanvas ?? earthShell;
-
-                let cx = 0.74;
-                let cy = 0.50;
-                let radius = Math.min(w, h) * 0.36;
-
-                if (target) {
-                    const r = target.getBoundingClientRect();
-                    if (r.width > 0 && r.height > 0) {
-                        // The Earth canvas is square; sphere sits exactly at its center
-                        // and fills the shorter side. Halo radius == half that side.
-                        // Canvas already includes the 7% bleed, so the actual planet
-                        // is ~93% of the canvas. Adjust radius accordingly.
-                        const earthCx = r.left + r.width * 0.5;
-                        const earthCy = r.top + r.height * 0.5;
-                        cx = (earthCx - mountRect.left) / w;
-                        cy = (earthCy - mountRect.top) / h;
-                        // If we're measuring the canvas, the planet radius is 93% of half-width.
-                        // If we fell back to the shell, the planet fills it 100%.
-                        const bleedCompensation = earthCanvas ? (1 / 1.14) : 1.0;
-                        radius = Math.min(r.width, r.height) * 0.5 * bleedCompensation;
-                    }
-                }
-
-                haloUniforms.uCenterPx.value.set(cx * w, (1 - cy) * h);
-                haloUniforms.uInnerPx.value = radius * TUNING.halo.innerScale;
-                haloUniforms.uOuterPx.value = radius * TUNING.halo.outerScale;
-                haloUniforms.uResolution.value.set(w, h);
             };
 
             // ── Resize ───────────────────────────────────────────────────────
@@ -217,20 +148,10 @@ export function CinematicSpaceBackdrop({ earthReady = false }: { earthReady?: bo
                 camera.aspect = w / Math.max(h, 1);
                 camera.updateProjectionMatrix();
                 (comet.material as import('three').ShaderMaterial).uniforms.uResolution.value.set(w, h);
-                placeHalo();
             };
             const observer = new ResizeObserver(resize);
             observer.observe(mount);
-            const earthEl = document.querySelector(EARTH_SHELL_SELECTOR);
-            if (earthEl) observer.observe(earthEl);
             resize();
-
-            // The Earth canvas mounts asynchronously (lazy import + texture load),
-            // so its initial bounds may not exist yet. Re-place once it appears.
-            const mutationObserver = new MutationObserver(() => placeHalo());
-            if (earthEl) {
-                mutationObserver.observe(earthEl, { childList: true, subtree: true });
-            }
 
             // ── Pointer parallax (no twinkle, no time-driven motion) ─────────
             const pointer = { x: 0, y: 0 };
@@ -243,11 +164,8 @@ export function CinematicSpaceBackdrop({ earthReady = false }: { earthReady?: bo
             window.addEventListener('pointermove', onPointerMove, { passive: true });
 
             // ── Animate ──────────────────────────────────────────────────────
-            // Only thing animating: smooth parallax easing + occasional halo reposition
-            // (in case Earth shell moves during expand/collapse transitions).
+            // Only things animating: smooth parallax easing + the occasional comet.
             let frame = 0;
-            let recheckCounter = 0;
-            let haloOpacity = 0;
             const animate = () => {
                 pointer.x += (target.x - pointer.x) * TUNING.parallax.easing;
                 pointer.y += (target.y - pointer.y) * TUNING.parallax.easing;
@@ -255,23 +173,7 @@ export function CinematicSpaceBackdrop({ earthReady = false }: { earthReady?: bo
                 nebulaGroup.position.set(-pointer.x * TUNING.parallax.nebulaStrength, pointer.y * TUNING.parallax.nebulaStrength, 0);
                 // Stars are 100% static — any sub-pixel motion makes anti-aliased
                 // point sprites flicker pixel-to-pixel, which reads as twinkling.
-                // Leave them locked in place; the nebula and halo carry the depth cue.
-                haloGroup.position.set(-pointer.x * TUNING.parallax.haloStrength, pointer.y * TUNING.parallax.haloStrength, 0);
-
-                // Fade halo in only after Earth is ready.
-                const targetOpacity = earthReadyRef.current ? 1 : 0;
-                haloOpacity += (targetOpacity - haloOpacity) * 0.04;
-                haloGroup.visible = haloOpacity > 0.01;
-                if (haloGroup.visible) {
-                    (halo.material as import('three').ShaderMaterial).uniforms.uOpacity.value = haloOpacity;
-                }
-
-                // Re-place halo every ~10 frames — cheap and catches any CSS-driven
-                // movement that ResizeObserver doesn't (e.g. transforms during expand).
-                if (++recheckCounter >= 10) {
-                    recheckCounter = 0;
-                    placeHalo();
-                }
+                // Leave them locked in place; the nebula carries the depth cue.
 
                 // Comet scheduling + per-frame uniforms.
                 const nowSec = performance.now() / 1000;
@@ -305,7 +207,6 @@ export function CinematicSpaceBackdrop({ earthReady = false }: { earthReady?: bo
                 window.cancelAnimationFrame(frame);
                 window.removeEventListener('pointermove', onPointerMove);
                 observer.disconnect();
-                mutationObserver.disconnect();
                 scene.traverse((object) => {
                     if (object instanceof THREE.Mesh || object instanceof THREE.Points) {
                         object.geometry.dispose();
@@ -479,69 +380,6 @@ function buildStarLayer(THREE: typeof import('three'), opts: StarLayerOpts): imp
         `,
     });
     return new THREE.Points(geometry, material);
-}
-
-// ── Earth-tracking halo ─────────────────────────────────────────────────────
-// A fullscreen quad in clip space. The shader receives Earth's pixel center
-// and inner/outer radii (also in pixels). Falloff is a smooth ring that
-// peaks at the inner radius and fades to zero at the outer.
-function buildHalo(THREE: typeof import('three')): import('three').Mesh<import('three').PlaneGeometry, import('three').ShaderMaterial> {
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    const material = new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        depthTest: false,
-        blending: THREE.AdditiveBlending,
-        uniforms: {
-            uColor: { value: new THREE.Color(TUNING.halo.color) },
-            uCenterPx: { value: new THREE.Vector2(0, 0) },
-            uInnerPx: { value: 100 },
-            uOuterPx: { value: 200 },
-            uResolution: { value: new THREE.Vector2(1, 1) },
-            uIntensity: { value: TUNING.halo.intensity },
-            uFalloff: { value: TUNING.halo.falloffPower },
-            uOpacity: { value: 0.0 },
-        },
-        vertexShader: `
-            varying vec2 vUv;
-            void main() {
-                vUv = uv;
-                gl_Position = vec4(position.xy, 0.0, 1.0);
-            }
-        `,
-        fragmentShader: `
-            varying vec2 vUv;
-            uniform vec3 uColor;
-            uniform vec2 uCenterPx;
-            uniform float uInnerPx;
-            uniform float uOuterPx;
-            uniform vec2 uResolution;
-            uniform float uIntensity;
-            uniform float uFalloff;
-            uniform float uOpacity;
-            void main() {
-                vec2 fragPx = vUv * uResolution;
-                float dist = distance(fragPx, uCenterPx);
-
-                // Outside the outer radius: nothing.
-                if (dist >= uOuterPx) discard;
-
-                // Inside the planet disc: nothing (the Earth occupies this area).
-                if (dist <= uInnerPx) discard;
-
-                // Smooth ring fading from inner→outer.
-                float t = (dist - uInnerPx) / (uOuterPx - uInnerPx);
-                // Inverse power: brightest at the inner edge, soft fade outward.
-                float falloff = pow(1.0 - t, uFalloff);
-                float alpha = falloff * uIntensity * uOpacity;
-                gl_FragColor = vec4(uColor, alpha);
-            }
-        `,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.frustumCulled = false;
-    mesh.renderOrder = -5;
-    return mesh;
 }
 
 // ── Comet (rare streak across the canvas) ───────────────────────────────────

@@ -25,11 +25,10 @@
 ## Estrutura
 
 - `ObjectTypeBadge.tsx`: badge compacto do tipo do pequeno corpo.
-- `EarthMoonRuler.tsx`: régua visual Terra-Lua e posição relativa do objeto.
 
 ## Remoção Do Caminho 2D
 
-Os presenters usados apenas pelo radar 2D/SVG e pelo painel lateral antigo foram removidos: marcador SVG de aproximação, legenda de distância, card de fidelidade visual e prévia procedural embutida. A cena 3D usa seus próprios corpos, trajetórias e painéis.
+Os presenters usados apenas pelo radar 2D/SVG e pelo painel lateral antigo foram removidos: marcador SVG de aproximação, legenda de distância, card de fidelidade visual, prévia procedural embutida e a régua Terra-Lua (`EarthMoonRuler`, que só vivia no card de foco antigo). A cena 3D usa seus próprios corpos, trajetórias e painéis.
 
 ## Regra Para IA
 

@@ -3,27 +3,31 @@
  *
  * Responsabilidade: apresentar objetos já filtrados/rankeados por camadas
  * superiores e encaminhar a intenção de seleção para o componente pai.
+ * A moldura externa (painel desktop ou sheet mobile) fica por conta de quem monta.
  */
 
 import { RefreshCw } from 'lucide-react';
 import type { ClosestNowObject, ObjectLimit, SelectionMode, UnifiedApproach } from '@/types';
 import { OBJECT_PALETTE } from '@/lib/radar/palette';
+import { Tooltip } from '../Controls/Tooltip';
 import { ObjectListItem } from '../Lists/RadarSceneObjectListItem';
 import { EmptyModeMessage } from './MobilePanelControls';
 
 export function RefreshButton({ en, onRefresh, loading }: { en: boolean; onRefresh?: () => void; loading: boolean }) {
     if (!onRefresh) return null;
     return (
-        <button
-            type="button"
-            onClick={onRefresh}
-            disabled={loading}
-            title={en ? 'Refresh data' : 'Atualizar dados'}
-            aria-label={en ? 'Refresh data' : 'Atualizar dados'}
-            className="rounded p-0.5 text-white/35 transition outline-none hover:text-white/70 focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait disabled:opacity-40"
-        >
-            <RefreshCw className={['size-3', loading ? 'animate-spin' : ''].join(' ')} />
-        </button>
+        <Tooltip content={en ? 'Refresh data' : 'Atualizar dados'} hideDelay={150}>
+            <button
+                type="button"
+                onClick={onRefresh}
+                disabled={loading}
+                aria-label={en ? 'Refresh data' : 'Atualizar dados'}
+                /* p-2 no mobile garante área de toque razoável; compacto no desktop */
+                className="rounded-full p-2 text-white/35 transition outline-none hover:text-white/70 focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait disabled:opacity-40 lg:p-0.5"
+            >
+                <RefreshCw className={['size-3.5 lg:size-3', loading ? 'animate-spin' : ''].join(' ')} />
+            </button>
+        </Tooltip>
     );
 }
 
@@ -36,7 +40,6 @@ export function RadarNavigationObjectList({
     locale,
     orbitMode,
     radarLoading,
-    mobile = false,
 }: {
     objects: ClosestNowObject[];
     selectedId: string | null;
@@ -46,37 +49,25 @@ export function RadarNavigationObjectList({
     locale: 'pt-BR' | 'en';
     orbitMode: boolean;
     radarLoading: boolean;
-    mobile?: boolean;
 }) {
-    const list = radarLoading
-        ? null
-        : objects.length === 0
-            ? <EmptyModeMessage selectionMode={selectionMode} locale={locale} />
-            : (
-                <ul className={mobile ? 'w-full min-w-0 space-y-0.5' : 'min-h-0 flex-1 space-y-0.5 overflow-y-auto'}>
-                    {objects.map((object, index) => (
-                        <ObjectListItem
-                            key={object.approach.id}
-                            object={object}
-                            palette={OBJECT_PALETTE[index % OBJECT_PALETTE.length]}
-                            isSelected={object.approach.id === selectedId}
-                            onSelect={onSelect}
-                            locale={locale}
-                            selectionMode={selectionMode}
-                            compact={objectLimit === 30}
-                            orbitMode={orbitMode}
-                        />
-                    ))}
-                </ul>
-            );
-
-    if (!mobile) return list;
+    if (radarLoading) return null;
+    if (objects.length === 0) return <EmptyModeMessage selectionMode={selectionMode} locale={locale} />;
 
     return (
-        <div className="flex min-h-0 flex-1 w-full px-2 py-2">
-            <div className="h-full min-h-0 w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-space-950/90 p-1 shadow-[0_8px_24px_rgba(0,0,0,0.24)]">
-                {list}
-            </div>
-        </div>
+        <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
+            {objects.map((object, index) => (
+                <ObjectListItem
+                    key={object.approach.id}
+                    object={object}
+                    palette={OBJECT_PALETTE[index % OBJECT_PALETTE.length]}
+                    isSelected={object.approach.id === selectedId}
+                    onSelect={onSelect}
+                    locale={locale}
+                    selectionMode={selectionMode}
+                    compact={objectLimit === 30}
+                    orbitMode={orbitMode}
+                />
+            ))}
+        </ul>
     );
 }

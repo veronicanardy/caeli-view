@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
-import type { MobilePanelSection } from './Panels/MobilePanelControls';
+import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import type { CameraViewKey } from './Scene/cameraConstants';
 import { framingForBody } from './Scene/cameraFraming';
 import type { FocusFraming } from './Scene/cameraFraming';
@@ -27,11 +27,9 @@ type Args = {
     closestNowObjects: ClosestNowObject[];
     focusedObject: ClosestNowObject | null;
     ephemeris: SceneEphemeris | null;
-    mobilePanelSection: MobilePanelSection;
     onClearSelection?: () => void;
     onSelect: (approach: UnifiedApproach) => void;
-    setMobilePanelSection: (section: MobilePanelSection) => void;
-    setPanelCollapsed: (collapsed: boolean) => void;
+    setMobileSheet: (sheet: MobileSheetSection | null) => void;
     setPlanetsOpen: (open: boolean) => void;
     triggerTransition: (fn: () => void) => void;
 };
@@ -43,11 +41,9 @@ export function useRadar3DFocusActions({
     closestNowObjects,
     focusedObject,
     ephemeris,
-    mobilePanelSection,
     onClearSelection,
     onSelect,
-    setMobilePanelSection,
-    setPanelCollapsed,
+    setMobileSheet,
     setPlanetsOpen,
     triggerTransition,
 }: Args) {
@@ -61,6 +57,9 @@ export function useRadar3DFocusActions({
     const [bodyCardOpen, setBodyCardOpen] = useState<Radar3DBodyCardTarget>(null);
     const [planetFocusTargets, setPlanetFocusTargets] = useState<Partial<Record<PlanetId, FocusFraming>>>({});
     const [sunFocusTarget, setSunFocusTarget] = useState<FocusFraming | null>(null);
+    // Enquadramento dos asteroides famosos: voo até um conhecido (clique) ou panorama da régua dos
+    // planetas (entrada no modo). Vive no mesmo trilho de foco dos planetas/Sol no RadarSceneCanvas.
+    const [knownFocusTarget, setKnownFocusTarget] = useState<FocusFraming | null>(null);
 
     const visibleFocusedObject = focusedObject && focusedObject.approach.id !== dismissedFocusObjectId
         ? focusedObject
@@ -69,14 +68,23 @@ export function useRadar3DFocusActions({
     const clearPlanetTargets = useCallback(() => {
         setPlanetFocusTargets({});
         setSunFocusTarget(null);
+        setKnownFocusTarget(null);
     }, []);
+
+    /** Recua a câmera para enquadrar toda a régua dos planetas (onde vivem os famosos). */
+    const frameFamousBelt = useCallback(() => {
+        clearPlanetTargets();
+        // Raio grande centrado no Sol: os conhecidos ficam a ~100–270 unidades; este enquadramento
+        // os traz todos ao campo de visão na entrada do modo. Multiplicador alto = câmera bem recuada.
+        setKnownFocusTarget(framingForBody(new THREE.Vector3(0, 0, 0), 24, undefined, 9));
+    }, [clearPlanetTargets]);
 
     const collapseNavigationForMobile = useCallback(() => {
         if (typeof window === 'undefined') return;
         if (!window.matchMedia(MOBILE_MEDIA_QUERY).matches) return;
         setPlanetsOpen(false);
-        setPanelCollapsed(true);
-    }, [setPanelCollapsed, setPlanetsOpen]);
+        setMobileSheet(null);
+    }, [setMobileSheet, setPlanetsOpen]);
 
     const pickView = useCallback((key: CameraViewKey) => {
         onClearSelection?.();
@@ -93,6 +101,10 @@ export function useRadar3DFocusActions({
         setBodyCardOpen(null);
         clearPlanetTargets();
         collapseNavigationForMobile();
+
+        // Os famosos vêm do Horizons (posição heliocêntrica real, igual aos NEOs), então seguem o
+        // cameraIntent 'object' habitual → useSelectionFocusFraming os enquadra.
+        setKnownFocusTarget(null);
         setCameraIntent((intent) => ({ kind: 'object', view: intent.view, nonce: nextCameraNonce(intent) }));
         onSelect(approach);
     }, [clearPlanetTargets, closestNowObjects, collapseNavigationForMobile, onSelect, orbitMode]);
@@ -113,9 +125,8 @@ export function useRadar3DFocusActions({
         setBodyCardOpen(null);
         clearPlanetTargets();
         setPlanetsOpen(false);
-        setPanelCollapsed(false);
-        setMobilePanelSection('objects');
-    }, [clearPlanetTargets, onClearSelection, setMobilePanelSection, setPanelCollapsed, setPlanetsOpen]);
+        setMobileSheet('objects');
+    }, [clearPlanetTargets, onClearSelection, setMobileSheet, setPlanetsOpen]);
 
     const closeFocusedObject = useCallback(() => {
         if (focusedObject) setDismissedFocusObjectId(focusedObject.approach.id);
@@ -145,6 +156,8 @@ export function useRadar3DFocusActions({
     const focusPlanet = useCallback((id: PlanetId) => {
         onClearSelection?.();
         const cfg = PLANET_CONFIG[id];
+        // A efeméride já chega na régua única (computeSceneEphemeris gera as posições nela), então a
+        // câmera mira direto na posição do planeta — a mesma em que ele é desenhado.
         const pos = ephemeris?.[cfg.ephemerisKey];
         withOrbitExit(() => {
             setDismissedFocusObjectId(null);
@@ -201,10 +214,7 @@ export function useRadar3DFocusActions({
     useEffect(() => {
         if (!orbitMode) return;
         setPlanetsOpen(false);
-        if (mobilePanelSection !== 'objects') {
-            setMobilePanelSection('objects');
-        }
-    }, [mobilePanelSection, orbitMode, setMobilePanelSection, setPlanetsOpen]);
+    }, [orbitMode, setPlanetsOpen]);
 
     return {
         bodyCardOpen,
@@ -215,6 +225,8 @@ export function useRadar3DFocusActions({
         focusBody,
         focusPlanet,
         focusSun,
+        frameFamousBelt,
+        knownFocusTarget,
         orbitMode,
         pickView,
         planetFocusTargets,

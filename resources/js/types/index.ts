@@ -130,6 +130,11 @@ export type UnifiedApproach = {
     orbitId: string | null;
     absoluteMagnitude: number | null;
     distanceContext: DistanceContext;
+    /** Campos opcionais do SBDB, preenchidos sob demanda (ex.: card dos asteroides famosos). */
+    orbitClass?: string | null;
+    orbitClassDescription?: string | null;
+    albedo?: number | null;
+    rotationPeriodHours?: number | null;
 };
 
 export type TrajectoryPoint = {
@@ -151,7 +156,8 @@ export type AsteroidTrajectory = {
     objectName: string;
     source: 'JPL Horizons';
     center: 'Earth';
-    projection: '2D simplified';
+    /** Os pontos são vetores eclípticos J2000 3D (x, y, z em km) — a cena preserva o eixo Z real. */
+    projection: '3D ecliptic J2000';
     closestApproachTime: string;
     points: TrajectoryPoint[];
     /** When the trajectory is anchored to "now" (closest-now mode), Horizons returns the points
@@ -203,7 +209,7 @@ export type ClosestNowObject = {
 
 export const OBJECT_LIMITS = [5, 15, 30] as const;
 export type ObjectLimit = (typeof OBJECT_LIMITS)[number];
-export type SelectionMode = 'nearest' | 'upcoming';
+export type SelectionMode = 'nearest' | 'upcoming' | 'famous';
 
 export type ClosestNowResponse = {
     mode: 'closest_now';
@@ -217,17 +223,6 @@ export type ClosestNowResponse = {
     lunarReference: LunarReference;
 };
 
-export type HorizonsPositionFailureReason =
-    | 'no_command_candidates'
-    | 'no_ephemeris'
-    | 'parse_error'
-    | 'no_point_near_reference'
-    | 'no_reference_time'
-    | 'rate_limit'
-    | 'timeout'
-    | 'http_error'
-    | 'invalid_target';
-
 /**
  * UI-facing classification of why Horizons position is unavailable.
  * - horizons_transient: 503/timeout/rate-limit — worth retrying, already attempted with backoff.
@@ -240,27 +235,6 @@ export type HorizonsFailureKind =
     | 'no_ephemeris'
     | 'no_orbital_data'
     | 'symbolic';
-
-export type HorizonsPositionResult = {
-    id: string;
-    status: 'available' | 'unavailable';
-    positionKind: 'horizons_current' | 'symbolic_distance_only';
-    x: number | null;
-    y: number | null;
-    z: number | null;
-    vx: number | null;
-    vy: number | null;
-    vz: number | null;
-    currentPositionTime: string | null;
-    closestApproachTime: string | null;
-    closestApproachDistanceKm: number | null;
-    closestApproachDistanceLD: number | null;
-    distanceSource: 'JPL Horizons' | 'NeoWs' | 'CAD' | 'fallback';
-    positionSource: 'JPL Horizons' | 'symbolic' | 'unavailable';
-    failureReason: HorizonsPositionFailureReason | null;
-    horizonsFailureKind: HorizonsFailureKind | null;
-    note: string | null;
-};
 
 export type SunDirection = {
     longitudeDeg: number;

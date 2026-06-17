@@ -25,6 +25,8 @@ const PLANET_OCCLUDER_RADII = {
     venusPos: VENUS.visualRadiusDl,
     marsPos: MARS.visualRadiusDl,
     jupiterPos: JUPITER.visualRadiusDl,
+    // 2.3× cobre o raio EXTERNO dos anéis de Saturno, que se estendem bem além do disco e também
+    // ocultam corpos atrás deles. O raio do disco sozinho subestimaria a área de oclusão real.
     saturnPos: SATURN.visualRadiusDl * 2.3,
     uranusPos: URANUS.visualRadiusDl,
     neptunePos: NEPTUNE.visualRadiusDl,
