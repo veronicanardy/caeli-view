@@ -13,7 +13,7 @@ const ptBR = {
     'home.hero.badge': 'Radar orbital · dados ao vivo',
     'home.hero.heading': 'CaeliView',
     'home.hero.tagline': 'Veja o que passa perto da Terra agora.',
-    'home.hero.description': 'O radar de asteroides e aproximações em uma cena 3D interativa, com dados oficiais da NASA/JPL e a leitura do céu da sua noite.',
+    'home.hero.description': 'O radar de asteroides e aproximações em uma cena 3D interativa, com a leitura do céu da sua noite.',
     'home.hero.sources': 'Dados oficiais NASA/JPL · atualizados continuamente',
     'home.hero.options': 'Comece por aqui',
     'home.hero.back': 'Voltar',

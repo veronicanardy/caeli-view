@@ -13,7 +13,7 @@ const en = {
     'home.hero.badge': 'Orbital radar · live data',
     'home.hero.heading': 'CaeliView',
     'home.hero.tagline': 'See what passes near Earth right now.',
-    'home.hero.description': 'The radar of asteroids and close approaches in an interactive 3D scene, with official NASA/JPL data and a read of tonight’s sky.',
+    'home.hero.description': 'The radar of asteroids and close approaches in an interactive 3D scene, with a read of tonight’s sky.',
     'home.hero.sources': 'Official NASA/JPL data · continuously updated',
     'home.hero.options': 'Start here',
     'home.hero.back': 'Back',

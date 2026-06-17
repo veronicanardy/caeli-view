@@ -37,13 +37,16 @@ const TUNING = {
         easing: 0.06,
     },
     comet: {
-        // Evento cinematográfico raro — um risco cruza o céu de tempos em tempos.
-        minIntervalSec: 45,      // intervalo mínimo até o próximo cometa
-        maxIntervalSec: 90,      // espera máxima
-        durationSec: 2.2,        // segundos do spawn ao desaparecimento
+        // Evento cinematográfico RARO e claramente "cometa": branco frio, cauda
+        // longa de gelo, no céu superior. Diferente dos asteroides do centro
+        // (pontos quentes, lentos, frequentes, com dado real). A raridade reforça
+        // a distinção: o cometa é o evento especial; o asteroide é o cotidiano.
+        minIntervalSec: 70,      // bem mais raro que as passagens de asteroide
+        maxIntervalSec: 130,     // espera máxima
+        durationSec: 2.6,        // travessia rápida (cometa risca o céu)
         headSizePx: 3.5,         // ponto brilhante da cabeça
-        trailLengthPx: 220,      // comprimento da cauda
-        color: 0xeaf4ff,         // branco frio
+        trailLengthPx: 300,      // cauda LONGA de gelo (vs ~42px do asteroide)
+        color: 0xeaf4ff,         // branco frio (vs âmbar quente do asteroide)
     },
 } as const;
 

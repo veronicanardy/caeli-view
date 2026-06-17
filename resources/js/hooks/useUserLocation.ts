@@ -134,7 +134,20 @@ export function locationStatusLabel(location: UserLocation, en = false): string 
     return location.displayName;
 }
 
-export function useUserLocation(locale: LocationLocale = 'pt-BR') {
+type UseUserLocationOptions = {
+    /**
+     * Quando true (padrão), pede a localização do navegador já na montagem.
+     * Quando false, NÃO dispara o prompt automaticamente: a Home prefere que o
+     * acesso à localização venha de um gesto explícito do usuário (botão),
+     * evitando o popup sem contexto no primeiro load. Mesmo com auto=false, uma
+     * localização em cache (visita anterior já autorizada) é aplicada na
+     * montagem, então quem já permitiu não precisa pedir de novo.
+     */
+    auto?: boolean;
+};
+
+export function useUserLocation(locale: LocationLocale = 'pt-BR', options: UseUserLocationOptions = {}) {
+    const { auto = true } = options;
     const [location, setLocation] = useState<UserLocation>(EMPTY_LOCATION);
     const latestLocationRef = useRef<UserLocation>(EMPTY_LOCATION);
 
@@ -281,8 +294,17 @@ export function useUserLocation(locale: LocationLocale = 'pt-BR') {
     }, [applyCachedLocation, applyFallback, setTrackedLocation]);
 
     useEffect(() => {
-        requestLocation();
-    }, [requestLocation]);
+        if (auto) {
+            requestLocation();
+
+            return;
+        }
+
+        // Gesto explícito: não dispara o prompt na montagem. Mas se já houver
+        // localização salva (visita anterior autorizada), aplica em silêncio —
+        // o usuário que já permitiu vê sua cidade sem novo popup.
+        applyCachedLocation();
+    }, [auto, requestLocation, applyCachedLocation]);
 
     useEffect(() => {
         if (!hasValidCoordinates(location) || !shouldResolvePlaceName(location)) {

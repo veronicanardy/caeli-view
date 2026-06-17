@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     buildObservationNote,
+    cleanFeedTitle,
     formatApproachDate,
     formatObservingVisibility,
     formatVisiblePlanetsLine,
@@ -219,5 +220,27 @@ describe('moonPhaseLabel', () => {
 
     it('arredonda o percentual exibido', () => {
         expect(label(8.6, true)).toBe('Crescent Moon (9%)');
+    });
+});
+
+describe('cleanFeedTitle', () => {
+    it('troca hífen órfão de separador por ponto médio', () => {
+        expect(cleanFeedTitle('Ariane 6 flight VA269 - full replay')).toBe('Ariane 6 flight VA269 · full replay');
+    });
+
+    it('troca travessão de separador por ponto médio', () => {
+        expect(cleanFeedTitle('Webb — primeira luz')).toBe('Webb · primeira luz');
+    });
+
+    it('nunca deixa travessão no texto', () => {
+        expect(cleanFeedTitle('A—B—C')).not.toMatch(/[–—]/);
+    });
+
+    it('preserva hífen interno de palavra (sem espaços)', () => {
+        expect(cleanFeedTitle('full-replay ao vivo')).toBe('full-replay ao vivo');
+    });
+
+    it('normaliza espaços duplicados e apara as pontas', () => {
+        expect(cleanFeedTitle('  Apollo   11   ')).toBe('Apollo 11');
     });
 });

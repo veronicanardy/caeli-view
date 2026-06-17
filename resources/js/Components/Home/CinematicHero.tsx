@@ -10,8 +10,9 @@
  */
 
 import { Link } from '@inertiajs/react';
-import { ArrowLeft, ArrowRight, Earth, ExternalLink, Eye, Image, Moon, Orbit, Satellite, Star } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Earth, ExternalLink, Eye, Image, MapPin, Moon, Orbit, Satellite, Star } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useHomeApproachTransits, type HomeApproachTransit } from '@/hooks/useHomeApproachTransits';
 import { useHomeAstronomyFeed } from '@/hooks/useHomeAstronomyFeed';
 import { useSkyObservation } from '@/hooks/useSkyObservation';
 import { locationStatusLabel, useUserLocation } from '@/hooks/useUserLocation';
@@ -21,7 +22,7 @@ import { formatNumber } from '@/lib/format';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import {
     buildObservationNote,
-    formatApproachDate,
+    cleanFeedTitle,
     formatObservingVisibility,
     formatVisiblePlanetsLine,
     moonPhaseLabel,
@@ -34,6 +35,9 @@ const CinematicEarthScene = lazy(() =>
 );
 const CinematicSpaceBackdrop = lazy(() =>
     import('./CinematicSpaceBackdrop').then((module) => ({ default: module.CinematicSpaceBackdrop })),
+);
+const ApproachTransit = lazy(() =>
+    import('./ApproachTransit').then((module) => ({ default: module.ApproachTransit })),
 );
 
 const optionCards = [
@@ -74,13 +78,19 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
     const en = locale === 'en';
     const [optionsOpen, setOptionsOpen] = useState(false);
     const sceneRef = useRef<HTMLElement | null>(null);
-    const { location } = useUserLocation(locale);
+    // auto:false — não dispara o prompt de localização no load. A leitura do céu
+    // local vem de um gesto explícito (botão no console), com fallback honesto.
+    const { location, requestLocation } = useUserLocation(locale, { auto: false });
     const sky = useSkyObservation(location);
     const visible = useVisibleObjects(location);
     const feed = useHomeAstronomyFeed({ apod, apodError: apodError ?? null, nextApproach: nextApproach ?? null, spaceNewsHighlight });
     const approach = feed.data.nextApproach;
+    const { transits: approachTransits, nearbyCount } = useHomeApproachTransits();
     const skySummary = sky.data ? (en ? sky.data.summaryEn : sky.data.summaryPt) : t('home.hero.readingLocalSky');
     const locationLabel = locationStatusLabel(location, en);
+    // Sem localização ainda (nem cache nem permissão): oferecer o gesto em vez
+    // de mostrar dados de céu vazios/genéricos.
+    const needsLocationGesture = location.source === 'unavailable' && location.status === 'idle';
 
     const visibleNowPlanets = useMemo(
         () => visible.objects.filter((o) => o.id !== 'moon' && o.altitude >= 10),
@@ -112,7 +122,11 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
     }, [optionsOpen]);
 
     return (
-        <section ref={sceneRef} className={`home-hero-scene relative flex min-h-[660px] flex-col overflow-hidden border-b border-white/10 lg:min-h-[calc(100vh-5rem)] ${optionsOpen ? 'home-hero-scene-expanded' : ''}`}>
+        <section ref={sceneRef} className={`home-hero-scene home-hero-intro relative flex min-h-[660px] flex-col overflow-hidden border-b border-white/10 lg:min-h-[calc(100vh-5rem)] ${optionsOpen ? 'home-hero-scene-expanded' : ''}`}>
+                {/* Véu do amanhecer: a cena começa escura e o véu se dissolve de
+                    baixo pra cima, como a luz do sol nascendo e clareando a Terra.
+                    aria-hidden, decorativo, roda a cada carregamento. */}
+                <div className="home-hero-intro-veil pointer-events-none absolute inset-0 z-[30]" aria-hidden="true" />
                 <Suspense fallback={null}>
                     <CinematicSpaceBackdrop />
                 </Suspense>
@@ -120,6 +134,14 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                     <CinematicEarthScene />
                 </Suspense>
                 <div className="home-earth-cinematic-grade pointer-events-none absolute inset-0 z-[11]" aria-hidden="true" />
+
+                {/* Trânsito de dados: asteroides reais da vizinhança cruzam a
+                    faixa central como pontos de luz, com rótulo fantasma (nome +
+                    distância). Preenche o vazio do meio com o que o produto faz. */}
+                <Suspense fallback={null}>
+                    <ApproachTransit transits={approachTransits} />
+                </Suspense>
+
 
                 {/* Vignette: separa a navbar do céu e cria um poço suave atrás do
                     bloco editorial central, sem escurecer o horizonte embaixo. */}
@@ -164,8 +186,7 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                     <p className="home-hero-tagline hero-rise hero-rise-3 mt-5 max-w-2xl text-balance text-xl font-medium leading-9 text-white/92 sm:text-2xl">
                         {t('home.hero.tagline')}
                     </p>
-                    <p className="home-hero-description hero-rise hero-rise-3 mt-3 max-w-xl text-balance text-base leading-7 text-white/68">{t('home.hero.description')}</p>
-                    <p className="home-hero-source hero-rise hero-rise-4 mt-4 inline-flex items-center gap-2 text-[0.68rem] font-semibold uppercase leading-5 tracking-[0.18em] text-white/45">
+                    <p className="home-hero-source hero-rise hero-rise-4 mt-4 inline-flex items-center gap-2 text-[0.68rem] font-semibold uppercase leading-5 tracking-[0.18em] text-white/60">
                         <span className="home-hero-source-dot" aria-hidden="true" />
                         {t('home.hero.sources')}
                     </p>
@@ -207,7 +228,11 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                         visibleNowPlanets={visibleNowPlanets}
                         moonIllumination={visible.moonIllumination}
                         approach={approach}
+                        nearbyCount={nearbyCount}
+                        nearestObject={approachTransits[0] ?? null}
                         locationLabel={locationLabel}
+                        needsLocationGesture={needsLocationGesture}
+                        onRequestLocation={requestLocation}
                         en={en}
                     />
                 </div>
@@ -264,7 +289,11 @@ function ObservatoryConsole({
     visibleNowPlanets,
     moonIllumination,
     approach,
+    nearbyCount,
+    nearestObject,
     locationLabel,
+    needsLocationGesture,
+    onRequestLocation,
     en,
 }: {
     spaceNews: SpaceNewsHighlight | null;
@@ -275,7 +304,11 @@ function ObservatoryConsole({
     visibleNowPlanets: VisibleObject[];
     moonIllumination: number;
     approach: UnifiedApproach | null | undefined;
+    nearbyCount: number;
+    nearestObject: HomeApproachTransit | null;
     locationLabel: string;
+    needsLocationGesture: boolean;
+    onRequestLocation: () => void;
     en: boolean;
 }) {
     const { t } = useTranslation();
@@ -286,7 +319,7 @@ function ObservatoryConsole({
     const highlightSource = spaceNews?.source ?? 'NASA APOD';
     const highlightUrl = spaceNews?.url ?? '/apod';
     const highlightFallback = en ? STATIC_CURIOSITY.en : STATIC_CURIOSITY.pt;
-    const displayTitle = highlightTitle ?? highlightFallback;
+    const displayTitle = cleanFeedTitle(highlightTitle ?? highlightFallback);
     const highlightDate = spaceNews?.publishedAt
         ? new Intl.DateTimeFormat(en ? 'en' : 'pt-BR', { day: '2-digit', month: 'short' }).format(new Date(spaceNews.publishedAt))
         : null;
@@ -300,12 +333,17 @@ function ObservatoryConsole({
     const visibilityLabel = formatObservingVisibility(cloudCover, seeing, en);
     const observingConditionLine = en ? `${visibilityLabel} visibility` : `Visibilidade ${visibilityLabel.toLowerCase()}`;
     const planetsLine = formatVisiblePlanetsLine(visibleNowPlanets.map((p) => en ? p.nameEn : p.namePt), en);
-    // ── Célula 4: Próxima aproximação ─────────────────────────────────
-    const approachName = approach ? resolveApproachIdentity(approach).displayName : null;
-    const approachDate = approach?.approachDate ? formatApproachDate(approach.approachDate, en) : null;
-    const approachKm = approach?.nominalDistanceKm != null
-        ? `${formatNumber(approach.nominalDistanceKm, 0)} km`
-        : null;
+    // ── Célula 1: Vizinhança da Terra ─────────────────────────────────
+    // Fonte ÚNICA: closest-now (mesma do contador e dos trânsitos). O dado
+    // principal é a CONTAGEM de objetos próximos agora; o secundário é o mais
+    // próximo (nome + distância). Antes o card usava nextApproach das props,
+    // que vinha vazio ("tudo tranquilo") e contradizia o contador de 32.
+    const hasNearby = nearbyCount > 0;
+    const nearestName = nearestObject?.name
+        ?? (approach ? resolveApproachIdentity(approach).displayName : null);
+    const nearestKm = nearestObject?.distanceKm != null
+        ? `${formatNumber(nearestObject.distanceKm, 0)} km`
+        : (approach?.nominalDistanceKm != null ? `${formatNumber(approach.nominalDistanceKm, 0)} km` : null);
 
     return (
         <div className="hero-rise hero-rise-5">
@@ -318,62 +356,56 @@ function ObservatoryConsole({
                             {t('home.hero.liveLabel')}
                         </span>
                     </span>
-                    <span className="console-header-location">
-                        <span className="console-header-prefix">{en ? 'Observing from' : 'Observando de'}</span>
-                        <strong>{locationLabel}</strong>
-                    </span>
+                    {needsLocationGesture ? (
+                        <button
+                            type="button"
+                            className="console-location-cta"
+                            onClick={onRequestLocation}
+                        >
+                            <MapPin className="size-3.5" aria-hidden="true" />
+                            {en ? 'Read my night sky' : 'Ler o céu da minha noite'}
+                        </button>
+                    ) : (
+                        <span className="console-header-location">
+                            <span className="console-header-prefix">{en ? 'Observing from' : 'Observando de'}</span>
+                            <strong>{locationLabel}</strong>
+                        </span>
+                    )}
                 </header>
 
                 <div ref={gridRef} className="console-grid">
-                    {/* 1. Céu esta noite */}
-                    <article className="console-cell console-cell-observe">
-                        <span className="editorial-card-glow" aria-hidden="true" />
-                        <span className="editorial-card-icon editorial-card-icon-mint" aria-hidden="true">
-                            <Eye className="size-4" />
-                        </span>
-                        <div className="editorial-card-body">
-                            <span className="editorial-card-label">
-                                {en ? 'Tonight\'s sky' : 'Céu esta noite'}
-                                <span className="editorial-live-dot" aria-hidden="true" />
-                            </span>
-                            <h3 className="editorial-card-title editorial-card-title-note">{observationLine}</h3>
-                        </div>
-                    </article>
-
-                    {/* 2. Dados do céu */}
-                    <article className="console-cell console-cell-sky">
-                        <span className="editorial-card-glow" aria-hidden="true" />
-                        <span className="editorial-card-icon editorial-card-icon-purple" aria-hidden="true">
-                            <Moon className="size-4" />
-                        </span>
-                        <div className="editorial-card-body">
-                            <span className="editorial-card-label">
-                                {en ? 'Sky data' : 'Dados do céu'}
-                                <span className="editorial-live-dot" aria-hidden="true" />
-                            </span>
-                            <h3 className="editorial-card-title editorial-card-main-value">{moonPhaseLine}</h3>
-                            <div className="editorial-sky-list">
-                                {cloudLine ? <span>{cloudLine}</span> : null}
-                                <span>{observingConditionLine}</span>
-                                <span className="editorial-sky-planets">{planetsLine}</span>
-                            </div>
-                        </div>
-                    </article>
-
-                    {/* 3. Próxima aproximação */}
-                    <article className="console-cell console-cell-approach">
+                    {/* 1. Próxima aproximação — primeiro card e CLICÁVEL: leva ao
+                        radar, que é a feature central do produto. */}
+                    <Link
+                        href="/radar"
+                        prefetch
+                        className="console-cell console-cell-approach console-cell-link group focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                        aria-label={en ? 'Open the radar to see close approaches' : 'Abrir o radar para ver as aproximações'}
+                    >
                         <span className="editorial-card-glow" aria-hidden="true" />
                         <span className="editorial-card-icon editorial-card-icon-orange" aria-hidden="true">
                             <Orbit className="size-4" />
                         </span>
                         <div className="editorial-card-body">
-                            <span className="editorial-card-label">{en ? 'Next approach' : 'Próxima aproximação'}</span>
-                            {approachName ? (
+                            <span className="editorial-card-label">
+                                {en ? 'Near Earth now' : 'Perto da Terra agora'}
+                                <span className="editorial-live-dot" aria-hidden="true" />
+                                <ArrowRight className="console-cell-link-arrow size-3.5" aria-hidden="true" />
+                            </span>
+                            {hasNearby ? (
                                 <>
-                                    <h3 className="editorial-card-title editorial-card-main-value">{approachName}</h3>
+                                    <h3 className="editorial-card-title editorial-card-approach-count">
+                                        <span className="editorial-approach-count-value">{formatNumber(nearbyCount, 0)}</span>
+                                        <span className="editorial-approach-count-unit">{en ? 'objects' : 'objetos'}</span>
+                                    </h3>
                                     <div className="editorial-approach-details">
-                                        {approachDate ? <span className="editorial-approach-date">{approachDate}</span> : null}
-                                        {approachKm ? <span className="editorial-approach-item editorial-approach-item-dim">{approachKm}</span> : null}
+                                        {nearestName ? (
+                                            <span className="editorial-approach-nearest">
+                                                {en ? 'Closest: ' : 'Mais próximo: '}
+                                                <strong>{nearestName}</strong>
+                                            </span>
+                                        ) : null}
+                                        {nearestKm ? <span className="editorial-approach-item editorial-approach-item-dim">{nearestKm}</span> : null}
                                     </div>
                                 </>
                             ) : (
@@ -382,8 +414,53 @@ function ObservatoryConsole({
                                         {en ? 'All quiet up there' : 'Tudo tranquilo lá em cima'}
                                     </h3>
                                     <span className="editorial-card-secondary editorial-card-secondary-dim">
-                                        {en ? 'Nothing we track is coming close in the next few hours.' : 'Nada que monitoramos chega perto nas próximas horas.'}
+                                        {en ? 'Nothing we track is coming close right now.' : 'Nada que monitoramos chega perto agora.'}
                                     </span>
+                                </>
+                            )}
+                        </div>
+                    </Link>
+
+                    {/* 2. Céu esta noite */}
+                    <article className="console-cell console-cell-observe">
+                        <span className="editorial-card-glow" aria-hidden="true" />
+                        <span className="editorial-card-icon editorial-card-icon-mint" aria-hidden="true">
+                            <Eye className="size-4" />
+                        </span>
+                        <div className="editorial-card-body">
+                            <span className="editorial-card-label">
+                                {en ? 'Tonight\'s sky' : 'Céu esta noite'}
+                                {!needsLocationGesture ? <span className="editorial-live-dot" aria-hidden="true" /> : null}
+                            </span>
+                            {needsLocationGesture ? (
+                                <LocationInvite onRequest={onRequestLocation} en={en} />
+                            ) : (
+                                <h3 className="editorial-card-title editorial-card-title-note">{observationLine}</h3>
+                            )}
+                        </div>
+                    </article>
+
+                    {/* 3. Dados do céu */}
+                    <article className="console-cell console-cell-sky">
+                        <span className="editorial-card-glow" aria-hidden="true" />
+                        <span className="editorial-card-icon editorial-card-icon-purple" aria-hidden="true">
+                            <Moon className="size-4" />
+                        </span>
+                        <div className="editorial-card-body">
+                            <span className="editorial-card-label">
+                                {en ? 'Sky data' : 'Dados do céu'}
+                                {!needsLocationGesture ? <span className="editorial-live-dot" aria-hidden="true" /> : null}
+                            </span>
+                            {needsLocationGesture ? (
+                                <LocationInvite onRequest={onRequestLocation} en={en} />
+                            ) : (
+                                <>
+                                    <h3 className="editorial-card-title editorial-card-main-value">{moonPhaseLine}</h3>
+                                    <div className="editorial-sky-list">
+                                        {cloudLine ? <span>{cloudLine}</span> : null}
+                                        <span>{observingConditionLine}</span>
+                                        <span className="editorial-sky-planets">{planetsLine}</span>
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -494,6 +571,20 @@ function OptionsScene({ open, onBack }: { open: boolean; onBack: () => void }) {
                 </div>
             </div>
         </div>
+    );
+}
+
+/**
+ * Convite de localização exibido nos cards que dependem dela, enquanto o usuário
+ * não autorizou. Em vez de dados falsos (Lua 0%, "Lendo o céu local"), oferece o
+ * gesto explícito que dispara o prompt do navegador.
+ */
+function LocationInvite({ onRequest, en }: { onRequest: () => void; en: boolean }) {
+    return (
+        <button type="button" className="editorial-card-invite" onClick={onRequest}>
+            <MapPin className="size-3.5" aria-hidden="true" />
+            <span>{en ? 'Allow location to read your sky' : 'Permita a localização para ler seu céu'}</span>
+        </button>
     );
 }
 

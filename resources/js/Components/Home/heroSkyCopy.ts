@@ -18,6 +18,24 @@ const GENERIC_SUMMARY_MARKERS = [
 ];
 
 /**
+ * Limpa títulos de feed externo para exibição no console.
+ *
+ * Feeds (ESA, NASA, agências) costumam vir com hífens órfãos como separador
+ * ("Ariane 6 flight VA269 - full replay") e, às vezes, travessões. O produto
+ * não usa travessão (—) em texto; aqui o separador vira ponto " · ", coerente
+ * com o resto do hero, e espaços duplicados são normalizados. Pura e testável.
+ */
+export function cleanFeedTitle(title: string): string {
+    return title
+        // Hífen ou travessão cercado de espaços como separador → ponto médio.
+        .replace(/\s+[-–—]\s+/g, ' · ')
+        // Travessão solto residual → ponto médio (nunca exibir —).
+        .replace(/[–—]/g, '·')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/**
  * Detecta resumos genéricos/placeholder vindos do serviço de céu local,
  * que não devem ser exibidos como leitura real ao usuário.
  */

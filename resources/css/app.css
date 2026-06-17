@@ -270,6 +270,107 @@ body {
     }
 }
 
+/* ─── Amanhecer cinematográfico: entrada da Home ─────────────────────────
+   A cena começa escura; um véu se dissolve de cima pra baixo enquanto o sol
+   "nasce" (a luz cresce do horizonte), e então o nome + textos sobem na cascata
+   hero-rise. Roda a cada carregamento. Tudo decorativo e respeitando reduced-motion. */
+
+.home-hero-intro-veil {
+    /* Escuro por cima de tudo, dissolvendo de cima pra baixo: a parte de cima
+       (céu) clareia primeiro, a base (horizonte/sol) por último, como a luz
+       chegando. O mask revela progressivamente via animação de opacidade. */
+    background: linear-gradient(to bottom, rgba(2, 4, 10, 0.96) 0%, rgba(2, 4, 10, 0.99) 55%, #02040a 100%);
+    animation: heroIntroVeil 1700ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes heroIntroVeil {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* O sol e seu brilho "nascem": começam apagados e baixos, e sobem em
+   intensidade/escala durante a entrada, sincronizados com o véu se dissolvendo. */
+.home-hero-intro .home-cinematic-sunrise-bloom,
+.home-hero-intro .home-cinematic-sunrise-corona,
+.home-hero-intro .home-cinematic-sunrise-core {
+    animation: heroIntroSunrise 2100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes heroIntroSunrise {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, calc(-50% + 2.2rem)) scale(0.7);
+    }
+    55% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* O nome surge com um glow que acende e assenta: brilho forte no meio da
+   entrada, decaindo para o drop-shadow permanente do título. */
+.home-hero-intro .hero-headline {
+    animation: heroIntroNameGlow 2200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 620ms;
+}
+
+@keyframes heroIntroNameGlow {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 0.6rem, 0) scale(0.985);
+        filter:
+            drop-shadow(0 1px 20px rgba(3, 8, 18, 0.82))
+            drop-shadow(0 0 4px rgba(84, 214, 214, 0));
+    }
+    45% {
+        opacity: 1;
+        filter:
+            drop-shadow(0 1px 20px rgba(3, 8, 18, 0.82))
+            drop-shadow(0 0 48px rgba(120, 214, 236, 0.55));
+    }
+    100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter:
+            drop-shadow(0 1px 20px rgba(3, 8, 18, 0.82))
+            drop-shadow(0 0 34px rgba(84, 214, 214, 0.13));
+    }
+}
+
+/* O título já tem regra .hero-headline.hero-rise (cascata padrão). Na entrada
+   cinematográfica, o glow acima assume; desligamos a cascata para o título não
+   ter duas animações concorrentes. */
+.home-hero-intro .hero-headline.hero-rise {
+    animation-name: heroIntroNameGlow;
+    animation-delay: 620ms;
+}
+
+/* Durante o amanhecer, o resto da cópia (badge, tagline, fonte, CTA, console)
+   espera o sol começar a nascer antes de subir, para a sequência ler como
+   "amanhece → a marca acende → o conteúdo surge", e não tudo de uma vez. */
+.home-hero-intro .hero-rise { animation-delay: 720ms; }
+.home-hero-intro .hero-rise-3 { animation-delay: 880ms; }
+.home-hero-intro .hero-rise-4 { animation-delay: 1000ms; }
+.home-hero-intro .hero-rise-5 { animation-delay: 1140ms; }
+
+@media (prefers-reduced-motion: reduce) {
+    .home-hero-intro-veil,
+    .home-hero-intro .home-cinematic-sunrise-bloom,
+    .home-hero-intro .home-cinematic-sunrise-corona,
+    .home-hero-intro .home-cinematic-sunrise-core,
+    .home-hero-intro .hero-headline,
+    .home-hero-intro .hero-headline.hero-rise {
+        animation: none;
+    }
+
+    .home-hero-intro-veil {
+        opacity: 0;
+    }
+}
+
 /* ─── Home CTA "Ver opções" ──────────────────────────────────────────── */
 
 .home-cta {
@@ -487,7 +588,7 @@ body {
     font-size: 0.82rem;
     font-weight: 600;
     letter-spacing: 0.04em;
-    color: rgba(255, 255, 255, 0.52);
+    color: rgba(255, 255, 255, 0.64);
     cursor: pointer;
     text-decoration: none;
     padding: 0.45rem 0.2rem;
@@ -1307,11 +1408,15 @@ body {
 }
 
 .editorial-card-label {
+    display: inline-flex;
+    align-items: center;
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.48);
+    /* Contraste: rótulo legível sobre o vidro escuro (era 0.48, abaixo do
+       confortável para texto pequeno). */
+    color: rgba(255, 255, 255, 0.66);
 }
 
 .editorial-card-title {
@@ -1439,8 +1544,47 @@ body {
 }
 
 .editorial-approach-item-dim {
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.68);
     font-size: 0.68rem;
+}
+
+/* Contagem de objetos próximos como info PRINCIPAL do card (número grande +
+   unidade), com o objeto mais próximo logo abaixo como secundário. */
+.editorial-card-approach-count {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin: 0;
+}
+
+.editorial-approach-count-value {
+    font-size: 2.1rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.96);
+}
+
+.editorial-approach-count-unit {
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgba(251, 146, 60, 0.9);
+}
+
+.editorial-approach-nearest {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.editorial-approach-nearest strong {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.88);
 }
 
 /* ─── Console de observação (painel sob o horizonte) ─────────────────── */
@@ -1552,7 +1696,7 @@ body {
     align-items: center;
     gap: 0.45rem;
     font-size: 0.72rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.66);
 }
 
 .console-header-location strong {
@@ -1562,6 +1706,70 @@ body {
     white-space: nowrap;
     color: rgba(255, 255, 255, 0.92);
     font-weight: 500;
+}
+
+/* Convite de localização dentro dos cards que dependem dela. Texto-botão sutil,
+   alinhado à esquerda, com a seta/ícone de pin. */
+.editorial-card-invite {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    margin-top: 0.1rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    font-weight: 500;
+    color: rgba(180, 244, 244, 0.82);
+    cursor: pointer;
+    transition: color 200ms ease;
+}
+
+.editorial-card-invite svg {
+    margin-top: 0.12rem;
+    flex-shrink: 0;
+    color: rgba(84, 214, 214, 0.85);
+}
+
+.editorial-card-invite:hover {
+    color: rgba(204, 250, 250, 1);
+}
+
+.editorial-card-invite:focus-visible {
+    outline: none;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* CTA de localização: aparece no lugar de "Observando de" quando ainda não há
+   localização. Pede o gesto explícito em vez de disparar o prompt no load. */
+.console-location-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.32rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(84, 214, 214, 0.3);
+    background: rgba(84, 214, 214, 0.08);
+    color: rgba(180, 244, 244, 0.92);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+}
+
+.console-location-cta:hover {
+    background: rgba(84, 214, 214, 0.14);
+    border-color: rgba(84, 214, 214, 0.5);
+    color: rgba(204, 250, 250, 1);
+}
+
+.console-location-cta:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(84, 214, 214, 0.5);
 }
 
 /* Pulso "ao vivo" do cabeçalho do console */
@@ -1647,6 +1855,34 @@ body {
     opacity: 1;
     left: 6%;
     right: 6%;
+}
+
+/* Célula clicável (próxima aproximação → radar): cursor, acento permanente um
+   pouco mais aceso e seta que desliza no hover/focus. */
+.console-cell-link {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+
+.console-cell-link::after {
+    opacity: 0.7;
+    left: 6%;
+    right: 6%;
+}
+
+.console-cell-link-arrow {
+    margin-left: 0.4rem;
+    color: rgba(251, 146, 60, 0.7);
+    opacity: 0;
+    transform: translateX(-3px);
+    transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.console-cell-link:hover .console-cell-link-arrow,
+.console-cell-link:focus-visible .console-cell-link-arrow {
+    opacity: 1;
+    transform: translateX(0);
 }
 
 /* Notas longas não estouram a barra: no console clampam em 3 linhas */
@@ -1895,6 +2131,49 @@ body {
 @media (prefers-reduced-motion: reduce) {
     .home-hero-stardust {
         animation: none;
+    }
+}
+
+/* Rótulo fantasma do trânsito de dados: surge quando a cabeça do risco passa
+   pelo centro e some depois. Segue a posição da cabeça (left/top inline). */
+.home-approach-transit-label {
+    position: absolute;
+    transform: translate(-50%, calc(-100% - 0.55rem));
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    white-space: nowrap;
+    padding: 0.28rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 196, 134, 0.22);
+    background: rgba(8, 14, 26, 0.42);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 520ms ease;
+    will-change: opacity;
+}
+
+.home-approach-transit-label.is-visible {
+    opacity: 1;
+}
+
+.home-approach-transit-name {
+    font-weight: 600;
+    color: rgba(255, 226, 196, 0.95);
+}
+
+.home-approach-transit-dist {
+    font-variant-numeric: tabular-nums;
+    color: rgba(160, 214, 236, 0.82);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-approach-transit-label {
+        transition: none;
     }
 }
 
