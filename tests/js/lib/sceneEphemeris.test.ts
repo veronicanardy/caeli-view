@@ -3,6 +3,7 @@ import {
     AU_IN_DL,
     KM_PER_AU,
     KM_PER_LD,
+    LINEAR_AU_SCALE,
     ORBIT_AU_SCALE,
     SUN_DISPLAY_DL,
     buildHeliocentricOrbit,
@@ -36,9 +37,9 @@ describe('compressDistanceDl', () => {
         }
     });
 
-    it('places 1 AU between 60 and 140 scene units (well past the Moon, not absurd) — R0=40', () => {
-        expect(SUN_DISPLAY_DL).toBeGreaterThan(60);
-        expect(SUN_DISPLAY_DL).toBeLessThan(140);
+    it('SUN_DISPLAY_DL is an alias of the single linear ruler (LINEAR_AU_SCALE)', () => {
+        // 1 AU in scene units = the single ruler. The legacy log value (~96) is gone.
+        expect(SUN_DISPLAY_DL).toBeCloseTo(LINEAR_AU_SCALE, 9);
     });
 });
 

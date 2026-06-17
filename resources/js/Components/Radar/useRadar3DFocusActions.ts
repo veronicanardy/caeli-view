@@ -9,7 +9,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
-import { LINEAR_SCALE_FACTOR } from '@/lib/sceneEphemeris';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { MobileSheetSection } from './Panels/radarNavigationTypes';
@@ -157,12 +156,9 @@ export function useRadar3DFocusActions({
     const focusPlanet = useCallback((id: PlanetId) => {
         onClearSelection?.();
         const cfg = PLANET_CONFIG[id];
-        const rawPos = ephemeris?.[cfg.ephemerisKey];
-        // O ephemeris aqui é o CRU; o planeta é DESENHADO em LINEAR_SCALE_FACTOR (RadarScene reescala).
-        // A câmera precisa mirar na MESMA posição escalada, senão voa para a posição antiga.
-        const pos = rawPos
-            ? ([rawPos[0] * LINEAR_SCALE_FACTOR, rawPos[1] * LINEAR_SCALE_FACTOR, rawPos[2] * LINEAR_SCALE_FACTOR] as [number, number, number])
-            : rawPos;
+        // A efeméride já chega na régua única (computeSceneEphemeris gera as posições nela), então a
+        // câmera mira direto na posição do planeta — a mesma em que ele é desenhado.
+        const pos = ephemeris?.[cfg.ephemerisKey];
         withOrbitExit(() => {
             setDismissedFocusObjectId(null);
             setBodyCardOpen(id);

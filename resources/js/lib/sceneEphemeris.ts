@@ -16,6 +16,17 @@ import { KM_PER_AU, LUNAR_DISTANCE_KM as KM_PER_LD } from '@/lib/physicalConstan
 export const AU_IN_DL = KM_PER_AU / KM_PER_LD;
 
 /**
+ * Escala da régua ÚNICA do radar: quantas unidades de cena correspondem a 1 UA de distância
+ * heliocêntrica real. Escala LINEAR, então o SHAPE da órbita é exato — o Sol no foco real da elipse,
+ * excentricidade/periélio/afélio fiéis. Asteroides, Lua, planetas e Sol caem todos nesta régua; a
+ * proximidade de uma aproximação é revelada por ZOOM de câmera, nunca distorcendo a escala.
+ *
+ * 300 dá aos NEOs bom respiro da Terra (≈ 2,4–6 unid), ao custo de empurrar cinturão/planetas mais
+ * longe (Ceres a ~831 unid). Fonte ÚNICA da escala da cena: mudar aqui recalibra todos os corpos.
+ */
+export const LINEAR_AU_SCALE = 300;
+
+/**
  * Compressão logarítmica radial — regra de escala da régua LOG LEGADA (acessível só atrás de `?log`).
  * O caminho PADRÃO da cena é a régua linear em UA (LINEAR_AU_SCALE, mais abaixo); esta compressão é
  * mantida como rede de comparação de bastidor, não como a experiência principal.
@@ -76,11 +87,10 @@ export function compressSceneVector(v: [number, number, number]): [number, numbe
 }
 
 /**
- * Onde o marcador do Sol é desenhado, em unidades de cena: sua distância real de 1 UA passa pela
- * mesma compressão logarítmica de tudo o mais. Derivado, não escolhido à mão, para que o gap
- * Terra→Sol permaneça honesto em ORDEM em relação ao gap Terra→Lua (apenas comprimido, nunca reordenado).
+ * @deprecated "1 UA em unidades de cena" — hoje é apenas um alias de LINEAR_AU_SCALE (a régua única).
+ * Mantido enquanto os consumidores (fallback de Terra/Sol, thresholds de câmera) são migrados.
  */
-export const SUN_DISPLAY_DL = compressDistanceDl(AU_IN_DL);
+export const SUN_DISPLAY_DL = LINEAR_AU_SCALE;
 
 export type SceneEphemeris = {
     /** Vetor unitário apontando DA Terra PARA o Sol, nos eixos da cena. Usado como direção de luz. */
@@ -377,53 +387,13 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
 }
 
 /**
- * Escala linear UA da camada heliocêntrica: quantas unidades de cena correspondem a 1 UA de distância
- * heliocêntrica real. Definida igual a SUN_DISPLAY_DL para que 1 UA (distância Terra–Sol) caia
- * exatamente sobre o Sol desenhado — ou seja, a referência de órbita de 1 UA fecha de volta na Terra
- * na origem.
- *
- * Crucialmente esta é uma escala LINEAR, então o SHAPE da órbita é exato: o Sol está no foco real da
- * elipse, excentricidade/periélio/afélio são todos fiéis. A camada do modo radar (Lua, asteroides
- * próximos) é a que usa a compressão log — as duas camadas se encontram no Sol.
+ * @deprecated Aliases da régua única (LINEAR_AU_SCALE), mantidos enquanto os consumidores são
+ * migrados. ORBIT_AU_SCALE era a escala log-derivada (≈96) que a matemática gerava antes de ser
+ * reescalada; agora a matemática já gera direto na régua única, então ambos valem LINEAR_AU_SCALE
+ * e LINEAR_SCALE_FACTOR é 1 (sem reescalonamento).
  */
-export const ORBIT_AU_SCALE = SUN_DISPLAY_DL;
-
-/**
- * [Modo linear] Escala AU PRÓPRIA do modo régua-única, isolada da régua normal (que mantém
- * ORBIT_AU_SCALE ≈ 96, amarrado ao encontro das duas réguas no Sol). 300 dá aos NEOs bom respiro da
- * Terra (≈ 2,4–6 unid, vs 0,8–1,9 em 96), ao custo de empurrar cinturão/planetas mais longe (Ceres a
- * ~831 unid). Só vale quando o modo linear está ligado; o modo normal não é afetado. Fonte ÚNICA da
- * escala do modo: mudar aqui recalibra todos os corpos.
- */
-export const LINEAR_AU_SCALE = 300;
-
-/** Fator que converte a escala normal (ORBIT_AU_SCALE) na escala do modo linear. */
-export const LINEAR_SCALE_FACTOR = LINEAR_AU_SCALE / ORBIT_AU_SCALE;
-
-/**
- * [Modo linear] Devolve uma CÓPIA do ephemeris com toda a geometria de cena reescalada por
- * LINEAR_SCALE_FACTOR: as posições renderizadas (campos `*ScenePosition`) e os semieixos maiores
- * (`*SemiMajorAU`, de que as elipses orbitais derivam o tamanho). Assim planetas, Terra, Lua, Sol e
- * as órbitas todos esticam juntos e de forma consistente, sem tocar cada consumidor.
- *
- * Os ângulos (lon. periélio, inclinação, nó, excentricidade) NÃO são tocados: definem a forma e a
- * orientação da órbita, não o tamanho. earthHelioPositionAU também fica intacto (é AU astronômico,
- * usado para converter NEOs; a escala entra depois, em helioAUToSunCenteredScene).
- */
-export function scaleEphemerisForLinear(ephemeris: SceneEphemeris): SceneEphemeris {
-    const k = LINEAR_SCALE_FACTOR;
-    const scaleVec = (v: [number, number, number]): [number, number, number] => [v[0] * k, v[1] * k, v[2] * k];
-    const out = { ...ephemeris } as Record<string, unknown>;
-    for (const key of Object.keys(out)) {
-        const value = out[key];
-        if (key.endsWith('ScenePosition') && Array.isArray(value)) {
-            out[key] = scaleVec(value as [number, number, number]);
-        } else if (key.endsWith('SemiMajorAU') && typeof value === 'number') {
-            out[key] = value * k;
-        }
-    }
-    return out as unknown as SceneEphemeris;
-}
+export const ORBIT_AU_SCALE = LINEAR_AU_SCALE;
+export const LINEAR_SCALE_FACTOR = 1;
 
 /**
  * Perifocal (x em direção ao periélio, y a +90° no sentido do movimento) → eclíptico heliocêntrico
@@ -609,11 +579,8 @@ export function runSceneEphemerisAssertions(): void {
     approx(c[1] / r1, v[1] / r0, 1e-12, 'compressão preserva direção y');
     approx(c[2] / r1, v[2] / r0, 1e-12, 'compressão preserva direção z');
 
-    // 1 UA deve dobrar para uma distância de cena claramente maior que a Lua, mas não absurdamente.
-    // Com R0 = 40, o Sol cai em ~96 unidades (era ~33 com R0 = 8).
-    if (!(SUN_DISPLAY_DL > 60 && SUN_DISPLAY_DL < 140)) {
-        throw new Error(`[sceneEphemeris] SUN_DISPLAY_DL fora da faixa esperada: ${SUN_DISPLAY_DL}`);
-    }
+    // Régua única: 1 UA cai exatamente em LINEAR_AU_SCALE unidades de cena.
+    approx(SUN_DISPLAY_DL, LINEAR_AU_SCALE, 1e-9, '1 UA mapeia para LINEAR_AU_SCALE unidades');
 
     // Perifocal para eclíptico com i = Ω = ω = 0: periélio cai em +x eclíptico.
     const p = perifocalToEclipticAU(1, 0, 0, 0, 0);

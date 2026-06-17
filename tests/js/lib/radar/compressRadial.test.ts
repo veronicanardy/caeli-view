@@ -18,8 +18,8 @@ import { describe, expect, it } from 'vitest';
 import {
     KM_PER_AU,
     KM_PER_LD,
+    LINEAR_AU_SCALE,
     ORBIT_AU_SCALE,
-    SUN_DISPLAY_DL,
     compressDistanceDl,
     compressSceneVector,
     helioAUToSunCenteredScene,
@@ -179,11 +179,12 @@ describe('objeto perto de Júpiter cai na região visual de Júpiter', () => {
         const rLog = Math.hypot(...logGeo);
         const rHelio = Math.hypot(...linHelio);
         // Invariante de fronteira, derivado das constantes (sem multiplicador mágico):
-        //  - a camada LINEAR é fiel à UA: 4,2 UA ficam exatamente em 4,2 × ORBIT_AU_SCALE;
+        //  - a camada LINEAR é fiel à UA: 4,2 UA ficam exatamente em 4,2 × LINEAR_AU_SCALE;
         //  - a camada LOG comprime esses 4,2 UA geocêntricos para bem menos que isso.
-        expect(rHelio).toBeCloseTo(distAU * ORBIT_AU_SCALE, 6); // linear: fiel à distância em UA
+        const oneAuLog = compressDistanceDl(KM_PER_AU / KM_PER_LD); // 1 UA na régua log (~96)
+        expect(rHelio).toBeCloseTo(distAU * LINEAR_AU_SCALE, 6); // linear: fiel à distância em UA
         expect(rLog).toBeLessThan(rHelio * 0.5);                // log: fortemente comprimido vs. linear
-        expect(rLog).toBeGreaterThan(SUN_DISPLAY_DL);           // mas ainda além do Sol (4,2 UA > 1 UA), ordem preservada
+        expect(rLog).toBeGreaterThan(oneAuLog);                 // mas ainda além do Sol na régua log (4,2 UA > 1 UA)
     });
 });
 
