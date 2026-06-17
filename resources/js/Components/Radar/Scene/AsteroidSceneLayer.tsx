@@ -19,7 +19,10 @@ import type { FocusFraming } from './cameraFraming';
 import type { SceneVector } from './scenePositions';
 
 /**
- * Asteroides e trajetórias log-comprimidas, offsetadas pela Terra na cena.
+ * Asteroides e trajetórias na cena.
+ *
+ * No caminho padrão (helioScene) os NEOs caem na régua linear heliocêntrica em UA (Sol na origem),
+ * sem offset da Terra. Só atrás de `?log` eles são log-comprimidos e offsetados pela Terra.
  *
  * Esta camada prepara posição atual e estados derivados de trajetória antes de
  * enviar os dados para `Bodies/Asteroid`, mantendo os corpos apenas renderizando.

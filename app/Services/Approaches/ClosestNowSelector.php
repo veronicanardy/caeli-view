@@ -661,8 +661,9 @@ final class ClosestNowSelector
     /**
      * O radar de proximidade usa uma janela retrospectiva longa e adaptativa.
      *
-     * Como a cena já aplica a mesma compressão logarítmica ao rastro e à posição atual,
-     * podemos trazer mais histórico sem quebrar a coerência visual do radar.
+     * A cena renderiza o rastro e a posição atual na régua linear única em UA (escala fiel,
+     * sem compressão), então a janela é escolhida só por distância/resolução de amostragem,
+     * não por restrição visual de escala.
      */
     private function trajectoryWindowFor(?float $distanceKm): array
     {

@@ -77,7 +77,7 @@ class RadarController
             $dateMax = $anchorMax;
         }
 
-        Log::info('[closestNow] request', compact('anchorMin', 'anchorMax', 'dateMin', 'dateMax', 'limit', 'mode'));
+        Log::debug('[closestNow] request', compact('anchorMin', 'anchorMax', 'dateMin', 'dateMax', 'limit', 'mode'));
 
         try {
             $payload = $this->closestNow->select($dateMin, $dateMax, $limit, $mode, $anchorMin, $forceRefresh);
