@@ -28,7 +28,6 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 - `BodyImagePreview.tsx`: preview de imagem real estática para corpos celestes; ocupa o mesmo espaço visual do `AsteroidModelPreview`. As imagens são servidas localmente (`/images/bodies/`), com `fit` (cover/contain) e `scale` calibrados por hierarquia de tamanho real — não buscam URLs externas.
 - `AsteroidModelPreview.tsx`: preview 3D do asteroide em foco.
 - `bodyData.ts`: fatos científicos, textos de contexto e narrativas históricas dos corpos celestes — unificado a partir dos antigos `bodyInfoContent.ts` e `bodyHistory.ts`, que compartilhavam a mesma chave `BodyId` e eram sempre lidos juntos.
-- `FocusObject.tsx`: conteúdo principal do objeto selecionado (usado fora do card unificado).
 - `focusCardPresentation.ts`: textos, badges e status de apresentação usados pelo `UnifiedFocusCard`. Ícones são retornados como nomes semânticos (`'alert'`, `'zap'`, ...) e mapeados para componentes lucide no card; emojis não devem voltar a ser usados como ícone.
 - `MobilePanelControls.tsx`: helpers de apresentação compartilhados (título da lista, mensagem de vazio).
 - `RadarDataQualityCard.tsx`: resumo visual de qualidade dos dados.
