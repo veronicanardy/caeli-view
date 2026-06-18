@@ -1,7 +1,7 @@
 /**
  * Card de foco unificado — asteroides e corpos celestes com o mesmo shell.
  *
- * kind: 'asteroid' → tabs Resumo | Perfil Físico | Aproximação
+ * kind: 'asteroid' → tabs Resumo | Perfil Físico | Aproximação (+ História quando é objeto famoso)
  * kind: 'body'     → tabs Resumo | Perfil Físico | História
  *
  * Mobile: bottom sheet com abas diretas, sem menu de seções intermediário.
@@ -18,11 +18,14 @@ import { ArrowRight, Check, ChevronDown, Circle, Clock, Minus, Orbit, Target, Tr
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { approxKm, compactKm } from '@/lib/format';
 import { formatDistanceAU, formatRelativeDayLabel, formatTimestamp } from '@/lib/radar/format';
+import { isBeyondRenderLimit } from '@/lib/radar/trajectorySampling';
 import { motionLabel, objectTypeEyebrow, riskAssessment, sizeComparison, trajectoryStatusBadge, type StatusBadgeIcon } from './focusCardPresentation';
+import { famousLoreFor } from './famousLore';
 import { BODIES, type BodyId } from './bodyData';
 import { PanelShell, usePanelSheetState } from './PanelShell';
 import { AsteroidModelPreview } from './AsteroidModelPreview';
 import { BodyImagePreview } from './BodyImagePreview';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 
 /**
  * Slot do preview decorativo: no bottom sheet mobile, só aparece no estado
@@ -218,8 +221,17 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
         </button>
     ) : undefined;
 
-    const tabs: Tab[] = ['summary', 'physical', 'approach'];
+    // História só aparece quando o objeto é famoso (tem lore cadastrada). Asteroides comuns do feed
+    // seguem com as 3 abas de sempre.
+    const history = famousLoreFor(a.id, locale);
+    const tabs: Tab[] = history ? ['summary', 'physical', 'approach', 'history'] : ['summary', 'physical', 'approach'];
     const tabLabels = en ? TAB_LABELS_EN : TAB_LABELS_PT;
+
+    // Trocar de um famoso (com História) para um objeto sem História deixaria a aba ativa órfã:
+    // volta ao Resumo nesse caso.
+    useEffect(() => {
+        if (tab === 'history' && !history) setTab('summary');
+    }, [tab, history, setTab]);
 
     return (
         <PanelShell
@@ -348,13 +360,11 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
                                 </div>
                             </dl>
                             {(() => {
-                                const pt = object.trajectory?.currentPoint;
-                                if (!pt || typeof pt.x !== 'number' || typeof pt.y !== 'number') return null;
-                                // 750M km — mesmo limite de trajectorySampling.ts; pontos além disso são descartados da cena
-                                const distKm = Math.hypot(pt.x, pt.y, typeof pt.z === 'number' ? pt.z : 0);
-                                if (distKm <= 750_000_000) return null;
+                                // Limite renderizável é type-aware (cometas vão muito mais longe); a regra
+                                // mora em trajectorySampling para não duplicar o número aqui.
+                                if (!isBeyondRenderLimit(object)) return null;
                                 return (
-                                    <Tooltip side="right" wrap content={en ? 'Object is beyond 750 million km from Earth. Its position is not shown in the scene.' : 'Objeto está além de 750 milhões de km da Terra. A posição não é exibida na cena.'}>
+                                    <Tooltip side="right" wrap content={en ? 'This object is currently too far from Earth to show its position in the scene.' : 'Este objeto está longe demais da Terra agora para exibir a posição na cena.'}>
                                         <p className="flex items-start gap-1 text-[11px] leading-4 text-amber-400/70 cursor-help">
                                             <TriangleAlert className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
                                             {en ? 'Position not shown, too far for reliable rendering' : 'Posição não exibida, distância além do limite de renderização'}
@@ -487,6 +497,12 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                                 </span>
                             </Row>
                         </dl>
+                    ) : null}
+
+                    {tab === 'history' && history ? (
+                        <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">
+                            {history}
+                        </p>
                     ) : null}
                 </div>
             </div>
@@ -701,6 +717,14 @@ function FocusTabBar({ tabs, tab, setTab, labels, ariaLabel }: {
     ariaLabel: string;
 }) {
     const buttonRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+    const tutorial = useRadarTutorialOptional();
+
+    const activateTab = (next: Tab) => {
+        if (!(tutorial?.isActionAllowed('card-tab', { tab: next }) ?? true)) return false;
+        setTab(next);
+        tutorial?.completeStep('card-tab', { tab: next });
+        return true;
+    };
 
     const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
         const idx = tabs.indexOf(tab);
@@ -711,8 +735,7 @@ function FocusTabBar({ tabs, tab, setTab, labels, ariaLabel }: {
         else if (e.key === 'End') next = tabs[tabs.length - 1];
         if (!next) return;
         e.preventDefault();
-        setTab(next);
-        buttonRefs.current[next]?.focus();
+        if (activateTab(next)) buttonRefs.current[next]?.focus();
     };
 
     return (
@@ -722,7 +745,8 @@ function FocusTabBar({ tabs, tab, setTab, labels, ariaLabel }: {
                     key={t}
                     id={`focus-tab-${t}`}
                     active={tab === t}
-                    onClick={() => setTab(t)}
+                    disabled={tab !== t && !(tutorial?.isActionAllowed('card-tab', { tab: t }) ?? true)}
+                    onClick={() => activateTab(t)}
                     buttonRef={(el) => { buttonRefs.current[t] = el; }}
                 >
                     {labels[t]}
@@ -732,11 +756,12 @@ function FocusTabBar({ tabs, tab, setTab, labels, ariaLabel }: {
     );
 }
 
-function FocusTabButton({ id, active, onClick, buttonRef, children }: {
+function FocusTabButton({ id, active, onClick, buttonRef, disabled = false, children }: {
     id: string;
     active: boolean;
     onClick: () => void;
     buttonRef: Ref<HTMLButtonElement>;
+    disabled?: boolean;
     children: ReactNode;
 }) {
     return (
@@ -748,10 +773,11 @@ function FocusTabButton({ id, active, onClick, buttonRef, children }: {
             aria-selected={active}
             aria-controls="focus-tabpanel"
             tabIndex={active ? 0 : -1}
+            disabled={disabled}
             onClick={onClick}
             /* py-2 no mobile garante área de toque adequada com altura mais compacta */
             className={[
-                '-mb-px flex-1 rounded-t-md border-b-2 px-2.5 py-2 text-center text-[11px] font-medium tracking-wide transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan lg:px-3 lg:py-2 lg:text-[12px]',
+                '-mb-px flex-1 rounded-t-md border-b-2 px-2.5 py-2 text-center text-[11px] font-medium tracking-wide transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-not-allowed disabled:opacity-35 lg:px-3 lg:py-2 lg:text-[12px]',
                 active
                     ? 'border-signal-cyan text-white drop-shadow-[0_1px_12px_rgba(34,211,238,0.55)]'
                     : 'border-transparent text-white/55 hover:bg-white/[0.04] hover:text-white/80',
