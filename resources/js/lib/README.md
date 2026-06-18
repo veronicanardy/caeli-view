@@ -15,7 +15,6 @@ Tudo aqui deve ser testável em Node puro.
 - `approachAttention.ts`: classificação de atenção de uma aproximação.
 - `approachInterpretation.ts`: interpretação textual de aproximações.
 - `asteroidIdentity.ts`: normalização de nomes e identidade de asteroides.
-- `radarData.ts`: carga e normalização dos dados do radar.
 - `sceneEphemeris.ts`: efemérides de alto nível (Sol/Lua/planetas) e compressão logarítmica da cena.
 - `keplerOrbit.ts`: propagação orbital de Kepler.
 - `radar/`: infraestrutura matemática e gráfica da cena 3D (ver `radar/README.md`).

@@ -31,7 +31,6 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 - `focusCardPresentation.ts`: textos, badges e status de apresentação usados pelo `UnifiedFocusCard`. Ícones são retornados como nomes semânticos (`'alert'`, `'zap'`, ...) e mapeados para componentes lucide no card; emojis não devem voltar a ser usados como ícone.
 - `famousLore.ts`: texto da aba **História** dos objetos famosos (5 asteroides + 4 cometas), em PT e EN, indexado pelo id sintético. `famousLoreFor(id, locale)` devolve o parágrafo ou `null`; o card de asteroide só mostra a aba História quando há lore (objetos comuns do feed seguem com 3 abas).
 - `MobilePanelControls.tsx`: helpers de apresentação compartilhados (título da lista, mensagem de vazio).
-- `RadarDataQualityCard.tsx`: resumo visual de qualidade dos dados.
 - `RadarFloatingOverlays.tsx`: overlays flutuantes da cena 3D.
 - `RadarNavigationPanel.tsx`: decide a moldura por viewport — painel lateral + flyout no desktop, bottom sheets (objetos e filtros) no mobile.
 - `RadarNavigationMobileContent.tsx`: conteúdo do sheet de objetos mobile (referências, acordeão de planetas e lista).
