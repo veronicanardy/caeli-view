@@ -200,11 +200,8 @@ final class FamousAsteroidsSelector
     /**
      * Monta o ClosestNowObject de cada famoso: approach sintético + trajetória real (ou null em
      * caso de falha do Horizons). O fallback null garante que o famoso nunca suma da cena: o front
-     * cai para a posição Kepler local nesse caso.
-     *
-     * Os objetos saem ordenados por distância atual da Terra (mais próximo primeiro); os sem
-     * distância (Horizons falhou) vão para o fim. Assim a lista de navegação e a paleta da cena
-     * seguem a mesma ordem por proximidade dos demais modos, sem reordenar no front.
+     * cai para a posição Kepler local nesse caso. A ordenação por distância fica em
+     * sortByCurrentDistance.
      *
      * @param  array<int, array{id: string, payload: array<string, mixed>, approach: array<string, mixed>, diameterMeters: int}>  $entries
      * @param  array<string, array<string, mixed>>  $trajectories
@@ -234,7 +231,23 @@ final class FamousAsteroidsSelector
             ];
         }
 
-        // Ordena por distância atual crescente; sem distância (null) vai para o fim.
+        return $this->sortByCurrentDistance($objects);
+    }
+
+    /**
+     * Ordena os objetos por distância atual da Terra (mais próximo primeiro). Os sem distância
+     * (Horizons falhou, currentDistanceKm null) vão para o fim, preservando a ordem relativa entre
+     * eles. Assim a lista de navegação e a paleta da cena seguem a mesma ordem por proximidade dos
+     * demais modos, sem reordenar no front.
+     *
+     * Extraído como método próprio por ser a regra que justifica o bump de CACHE_VERSION (famous-v3):
+     * é pura e vale um teste direto, sem precisar de fixtures de rede por objeto.
+     *
+     * @param  array<int, array<string, mixed>>  $objects
+     * @return array<int, array<string, mixed>>
+     */
+    public function sortByCurrentDistance(array $objects): array
+    {
         usort($objects, static function (array $a, array $b): int {
             $da = $a['currentDistanceKm'] ?? INF;
             $db = $b['currentDistanceKm'] ?? INF;

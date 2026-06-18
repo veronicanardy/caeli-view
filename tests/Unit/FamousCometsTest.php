@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Services\Approaches\FamousAsteroidsSelector;
 use App\Services\Jpl\Horizons\HorizonsObjectIdentity;
 use App\Support\Asteroids\FamousComets;
 use Tests\TestCase;
@@ -69,5 +70,35 @@ class FamousCometsTest extends TestCase
         $payload = FamousComets::horizonsPayload($encke);
 
         $this->assertArrayNotHasKey('approachTime', $payload);
+    }
+
+    public function test_ordena_famosos_por_distancia_atual_crescente(): void
+    {
+        $selector = $this->app->make(FamousAsteroidsSelector::class);
+
+        $sorted = $selector->sortByCurrentDistance([
+            ['approach' => ['id' => 'longe'], 'currentDistanceKm' => 9_000_000.0],
+            ['approach' => ['id' => 'perto'], 'currentDistanceKm' => 300_000.0],
+            ['approach' => ['id' => 'medio'], 'currentDistanceKm' => 1_500_000.0],
+        ]);
+
+        $ids = array_map(static fn (array $o): string => $o['approach']['id'], $sorted);
+        $this->assertSame(['perto', 'medio', 'longe'], $ids);
+    }
+
+    public function test_famosos_sem_distancia_vao_para_o_fim_preservando_a_ordem(): void
+    {
+        $selector = $this->app->make(FamousAsteroidsSelector::class);
+
+        // 'sem_a' e 'sem_b' não têm distância (Horizons falhou): devem ir para o fim, na ordem
+        // de entrada, atrás de quem tem distância real.
+        $sorted = $selector->sortByCurrentDistance([
+            ['approach' => ['id' => 'sem_a'], 'currentDistanceKm' => null],
+            ['approach' => ['id' => 'com'],   'currentDistanceKm' => 500_000.0],
+            ['approach' => ['id' => 'sem_b'], 'currentDistanceKm' => null],
+        ]);
+
+        $ids = array_map(static fn (array $o): string => $o['approach']['id'], $sorted);
+        $this->assertSame(['com', 'sem_a', 'sem_b'], $ids);
     }
 }
