@@ -9,8 +9,9 @@ use Tests\Fixtures\JplResponses;
 use Tests\TestCase;
 
 /**
- * Testa o endpoint /radar/famous: os asteroides famosos (Ceres, Vesta, Eros, Bennu, Itokawa)
- * resolvidos com posição e trilha curta do JPL Horizons, no mesmo shape do closest-now.
+ * Testa o endpoint /radar/famous: os objetos famosos (5 asteroides: Ceres, Vesta, Eros, Bennu,
+ * Itokawa; e 4 cometas: Halley, Encke, 67P, NEOWISE) resolvidos com posição e trilha curta do JPL
+ * Horizons, no mesmo shape do closest-now.
  */
 class RadarFamousTest extends TestCase
 {
@@ -20,7 +21,7 @@ class RadarFamousTest extends TestCase
         Cache::flush();
     }
 
-    public function test_retorna_os_cinco_famosos_com_trajetoria_do_horizons(): void
+    public function test_retorna_todos_os_famosos_asteroides_e_cometas_com_trajetoria_do_horizons(): void
     {
         Http::fake([
             'ssd.jpl.nasa.gov/api/horizons.api*' => Http::response(JplResponses::horizonsVectorsText()),
@@ -32,15 +33,37 @@ class RadarFamousTest extends TestCase
             ->assertJsonPath('selectionMode', 'famous');
 
         $objects = $response->json('objects');
-        $this->assertCount(5, $objects);
+        $this->assertCount(9, $objects, '5 asteroides + 4 cometas.');
 
-        $numbers = array_map(fn ($o) => $o['approach']['permanentNumber'], $objects);
-        $this->assertEqualsCanonicalizing(['1', '4', '433', '101955', '25143'], $numbers);
+        $ids = array_map(fn ($o) => $o['approach']['id'], $objects);
+        $this->assertEqualsCanonicalizing(
+            ['known:1', 'known:4', 'known:433', 'known:101955', 'known:25143',
+             'comet:1P', 'comet:2P', 'comet:67P', 'comet:C/2020 F3'],
+            $ids,
+        );
+
+        // Os cometas são marcados como tal no approach sintético.
+        $comets = array_filter($objects, fn ($o) => $o['approach']['objectType'] === 'comet');
+        $this->assertCount(4, $comets);
 
         foreach ($objects as $obj) {
             $this->assertSame('available', $obj['trajectory']['status']);
             $this->assertNull($obj['approach']['approachDate']);
             $this->assertTrue($obj['hasRealCurrentDistance']);
+        }
+    }
+
+    public function test_resolve_cada_cometa_pelo_comando_des_cap(): void
+    {
+        Http::fake([
+            'ssd.jpl.nasa.gov/api/horizons.api*' => Http::response(JplResponses::horizonsVectorsText()),
+        ]);
+
+        $this->getJson('/radar/famous')->assertOk();
+
+        // Cometas usam o comando DES=<des>;CAP (URL-encoded). Confirma que cada um foi consultado assim.
+        foreach (['DES%3D1P%3BCAP', 'DES%3D2P%3BCAP', 'DES%3D67P%3BCAP'] as $encoded) {
+            Http::assertSent(fn (Request $request) => str_contains((string) $request->url(), $encoded));
         }
     }
 
@@ -71,7 +94,7 @@ class RadarFamousTest extends TestCase
         $response = $this->getJson('/radar/famous')->assertOk();
 
         $objects = $response->json('objects');
-        $this->assertCount(5, $objects, 'Nenhum famoso pode sumir quando o Horizons falha.');
+        $this->assertCount(9, $objects, 'Nenhum famoso (asteroide ou cometa) pode sumir quando o Horizons falha.');
 
         foreach ($objects as $obj) {
             $this->assertNull($obj['trajectory']);
@@ -103,7 +126,7 @@ class RadarFamousTest extends TestCase
         );
     }
 
-    public function test_force_refresh_recompoe_o_payload_e_mantem_os_cinco(): void
+    public function test_force_refresh_recompoe_o_payload_e_mantem_todos(): void
     {
         // force_refresh esquece o cache do PAYLOAD (e roda o selector de novo); o cache individual
         // do Horizons por objeto (NOW_TRAJECTORY_SUCCESS_TTL) é compartilhado e pode ser reusado,
@@ -117,6 +140,6 @@ class RadarFamousTest extends TestCase
         $this->getJson('/radar/famous?force_refresh=1')
             ->assertOk()
             ->assertJsonPath('selectionMode', 'famous')
-            ->assertJsonCount(5, 'objects');
+            ->assertJsonCount(9, 'objects');
     }
 }

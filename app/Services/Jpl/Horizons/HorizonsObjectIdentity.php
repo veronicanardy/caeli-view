@@ -56,18 +56,7 @@ final class HorizonsObjectIdentity
      */
     public function buildCommandCandidates(array $object): array
     {
-        $identity = AsteroidIdentityNormalizer::normalize(
-            (string) ($object['rawName'] ?? $object['name'] ?? '')
-        );
-
-        $identity = $this->mergeExplicitPermanentNumber($identity, $object);
-
-        return HorizonsCommandBuilder::build(
-            $identity,
-            $this->parseTrustedSpkId($object['spkId'] ?? null),
-            (string) ($object['detailIdentifier'] ?? ''),
-            (string) ($object['designation'] ?? ''),
-        );
+        return $this->buildCommandCandidatesWithIdentity($object)['commands'];
     }
 
     /**
@@ -90,6 +79,14 @@ final class HorizonsObjectIdentity
             (string) ($object['detailIdentifier'] ?? ''),
             (string) ($object['designation'] ?? ''),
         );
+
+        // Comando explícito de cometa (DES=...;CAP): tem precedência ABSOLUTA. Cometas não seguem as
+        // convenções do MPC que o AsteroidIdentityNormalizer assume, então o comando vem pronto da
+        // identidade do cometa (FamousComets) e entra no topo da lista, sem duplicar.
+        $explicitCommand = trim((string) ($object['horizonsCommand'] ?? ''));
+        if ($explicitCommand !== '') {
+            $commands = array_values(array_unique([$explicitCommand, ...$commands]));
+        }
 
         return ['commands' => $commands, 'identity' => $identity];
     }
