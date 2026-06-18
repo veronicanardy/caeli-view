@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { AsteroidTrajectory, TrajectoryPoint } from '@/types';
+import type { AsteroidTrajectory, ClosestNowObject, TrajectoryPoint } from '@/types';
 import {
     clipPolylineByLength,
     collectTimeTicks,
     findClosestApproachPoint,
+    hasRenderableHelioPosition,
     trajectoryFramePoints,
     type PointProjector,
 } from '@/lib/radar/trajectorySampling';
@@ -214,5 +215,39 @@ describe('trajectoryFramePoints', () => {
         });
         const points = trajectoryFramePoints(trajectory, 78, project);
         expect(points).toHaveLength(1);
+    });
+});
+
+describe('hasRenderableHelioPosition (limite por tipo)', () => {
+    const objectWith = (
+        trajectory: AsteroidTrajectory | null,
+        objectType: 'asteroid' | 'comet' = 'asteroid',
+    ): ClosestNowObject =>
+        ({ approach: { id: 'x', objectType }, trajectory } as unknown as ClosestNowObject);
+
+    it('asteroide: true dentro do limite (~5 UA)', () => {
+        const obj = objectWith(makeTrajectory({ currentPoint: makePoint({ x: 100_000_000 }) }));
+        expect(hasRenderableHelioPosition(obj)).toBe(true);
+    });
+
+    it('asteroide: false além de 750M km (vetor provavelmente corrompido)', () => {
+        const obj = objectWith(makeTrajectory({ currentPoint: makePoint({ x: 1_000_000_000 }) }));
+        expect(hasRenderableHelioPosition(obj)).toBe(false);
+    });
+
+    it('cometa: true a bilhões de km (afélio de Halley é distância legítima)', () => {
+        // ~5,4 bilhões de km: Halley perto do afélio. Para cometa o limite é muito maior.
+        const obj = objectWith(makeTrajectory({ currentPoint: makePoint({ x: 5_400_000_000 }) }), 'comet');
+        expect(hasRenderableHelioPosition(obj)).toBe(true);
+    });
+
+    it('cometa: false só num absurdo bem além do afélio (> 8 bilhões de km)', () => {
+        const obj = objectWith(makeTrajectory({ currentPoint: makePoint({ x: 9_000_000_000 }) }), 'comet');
+        expect(hasRenderableHelioPosition(obj)).toBe(false);
+    });
+
+    it('é false sem trajetória ou sem ponto atual', () => {
+        expect(hasRenderableHelioPosition(objectWith(null))).toBe(false);
+        expect(hasRenderableHelioPosition(objectWith(makeTrajectory({ currentPoint: null })))).toBe(false);
     });
 });

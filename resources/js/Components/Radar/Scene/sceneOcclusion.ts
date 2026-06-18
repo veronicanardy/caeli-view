@@ -38,7 +38,7 @@ export function computeSceneObjectOccluders({
     moonPos,
     planetPositions,
 }: SceneObjectOccluderInput): SceneObjectOccluder[] {
-    const sunOccluder = { center: new THREE.Vector3(0, 0, 0), radius: SUN_RADIUS_SCENE };
+    const sunOccluder = { id: 'sun', center: new THREE.Vector3(0, 0, 0), radius: SUN_RADIUS_SCENE };
 
     if (useHelioScene) {
         return [sunOccluder];
@@ -49,6 +49,7 @@ export function computeSceneObjectOccluders({
             if (!position) return [];
 
             return [{
+                id: key.replace('Pos', ''),
                 center: new THREE.Vector3(...position),
                 radius: PLANET_OCCLUDER_RADII[key as keyof PlanetScenePositions],
             }];
@@ -56,8 +57,8 @@ export function computeSceneObjectOccluders({
 
     return [
         sunOccluder,
-        { center: new THREE.Vector3(...earthPos), radius: EARTH_RADIUS_DL },
-        { center: new THREE.Vector3(...moonPos), radius: MOON_RADIUS_DL },
+        { id: 'earth', center: new THREE.Vector3(...earthPos), radius: EARTH_RADIUS_DL },
+        { id: 'moon', center: new THREE.Vector3(...moonPos), radius: MOON_RADIUS_DL },
         ...planetOccluders,
     ];
 }

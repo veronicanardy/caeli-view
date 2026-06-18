@@ -40,7 +40,7 @@ const PERSPECTIVE_ELEVATION = 5.5;
    sem a cauda assintótica do lerp antigo (que arrastava o trecho final e só devolvia o controle muito
    depois). Mesma duração para voo curto e longo (previsível). Usa o delta de tempo real, então o ritmo
    é estável em qualquer FPS. */
-const TWEEN_DURATION_S = 1.1;
+const TWEEN_DURATION_S = 1.7;
 
 /* Ease-out cúbico: arranca firme e desacelera suave na chegada (aterrissagem macia, sem freada seca).
    easeOutCubic(0)=0, easeOutCubic(1)=1, derivada → 0 no fim. */

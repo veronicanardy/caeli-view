@@ -12,48 +12,44 @@ import { shouldShowLabelForObject } from '@/Components/Radar/Scene/sceneFocus';
 describe('shouldShowLabelForObject', () => {
     it('retorna false quando showLabels está desligado, independente do resto', () => {
         expect(shouldShowLabelForObject({
-            id: 'A', selectedId: 'A', showLabels: false, orbitLabelsOnly: false, hideAsteroidLabels: false,
+            id: 'A', selectedId: 'A', showLabels: false, orbitLabelsOnly: false,
         })).toBe(false);
 
         expect(shouldShowLabelForObject({
-            id: 'A', selectedId: null, showLabels: false, orbitLabelsOnly: false, hideAsteroidLabels: false,
+            id: 'A', selectedId: null, showLabels: false, orbitLabelsOnly: false,
         })).toBe(false);
     });
 
     it('retorna true para objeto selecionado fora do modo órbita', () => {
         expect(shouldShowLabelForObject({
-            id: 'A', selectedId: 'A', showLabels: true, orbitLabelsOnly: false, hideAsteroidLabels: false,
+            id: 'A', selectedId: 'A', showLabels: true, orbitLabelsOnly: false,
         })).toBe(true);
     });
 
     it('retorna false para objeto selecionado no modo órbita (orbitLabelsOnly)', () => {
         // No modo órbita apenas a elipse precisa de label — a rocha some.
         expect(shouldShowLabelForObject({
-            id: 'A', selectedId: 'A', showLabels: true, orbitLabelsOnly: true, hideAsteroidLabels: false,
+            id: 'A', selectedId: 'A', showLabels: true, orbitLabelsOnly: true,
         })).toBe(false);
     });
 
-    it('retorna false para objeto não selecionado quando hideAsteroidLabels está ativo', () => {
+    it('monta a label de toda rocha: o amontoamento por zoom NAO e cortado aqui', () => {
+        // O corte por densidade local fica no resolvedor (resolveRadarLabels), que precisa da
+        // label montada para medir vizinhos. Aqui o portão é só o toggle global e o modo órbita.
         expect(shouldShowLabelForObject({
-            id: 'B', selectedId: 'A', showLabels: true, orbitLabelsOnly: false, hideAsteroidLabels: true,
-        })).toBe(false);
+            id: 'B', selectedId: 'A', showLabels: true, orbitLabelsOnly: false,
+        })).toBe(true);
     });
 
     it('retorna false para objeto não selecionado no modo órbita', () => {
         expect(shouldShowLabelForObject({
-            id: 'B', selectedId: 'A', showLabels: true, orbitLabelsOnly: true, hideAsteroidLabels: false,
+            id: 'B', selectedId: 'A', showLabels: true, orbitLabelsOnly: true,
         })).toBe(false);
-    });
-
-    it('retorna true para objeto não selecionado com labels ativos e câmera próxima', () => {
-        expect(shouldShowLabelForObject({
-            id: 'B', selectedId: 'A', showLabels: true, orbitLabelsOnly: false, hideAsteroidLabels: false,
-        })).toBe(true);
     });
 
     it('trata selectedId null como ausência de seleção', () => {
         expect(shouldShowLabelForObject({
-            id: 'A', selectedId: null, showLabels: true, orbitLabelsOnly: false, hideAsteroidLabels: false,
+            id: 'A', selectedId: null, showLabels: true, orbitLabelsOnly: false,
         })).toBe(true);
     });
 });

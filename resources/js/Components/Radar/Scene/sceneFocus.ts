@@ -19,22 +19,27 @@ import type { SceneVector } from './scenePositions';
  */
 export type BodyFocus = { body: 'earth' | 'moon'; framing: FocusFraming; nonce: number };
 
+/**
+ * Decide se o nome de um objeto deve ser montado em cena.
+ *
+ * É só o portão grosso (toggle global de labels e o modo "só órbitas"): o amontoamento por zoom
+ * NÃO é tratado aqui. Quem decide se uma rocha específica some por estar numa pilha é o resolvedor
+ * central (resolveRadarLabels, regra de densidade local), que precisa receber a label montada para
+ * poder medir os vizinhos. Cortar aqui por distância esconderia rochas isoladas que deviam aparecer.
+ */
 export function shouldShowLabelForObject({
     id,
     selectedId,
     showLabels,
     orbitLabelsOnly,
-    hideAsteroidLabels,
 }: {
     id: string;
     selectedId: string | null;
     showLabels: boolean;
     orbitLabelsOnly: boolean;
-    hideAsteroidLabels: boolean;
 }) {
     if (!showLabels) return false;
     if (id === selectedId) return !orbitLabelsOnly;
-    if (hideAsteroidLabels) return false;
     return !orbitLabelsOnly;
 }
 

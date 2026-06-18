@@ -19,10 +19,20 @@ import { KM_PER_AU } from '@/lib/physicalConstants';
 export type EarthHelioAU = { x: number; y: number; z: number };
 
 // NEOs podem chegar a algo perto de ~5 UA geocêntricas.
-// Acima de 750 milhões de km, o vetor do Horizons quase certamente está incorreto
+// Acima de 750 milhões de km, o vetor do Horizons de um NEO quase certamente está incorreto
 // (descentramento no baricentro ou confusão de unidade), então descartamos o ponto
 // em vez de posicionar o objeto em um lugar sem sentido.
 const MAX_GEOCENTRIC_KM = 750_000_000;
+
+// Cometas famosos têm órbitas muito mais largas: Halley chega a ~5,4 bilhões de km no afélio e
+// NEOWISE a ~2,6 bilhões agora. Para eles essa distância é LEGÍTIMA (não é vetor corrompido), então
+// o limite é bem maior. 8 bilhões de km dá folga sobre o afélio de Halley sem aceitar lixo absurdo.
+const MAX_GEOCENTRIC_KM_COMET = 8_000_000_000;
+
+/** Limite de distância geocêntrica renderizável conforme o tipo: cometas vão muito mais longe. */
+function maxGeocentricKmFor(object: ClosestNowObject): number {
+    return object.approach.objectType === 'comet' ? MAX_GEOCENTRIC_KM_COMET : MAX_GEOCENTRIC_KM;
+}
 
 /**
  * Posição de cena de um objeto do feed na régua HELIOCÊNTRICA linear em UA (Sol na origem), igual aos
@@ -39,7 +49,7 @@ export function currentPositionInHelioScene(
     const point = object.trajectory?.currentPoint;
     if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') return null;
     const distKm = Math.hypot(point.x, point.y, point.z ?? 0);
-    if (distKm > MAX_GEOCENTRIC_KM) return null;
+    if (distKm > maxGeocentricKmFor(object)) return null;
     const helio = {
         x: earthHelioAU.x + point.x / KM_PER_AU,
         y: earthHelioAU.y + point.y / KM_PER_AU,
@@ -47,6 +57,36 @@ export function currentPositionInHelioScene(
     };
     // Escala da régua única (LINEAR_AU_SCALE): fonte única para calibrar todos os corpos num lugar só.
     return helioAUToSunCenteredScene(helio, LINEAR_AU_SCALE);
+}
+
+/**
+ * True se o objeto TEM uma posição renderizável pelo AsteroidSceneLayer (ponto atual do Horizons
+ * dentro do limite geocêntrico). Espelha a guarda de currentPositionInHelioScene em forma booleana.
+ *
+ * Por que existe: a camada de fallback Kepler (KnownAsteroidsLayer/KnownCometsLayer) só deve PULAR
+ * um famoso quando o AsteroidSceneLayer realmente vai desenhá-lo. Marcar "tem posição real" só por
+ * trajectory.status === 'available' não basta: cometas distantes (Halley, NEOWISE no afélio) têm
+ * trajetória disponível mas o ponto fica ALÉM do limite de 750M km, então o AsteroidSceneLayer o
+ * descarta. Sem este teste o cometa caía no vão entre as duas camadas: pulado pelo fallback e
+ * descartado pelo feed, sumindo da cena (e ficando sem hitbox clicável).
+ */
+export function hasRenderableHelioPosition(object: ClosestNowObject): boolean {
+    const point = object.trajectory?.currentPoint;
+    if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') return false;
+    const distKm = Math.hypot(point.x, point.y, point.z ?? 0);
+    return distKm <= maxGeocentricKmFor(object);
+}
+
+/**
+ * True se o objeto TEM ponto atual mas está ALÉM do limite renderizável do seu tipo (some da cena).
+ * Usado pelo card para avisar "posição não exibida". Fonte única do limite, type-aware (cometas vão
+ * muito mais longe que NEOs), evitando o número mágico duplicado no componente.
+ */
+export function isBeyondRenderLimit(object: ClosestNowObject): boolean {
+    const point = object.trajectory?.currentPoint;
+    if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') return false;
+    const distKm = Math.hypot(point.x, point.y, point.z ?? 0);
+    return distKm > maxGeocentricKmFor(object);
 }
 
 /**
