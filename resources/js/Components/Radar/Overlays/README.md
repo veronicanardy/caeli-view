@@ -41,8 +41,10 @@ Por performance, cada label resolve seus três estados de visibilidade (foco, zo
 
 Dois cuidados adicionais de performance:
 
-- **Ocultação via CSS, não unmount:** labels ocultos por foco, zona proibida ou oclusão permanecem montados com `visibility: hidden`. Montar/desmontar o portal `<Html>` a cada cruzamento de fronteira força layout e GC exatamente durante o movimento de câmera, que é o gatilho das micro-travadas. A remoção em massa de labels com zoom muito afastado continua sendo por unmount (`DistanceCulledScreenLabel` e `useHideAsteroidLabelsMode`), pois ali o objetivo é zerar o custo por frame de dezenas de labels.
-- **Limiares booleanos com histerese:** `useCompactLabelMode` e `useHideAsteroidLabelsMode` publicam apenas o boolean "abaixo do limiar?" (via `useLunarRadiusBelow`), com histerese de 2px. Publicar o raio numérico re-renderizava todos os consumidores a cada ~4 frames durante qualquer zoom contínuo.
+- **Ocultação via CSS, não unmount:** labels ocultos por foco, zona proibida ou oclusão permanecem montados com `visibility: hidden`. Montar/desmontar o portal `<Html>` a cada cruzamento de fronteira força layout e GC exatamente durante o movimento de câmera, que é o gatilho das micro-travadas. A remoção em massa de labels com zoom muito afastado continua sendo por unmount (`DistanceCulledScreenLabel`), pois ali o objetivo é zerar o custo por frame de dezenas de labels.
+- **Limiares booleanos com histerese:** `useCompactLabelMode` publica apenas o boolean "abaixo do limiar?" (via `useLunarRadiusBelow`), com histerese de 2px. Publicar o raio numérico re-renderizava todos os consumidores a cada ~4 frames durante qualquer zoom contínuo.
+
+O amontoamento de rochas no zoom out NÃO é mais cortado por um limiar global de distância: quem decide se uma rocha some é o resolvedor central (`resolveRadarLabels`, em `@/lib/radar/radarLabels`), pela densidade local de vizinhos. Rochas isoladas continuam visíveis; só somem quando a vizinhança vira pilha. Por isso Sol, Terra, Lua e planetas nunca somem por colisão de label, só quando um corpo 3D real passa na frente do disco.
 
 ## Guias 3D
 

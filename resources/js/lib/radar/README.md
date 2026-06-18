@@ -22,6 +22,7 @@ que precise do mesmo pipeline gráfico.
 - Gerenciamento do cursor da cena 3D (`cursor.ts`)
 - Formatadores específicos da cena (timestamp UTC, distância em UA, rótulo relativo de dias)
 - Geração procedural da bump map da Lua (`moonTextures.ts`)
+- Resolvedor puro de visibilidade dos rótulos (`radarLabels.ts`): quem aparece e quem some, sem React
 
 ## O que NÃO fica aqui
 
@@ -91,6 +92,7 @@ Os testes unitários ficam em `tests/js/lib/radar/` e seguem o padrão Vitest do
 | `format.ts`           | `format.test.ts`                        | Dígitos dinâmicos, locales, fallbacks nulos, dias relativos |
 | `cursor.ts`           | `cursor.test.ts`                        | Contagem de referência, reset, leaves extras           |
 | `bodyScale.ts`        | `bodyScale.test.ts`                     | Invariantes hitbox > raio visual                       |
+| `radarLabels.ts`      | `../../Radar/radarLabels.test.ts`       | Prioridade, primários nunca somem por colisão, densidade local das rochas, oclusão 3D forte |
 | _(transversal)_       | `helioSceneProjection.test.ts`          | Firewall científico: a projeção heliocêntrica preserva direção, alinhamento relativo no mesmo frame, objeto na região de Júpiter, unidades/eixos aplicados uma vez |
 
 `helioSceneProjection.test.ts` não cobre um arquivo específico: trava INVARIANTES da pipeline de posicionamento (a régua é fiel à direção e à UA) contra regressões, mesmo que a implementação seja reescrita. A independência entre posição científica e modelo 3D vive em `tests/js/Radar/modelPositionIndependence.test.ts`.

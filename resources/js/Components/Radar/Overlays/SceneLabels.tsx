@@ -10,8 +10,17 @@ import { Html } from '@react-three/drei';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/radar/cursor';
 import { Tooltip } from '../Controls/Tooltip';
 import { useFrame, useThree } from '@react-three/fiber';
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import {
+    labelZIndexRange,
+    resolveRadarLabels,
+    type RadarLabelCandidate,
+    type RadarLabelKind,
+    type RadarLabelObjectBounds,
+    type RadarLabelPlacement,
+    type ResolvedRadarLabel,
+} from '@/lib/radar/radarLabels';
 import { circleOverlapsRect, labelHiddenByFocusCircle } from '../Scene/sceneOcclusion';
 
 /**
@@ -28,7 +37,7 @@ import { circleOverlapsRect, labelHiddenByFocusCircle } from '../Scene/sceneOccl
  */
 export type NoGoRect = { left: number; top: number; right: number; bottom: number };
 export const LabelNoGoContext = createContext<NoGoRect[]>([]);
-export type SceneObjectOccluder = { center: THREE.Vector3; radius: number };
+export type SceneObjectOccluder = { id?: string; center: THREE.Vector3; radius: number };
 export const SceneObjectOccludersContext = createContext<SceneObjectOccluder[]>([]);
 
 /**
@@ -36,9 +45,6 @@ export const SceneObjectOccludersContext = createContext<SceneObjectOccluder[]>(
  * módulo de labels seja autossuficiente.
  */
 const COMPACT_LABEL_THRESHOLD_PX = 92;
-// Abaixo deste limiar a região Terra-Lua é pequena demais para exibir labels de asteroides
-// sem amontoamento — esconde todos (exceto o selecionado, tratado pelo chamador).
-const HIDE_ASTEROID_LABELS_THRESHOLD_PX = 10;
 const LABEL_HIDE_MIN_RADIUS_PX = 72;
 const LABEL_HIDE_BODY_PADDING_PX = 72;
 const LABEL_OBJECT_HIDE_PADDING_PX = 8;
@@ -73,6 +79,154 @@ export function findLabelPortalHost(canvas: HTMLCanvasElement): HTMLElement | nu
  * ocultados para que o corpo em foco nunca apareça como uma pilha confusa de nomes.
  */
 export const LabelOccluderContext = createContext<LabelOccluder>(null);
+
+type RadarLabelMeta = {
+    kind: RadarLabelKind;
+    selected?: boolean;
+    hovered?: boolean;
+    importance?: number;
+};
+
+type RegisteredRadarLabel = {
+    id: string;
+    objectRef: React.RefObject<THREE.Object3D | null>;
+    sizeRef: React.RefObject<{ w: number; h: number }>;
+    metaRef: React.RefObject<RadarLabelMeta>;
+};
+
+type RadarLabelResolutionContextValue = {
+    register: (label: RegisteredRadarLabel) => () => void;
+    snapshot: Map<string, ResolvedRadarLabel>;
+};
+
+const RadarLabelResolutionContext = createContext<RadarLabelResolutionContextValue | null>(null);
+
+/**
+ * Resolvedor central de labels de tela do radar.
+ *
+ * Os componentes continuam donos do conteudo visual, mas esta camada arbitra prioridade,
+ * colisao entre labels, colisao com corpos projetados e densidade em zoom/mobile.
+ */
+export function RadarLabelResolutionProvider({ children }: { children: React.ReactNode }) {
+    const { camera, size } = useThree();
+    const controls = useThree((state) => state.controls) as unknown as { target?: THREE.Vector3 } | null;
+    const sceneOccluders = useContext(SceneObjectOccludersContext);
+    const noGoRects = useContext(LabelNoGoContext);
+    const labelsRef = useRef(new Map<string, RegisteredRadarLabel>());
+    const previousPlacementsRef = useRef(new Map<string, RadarLabelPlacement>());
+    const signatureRef = useRef('');
+    const [snapshot, setSnapshot] = useState<Map<string, ResolvedRadarLabel>>(new Map());
+
+    const register = useCallback((label: RegisteredRadarLabel) => {
+        labelsRef.current.set(label.id, label);
+        return () => {
+            labelsRef.current.delete(label.id);
+            previousPlacementsRef.current.delete(label.id);
+        };
+    }, []);
+
+    const _labelWorld = useRef(new THREE.Vector3());
+    const _labelProj = useRef(new THREE.Vector3());
+    const _cameraRight = useRef(new THREE.Vector3());
+    const _center = useRef(new THREE.Vector3());
+    const _edge = useRef(new THREE.Vector3());
+    const _target = useRef(new THREE.Vector3());
+
+    useFrame(() => {
+        const candidates: RadarLabelCandidate[] = [];
+        for (const label of labelsRef.current.values()) {
+            const object = label.objectRef.current;
+            if (!object) continue;
+
+            object.getWorldPosition(_labelWorld.current);
+            _labelProj.current.copy(_labelWorld.current).project(camera);
+            if (_labelProj.current.z > 1) continue;
+
+            const meta = label.metaRef.current;
+            const sizePx = label.sizeRef.current;
+            candidates.push({
+                id: label.id,
+                kind: meta.kind,
+                anchor: {
+                    x: (_labelProj.current.x * 0.5 + 0.5) * size.width,
+                    y: (-_labelProj.current.y * 0.5 + 0.5) * size.height,
+                },
+                size: {
+                    width: Math.max(sizePx.w, 54),
+                    height: Math.max(sizePx.h, 22),
+                },
+                selected: meta.selected,
+                hovered: meta.hovered,
+                importance: meta.importance,
+            });
+        }
+
+        _cameraRight.current.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+        const objectBounds: RadarLabelObjectBounds[] = [];
+        for (const occluder of sceneOccluders) {
+            _center.current.copy(occluder.center).project(camera);
+            if (_center.current.z < -1 || _center.current.z > 1) continue;
+            _edge.current.copy(occluder.center).addScaledVector(_cameraRight.current, occluder.radius).project(camera);
+            const x = (_center.current.x * 0.5 + 0.5) * size.width;
+            const y = (-_center.current.y * 0.5 + 0.5) * size.height;
+            const edgeX = (_edge.current.x * 0.5 + 0.5) * size.width;
+            const edgeY = (-_edge.current.y * 0.5 + 0.5) * size.height;
+            const radius = Math.max(Math.hypot(edgeX - x, edgeY - y), 8);
+            objectBounds.push({ id: occluder.id, x, y, radius });
+        }
+
+        const target = controls?.target ?? _target.current.set(0, 0, 0);
+        const zoomedOut = camera.position.distanceTo(target) > 9;
+        const result = resolveRadarLabels(candidates, {
+            viewport: size,
+            objectBounds,
+            blockedRects: noGoRects,
+            previousPlacements: previousPlacementsRef.current,
+            mobile: size.width < 640,
+            zoomedOut,
+        });
+
+        const nextPlacements = new Map<string, RadarLabelPlacement>();
+        for (const item of result) {
+            if (item.visible) nextPlacements.set(item.id, item.placement);
+        }
+        previousPlacementsRef.current = nextPlacements;
+
+        const signature = result
+            .map((item) => `${item.id}:${item.visible ? 1 : 0}:${Math.round(item.offset.x)}:${Math.round(item.offset.y)}:${item.placement}`)
+            .join('|');
+
+        if (signature !== signatureRef.current) {
+            signatureRef.current = signature;
+            setSnapshot(new Map(result.map((item) => [item.id, item])));
+        }
+    });
+
+    return (
+        <RadarLabelResolutionContext.Provider value={{ register, snapshot }}>
+            {children}
+        </RadarLabelResolutionContext.Provider>
+    );
+}
+
+function useResolvedRadarLabel(
+    id: string | undefined,
+    objectRef: React.RefObject<THREE.Object3D | null>,
+    sizeRef: React.RefObject<{ w: number; h: number }>,
+    meta: RadarLabelMeta,
+): ResolvedRadarLabel | null {
+    const context = useContext(RadarLabelResolutionContext);
+    const metaRef = useRef(meta);
+    metaRef.current = meta;
+    const register = context?.register;
+
+    useEffect(() => {
+        if (!register || !id) return;
+        return register({ id, objectRef, sizeRef, metaRef });
+    }, [register, id, objectRef, sizeRef]);
+
+    return id && context ? context.snapshot.get(id) ?? null : null;
+}
 
 // --------------- Scene label (DOM overlay; always faces the screen) ---------------
 
@@ -222,6 +376,127 @@ export function ScreenLabel({
     );
 }
 
+export function ResolvedScreenLabel({
+    position,
+    labelId,
+    labelKind,
+    emphasized = false,
+    selected = false,
+    hovered = false,
+    importance,
+    protectFromFocus = true,
+    children,
+    onClick,
+    title,
+    tooltip,
+}: {
+    position: [number, number, number];
+    labelId: string;
+    labelKind: RadarLabelKind;
+    emphasized?: boolean;
+    selected?: boolean;
+    hovered?: boolean;
+    importance?: number;
+    protectFromFocus?: boolean;
+    children: React.ReactNode;
+    onClick?: () => void;
+    title?: string;
+    tooltip?: React.ReactNode;
+}) {
+    const labelRef = useRef<THREE.Group>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const focusOccluder = useContext(LabelOccluderContext);
+    const labelSize = useLabelSizePx(buttonRef);
+    const resolvedLabel = useResolvedRadarLabel(labelId, labelRef, labelSize, {
+        kind: selected ? 'selected' : labelKind,
+        selected,
+        hovered,
+        importance,
+    });
+    const { hiddenByFocus } = useLabelFrameState(
+        labelRef,
+        buttonRef,
+        protectFromFocus ? focusOccluder : null,
+        true,
+        labelSize,
+    );
+    const hidden = hiddenByFocus || !resolvedLabel || resolvedLabel.visible === false;
+    const resolvedOffset = resolvedLabel?.visible ? resolvedLabel.offset : { x: 0, y: 0 };
+    const zIndexRange = labelZIndexRange({ kind: labelKind, selected, hovered });
+    // Visual de destaque unificado: QUALQUER corpo selecionado ou sob hover acende com a mesma
+    // borda ciano + glow, igual ao da rocha. Antes cada corpo decidia via `emphasized` e Terra/Lua
+    // não acendiam ao serem selecionados. Centralizar aqui garante o mesmo comportamento pra todos.
+    const highlighted = emphasized || selected || hovered;
+
+    return (
+        <group ref={labelRef} position={position}>
+            <Html position={[0, 0, 0]} center zIndexRange={zIndexRange} style={{ pointerEvents: onClick || tooltip ? 'auto' : 'none' }}>
+                {(() => {
+                    const btn = (
+                        <button
+                            type="button"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onClick?.();
+                            }}
+                            onPointerEnter={() => { if (onClick) cursorPointerEnter(); }}
+                            onPointerLeave={() => { if (onClick) cursorPointerLeave(); }}
+                            title={title}
+                            aria-label={title}
+                            disabled={!onClick}
+                            ref={buttonRef}
+                            className={[
+                                '-translate-y-[55%] max-w-[18ch] truncate rounded-lg border px-2 py-0.5 text-[12px] font-semibold leading-snug backdrop-blur',
+                                highlighted
+                                    ? 'border-signal-cyan/55 bg-space-950/95 text-white shadow-[0_0_16px_rgba(34,211,238,0.18)]'
+                                    : 'border-white/10 bg-space-950/85 text-white/80',
+                                onClick ? 'pointer-events-auto cursor-pointer text-left transition hover:border-signal-cyan/50 hover:bg-space-950' : 'pointer-events-none',
+                            ].join(' ')}
+                        >
+                            {children}
+                        </button>
+                    );
+                    const content = tooltip ? <Tooltip content={tooltip} side="top" hideDelay={200} offset={28}>{btn}</Tooltip> : btn;
+                    return (
+                        <div
+                            style={{
+                                transform: `translate3d(${Math.round(resolvedOffset.x)}px, ${Math.round(resolvedOffset.y)}px, 0)`,
+                                opacity: hidden ? 0 : 1,
+                                transition: 'opacity 120ms ease-out',
+                                pointerEvents: hidden ? 'none' : undefined,
+                            }}
+                        >
+                            {content}
+                        </div>
+                    );
+                })()}
+            </Html>
+        </group>
+    );
+}
+
+export function ResolvedDistanceCulledScreenLabel({
+    anchor,
+    maxCameraDistance,
+    ...props
+}: Parameters<typeof ResolvedScreenLabel>[0] & {
+    anchor: [number, number, number];
+    maxCameraDistance: number;
+}) {
+    const camera = useThree((state) => state.camera);
+    const [visible, setVisible] = useState(true);
+    const _anchor = useRef(new THREE.Vector3());
+
+    useFrame(() => {
+        _anchor.current.set(...anchor);
+        const d = camera.position.distanceTo(_anchor.current);
+        const nextVisible = d <= maxCameraDistance;
+        setVisible((current) => (current === nextVisible ? current : nextVisible));
+    });
+
+    return visible ? <ResolvedScreenLabel {...props} /> : null;
+}
+
 export function DistanceCulledScreenLabel({
     anchor,
     maxCameraDistance,
@@ -341,16 +616,6 @@ export function useCompactLabelMode(): boolean {
 }
 
 /**
- * Retorna true quando a câmera está longe demais da Terra para exibir labels de asteroides
- * sem amontoamento. Usa a mesma projeção de 1 DL que useCompactLabelMode, mas com um limiar
- * menor — quando a região Terra-Lua encolhe abaixo de HIDE_ASTEROID_LABELS_THRESHOLD_PX, os
- * labels de rochas devem ser ocultados (exceto o objeto selecionado, responsabilidade do chamador).
- */
-export function useHideAsteroidLabelsMode(): boolean {
-    return useLunarRadiusBelow(HIDE_ASTEROID_LABELS_THRESHOLD_PX);
-}
-
-/**
  * Estados de visibilidade de um label, derivados da câmera a cada frame.
  *
  * - hiddenByFocus: dentro da silhueta projetada do corpo em foco (LabelOccluderContext);
@@ -399,11 +664,13 @@ function useLabelFrameState(
     elementRef: React.RefObject<HTMLElement | null> | null,
     focusOccluder: LabelOccluder,
     allowSceneOverlap: boolean,
+    measuredLabelSize?: React.RefObject<{ w: number; h: number }>,
 ): LabelFrameState {
     const { camera, gl, size } = useThree();
     const noGoRects = useContext(LabelNoGoContext);
     const sceneOccluders = useContext(SceneObjectOccludersContext);
-    const labelSize = useLabelSizePx(elementRef ?? { current: null });
+    const fallbackLabelSize = useLabelSizePx(elementRef ?? { current: null });
+    const labelSize = measuredLabelSize ?? fallbackLabelSize;
 
     const [state, setState] = useState<LabelFrameState>({ hiddenByFocus: false, hiddenByNoGo: false, hiddenByObjects: false });
     const stateRef = useRef(state);
