@@ -1,6 +1,6 @@
 /**
  * Busca o detalhe físico/orbital de um asteroide conhecido no JPL SBDB (via /radar/small-body),
- * para enriquecer o card do critério "Asteroides famosos" sem recarregar a página.
+ * para enriquecer o card do critério "Objetos famosos" sem recarregar a página.
  *
  * Responsabilidade: dado o número de catálogo de um conhecido (ou null quando nenhum está
  * selecionado), buscar os dados ricos e mantê-los em cache por identificador. O card mostra a base

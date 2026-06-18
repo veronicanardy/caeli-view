@@ -31,15 +31,16 @@ final class ClosestNowSelector
     /**
      * Quantos candidatos buscar no CAD/SBDB antes de qualquer corte.
      *
-     * Precisa ser maior que o maior `limit` aceito pelo controller (30) mais margem para PHAs
-     * extras. 45 garante que mesmo com limit=30 haja candidatos suficientes para ordenar por
-     * distância real e ainda sobrar PHAs que não estavam no top-30 por miss_distance.
+     * Precisa cobrir o maior `limit` aceito pelo controller. 45 também é o teto
+     * usado por "Todos" no front, alinhado ao contador da home (candidatesEvaluated).
      *
      * O Horizons NÃO é consultado para todos eles: apenas os `limit + HORIZONS_MARGIN`
      * mais próximos por distância nominal recebem trajetória real. Os demais entram no
      * resultado com fallback nominal e hasRealCurrentDistance=false.
      */
-    private const TOP_CANDIDATES = 45;
+    public const RESULT_LIMIT_MAX = 45;
+
+    private const TOP_CANDIDATES = self::RESULT_LIMIT_MAX;
 
     /**
      * Quantos candidatos extras além do `limit` solicitado recebem consulta ao Horizons.
@@ -112,7 +113,7 @@ final class ClosestNowSelector
      *
      * A chave de cache NÃO inclui o limit: o resultado completo é armazenado e
      * fatias menores simplesmente fazem array_slice sobre ele. Isso garante que
-     * top-5, top-15 e top-30 sejam fatias coerentes do mesmo conjunto ordenado —
+     * top-5, top-15, top-30 e "todos" sejam fatias coerentes do mesmo conjunto ordenado —
      * sem pipelines independentes que podem discordar entre si.
      *
      * Quando o limit aumenta (ex: 5→15), os objetos 1–5 já estão no cache
@@ -121,13 +122,13 @@ final class ClosestNowSelector
      *
      * @param  string  $dateMin   Data inicial ISO (Y-m-d), inclusive (já pode estar alargada pelo controller)
      * @param  string  $dateMax   Data final ISO (Y-m-d), inclusive (já pode estar alargada pelo controller)
-     * @param  int     $limit     Quantos objetos retornar (padrão 5, máx 30)
+     * @param  int     $limit     Quantos objetos retornar (padrão 5, máx 45)
      * @param  string  $mode      Critério de seleção: 'nearest' | 'upcoming'
      * @param  string  $anchorMin Data âncora original (antes do alargamento) — usada pelo modo 'upcoming'
      */
     public function select(string $dateMin, string $dateMax, int $limit = self::TOP_RESULT_LIMIT, string $mode = 'nearest', string $anchorMin = '', bool $forceRefresh = false): array
     {
-        $limit = max(1, min($limit, 30));
+        $limit = max(1, min($limit, self::RESULT_LIMIT_MAX));
         $mode  = in_array($mode, self::VALID_MODES, true) ? $mode : 'nearest';
 
         // Âncora para o modo 'upcoming': data original sem alargamento.
@@ -135,7 +136,7 @@ final class ClosestNowSelector
         $anchor = $anchorMin !== '' ? $anchorMin : $dateMin;
 
         // O $limit entra na chave de cache porque o conteúdo do pipeline varia com ele:
-        // limit=5 consulta ~10 objetos no Horizons; limit=30 consulta ~35.
+        // limit=5 consulta ~10 objetos no Horizons; limit=45 consulta até ~50.
         //
         // Quando o usuário expande de 5→15, o cache de limit=5 é ignorado e resolve()
         // é executado novamente com limit=15. O custo adicional é mínimo: o cache
@@ -229,7 +230,7 @@ final class ClosestNowSelector
             // marca sourcesFailed para que select() não persista o vazio no cache.
             $sourcesFailed = is_array($data['errorsBySource'] ?? null) && $data['errorsBySource'] !== [];
 
-            return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato encontrado no período.', $sourcesFailed);
+            return $this->emptyResult($dateMin, $dateMax, $limit, $mode, 'Nenhum candidato encontrado no período.', $sourcesFailed);
         }
 
         // Passo 2: filtra e seleciona candidatos de acordo com o modo.
@@ -237,7 +238,7 @@ final class ClosestNowSelector
         Log::info('[ClosestNow] candidates após pick', ['mode' => $mode, 'count' => count($candidates), 'ids' => array_column(array_slice($candidates, 0, 6), 'id')]);
 
         if ($candidates === []) {
-            return $this->emptyResult($dateMin, $dateMax, 30, $mode, 'Nenhum candidato com dados suficientes para projeção.');
+            return $this->emptyResult($dateMin, $dateMax, $limit, $mode, 'Nenhum candidato com dados suficientes para projeção.');
         }
 
         // Passo 3: pré-ordena por distância nominal do CAD (gratuito) e divide em
@@ -291,7 +292,7 @@ final class ClosestNowSelector
             'selectionMode'       => $mode,
             'generatedAt'         => CarbonImmutable::now('UTC')->toIso8601String(),
             'window'              => ['dateMin' => $dateMin, 'dateMax' => $dateMax],
-            'requestedLimit'      => 30,
+            'requestedLimit'      => $limit,
             'candidatesEvaluated' => count($candidates),
             'horizonsQueried'     => count($priorityCandidates),
             'objects'             => $objects,
@@ -413,8 +414,8 @@ final class ClosestNowSelector
      *
      * Para o modo 'nearest', pré-ordena por nominalDistanceKm e consulta o Horizons apenas
      * para os `$limit + HORIZONS_MARGIN` mais próximos. Isso garante que a página abra
-     * consultando no máximo 10 objetos para limit=5, 20 para limit=15, e 35 para limit=30,
-     * em vez dos 45 que seriam consultados sem esse corte.
+     * consultando no máximo 10 objetos para limit=5, 20 para limit=15, 35 para limit=30,
+     * e todos os candidatos mapeados quando o usuário escolhe "Todos".
      *
      * O cache individual por objectId no HorizonsTrajectoryService garante que, ao expandir
      * de 5→15, os 5 já processados sejam reaproveitados sem nova chamada à API.

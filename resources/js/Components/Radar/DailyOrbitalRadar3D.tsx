@@ -162,7 +162,7 @@ export function DailyOrbitalRadar3D({
     // Limpa o foco de trajetória quando o usuário interage com outra coisa.
     useEffect(() => { setTrajectoryPointFocus(null); }, [focusTarget, bodyCardOpen]);
 
-    // Ao entrar no critério "Asteroides famosos", recua a câmera para enquadrar a régua dos planetas,
+    // Ao entrar no critério "Objetos famosos", recua a câmera para enquadrar a régua dos planetas,
     // onde os conhecidos vivem (a ~100–270 unidades do Sol). Sem isso, eles ficam fora do quadro
     // inicial e o usuário precisaria dar zoom out manual para achá-los.
     useEffect(() => {
@@ -171,7 +171,7 @@ export function DailyOrbitalRadar3D({
     }, [selectionMode]);
 
     const activeMode: SceneMode = deriveActiveMode(orbitMode, focusedObject);
-    // Famosos (Ceres, Bennu, etc.) só aparecem no critério dedicado "Asteroides famosos", em qualquer
+    // Famosos (Ceres, Bennu, etc.) só aparecem no critério dedicado "Objetos famosos", em qualquer
     // régua. Fora dele, a cena mostra apenas o feed de aproximações, sem misturar os dois conjuntos.
     const showKnownAsteroidsInScene = selectionMode === 'famous';
     const sidePanelRef = useRef<HTMLDivElement>(null);

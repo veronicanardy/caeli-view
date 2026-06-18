@@ -9,7 +9,7 @@
 import type { SelectionMode } from '@/types';
 
 export function listTitle(count: number, mode: SelectionMode, en: boolean): string {
-    if (mode === 'famous') return en ? `${count} famous asteroids` : `${count} asteroides famosos`;
+    if (mode === 'famous') return en ? `${count} famous objects` : `${count} objetos famosos`;
     if (mode === 'upcoming') return en ? `${count} upcoming passes` : `${count} próximas aproximações`;
     return en ? `${count} closest objects now` : `${count} objetos mais próximos agora`;
 }
@@ -17,7 +17,7 @@ export function listTitle(count: number, mode: SelectionMode, en: boolean): stri
 const EMPTY_MODE_MESSAGES: Record<SelectionMode, { pt: string; en: string }> = {
     nearest: { pt: 'Nenhum objeto próximo encontrado agora.', en: 'No nearby objects found right now.' },
     upcoming: { pt: 'Nenhuma aproximação prevista para os próximos dias.', en: 'No close approaches scheduled for the next few days.' },
-    famous: { pt: 'Nenhum asteroide famoso disponível.', en: 'No famous asteroids available.' },
+    famous: { pt: 'Nenhum objeto famoso disponível.', en: 'No famous objects available.' },
 };
 
 export function EmptyModeMessage({ selectionMode, locale }: { selectionMode: SelectionMode; locale: 'pt-BR' | 'en' }) {

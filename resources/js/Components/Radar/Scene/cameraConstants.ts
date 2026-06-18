@@ -12,7 +12,8 @@ import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
  * Constantes compartilhadas do enquadramento da câmera da cena 3D.
  */
 export const CAMERA_FOV_DEG = 42;
-export const MAX_CAMERA_DISTANCE = ORBIT_AU_SCALE * 48;
+// Mantem o zoom-out manual amplo o bastante para contexto de orbitas externas.
+export const MAX_CAMERA_DISTANCE = ORBIT_AU_SCALE * 96;
 
 /**
  * Plano near da câmera. A precisão do depth buffer escala com a razão far/near: um near minúsculo

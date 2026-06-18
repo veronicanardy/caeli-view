@@ -207,8 +207,22 @@ export type ClosestNowObject = {
     hasRealCurrentDistance: boolean;
 };
 
-export const OBJECT_LIMITS = [5, 15, 30] as const;
+/**
+ * Opções de quantidade exibidas no radar. `'all'` é um sentinela: pede "todos"
+ * os objetos que vierem. O backend mapeia até 45 candidatos para o radar, então
+ * `'all'` é resolvido para OBJECT_LIMIT_MAX na hora do fetch — ver
+ * resolveObjectLimit / useClosestNow.
+ */
+export const OBJECT_LIMITS = [5, 15, 30, 'all'] as const;
 export type ObjectLimit = (typeof OBJECT_LIMITS)[number];
+
+/** Teto efetivo de objetos retornados pelo backend (cap em ClosestNowSelector::select). */
+export const OBJECT_LIMIT_MAX = 45;
+
+/** Converte o sentinela `'all'` no teto numérico aceito pelo backend. */
+export function resolveObjectLimit(limit: ObjectLimit): number {
+    return limit === 'all' ? OBJECT_LIMIT_MAX : limit;
+}
 export type SelectionMode = 'nearest' | 'upcoming' | 'famous';
 
 export type ClosestNowResponse = {

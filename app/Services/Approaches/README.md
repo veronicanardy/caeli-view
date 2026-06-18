@@ -45,6 +45,7 @@ O CAD registra a distância no pico de máxima aproximação (um instante fixo).
 | Constante | Valor | Significado |
 |-----------|-------|-------------|
 | `TOP_CANDIDATES` | 45 | Máximo de candidatos buscados no CAD antes de qualquer corte |
+| `RESULT_LIMIT_MAX` | 45 | Teto aceito pelo endpoint e usado por "Todos" no front |
 | `HORIZONS_MARGIN` | 5 | Extras consultados no Horizons além do limit (reserva de falha) |
 | `HORIZONS_BATCH_SIZE` | 8 | Objetos por lote paralelo (acima disso os timeouts explodem) |
 | `RESULT_CACHE_TTL_SECONDS` | 900 | TTL do resultado resolvido (15 min) |

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { resolveObjectLimit } from '@/types';
 import type { ClosestNowResponse, ObjectLimit, SelectionMode } from '@/types';
 
 export interface UseClosestNowResult {
@@ -34,7 +35,9 @@ export function useClosestNow(
     // Ref dos params atualmente resolvidos (pós-fetch bem-sucedido).
     // Comparado com os params atuais para detectar mudança antes do useEffect.
     const resolvedParamsRef = useRef<string | null>(null);
-    const currentParams = `${dateMin}|${dateMax}|${limit}|${mode}|${refreshNonce}`;
+    // `'all'` é resolvido para o teto numérico mapeado pelo backend.
+    const numericLimit = resolveObjectLimit(limit);
+    const currentParams = `${dateMin}|${dateMax}|${numericLimit}|${mode}|${refreshNonce}`;
 
     // Síncrono: loading é true se os params atuais diferem dos últimos resolvidos
     // OU se o fetch ainda está em andamento. Não depende do ciclo de useEffect.
@@ -55,7 +58,7 @@ export function useClosestNow(
         const params = new URLSearchParams(
             mode === 'famous'
                 ? {}
-                : { date_min: dateMin, date_max: dateMax, limit: String(limit), mode },
+                : { date_min: dateMin, date_max: dateMax, limit: String(numericLimit), mode },
         );
         if (refreshNonce > 0) params.set('force_refresh', '1');
 

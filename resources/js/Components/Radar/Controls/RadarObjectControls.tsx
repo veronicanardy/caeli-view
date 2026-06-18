@@ -27,7 +27,7 @@ const LIMITS = OBJECT_LIMITS;
 const MODE_OPTIONS: Array<{ value: SelectionMode; labelPt: string; labelEn: string }> = [
     { value: 'nearest',  labelPt: 'Mais próximos agora',   labelEn: 'Closest now' },
     { value: 'upcoming', labelPt: 'Próximas aproximações', labelEn: 'Upcoming passes' },
-    { value: 'famous',   labelPt: 'Asteroides famosos',    labelEn: 'Famous asteroids' },
+    { value: 'famous',   labelPt: 'Objetos famosos',       labelEn: 'Famous objects' },
 ];
 
 /**
@@ -60,8 +60,8 @@ export function RadarObjectControls({
             ? 'Shows objects that will pass closest to Earth in the coming days, sorted by when they arrive.'
             : 'Mostra os objetos que vão passar mais perto da Terra nos próximos dias, em ordem de chegada.',
         famous: en
-            ? 'Shows famous asteroids visited by space missions (Ceres, Vesta, Eros, Bennu, Itokawa) where they are now in the Solar System.'
-            : 'Mostra asteroides famosos visitados por missões espaciais (Ceres, Vesta, Eros, Bennu, Itokawa) onde estão agora no Sistema Solar.',
+            ? 'Shows famous small bodies visited by space missions (Ceres, Vesta, Eros, Bennu, Itokawa) where they are now in the Solar System.'
+            : 'Mostra pequenos corpos famosos visitados por missões espaciais (Ceres, Vesta, Eros, Bennu, Itokawa) onde estão agora no Sistema Solar.',
     };
 
     // Interpolação contínua baseada em 100dvh:
@@ -148,7 +148,7 @@ export function RadarObjectControls({
                     className="font-medium uppercase tracking-wide text-signal-cyan/70 whitespace-nowrap"
                     style={{ fontSize: 'var(--ctrl-fs-label)', marginRight: 'var(--ctrl-gap)' }}
                 >
-                    {en ? 'Show up to' : 'Exibir até'}
+                    {en ? 'Show' : 'Exibir'}
                 </span>
                 {LIMITS.map((limit) => (
                     <button
@@ -171,7 +171,7 @@ export function RadarObjectControls({
                             minWidth:      'clamp(1.8rem, 3dvh, 2.6rem)',
                         }}
                     >
-                        {limit}
+                        {limit === 'all' ? (en ? 'All' : 'Todos') : limit}
                     </button>
                 ))}
                 <span

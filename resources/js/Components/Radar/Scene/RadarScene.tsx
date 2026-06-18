@@ -166,11 +166,18 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     const orbitLabelsOnly = orbitMode && selectedHasOrbit;
 
     // Labels visíveis para todos os objetos enquanto a câmera não estiver muito afastada.
-    // Só some quando hideAsteroidLabels (câmera muito longe) — independente do limite de objetos.
+    // No modo "Asteroides famosos" o enquadramento começa longe de propósito; nesse caso
+    // mantemos os nomes ligados para os corpos serem identificáveis sem seleção.
     // Também respeita o toggle global showLabels.
     const showLabelForObject = useCallback(
-        (id: string) => shouldShowLabelForObject({ id, selectedId, showLabels, orbitLabelsOnly, hideAsteroidLabels }),
-        [selectedId, showLabels, orbitLabelsOnly, hideAsteroidLabels],
+        (id: string) => shouldShowLabelForObject({
+            id,
+            selectedId,
+            showLabels,
+            orbitLabelsOnly,
+            hideAsteroidLabels: showKnownAsteroids ? false : hideAsteroidLabels,
+        }),
+        [selectedId, showLabels, orbitLabelsOnly, hideAsteroidLabels, showKnownAsteroids],
     );
 
     // useMemo evita que novos objetos sejam criados a cada render, prevenindo

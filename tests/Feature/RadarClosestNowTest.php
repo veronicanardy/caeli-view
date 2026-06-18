@@ -29,6 +29,19 @@ class RadarClosestNowTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_accepts_full_mapped_limit(): void
+    {
+        Http::fake([
+            'api.nasa.gov/neo/rest/v1/feed*'     => Http::response(NasaResponses::neoWsFeed()),
+            'ssd-api.jpl.nasa.gov/cad.api*'      => Http::response(JplResponses::cadApproaches()),
+            'ssd.jpl.nasa.gov/api/horizons.api*' => Http::response(JplResponses::horizonsVectorsText()),
+        ]);
+
+        $this->getJson('/radar/closest-now?date_min=2026-05-20&date_max=2026-05-21&limit=45&mode=nearest')
+            ->assertOk()
+            ->assertJsonPath('requestedLimit', 45);
+    }
+
     public function test_rejects_invalid_mode(): void
     {
         $this->getJson('/radar/closest-now?mode=random')
