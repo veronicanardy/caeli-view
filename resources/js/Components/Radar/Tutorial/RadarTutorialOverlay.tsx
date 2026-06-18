@@ -34,6 +34,8 @@ const TARGET_POLL_MS = 400;
 const TARGET_GRACE_MS = 1400;
 /** Folga visual do spotlight ao redor do alvo. */
 const SPOTLIGHT_PADDING = 8;
+/** Classe aplicada no alvo real do passo para deixar o convite ao clique evidente. */
+const TARGET_PULSE_CLASS = 'radar-tutorial-target-pulse';
 
 export function RadarTutorialOverlay() {
     const tutorial = useRadarTutorialOptional();
@@ -56,9 +58,17 @@ function OverlayForStep({ tutorial, step }: { tutorial: RadarTutorialContextValu
         }
 
         let raf = 0;
+        let pulsingEl: HTMLElement | null = null;
+        const setPulsingTarget = (el: HTMLElement | null) => {
+            if (pulsingEl === el) return;
+            pulsingEl?.classList.remove(TARGET_PULSE_CLASS);
+            pulsingEl = el;
+            pulsingEl?.classList.add(TARGET_PULSE_CLASS);
+        };
         const resolve = () => {
             const el = findVisibleTarget(step.targets, step.targetMustBeEnabled);
             targetElRef.current = el;
+            setPulsingTarget(el);
             if (el) {
                 setTargetMissing(false);
                 if (!scrolledIntoView.current) {
@@ -83,6 +93,7 @@ function OverlayForStep({ tutorial, step }: { tutorial: RadarTutorialContextValu
         }, TARGET_GRACE_MS);
 
         return () => {
+            setPulsingTarget(null);
             cancelAnimationFrame(raf);
             window.removeEventListener('resize', onLayoutChange);
             window.removeEventListener('scroll', onLayoutChange, true);
@@ -147,7 +158,15 @@ function OverlayForStep({ tutorial, step }: { tutorial: RadarTutorialContextValu
                 isMobile={tutorial.isMobile}
                 targetRect={spotlightRect}
                 extras={extras}
-                onNext={tutorial.next}
+                onNext={() => {
+                    const completed = tutorial.completeStep('manual-next');
+                    if (!completed || !step.autoClickTarget) return;
+                    const selectors = Array.isArray(step.autoClickTarget) ? step.autoClickTarget : [step.autoClickTarget];
+                    setTimeout(() => {
+                        const el = findVisibleTarget(selectors, true);
+                        el?.click();
+                    }, 0);
+                }}
                 onSkipStep={tutorial.skipUnavailableStep}
                 onSkipTutorial={tutorial.skip}
             />
@@ -200,7 +219,7 @@ function panKeyId(eventKey: string): string {
 /**
  * Avanço por teclado: o passo só completa depois que TODAS as teclas do mini
  * teclado (W, A, S, D e as quatro setas) foram pressionadas. O avanço espera
- * `advanceDelayMs` (1,5 s) para a última tecla acender e a pessoa respirar.
+ * `advanceDelayMs` para a última tecla acender antes do tutorial seguir.
  */
 function useKeyboardAdvance(step: TutorialStep, tutorial: RadarTutorialContextValue): boolean {
     const [done, setDone] = useState(false);
@@ -215,7 +234,7 @@ function useKeyboardAdvance(step: TutorialStep, tutorial: RadarTutorialContextVa
             pressed.add(id);
             if (pressed.size === KEYBOARD_ALL_KEYS.length) {
                 setDone(true);
-                tutorial.advanceFromAction(step.advanceDelayMs ?? 1500);
+                tutorial.advanceFromAction(step.advanceDelayMs ?? 700);
             }
         };
         window.addEventListener('keydown', onKeyDown);
@@ -259,7 +278,7 @@ function useZoomAdvance(
                 zoomOut: Math.min(1, acc.zoomOut / ZOOM_PHASE_AMOUNT),
             });
             if (acc.zoomIn >= ZOOM_PHASE_AMOUNT && acc.zoomOut >= ZOOM_PHASE_AMOUNT) {
-                tutorial.advanceFromAction(step.advanceDelayMs ?? 1500);
+                tutorial.advanceFromAction(step.advanceDelayMs ?? 700);
             }
         };
         const schedule = () => {
@@ -342,7 +361,7 @@ function useRotateAdvance(
         const flush = () => {
             raf = 0;
             setProgress(Math.min(1, accumulated / ROTATE_TOTAL_PX));
-            if (accumulated >= ROTATE_TOTAL_PX) tutorial.advanceFromAction(step.advanceDelayMs ?? 1500);
+            if (accumulated >= ROTATE_TOTAL_PX) tutorial.advanceFromAction(step.advanceDelayMs ?? 700);
         };
         const schedule = () => {
             if (!raf) raf = requestAnimationFrame(flush);

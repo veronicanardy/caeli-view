@@ -15,14 +15,21 @@ import { RadarTutorialContext, type RadarTutorialContextValue } from './RadarTut
 import { RadarTutorialOverlay } from './RadarTutorialOverlay';
 import { indexAfterGroup, stepsForViewport, type TutorialStep } from './radarTutorialSteps';
 import {
+    allowedActionsForStep,
+    doesTutorialActionCompleteStep,
+    isTutorialActionAllowed,
+    type TutorialAction,
+    type TutorialActionPayload,
+} from './radarTutorialFlow';
+import {
     persistRadarTutorialOutcome,
     readRadarTutorialState,
     shouldAutoStartTutorial,
     type RadarTutorialStatus,
 } from './radarTutorialStorage';
 
-/** Espera após o radar carregar antes do auto-início, para a cena assentar. */
-const AUTO_START_DELAY_MS = 800;
+/** Espera curta após o radar carregar antes do auto-início, só para a cena assentar. */
+const AUTO_START_DELAY_MS = 300;
 
 type Phase = 'boot' | 'pending' | 'running' | 'done';
 
@@ -36,6 +43,8 @@ type Props = {
     radarReady: boolean;
     /** Radar buscando dados agora; passos de filtro esperam terminar antes de avançar. */
     radarLoading: boolean;
+    /** Normaliza controles externos do Radar antes de iniciar/reiniciar o tutorial. */
+    onResetRadarState?: () => void;
     children: ReactNode;
 };
 
@@ -46,6 +55,7 @@ export function RadarTutorialProvider({
     selectedId,
     radarReady,
     radarLoading,
+    onResetRadarState,
     children,
 }: Props) {
     const [phase, setPhase] = useState<Phase>('boot');
@@ -80,9 +90,22 @@ export function RadarTutorialProvider({
     }, []);
 
     // Decide o auto-início uma única vez, no mount (client-side).
+    const prepareStart = useCallback(() => {
+        clearAdvanceTimer();
+        loadWaitRef.current = null;
+        setSettling(false);
+        setStepIndex(0);
+        onResetRadarState?.();
+        setPhase('pending');
+    }, [clearAdvanceTimer, onResetRadarState]);
+
     useEffect(() => {
-        setPhase(shouldAutoStartTutorial(readRadarTutorialState()) ? 'pending' : 'done');
-    }, []);
+        if (shouldAutoStartTutorial(readRadarTutorialState())) {
+            prepareStart();
+            return;
+        }
+        setPhase('done');
+    }, [prepareStart]);
 
     const begin = useCallback(() => {
         const mobile = typeof window !== 'undefined' && window.matchMedia(MOBILE_MEDIA_QUERY).matches;
@@ -162,7 +185,7 @@ export function RadarTutorialProvider({
      * Avança com espera longa e escurecimento removido: o usuário vê a câmera
      * viajar (referências, seleção) ou a aba escolhida antes do próximo passo.
      */
-    const advanceAfterSettle = useCallback((delayMs = 2600) => {
+    const advanceAfterSettle = useCallback((delayMs = 1200) => {
         if (advanceTimer.current || loadWaitRef.current) return;
         setSettling(true);
         advanceFromAction(delayMs);
@@ -187,8 +210,33 @@ export function RadarTutorialProvider({
                 advanceTo(wait.fromIndex + 1);
             }
             // Se ainda está carregando, a borda de descida de radarLoading resolve abaixo.
-        }, 900);
+        }, 350);
     }, [advanceTo]);
+
+    const isActionAllowed = useCallback((action: TutorialAction, payload: TutorialActionPayload = {}) => {
+        if (phaseRef.current !== 'running') return true;
+        return isTutorialActionAllowed(stepsRef.current[stepIndexRef.current] ?? null, action, payload);
+    }, []);
+
+    const completeStep = useCallback((action: TutorialAction, payload: TutorialActionPayload = {}) => {
+        if (phaseRef.current !== 'running') return true;
+        const step = stepsRef.current[stepIndexRef.current] ?? null;
+        if (!doesTutorialActionCompleteStep(step, action, payload)) return false;
+
+        if (step?.advance.kind === 'criterion-change' || step?.advance.kind === 'limit-change') {
+            advanceAfterRadarLoads();
+            return true;
+        }
+
+        if (step?.advance.kind === 'manual') {
+            advanceTo(stepIndexRef.current + 1);
+            return true;
+        }
+
+        if (step?.settleWhileAdvancing) advanceAfterSettle(step.advanceDelayMs ?? 1200);
+        else advanceFromAction(step?.advanceDelayMs ?? 350);
+        return true;
+    }, [advanceAfterRadarLoads, advanceAfterSettle, advanceFromAction, advanceTo]);
 
     // Borda de descida do carregamento: o "Carregando" sumiu, dá um respiro e avança.
     useEffect(() => {
@@ -200,7 +248,7 @@ export function RadarTutorialProvider({
             return;
         }
         loadWaitRef.current = null;
-        advanceFromAction(600);
+        advanceFromAction(250);
     }, [radarLoading, advanceFromAction]);
 
     // ─── Observadores de estado da página ─────────────────────────────────────
@@ -231,7 +279,7 @@ export function RadarTutorialProvider({
         if (!step) return;
         if (step.advance.kind === 'selection') {
             if (selectedId) {
-                if (step.settleWhileAdvancing) advanceAfterSettle(step.advanceDelayMs ?? 2600);
+                if (step.settleWhileAdvancing) advanceAfterSettle(step.advanceDelayMs ?? 1200);
                 else advanceFromAction(step.advanceDelayMs ?? 350);
             } else {
                 clearAdvanceTimer();
@@ -276,13 +324,16 @@ export function RadarTutorialProvider({
         isMobile,
         locale,
         settling,
-        start: begin,
+        allowedActions: phase === 'running' ? allowedActionsForStep(steps[stepIndex] ?? null) : [],
+        start: prepareStart,
         next,
         skip,
         advanceFromAction,
         advanceAfterSettle,
         skipUnavailableStep,
-    }), [phase, steps, stepIndex, isMobile, locale, settling, begin, next, skip, advanceFromAction, advanceAfterSettle, skipUnavailableStep]);
+        isActionAllowed,
+        completeStep,
+    }), [phase, steps, stepIndex, isMobile, locale, settling, prepareStart, next, skip, advanceFromAction, advanceAfterSettle, skipUnavailableStep, isActionAllowed, completeStep]);
 
     return (
         <RadarTutorialContext.Provider value={value}>

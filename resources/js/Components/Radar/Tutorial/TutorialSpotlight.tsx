@@ -13,7 +13,7 @@ export function TutorialSpotlight({ rect, dim = true }: { rect: TutorialRect; di
     return (
         <div
             aria-hidden
-            className={`absolute rounded-xl border border-signal-cyan/60
+            className={`radar-tutorial-spotlight-pulse absolute rounded-xl border border-signal-cyan/60
                        ${dim ? 'shadow-[0_0_0_9999px_rgba(2,4,10,0.82),0_0_24px_rgba(34,211,238,0.28)]' : 'shadow-[0_0_24px_rgba(34,211,238,0.28)]'}
                        transition-all duration-300 ease-out motion-reduce:transition-none`}
             style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }}

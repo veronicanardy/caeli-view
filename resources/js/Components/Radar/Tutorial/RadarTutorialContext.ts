@@ -13,11 +13,12 @@
 
 import { createContext, useContext } from 'react';
 import type { TutorialStep } from './radarTutorialSteps';
+import type { TutorialAction, TutorialActionPayload, TutorialPermission } from './radarTutorialFlow';
 
 export type RadarTutorialContextValue = {
     /** Tutorial em execução agora. */
     active: boolean;
-    /** Primeira visita detectada: o tutorial vai abrir sozinho em instantes. */
+    /** Tutorial aguardando o Radar ficar pronto antes de abrir. */
     pendingAutoStart: boolean;
     /** Passo atual, ou null quando inativo. */
     step: TutorialStep | null;
@@ -27,7 +28,9 @@ export type RadarTutorialContextValue = {
     locale: 'pt-BR' | 'en';
     /** Ação do passo concluída: o escurecimento sai para o usuário ver a cena (câmera viajando, carregando). */
     settling: boolean;
-    /** Inicia (ou reinicia) o tutorial do primeiro passo. */
+    /** Ações permitidas para a etapa atual. Vazio quando o tutorial está inativo. */
+    allowedActions: TutorialPermission[];
+    /** Reseta o Radar para os filtros padrÃ£o e inicia/reinicia o tutorial do primeiro passo. */
     start: () => void;
     /** Avança imediatamente para o próximo passo (botões do tooltip). */
     next: () => void;
@@ -39,6 +42,10 @@ export type RadarTutorialContextValue = {
     advanceAfterSettle: (delayMs?: number) => void;
     /** Pula o passo atual (e seu grupo) quando o alvo não existe na tela. */
     skipUnavailableStep: () => void;
+    /** Consulta central: toda interação do Radar deve passar por aqui durante o tutorial. */
+    isActionAllowed: (action: TutorialAction, payload?: TutorialActionPayload) => boolean;
+    /** Registra uma ação permitida e avança a etapa quando ela completa o objetivo atual. */
+    completeStep: (action: TutorialAction, payload?: TutorialActionPayload) => boolean;
 };
 
 export const RadarTutorialContext = createContext<RadarTutorialContextValue | null>(null);
