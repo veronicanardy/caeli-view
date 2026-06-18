@@ -175,7 +175,7 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                     <span className="home-cinematic-sunrise-core" />
                 </div>
 
-                <div className="home-hero-copy relative z-20 mx-auto flex w-full max-w-4xl flex-col items-center px-4 pt-[clamp(3.25rem,7.2vh,5.35rem)] text-center sm:px-6">
+                <div className="home-hero-copy relative z-20 mx-auto flex w-full max-w-4xl flex-col items-center px-4 pt-[clamp(4.75rem,10.5vh,7.75rem)] text-center sm:px-6">
                     <div className="home-hero-badge hero-rise inline-flex items-center gap-2 rounded-full border border-signal-cyan/30 bg-signal-cyan/10 px-3.5 py-1.5 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-signal-cyan backdrop-blur">
                         <Satellite className="size-3.5" aria-hidden="true" />
                         {t('home.hero.badge')}
@@ -191,7 +191,7 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                         {t('home.hero.sources')}
                     </p>
 
-                    <div className="hero-rise hero-rise-4 relative mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
+                    <div className="hero-rise hero-rise-4 relative mt-[clamp(2.5rem,5vh,4rem)] flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
                         <button
                             type="button"
                             className="home-cta group focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-space-950"
@@ -250,6 +250,47 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
  * radial-gradient revelado no hover. Sem re-render React e desligado em
  * dispositivos sem hover (touch).
  */
+/**
+ * Conta de 0 (ou de um piso) até o valor alvo numa animação curta de ease-out,
+ * para o número "ao vivo" subir em vez de aparecer estático. Reanima quando o
+ * alvo muda (ex.: o fetch resolve com a contagem real). Respeita reduced-motion:
+ * nesse caso vai direto ao valor final.
+ */
+function useCountUp(target: number, durationMs = 1100): number {
+    const [value, setValue] = useState(0);
+    const fromRef = useRef(0);
+
+    useEffect(() => {
+        if (target <= 0) {
+            setValue(0);
+            return undefined;
+        }
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduced) {
+            setValue(target);
+            return undefined;
+        }
+        const from = fromRef.current;
+        const start = performance.now();
+        let raf = 0;
+        const tick = (now: number) => {
+            const t = Math.min((now - start) / durationMs, 1);
+            const eased = 1 - Math.pow(1 - t, 3);
+            const current = Math.round(from + (target - from) * eased);
+            setValue(current);
+            if (t < 1) {
+                raf = window.requestAnimationFrame(tick);
+            } else {
+                fromRef.current = target;
+            }
+        };
+        raf = window.requestAnimationFrame(tick);
+        return () => window.cancelAnimationFrame(raf);
+    }, [target, durationMs]);
+
+    return value;
+}
+
 function useCardSpotlight() {
     const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -313,6 +354,7 @@ function ObservatoryConsole({
 }) {
     const { t } = useTranslation();
     const gridRef = useCardSpotlight();
+    const animatedCount = useCountUp(nearbyCount);
 
     // ── Célula 1: Destaque espacial ───────────────────────────────────
     const highlightTitle = spaceNews?.title ?? (apod?.title ?? null);
@@ -395,7 +437,7 @@ function ObservatoryConsole({
                             {hasNearby ? (
                                 <>
                                     <h3 className="editorial-card-title editorial-card-approach-count">
-                                        <span className="editorial-approach-count-value">{formatNumber(nearbyCount, 0)}</span>
+                                        <span className="editorial-approach-count-value">{formatNumber(animatedCount, 0)}</span>
                                         <span className="editorial-approach-count-unit">{en ? 'objects' : 'objetos'}</span>
                                     </h3>
                                     <div className="editorial-approach-details">
