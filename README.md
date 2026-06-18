@@ -111,12 +111,14 @@ All external API integrations live in the Laravel backend. React pages receive c
 - Combines **NASA NeoWs** and **JPL CAD** in parallel, deduplicates and merges by identity
 - Default view zooms in on Earth's neighborhood; reference panel lets you switch to Sun, Moon, or full planet view
 - Asteroid positions from **JPL Horizons API** ephemeris queries with real state vectors
+- **Famous comets** (Halley, Encke, 67P, NEOWISE) and famous asteroids with **real 3D models** and a Kepler fallback when Horizons is unavailable, so no object disappears
 - Gradient trajectory lines, direction cones, approach markers; distances on a single **linear AU scale** (no compression), with a close approach revealed by camera zoom
-- Scene badge shows "escala linear · UA" by default; a legacy logarithmic ruler stays behind `?log` as a backstage comparison only
 - Focus mode locks camera to any body; keyboard and touch pan/zoom
-- Navigation panel with object list, data quality card, and technical data tabs
+- Focus card with a **History** tab for the famous objects, alongside metrics, physical data, and actions
+- Scene labels resolved by importance and local density: Sun, Earth, Moon, and planets never disappear from collision; crowded rocks yield space on zoom out
+- Navigation panel with object list and technical data tabs
+- First-visit guided tutorial that walks through the scene step by step
 - Scale legend (1 LD / 1 AU) in the corner; interactive guide (manual) explains the representation
-- Welcome toast on first visit
 - Earth reference imagery from **NASA EPIC** with CSS fallback
 
 ### Asteroid Dashboard
@@ -260,23 +262,26 @@ app/
 ├── Http/
 │   ├── Controllers/Web/   # Page + data-endpoint controllers
 │   └── Requests/          # Form Request validation
-└── Services/
-    ├── Approaches/        # Observatory orchestration (fan-out, merge, summarize)
-    ├── Jpl/               # JPL CAD, SBDB, Horizons clients
-    ├── Nasa/              # NASA NeoWs, EPIC, APOD clients
-    └── SpaceNews/         # SNAPI client
+├── Services/
+│   ├── Approaches/        # Observatory orchestration (fan-out, merge, summarize)
+│   ├── Jpl/               # JPL CAD, SBDB, Horizons clients
+│   ├── Nasa/              # NASA NeoWs, EPIC, APOD clients
+│   └── SpaceNews/         # SNAPI client
+└── Support/
+    └── Asteroids/         # Source of truth for the famous objects: FamousAsteroids + FamousComets
 
 resources/js/
 ├── Pages/                 # Top-level Inertia page components
 ├── Components/
 │   ├── Home/              # CinematicEarthScene, LiveSkyDashboard
 │   ├── Radar/             # Full 3D radar module
-│   │   ├── Scene/         # Canvas, camera rig, planet/orbit layers, ephemeris hook
-│   │   ├── Bodies/        # Textured planets, Sun, Moon, asteroid models
+│   │   ├── Scene/         # Canvas, camera rig, planet/orbit/comet layers, ephemeris hook
+│   │   ├── Bodies/        # Textured planets, Sun, Moon, 3D asteroid and comet models
 │   │   ├── Trajectory/    # Gradient trajectory lines, direction cones, markers
 │   │   ├── Overlays/      # Scene labels, ring layer, starfield
-│   │   ├── Panels/        # Navigation panel, focus card, data quality, technical data
-│   │   ├── Controls/      # Toolbar, console bar, welcome toast, interactive manual
+│   │   ├── Panels/        # Navigation panel, focus card (with History tab), technical data
+│   │   ├── Controls/      # Toolbar, console bar, interactive manual
+│   │   ├── Tutorial/      # First-visit guided tutorial (flow, steps, spotlight)
 │   │   ├── Lists/         # Proximity list, approach table
 │   │   ├── Charts/        # Approach charts, velocity indicator, timeline
 │   │   └── Presenters/    # Earth–Moon ruler, object type badge
@@ -285,7 +290,7 @@ resources/js/
 │   └── Charts/            # Recharts wrappers
 ├── hooks/                 # Custom React hooks
 ├── lib/
-│   └── observatory/       # Coordinate math, shaders, planet data, Kepler orbits
+│   └── radar/             # Coordinate math, shaders, planet data, Kepler orbits, label resolution
 ├── services/              # Client-side API calls and fallback logic
 ├── i18n/                  # Translation dictionaries (pt-BR, en)
 └── types/                 # TypeScript type definitions

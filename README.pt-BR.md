@@ -111,12 +111,14 @@ Todas as integrações com APIs externas ficam no backend Laravel. As páginas R
 - Combina **NASA NeoWs** e **JPL CAD** em paralelo, deduplica e mescla por identidade
 - Visão padrão com zoom na vizinhança da Terra; painel de referências permite alternar para Sol, Lua ou visão completa com planetas
 - Posições dos asteroides via consultas de efemérides à **API JPL Horizons** com vetores de estado reais
+- **Cometas famosos** (Halley, Encke, 67P, NEOWISE) e asteroides famosos com **modelos 3D reais** e fallback Kepler quando o Horizons falha, para que nenhum objeto suma
 - Linhas de trajetória com gradiente, cones de direção, marcadores de aproximação; distâncias em **escala linear única em UA** (sem compressão), com a aproximação revelada por zoom de câmera
-- Badge da cena exibe "escala linear · UA" por padrão; a régua logarítmica legada fica atrás de `?log`, apenas como comparação de bastidor
 - Modo de foco trava a câmera em qualquer corpo; pan e zoom por teclado e toque
-- Painel de navegação com lista de objetos, card de qualidade de dados e abas de dados técnicos
+- Card de foco com aba **História** para os objetos famosos, além das métricas, dados físicos e ações
+- Labels da cena resolvidos por importância e densidade local: Sol, Terra, Lua e planetas nunca somem por colisão; rochas amontoadas no zoom out cedem espaço
+- Painel de navegação com lista de objetos e abas de dados técnicos
+- Tutorial guiado de primeira visita que apresenta a cena passo a passo
 - Legenda de escala (1 DL / 1 UA) no canto; guia interativo (manual) explica a representação
-- Toast de boas-vindas na primeira visita
 - Referência visual da Terra via **NASA EPIC** com fallback CSS
 
 ### Painel de Asteroides
@@ -260,23 +262,26 @@ app/
 ├── Http/
 │   ├── Controllers/Web/   # Controllers de página e endpoints de dados
 │   └── Requests/          # Validação com Form Requests
-└── Services/
-    ├── Approaches/        # Orquestração do Observatório (fan-out, mesclagem, análise)
-    ├── Jpl/               # Clientes CAD, SBDB e Horizons do JPL
-    ├── Nasa/              # Clientes NeoWs, EPIC e APOD da NASA
-    └── SpaceNews/         # Cliente SNAPI
+├── Services/
+│   ├── Approaches/        # Orquestração do Observatório (fan-out, mesclagem, análise)
+│   ├── Jpl/               # Clientes CAD, SBDB e Horizons do JPL
+│   ├── Nasa/              # Clientes NeoWs, EPIC e APOD da NASA
+│   └── SpaceNews/         # Cliente SNAPI
+└── Support/
+    └── Asteroids/         # Fonte de verdade dos famosos: FamousAsteroids + FamousComets
 
 resources/js/
 ├── Pages/                 # Componentes de página Inertia de nível superior
 ├── Components/
 │   ├── Home/              # CinematicEarthScene, LiveSkyDashboard
 │   ├── Radar/             # Módulo completo do radar 3D
-│   │   ├── Scene/         # Canvas, rig de câmera, camadas de planetas/órbitas, hook de efemérides
-│   │   ├── Bodies/        # Planetas texturizados, Sol, Lua, modelos de asteroides
+│   │   ├── Scene/         # Canvas, rig de câmera, camadas de planetas/órbitas/cometas, hook de efemérides
+│   │   ├── Bodies/        # Planetas texturizados, Sol, Lua, modelos 3D de asteroides e cometas
 │   │   ├── Trajectory/    # Linhas de trajetória com gradiente, cones de direção, marcadores
 │   │   ├── Overlays/      # Labels da cena, camada de anéis, campo de estrelas
-│   │   ├── Panels/        # Painel de navegação, card de foco, qualidade de dados, dados técnicos
-│   │   ├── Controls/      # Barra de ferramentas, console, toast de boas-vindas, manual interativo
+│   │   ├── Panels/        # Painel de navegação, card de foco (com aba História), dados técnicos
+│   │   ├── Controls/      # Barra de ferramentas, console, manual interativo
+│   │   ├── Tutorial/      # Tutorial guiado de primeira visita (fluxo, passos, spotlight)
 │   │   ├── Lists/         # Lista de proximidade, tabela de aproximações
 │   │   ├── Charts/        # Gráficos de aproximação, indicador de velocidade, linha do tempo
 │   │   └── Presenters/    # Régua Terra-Lua, badge de tipo de objeto
@@ -285,7 +290,7 @@ resources/js/
 │   └── Charts/            # Wrappers de Recharts
 ├── hooks/                 # Hooks React customizados
 ├── lib/
-│   └── observatory/       # Matemática de coordenadas, shaders, dados de planetas, órbitas de Kepler
+│   └── radar/             # Matemática de coordenadas, shaders, dados de planetas, órbitas de Kepler, resolução de labels
 ├── services/              # Chamadas de API client-side e lógica de fallback
 ├── i18n/                  # Dicionários de tradução (pt-BR, en)
 └── types/                 # Definições de tipos TypeScript
