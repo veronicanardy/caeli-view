@@ -64,7 +64,7 @@ export function RadarNavigationObjectList({
                     onSelect={onSelect}
                     locale={locale}
                     selectionMode={selectionMode}
-                    compact={objectLimit === 30}
+                    compact={objectLimit === 30 || objectLimit === 'all'}
                     orbitMode={orbitMode}
                 />
             ))}

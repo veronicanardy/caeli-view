@@ -41,11 +41,10 @@ type Props = {
     fallbackSunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
     showLabels: boolean;
+    sceneNavigationEnabled?: boolean;
     /** Mostra os asteroides conhecidos na régua dos planetas (critério "famosos"). */
     showKnownAsteroids: boolean;
     bodyCardOpen: 'earth' | 'moon' | 'sun' | PlanetId | null;
-    onBodyCardOpenChange: (body: 'earth' | 'moon' | 'sun' | PlanetId | null) => void;
-    onClearPlanetTargets: () => void;
     onFocusSun: () => void;
     onFocusPlanet: (id: PlanetId) => void;
     onFocusBody: (body: 'earth' | 'moon') => void;
@@ -75,10 +74,9 @@ export function RadarSceneCanvas({
     fallbackSunDirection,
     locale,
     showLabels,
+    sceneNavigationEnabled = true,
     showKnownAsteroids,
     bodyCardOpen,
-    onBodyCardOpenChange,
-    onClearPlanetTargets,
     onFocusSun,
     onFocusPlanet,
     onFocusBody,
@@ -115,11 +113,7 @@ export function RadarSceneCanvas({
                         closestNowObjects={closestNowObjects}
                         selectedId={selectedId}
                         orbitMode={orbitMode}
-                        onSelect={(approach) => {
-                            onBodyCardOpenChange(null);
-                            onClearPlanetTargets();
-                            onSelect(approach);
-                        }}
+                        onSelect={onSelect}
                         cameraIntent={cameraIntent}
                         focusTarget={activeFocusTarget}
                         panelBiasX={panelBiasX}
@@ -128,6 +122,7 @@ export function RadarSceneCanvas({
                         fallbackSunDirection={fallbackSunDirection}
                         locale={locale}
                         showLabels={showLabels}
+                        sceneNavigationEnabled={sceneNavigationEnabled}
                         showKnownAsteroids={showKnownAsteroids}
                         onFirstFrame={() => {
                             setSceneReady(true);

@@ -50,6 +50,8 @@ export function RadarObjectControls({
     const en = locale === 'en';
     const tutorial = useRadarTutorialOptional();
     const tutorialActive = tutorial?.active ?? false;
+    const canChangeMode = (mode: SelectionMode) => tutorial?.isActionAllowed('set-selection-mode', { mode }) ?? true;
+    const canChangeLimit = (limit: ObjectLimit) => tutorial?.isActionAllowed('set-object-limit', { limit }) ?? true;
     // "Famosos" é um conjunto fixo de corpos: a quantidade de objetos não se aplica.
     const limitDisabled = selectionMode === 'famous';
     const modeDescriptions: Record<SelectionMode, string> = {
@@ -60,9 +62,15 @@ export function RadarObjectControls({
             ? 'Shows objects that will pass closest to Earth in the coming days, sorted by when they arrive.'
             : 'Mostra os objetos que vão passar mais perto da Terra nos próximos dias, em ordem de chegada.',
         famous: en
-            ? 'Shows famous small bodies visited by space missions (Ceres, Vesta, Eros, Bennu, Itokawa) where they are now in the Solar System.'
-            : 'Mostra pequenos corpos famosos visitados por missões espaciais (Ceres, Vesta, Eros, Bennu, Itokawa) onde estão agora no Sistema Solar.',
+            ? 'Shows famous small bodies visited by space missions: asteroids and comets, where they are now in the Solar System.'
+            : 'Mostra pequenos corpos famosos visitados por missões espaciais: asteroides e cometas, onde estão agora no Sistema Solar.',
     };
+
+    // Em "Famosos" a quantidade não se aplica: é um conjunto fixo, sempre exibido por inteiro. O
+    // grupo fica travado em "Todos" (verdade) e explica o porquê por tooltip.
+    const limitDisabledHint = en
+        ? 'For famous objects, all available ones are always shown.'
+        : 'Para objetos famosos, todos os disponíveis são sempre exibidos.';
 
     // Interpolação contínua baseada em 100dvh:
     // altura do grupo:  clamp(1.5rem, 3.2dvh, 2.25rem)  → 24px..36px
@@ -101,8 +109,12 @@ export function RadarObjectControls({
                     const btn = (
                         <button
                             type="button"
-                            disabled={loading || criterionLocked}
-                            onClick={() => onModeChange(option.value)}
+                            disabled={loading || criterionLocked || !canChangeMode(option.value) || (tutorialActive && selectionMode === option.value)}
+                            onClick={() => {
+                                if (!canChangeMode(option.value)) return;
+                                onModeChange(option.value);
+                                tutorial?.completeStep('set-selection-mode', { mode: option.value });
+                            }}
                             aria-pressed={selectionMode === option.value}
                             aria-label={`${en ? option.labelEn : option.labelPt} — ${modeDescriptions[option.value]}`}
                             className={[
@@ -135,52 +147,78 @@ export function RadarObjectControls({
                 })}
             </div>
 
-            <div
-                className={[
-                    'flex min-w-0 flex-wrap items-center rounded-xl border border-white/10 bg-space-950/70 md:flex-nowrap',
-                    // Quantidade não se aplica a "famosos": é um conjunto fixo de corpos conhecidos.
-                    limitDisabled ? 'opacity-40' : '',
-                ].join(' ')}
-                style={{ height: 'var(--ctrl-h)', gap: 'var(--ctrl-gap)', paddingInline: 'var(--ctrl-px-group)' }}
-                data-tutorial="radar-filter-limit"
-            >
-                <span
-                    className="font-medium uppercase tracking-wide text-signal-cyan/70 whitespace-nowrap"
-                    style={{ fontSize: 'var(--ctrl-fs-label)', marginRight: 'var(--ctrl-gap)' }}
-                >
-                    {en ? 'Show' : 'Exibir'}
-                </span>
-                {LIMITS.map((limit) => (
-                    <button
-                        key={limit}
-                        type="button"
-                        disabled={loading || limitDisabled}
-                        onClick={() => onLimitChange(limit)}
-                        aria-pressed={objectLimit === limit}
+            {(() => {
+                const limitGroup = (
+                    <div
                         className={[
-                            'rounded-lg font-medium transition outline-none',
-                            'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait',
-                            objectLimit === limit
-                                ? 'bg-signal-cyan/20 text-signal-cyan ring-1 ring-signal-cyan/40'
-                                : 'text-white/65 hover:bg-white/[0.05] hover:text-white',
+                            'flex min-w-0 flex-wrap items-center rounded-xl border border-white/10 bg-space-950/70 md:flex-nowrap',
+                            // Quantidade não se aplica a "famosos": é um conjunto fixo de corpos conhecidos.
+                            // Cursor "proibido" no grupo todo (os botões herdam) deixa claro que não é espera.
+                            limitDisabled ? 'opacity-40 cursor-not-allowed' : '',
                         ].join(' ')}
-                        style={{
-                            fontSize:      'var(--ctrl-fs)',
-                            paddingBlock:  'var(--ctrl-py)',
-                            paddingInline: 'var(--ctrl-px-limit)',
-                            minWidth:      'clamp(1.8rem, 3dvh, 2.6rem)',
-                        }}
+                        style={{ height: 'var(--ctrl-h)', gap: 'var(--ctrl-gap)', paddingInline: 'var(--ctrl-px-group)' }}
+                        data-tutorial="radar-filter-limit"
                     >
-                        {limit === 'all' ? (en ? 'All' : 'Todos') : limit}
-                    </button>
-                ))}
-                <span
-                    className="uppercase tracking-wide text-white/40"
-                    style={{ fontSize: 'var(--ctrl-fs-label)', paddingLeft: 'var(--ctrl-gap)' }}
-                >
-                    {en ? 'Objects' : 'Objetos'}
-                </span>
-            </div>
+                        <span
+                            className="font-medium uppercase tracking-wide text-signal-cyan/70 whitespace-nowrap"
+                            style={{ fontSize: 'var(--ctrl-fs-label)', marginRight: 'var(--ctrl-gap)' }}
+                        >
+                            {en ? 'Show' : 'Exibir'}
+                        </span>
+                        {LIMITS.map((limit) => {
+                            // Em "Famosos" o limite efetivo é "Todos" (verdade): destaca essa opção
+                            // independentemente do objectLimit guardado, sem alterar o estado.
+                            const active = limitDisabled ? limit === 'all' : objectLimit === limit;
+                            const tutorialLocked = !canChangeLimit(limit) || (tutorialActive && objectLimit === limit);
+                            return (
+                                <button
+                                    key={limit}
+                                    type="button"
+                                    disabled={loading || limitDisabled || tutorialLocked}
+                                    onClick={() => {
+                                        if (!canChangeLimit(limit)) return;
+                                        onLimitChange(limit);
+                                        tutorial?.completeStep('set-object-limit', { limit });
+                                    }}
+                                    aria-pressed={active}
+                                    className={[
+                                        'rounded-lg font-medium transition outline-none',
+                                        // cursor-wait só no carregamento real; em "famosos" é proibido, não espera.
+                                        'focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                                        loading && !limitDisabled && !tutorialLocked ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed',
+                                        active
+                                            ? 'bg-signal-cyan/20 text-signal-cyan ring-1 ring-signal-cyan/40'
+                                            : 'text-white/65 hover:bg-white/[0.05] hover:text-white',
+                                    ].join(' ')}
+                                    style={{
+                                        fontSize:      'var(--ctrl-fs)',
+                                        paddingBlock:  'var(--ctrl-py)',
+                                        paddingInline: 'var(--ctrl-px-limit)',
+                                        minWidth:      'clamp(1.8rem, 3dvh, 2.6rem)',
+                                    }}
+                                >
+                                    {limit === 'all' ? (en ? 'All' : 'Todos') : limit}
+                                </button>
+                            );
+                        })}
+                        <span
+                            className="uppercase tracking-wide text-white/40"
+                            style={{ fontSize: 'var(--ctrl-fs-label)', paddingLeft: 'var(--ctrl-gap)' }}
+                        >
+                            {en ? 'Objects' : 'Objetos'}
+                        </span>
+                    </div>
+                );
+
+                // Quando travado, um tooltip no grupo explica por que não dá para mudar a quantidade.
+                // (Botões desabilitados não disparam hover, então o wrapper é que carrega o tooltip.)
+                if (!limitDisabled || tutorialActive) return limitGroup;
+                return (
+                    <Tooltip content={<span className="block w-52 leading-relaxed">{limitDisabledHint}</span>} wrap hideDelay={150}>
+                        {limitGroup}
+                    </Tooltip>
+                );
+            })()}
         </div>
     );
 }

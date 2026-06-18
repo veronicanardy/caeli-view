@@ -13,6 +13,7 @@
 import { Check } from 'lucide-react';
 import { OBJECT_LIMITS } from '@/types';
 import type { ObjectLimit, SelectionMode } from '@/types';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 
 type Props = {
     en: boolean;
@@ -44,6 +45,13 @@ const MODE_OPTIONS: Array<{
         descriptionPt: 'Quem ainda vai passar perto da Terra nos próximos dias, em ordem de chegada.',
         descriptionEn: 'What will pass close to Earth in the coming days, sorted by arrival.',
     },
+    {
+        value: 'famous',
+        labelPt: 'Objetos famosos',
+        labelEn: 'Famous objects',
+        descriptionPt: 'Corpos conhecidos visitados por missões, vistos na régua do Sistema Solar.',
+        descriptionEn: 'Known bodies visited by missions, shown on the Solar System scale.',
+    },
 ];
 
 export function MobileFiltersSheetContent({
@@ -54,6 +62,11 @@ export function MobileFiltersSheetContent({
     onModeChange,
     loading,
 }: Props) {
+    const tutorial = useRadarTutorialOptional();
+    const tutorialActive = tutorial?.active ?? false;
+    const canChangeMode = (mode: SelectionMode) => tutorial?.isActionAllowed('set-selection-mode', { mode }) ?? true;
+    const canChangeLimit = (limit: ObjectLimit) => tutorial?.isActionAllowed('set-object-limit', { limit }) ?? true;
+
     return (
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-3">
             <fieldset data-tutorial="radar-filter-criterion">
@@ -63,16 +76,22 @@ export function MobileFiltersSheetContent({
                 <div className="space-y-1.5">
                     {MODE_OPTIONS.map((option) => {
                         const active = selectionMode === option.value;
+                        const tutorialLocked = !canChangeMode(option.value) || (tutorialActive && active);
                         return (
                             <button
                                 key={option.value}
                                 type="button"
-                                disabled={loading}
-                                onClick={() => onModeChange(option.value)}
+                                disabled={loading || tutorialLocked}
+                                onClick={() => {
+                                    if (!canChangeMode(option.value)) return;
+                                    onModeChange(option.value);
+                                    tutorial?.completeStep('set-selection-mode', { mode: option.value });
+                                }}
                                 aria-pressed={active}
                                 className={[
                                     'flex w-full items-start gap-2.5 rounded-xl border px-3.5 py-3 text-left transition outline-none',
-                                    'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait disabled:opacity-50',
+                                    'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:opacity-50',
+                                    loading && !tutorialLocked ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed',
                                     active
                                         ? 'border-signal-cyan/40 bg-signal-cyan/10'
                                         : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.05]',
@@ -103,27 +122,35 @@ export function MobileFiltersSheetContent({
 
             <fieldset data-tutorial="radar-filter-limit">
                 <legend className="pb-2 text-[10.5px] font-semibold uppercase tracking-widest text-signal-cyan/70">
-                    {en ? 'Show up to' : 'Exibir até'}
+                    {en ? 'Show' : 'Exibir'}
                 </legend>
                 <div className="flex gap-1.5">
-                    {OBJECT_LIMITS.map((limit) => (
-                        <button
-                            key={limit}
-                            type="button"
-                            disabled={loading}
-                            onClick={() => onLimitChange(limit)}
-                            aria-pressed={objectLimit === limit}
-                            className={[
-                                'flex-1 rounded-xl border py-2.5 text-center text-[14px] font-semibold transition outline-none',
-                                'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-wait disabled:opacity-50',
-                                objectLimit === limit
-                                    ? 'border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan'
-                                    : 'border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/[0.05]',
-                            ].join(' ')}
-                        >
-                            {limit}
-                        </button>
-                    ))}
+                    {OBJECT_LIMITS.map((limit) => {
+                        const tutorialLocked = !canChangeLimit(limit) || (tutorialActive && objectLimit === limit);
+                        return (
+                            <button
+                                key={limit}
+                                type="button"
+                                disabled={loading || tutorialLocked}
+                                onClick={() => {
+                                    if (!canChangeLimit(limit)) return;
+                                    onLimitChange(limit);
+                                    tutorial?.completeStep('set-object-limit', { limit });
+                                }}
+                                aria-pressed={objectLimit === limit}
+                                className={[
+                                    'flex-1 rounded-xl border py-2.5 text-center text-[14px] font-semibold transition outline-none',
+                                    'focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:opacity-50',
+                                    loading && !tutorialLocked ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed',
+                                    objectLimit === limit
+                                        ? 'border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan'
+                                        : 'border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/[0.05]',
+                                ].join(' ')}
+                            >
+                                {limit === 'all' ? (en ? 'All' : 'Todos') : limit}
+                            </button>
+                        );
+                    })}
                 </div>
                 <p className="pt-1.5 text-[11px] leading-relaxed text-white/40">
                     {en

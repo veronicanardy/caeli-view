@@ -27,7 +27,7 @@
  * época de periélio válida (tpJd ≠ 0), sem isso a posição Kepleriana não é computável.
  */
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type SetStateAction } from 'react';
 import { usePanelBias } from './Scene/usePanelBias';
 import type { ClosestNowObject, LunarReference, ObjectLimit, SelectionMode, SunDirection, UnifiedApproach } from '@/types';
 import { sunDirectionFromIncoming } from '@/lib/radar/coordinates';
@@ -38,6 +38,8 @@ import { RadarFloatingOverlays } from './Panels/RadarFloatingOverlays';
 import { RadarNavigationPanel } from './Panels/RadarNavigationPanel';
 import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import { RadarSceneCanvas } from './Scene/RadarSceneCanvas';
+import { useRadarTutorialOptional } from './Tutorial/RadarTutorialContext';
+import type { TutorialAction, TutorialActionPayload } from './Tutorial/radarTutorialFlow';
 import { deriveActiveMode } from './Scene/sceneMode';
 import { useLabelNoGoRects } from './Scene/useLabelNoGoRects';
 import { useSceneEphemeris } from './Scene/useSceneEphemeris';
@@ -82,6 +84,17 @@ export function DailyOrbitalRadar3D({
     initialSunDirection,
 }: Props) {
     const en = locale === 'en';
+    const tutorial = useRadarTutorialOptional();
+
+    const runTutorialAction = useCallback((
+        action: TutorialAction,
+        payload: TutorialActionPayload,
+        fn: () => void,
+    ) => {
+        if (!(tutorial?.isActionAllowed(action, payload) ?? true)) return;
+        fn();
+        tutorial?.completeStep(action, payload);
+    }, [tutorial]);
 
     // Adia a atualização dos objetos na cena 3D enquanto `radarLoading` está ativo.
     // Isso garante que o overlay "Carregando..." pinte no browser antes de o Three.js
@@ -110,7 +123,12 @@ export function DailyOrbitalRadar3D({
 
     const [manualOpen, setManualOpen] = useState(false);
     const [fullscreen, setFullscreenState] = useState(false);
-    const setFullscreen = (value: boolean) => { setFullscreenState(value); onFullscreenChange?.(value); };
+    const setFullscreen = useCallback((value: boolean) => {
+        runTutorialAction(value ? 'enter-fullscreen' : 'exit-fullscreen', {}, () => {
+            setFullscreenState(value);
+            onFullscreenChange?.(value);
+        });
+    }, [onFullscreenChange, runTutorialAction]);
     const [showLabels, setShowLabels] = useState(true);
     const [planetsOpen, setPlanetsOpen] = useState(false);
     // Sheet mobile aberto (objetos ou filtros). Null = nenhum, cena livre.
@@ -122,7 +140,6 @@ export function DailyOrbitalRadar3D({
         bodyCardOpen,
         cameraIntent,
         canShowOrbitPosition,
-        clearPlanetTargets,
         closeFocusedObject,
         focusBody,
         focusPlanet,
@@ -158,6 +175,49 @@ export function DailyOrbitalRadar3D({
     );
 
     const [trajectoryPointFocus, setTrajectoryPointFocus] = useState<FocusFraming | null>(null);
+
+    const changeMobileSheet = useCallback((sheet: MobileSheetSection | null) => {
+        const action: TutorialAction = sheet === 'objects'
+            ? 'open-object-panel'
+            : sheet === 'filters'
+                ? 'open-filter-panel'
+                : mobileSheet === 'filters'
+                    ? 'close-filter-panel'
+                    : 'close-object-panel';
+        runTutorialAction(action, {}, () => setMobileSheet(sheet));
+    }, [mobileSheet, runTutorialAction]);
+
+    const changeDesktopPanelCollapsed = useCallback((collapsed: boolean) => {
+        runTutorialAction(collapsed ? 'collapse-object-panel' : 'expand-object-panel', {}, () => {
+            setDesktopPanelCollapsed(collapsed);
+            if (collapsed) setPlanetsOpen(false);
+        });
+    }, [runTutorialAction]);
+
+    const changePlanetsOpen = useCallback((open: boolean) => {
+        runTutorialAction('toggle-planets', {}, () => setPlanetsOpen(open));
+    }, [runTutorialAction]);
+
+    const selectObjectForTutorial = useCallback((approach: UnifiedApproach) => {
+        runTutorialAction('select-object', { objectId: approach.id }, () => selectObject(approach));
+    }, [runTutorialAction, selectObject]);
+
+    const focusBodyForTutorial = useCallback((body: 'earth' | 'moon') => {
+        runTutorialAction('focus-body', { body }, () => focusBody(body));
+    }, [focusBody, runTutorialAction]);
+
+    const focusSunForTutorial = useCallback(() => {
+        runTutorialAction('focus-sun', { body: 'sun' }, focusSun);
+    }, [focusSun, runTutorialAction]);
+
+    const focusPlanetForTutorial = useCallback((id: Parameters<typeof focusPlanet>[0]) => {
+        runTutorialAction('focus-planet', { planetId: id }, () => focusPlanet(id));
+    }, [focusPlanet, runTutorialAction]);
+
+    const setShowLabelsForTutorial = useCallback((value: SetStateAction<boolean>) => {
+        const next = typeof value === 'function' ? value(showLabels) : value;
+        runTutorialAction('toggle-labels', {}, () => setShowLabels(next));
+    }, [runTutorialAction, showLabels]);
 
     // Limpa o foco de trajetória quando o usuário interage com outra coisa.
     useEffect(() => { setTrajectoryPointFocus(null); }, [focusTarget, bodyCardOpen]);
@@ -205,12 +265,14 @@ export function DailyOrbitalRadar3D({
         const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false); };
         document.addEventListener('keydown', handler);
         return () => document.removeEventListener('keydown', handler);
-    }, [fullscreen]);
+    }, [fullscreen, setFullscreen]);
 
     return (
-        <section>
+        /* flex-1 + min-h-0: a cena ocupa toda a altura que a página (Pages/Radar/Index) deixar,
+           sem altura fixa por calc. Em fullscreen o div interno escapa do fluxo (fixed inset-0). */
+        <section className="flex min-h-0 flex-1 flex-col">
             {fullscreen && (
-                <div className="h-[calc(100dvh-7rem)] min-h-[360px] sm:h-[calc(100vh-8rem)] sm:min-h-[400px] lg:min-h-[560px] rounded-lg border border-white/5 bg-white/[0.02]" aria-hidden />
+                <div className="min-h-0 flex-1 rounded-lg border border-white/5 bg-white/[0.02]" aria-hidden />
             )}
             <div
                 ref={canvasContainerRef}
@@ -222,7 +284,7 @@ export function DailyOrbitalRadar3D({
                    atmosférica sem competir com os objetos científicos da cena. */
                 className={fullscreen
                     ? 'fixed inset-0 z-50 bg-[#03060d] [background-image:radial-gradient(ellipse_70%_55%_at_50%_40%,#071420_0%,#03060d_70%)] lg:cursor-grab lg:active:cursor-grabbing touch-none'
-                    : 'relative h-[calc(100dvh-7rem)] min-h-[360px] sm:h-[calc(100vh-8rem)] sm:min-h-[400px] lg:min-h-[560px] overflow-hidden rounded-lg border border-white/10 bg-[#03060d] [background-image:radial-gradient(ellipse_70%_55%_at_50%_40%,#071420_0%,#03060d_70%)] lg:cursor-grab lg:active:cursor-grabbing touch-none'}
+                    : 'relative min-h-0 flex-1 overflow-hidden rounded-lg border border-white/10 bg-[#03060d] [background-image:radial-gradient(ellipse_70%_55%_at_50%_40%,#071420_0%,#03060d_70%)] lg:cursor-grab lg:active:cursor-grabbing touch-none'}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 <RadarSceneCanvas
@@ -232,7 +294,7 @@ export function DailyOrbitalRadar3D({
                     closestNowObjects={sceneObjects}
                     selectedId={selectedId}
                     orbitMode={orbitMode}
-                    onSelect={selectObject}
+                    onSelect={selectObjectForTutorial}
                     cameraIntent={cameraIntent}
                     focusTarget={trajectoryPointFocus ?? focusTarget}
                     sunFocusTarget={sunFocusTarget}
@@ -242,14 +304,13 @@ export function DailyOrbitalRadar3D({
                     fallbackSunDirection={fallbackSunDirection}
                     locale={locale}
                     showLabels={showLabels}
+                    sceneNavigationEnabled={tutorial?.isActionAllowed('scene-navigate') ?? true}
                     showKnownAsteroids={showKnownAsteroidsInScene}
                     bodyCardOpen={bodyCardOpen}
-                    onBodyCardOpenChange={setBodyCardOpen}
-                    onClearPlanetTargets={clearPlanetTargets}
-                    onFocusSun={focusSun}
-                    onFocusPlanet={focusPlanet}
-                    onFocusBody={focusBody}
-                    onFocusTrajectoryPoint={setTrajectoryPointFocus}
+                    onFocusSun={focusSunForTutorial}
+                    onFocusPlanet={focusPlanetForTutorial}
+                    onFocusBody={focusBodyForTutorial}
+                    onFocusTrajectoryPoint={tutorial?.active ? undefined : setTrajectoryPointFocus}
                 />
                 <RadarNavigationPanel
                     en={en}
@@ -262,59 +323,65 @@ export function DailyOrbitalRadar3D({
                     onLimitChange={onLimitChange}
                     onModeChange={onModeChange}
                     radarLoading={radarLoading}
-                    onRefresh={onRefresh}
+                    onRefresh={onRefresh ? () => runTutorialAction('refresh', {}, onRefresh) : undefined}
                     mobileSheet={mobileSheet}
-                    onMobileSheetChange={setMobileSheet}
+                    onMobileSheetChange={changeMobileSheet}
                     desktopCollapsed={desktopPanelCollapsed}
-                    onDesktopCollapsedChange={setDesktopPanelCollapsed}
+                    onDesktopCollapsedChange={changeDesktopPanelCollapsed}
                     planetsOpen={planetsOpen}
-                    onPlanetsOpenChange={setPlanetsOpen}
+                    onPlanetsOpenChange={changePlanetsOpen}
                     bodyCardOpen={bodyCardOpen}
                     sidePanelRef={sidePanelRef}
                     planetFlyoutRef={planetFlyoutRef}
-                    onSelectObject={selectObject}
-                    onFocusBody={focusBody}
-                    onFocusPlanet={focusPlanet}
-                    onFocusSun={focusSun}
+                    onSelectObject={selectObjectForTutorial}
+                    onFocusBody={focusBodyForTutorial}
+                    onFocusPlanet={focusPlanetForTutorial}
+                    onFocusSun={focusSunForTutorial}
                 />
                 {/* Barra de ações mobile: some enquanto um sheet ou card ocupa o rodapé. */}
                 <MobileActionBar
                     en={en}
                     hidden={mobileSheet !== null || Boolean(visibleFocusedObject) || Boolean(bodyCardOpen)}
-                    onOpenObjects={showNavigationPanel}
-                    onOpenFilters={() => setMobileSheet('filters')}
-                    onOpenGuide={() => setManualOpen(true)}
+                    onOpenObjects={() => runTutorialAction('open-object-panel', {}, showNavigationPanel)}
+                    onOpenFilters={() => changeMobileSheet('filters')}
+                    onOpenGuide={() => runTutorialAction('open-guide', {}, () => setManualOpen(true))}
                 />
                 <SceneToolbar
                     en={en}
                     activeMode={activeMode}
                     showLabels={showLabels}
-                    onShowLabelsChange={setShowLabels}
+                    onShowLabelsChange={setShowLabelsForTutorial}
                     fullscreen={fullscreen}
                     onFullscreenChange={(v) => setFullscreen(typeof v === 'function' ? v(fullscreen) : v)}
-                    onResetView={resetView}
+                    onResetView={() => runTutorialAction('reset-view', {}, resetView)}
                 />
                 <RadarFloatingOverlays
                     en={en}
                     locale={locale}
                     desktopPanelCollapsed={desktopPanelCollapsed}
                     visibleFocusedObject={visibleFocusedObject}
-                    onOpenFocus={onOpenFocus}
-                    onCloseFocusedObject={closeFocusedObject}
+                    onOpenFocus={onOpenFocus ? (approach) => runTutorialAction('open-dossier', {}, () => onOpenFocus(approach)) : undefined}
+                    onCloseFocusedObject={() => runTutorialAction('close-card', {}, closeFocusedObject)}
                     orbitMode={orbitMode}
                     canShowOrbitPosition={canShowOrbitPosition}
-                    onShowOrbit={showOrbit}
-                    onShowCloseUp={showCloseUp}
-                    onShowNavigationPanel={showNavigationPanel}
+                    onShowOrbit={() => runTutorialAction('enter-orbit', {}, showOrbit)}
+                    onShowCloseUp={() => runTutorialAction('exit-orbit', {}, showCloseUp)}
+                    onShowNavigationPanel={() => runTutorialAction('open-object-panel', {}, showNavigationPanel)}
                     focusCardRef={focusCardRef}
                     bodyCardOpen={bodyCardOpen}
-                    onBodyCardOpenChange={setBodyCardOpen}
+                    onBodyCardOpenChange={(body) => {
+                        if (body !== null) {
+                            setBodyCardOpen(body);
+                            return;
+                        }
+                        runTutorialAction('close-card', {}, () => setBodyCardOpen(null));
+                    }}
                     bodyCardRef={bodyCardRef}
                     sceneTransitioning={sceneTransitioning}
                     radarLoading={radarLoading}
                     activeMode={activeMode}
                     manualOpen={manualOpen}
-                    onManualOpenChange={setManualOpen}
+                    onManualOpenChange={(open) => runTutorialAction(open ? 'open-guide' : 'close-guide', {}, () => setManualOpen(open))}
                     lunarReference={lunarReference}
                     ephemerisAvailable={ephemeris !== null}
                 />

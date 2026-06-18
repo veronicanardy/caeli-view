@@ -10,6 +10,7 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { Eye, EyeOff, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import type { SceneMode } from './Manual/manualTypes';
 import { Tooltip } from './Tooltip';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 
 type Props = {
     en: boolean;
@@ -34,12 +35,17 @@ export function SceneToolbar({
     onFullscreenChange,
     onResetView,
 }: Props) {
+    const tutorial = useRadarTutorialOptional();
+    const canReset = tutorial?.isActionAllowed('reset-view') ?? true;
+    const canToggleLabels = tutorial?.isActionAllowed('toggle-labels') ?? true;
+    const canToggleFullscreen = tutorial?.isActionAllowed(fullscreen ? 'exit-fullscreen' : 'enter-fullscreen') ?? true;
+
     return (
         <div className="pointer-events-none absolute right-3 top-3 z-20">
             <div className="pointer-events-auto flex items-center gap-1.5 cursor-auto" data-tutorial="camera-controls">
                 {activeMode !== 'orbit' ? (
                     <Tooltip content={en ? 'Reset view' : 'Resetar vista'} align="right" hideDelay={150}>
-                        <IconButton onClick={onResetView} dataTutorial="reset-view" aria-label={en ? 'Reset view' : 'Resetar vista'}>
+                        <IconButton disabled={!canReset} onClick={onResetView} dataTutorial="reset-view" aria-label={en ? 'Reset view' : 'Resetar vista'}>
                             <RotateCcw className="size-3.5" />
                         </IconButton>
                     </Tooltip>
@@ -53,6 +59,7 @@ export function SceneToolbar({
                 >
                     <IconButton
                         onClick={() => onShowLabelsChange((v) => !v)}
+                        disabled={!canToggleLabels}
                         dataTutorial="toggle-labels"
                         aria-label={showLabels ? (en ? 'Hide markers' : 'Ocultar marcações') : (en ? 'Show markers' : 'Mostrar marcações')}
                     >
@@ -68,6 +75,7 @@ export function SceneToolbar({
                 >
                     <IconButton
                         onClick={() => onFullscreenChange((v) => !v)}
+                        disabled={!canToggleFullscreen}
                         dataTutorial="toggle-fullscreen"
                         aria-label={fullscreen ? (en ? 'Exit fullscreen' : 'Sair da tela cheia') : (en ? 'Fullscreen' : 'Tela cheia')}
                     >
@@ -79,15 +87,16 @@ export function SceneToolbar({
     );
 }
 
-function IconButton({ onClick, children, 'aria-label': ariaLabel, dataTutorial }: { onClick: () => void; children: ReactNode; 'aria-label': string; dataTutorial?: string }) {
+function IconButton({ onClick, children, 'aria-label': ariaLabel, dataTutorial, disabled = false }: { onClick: () => void; children: ReactNode; 'aria-label': string; dataTutorial?: string; disabled?: boolean }) {
     return (
         <button
             type="button"
             onClick={onClick}
+            disabled={disabled}
             aria-label={ariaLabel}
             data-tutorial={dataTutorial}
             /* p-2.5 no mobile garante área de toque ~44px; p-1.5 mantém o visual compacto no desktop */
-            className="flex items-center justify-center rounded-full border border-white/10 bg-space-950/80 p-2.5 text-white/50 backdrop-blur transition outline-none hover:border-white/20 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-signal-cyan lg:p-1.5"
+            className="flex items-center justify-center rounded-full border border-white/10 bg-space-950/80 p-2.5 text-white/50 backdrop-blur transition outline-none hover:border-white/20 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-not-allowed disabled:opacity-35 lg:p-1.5"
         >
             {children}
         </button>

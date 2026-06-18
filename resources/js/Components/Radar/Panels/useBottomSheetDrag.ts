@@ -30,6 +30,7 @@ type Args = {
     onDismiss?: () => void;
     /** Frações de altura por snap; padrão dos sheets de navegação. */
     fractions?: SheetSnapFractions;
+    disabled?: boolean;
 };
 
 type DragState = {
@@ -41,7 +42,7 @@ type DragState = {
     lastHeightPx: number;
 };
 
-export function useBottomSheetDrag({ sheetRef, snaps, snap, onSnapChange, onDismiss, fractions = SHEET_SNAP_FRACTION }: Args) {
+export function useBottomSheetDrag({ sheetRef, snaps, snap, onSnapChange, onDismiss, fractions = SHEET_SNAP_FRACTION, disabled = false }: Args) {
     const [dragHeightPx, setDragHeightPx] = useState<number | null>(null);
     const dragState = useRef<DragState | null>(null);
     // Remoção dos listeners globais do gesto em andamento (também chamada no desmonte).
@@ -59,6 +60,7 @@ export function useBottomSheetDrag({ sheetRef, snaps, snap, onSnapChange, onDism
     }, []);
 
     const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+        if (disabled) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
         const sheet = sheetRef.current;
         if (!sheet || dragState.current) return;

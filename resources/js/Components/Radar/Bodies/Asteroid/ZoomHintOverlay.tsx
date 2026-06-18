@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Tooltip } from '../../Controls/Tooltip';
+import { useRadarTutorialOptional } from '../../Tutorial/RadarTutorialContext';
 import { useZoomHintState } from './ZoomHintContext';
 
 function MagnifyMinusIcon() {
@@ -22,6 +23,7 @@ const FADE_IN_MS = 400;
 
 export function ZoomHintOverlay() {
     const state = useZoomHintState();
+    const tutorial = useRadarTutorialOptional();
     const lastState = useRef(state);
     if (state) lastState.current = state;
 
@@ -70,7 +72,12 @@ export function ZoomHintOverlay() {
         >
             <Tooltip content="Afastar para ver a trajetória" side="top" hideDelay={200}>
                 <button
-                    onClick={s.onZoomOut}
+                    onClick={() => {
+                        if (!(tutorial?.isActionAllowed('show-trajectory') ?? true)) return;
+                        s.onZoomOut();
+                        tutorial?.completeStep('show-trajectory');
+                    }}
+                    disabled={!(tutorial?.isActionAllowed('show-trajectory') ?? true)}
                     data-tutorial="zoom-trajectory"
                     style={{
                         background: 'rgba(255,255,255,0.11)',

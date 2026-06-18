@@ -1,11 +1,9 @@
 import { Head } from '@inertiajs/react';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/Components/AppLayout';
 import { CompactConsoleBar } from '@/Components/Radar/Controls/CompactConsoleBar';
-import { RadarDataQualityCard } from '@/Components/Radar/Panels/RadarDataQualityCard';
 import { RadarTutorialProvider } from '@/Components/Radar/Tutorial/RadarTutorialProvider';
 import { ErrorMessage } from '@/Components/ErrorMessage';
-import { buildRadarObjects } from '@/lib/radarData';
 import { useTranslation } from '@/i18n';
 import { useClosestNow } from '@/hooks/useClosestNow';
 import { useKnownAsteroidDetail } from '@/hooks/useKnownAsteroidDetail';
@@ -32,8 +30,13 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
     const [selectedFocusId, setSelectedFocusId] = useState<string | null>(null);
     const { locale, t } = useTranslation();
 
-    const { objectLimit, selectionMode, setObjectLimit, setSelectionMode } = useRadarControls();
+    const { objectLimit, selectionMode, setObjectLimit, setSelectionMode, resetControls } = useRadarControls();
     const [refreshNonce, setRefreshNonce] = useState(0);
+
+    const resetRadarForTutorial = useCallback(() => {
+        resetControls();
+        setSelectedFocusId(null);
+    }, [resetControls]);
 
     useEffect(() => {
         setSelectedFocusId(null);
@@ -65,11 +68,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
     }, [closestNowData]);
 
     const lunarReference = closestNowData?.lunarReference;
-
-    const radarObjects = useMemo(
-        () => (closestNowData ? buildRadarObjects(closestNowData.objects) : []),
-        [closestNowData],
-    );
 
     const focusApproach = useMemo(() => {
         if (!selectedFocusId) return null;
@@ -112,7 +110,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
     }, [closestNowData, isFamous, knownDetail, focusApproach]);
 
     return (
-        <AppLayout hideHeader={radarFullscreen}>
+        <AppLayout hideHeader={radarFullscreen} hideFooter>
             <Head title={t('observatory.title')} />
 
             {/* Tutorial interativo de primeira visita: observa critério, limite e
@@ -124,8 +122,11 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
                 selectedId={focusApproach?.id ?? null}
                 radarReady={Boolean(closestNowData && lunarReference && !closestNowLoading)}
                 radarLoading={closestNowLoading}
+                onResetRadarState={resetRadarForTutorial}
             >
-            <section className="mx-auto max-w-[1800px] space-y-3 px-3 py-2 sm:px-6 sm:py-4 sm:space-y-4 lg:px-8">
+            {/* Coluna que preenche a viewport abaixo do header: a barra de filtros fica no topo e o
+                radar 3D consome todo o resto via flex-1, sem nunca gerar scroll na página. */}
+            <section className="mx-auto flex h-full min-h-0 max-w-[1800px] flex-col gap-3 px-3 py-2 sm:px-6 sm:py-3 sm:gap-4 lg:px-8">
                 <ErrorMessage message={closestNowError} />
 
                 {closestNowLoading && !closestNowData ? (
@@ -134,7 +135,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
                     <>
                         {/* Filtros do topo: só no desktop. No mobile vivem no bottom sheet
                             aberto pela barra de ações da cena (DailyOrbitalRadar3D). */}
-                        <div className="hidden lg:block">
+                        <div className="hidden shrink-0 lg:block">
                             <CompactConsoleBar
                                 locale={locale}
                                 objectLimit={objectLimit}
@@ -170,14 +171,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
                         ) : (
                             <ObservatorySkeleton label={t('observatory.loading.map')} rows={6} />
                         )}
-
-                        {radarObjects.length ? (
-                            <RadarDataQualityCard
-                                objects={radarObjects}
-                                locale={locale}
-                                t={t}
-                            />
-                        ) : null}
                     </>
                 )}
             </section>

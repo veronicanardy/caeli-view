@@ -12,12 +12,13 @@
  * Por que vive no espaço heliocêntrico (e não offsetada pela Terra): estes objetos são distantes e
  * usam a mesma escala dos planetas, então caem ao lado deles sem a compressão log do radar.
  *
- * São exibidos apenas no critério "Asteroides famosos" (SelectionMode 'famous'), que oculta o feed
- * de aproximação. Como os dois conjuntos nunca coexistem, não há duplicação a tratar aqui.
+ * São exibidos apenas no critério "Objetos famosos" (SelectionMode 'famous'), que oculta o feed
+ * de aproximação. Como os dois conjuntos nunca coexistem, não há duplicação a tratar aqui. Os cometas
+ * famosos têm camada irmã própria (KnownCometsLayer), montada no mesmo critério.
  */
 
 import { useMemo, useState } from 'react';
-import { ScreenLabel } from '../Overlays/SceneLabels';
+import { ResolvedScreenLabel } from '../Overlays/SceneLabels';
 import { BodyHitbox } from '../Bodies/BodyHitbox';
 import RealAsteroidModel from '../Bodies/Asteroid/RealAsteroidModel';
 import type { KnownAsteroid } from '../Bodies/Asteroid/knownAsteroids';
@@ -127,17 +128,20 @@ function KnownAsteroidBody({ known, position, showLabel, dimmed, selected, onSel
             ) : null}
 
             {(showLabel || hovered || selected) ? (
-                <ScreenLabel
+                <ResolvedScreenLabel
                     position={labelOffset}
+                    labelId={`known-asteroid:${knownAsteroidId(known)}`}
+                    labelKind="asteroid"
                     emphasized={hovered || selected}
+                    selected={selected}
+                    hovered={hovered}
                     protectFromFocus={!hovered && !selected}
-                    allowSceneOverlap={selected}
                     /* Como nos planetas: o label seleciona quando o corpo NÃO está focado; já focado,
                        não re-dispara (mesma regra da hitbox). */
                     onClick={selected ? undefined : () => onSelect?.()}
                 >
                     {known.name}
-                </ScreenLabel>
+                </ResolvedScreenLabel>
             ) : null}
         </group>
     );

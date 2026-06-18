@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 import type { PlanetId } from '../Scene/planetConfig';
 
-// Símbolos astronômicos Unicode oficiais
-// ☉ Sol  ♁ Terra  ☽ Lua  ✦ Planetas
-
-/**
- * Atalhos de foco para corpos de referência da cena.
- *
- * Expõe ações rápidas para Sol, Terra, Lua e, fora do modo órbita, a lista de planetas.
- */
 export function ReferenceSection({
     en,
     orbitMode = false,
@@ -29,9 +22,14 @@ export function ReferenceSection({
     onFocusMoon: () => void;
     onFocusSun: () => void;
     compact?: boolean;
-    /** Força os rótulos de texto mesmo abaixo de sm: (uso nos sheets mobile, onde há largura). */
     labelsAlwaysVisible?: boolean;
 }) {
+    const tutorial = useRadarTutorialOptional();
+    const canFocusSun = tutorial?.isActionAllowed('focus-sun', { body: 'sun' }) ?? true;
+    const canFocusEarth = tutorial?.isActionAllowed('focus-body', { body: 'earth' }) ?? true;
+    const canFocusMoon = tutorial?.isActionAllowed('focus-body', { body: 'moon' }) ?? true;
+    const canTogglePlanets = tutorial?.isActionAllowed('toggle-planets') ?? true;
+
     return (
         <div className={compact ? '' : 'border-b border-white/[0.04] px-2 pb-1.5 pt-2'}>
             {!compact ? (
@@ -40,18 +38,55 @@ export function ReferenceSection({
                 </div>
             ) : null}
             <div className="flex items-center gap-px rounded-lg border border-white/[0.07] bg-white/[0.02] p-0.5" data-tutorial="reference-controls">
-                <AstroButton symbol="☉" label={en ? 'Sun' : 'Sol'}   onClick={onFocusSun} dataTutorial="reference-body" labelAlways={labelsAlwaysVisible} />
+                <AstroButton
+                    symbol={'\u2609'}
+                    label={en ? 'Sun' : 'Sol'}
+                    onClick={() => {
+                        if (!canFocusSun) return;
+                        onFocusSun();
+                        tutorial?.completeStep('focus-sun', { body: 'sun' });
+                    }}
+                    disabled={!canFocusSun}
+                    dataTutorial="reference-body"
+                    labelAlways={labelsAlwaysVisible}
+                />
                 <Divider />
-                <AstroButton symbol="♁" label={en ? 'Earth' : 'Terra'} onClick={onFocusEarth} dataTutorial="reference-body" labelAlways={labelsAlwaysVisible} />
+                <AstroButton
+                    symbol={'\u2641'}
+                    label={en ? 'Earth' : 'Terra'}
+                    onClick={() => {
+                        if (!canFocusEarth) return;
+                        onFocusEarth();
+                        tutorial?.completeStep('focus-body', { body: 'earth' });
+                    }}
+                    disabled={!canFocusEarth}
+                    dataTutorial="reference-body"
+                    labelAlways={labelsAlwaysVisible}
+                />
                 <Divider />
-                <AstroButton symbol="☽" label={en ? 'Moon' : 'Lua'}  onClick={onFocusMoon} dataTutorial="reference-body" labelAlways={labelsAlwaysVisible} />
+                <AstroButton
+                    symbol={'\u263D'}
+                    label={en ? 'Moon' : 'Lua'}
+                    onClick={() => {
+                        if (!canFocusMoon) return;
+                        onFocusMoon();
+                        tutorial?.completeStep('focus-body', { body: 'moon' });
+                    }}
+                    disabled={!canFocusMoon}
+                    dataTutorial="reference-body"
+                    labelAlways={labelsAlwaysVisible}
+                />
                 {!orbitMode ? (
                     <>
                         <Divider />
                         <AstroButton
-                            symbol="✦"
+                            symbol={'\u2726'}
                             label={en ? 'Planets' : 'Planetas'}
-                            onClick={() => onPlanetsOpenChange(!planetsOpen)}
+                            onClick={() => {
+                                if (!canTogglePlanets) return;
+                                onPlanetsOpenChange(!planetsOpen);
+                            }}
+                            disabled={!canTogglePlanets}
                             active={planetsOpen}
                             chevron
                             chevronOpen={planetsOpen}
@@ -78,6 +113,7 @@ function AstroButton({
     chevronOpen = false,
     dataTutorial,
     labelAlways = false,
+    disabled = false,
 }: {
     symbol: string;
     label: string;
@@ -87,15 +123,17 @@ function AstroButton({
     chevronOpen?: boolean;
     dataTutorial?: string;
     labelAlways?: boolean;
+    disabled?: boolean;
 }) {
     return (
         <button
             type="button"
             onClick={onClick}
+            disabled={disabled}
             aria-label={label}
             data-tutorial={dataTutorial}
             className={[
-                'group flex flex-1 items-center justify-center gap-1 rounded-md px-1 transition-all outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                'group flex flex-1 items-center justify-center gap-1 rounded-md px-1 transition-all outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-not-allowed disabled:opacity-35',
                 labelAlways ? 'py-2.5 text-[12px]' : 'py-1.5 text-[11px]',
                 active
                     ? 'bg-signal-cyan/10 text-signal-cyan shadow-[inset_0_1px_0_rgba(34,211,238,0.1)]'
@@ -129,12 +167,9 @@ const PLANET_LIST = [
     { id: 'neptune' as PlanetId, color: '#2878d8', labelPt: 'Netuno', labelEn: 'Neptune' },
 ];
 
-/**
- * Lista flutuante de planetas usada pelo atalho de referência.
- * Entra com fade+slide suave ao montar.
- */
 export function PlanetFlyout({ en, focusedId, onFocus }: { en: boolean; focusedId: PlanetId | null; onFocus: (id: PlanetId) => void }) {
     const [visible, setVisible] = useState(false);
+    const tutorial = useRadarTutorialOptional();
     useEffect(() => {
         const t = requestAnimationFrame(() => setVisible(true));
         return () => cancelAnimationFrame(t);
@@ -149,26 +184,34 @@ export function PlanetFlyout({ en, focusedId, onFocus }: { en: boolean; focusedI
                 transform: visible ? 'translateY(0)' : 'translateY(-6px)',
             }}
         >
-            {PLANET_LIST.map((p) => (
-                <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => onFocus(p.id)}
-                    data-tutorial="planet-option"
-                    className={[
-                        'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
-                        p.id === focusedId
-                            ? 'bg-white/[0.04] text-white/85'
-                            : 'text-white/60 hover:bg-white/[0.04] hover:text-white/75',
-                    ].join(' ')}
-                >
-                    <span
-                        className="inline-block size-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: p.color, opacity: p.id === focusedId ? 0.8 : 0.45 }}
-                    />
-                    <span className="font-medium">{en ? p.labelEn : p.labelPt}</span>
-                </button>
-            ))}
+            {PLANET_LIST.map((p) => {
+                const allowed = tutorial?.isActionAllowed('focus-planet', { planetId: p.id }) ?? true;
+                return (
+                    <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                            if (!allowed) return;
+                            onFocus(p.id);
+                            tutorial?.completeStep('focus-planet', { planetId: p.id });
+                        }}
+                        disabled={!allowed}
+                        data-tutorial="planet-option"
+                        className={[
+                            'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-not-allowed disabled:opacity-35',
+                            p.id === focusedId
+                                ? 'bg-white/[0.04] text-white/85'
+                                : 'text-white/60 hover:bg-white/[0.04] hover:text-white/75',
+                        ].join(' ')}
+                    >
+                        <span
+                            className="inline-block size-1.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: p.color, opacity: p.id === focusedId ? 0.8 : 0.45 }}
+                        />
+                        <span className="font-medium">{en ? p.labelEn : p.labelPt}</span>
+                    </button>
+                );
+            })}
         </div>
     );
 }

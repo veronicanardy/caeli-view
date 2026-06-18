@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { orientMoonTidal } from '@/lib/radar/earthOrientation';
 import { MOON_HITBOX_DL, MOON_RADIUS_DL } from '@/lib/radar/bodyScale';
 import { MOON_FRAG, MOON_VERT } from '@/lib/radar/shaders/moon.glsl';
-import { DistanceCulledScreenLabel } from '../../Overlays/SceneLabels';
+import { ResolvedDistanceCulledScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
 import { useBodyTexture } from '../useBodyTexture';
@@ -117,18 +117,21 @@ export function Moon({
             ) : null}
 
             {showLabel ? (
-                <DistanceCulledScreenLabel
+                <ResolvedDistanceCulledScreenLabel
                     anchor={position}
                     maxCameraDistance={5.2}
                     position={moonLabelOffset(earthToMoonVector, compactLabel)}
+                    labelId="moon"
+                    labelKind="moon"
                     emphasized={hovered}
+                    hovered={hovered}
+                    selected={isFocused}
                     protectFromFocus={protectLabelFromFocus}
-                    allowSceneOverlap={isFocused}
                     onClick={isFocused ? undefined : onFocus}
                     title={isFocused ? undefined : title}
                 >
                     {labelName}
-                </DistanceCulledScreenLabel>
+                </ResolvedDistanceCulledScreenLabel>
             ) : null}
         </group>
     );

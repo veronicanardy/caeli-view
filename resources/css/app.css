@@ -26,6 +26,44 @@ body {
     -webkit-backdrop-filter: none !important;
 }
 
+.radar-tutorial-target-pulse {
+    outline: 2px solid rgba(34, 211, 238, 0.78) !important;
+    outline-offset: 3px;
+    box-shadow:
+        0 0 0 1px rgba(34, 211, 238, 0.45),
+        0 0 22px rgba(34, 211, 238, 0.52),
+        0 0 42px rgba(34, 211, 238, 0.2) !important;
+    animation: radarTutorialTargetPulse 1.05s ease-in-out infinite;
+}
+
+.radar-tutorial-spotlight-pulse {
+    animation: radarTutorialSpotlightPulse 1.05s ease-in-out infinite;
+}
+
+@keyframes radarTutorialTargetPulse {
+    0%,
+    100% {
+        outline-color: rgba(34, 211, 238, 0.62);
+        filter: brightness(1);
+    }
+    50% {
+        outline-color: rgba(255, 255, 255, 0.95);
+        filter: brightness(1.18);
+    }
+}
+
+@keyframes radarTutorialSpotlightPulse {
+    0%,
+    100% {
+        border-color: rgba(34, 211, 238, 0.58);
+        box-shadow: 0 0 0 9999px rgba(2, 4, 10, 0.82), 0 0 24px rgba(34, 211, 238, 0.28);
+    }
+    50% {
+        border-color: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 0 0 9999px rgba(2, 4, 10, 0.82), 0 0 24px rgba(34, 211, 238, 0.28);
+    }
+}
+
 .space-grid {
     background-image:
         linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
@@ -72,6 +110,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .radar-tutorial-target-pulse,
+    .radar-tutorial-spotlight-pulse,
     .star-dot {
         animation: none !important;
     }
@@ -2093,10 +2133,28 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 20%, #000 38%, #000 52%, transparent 64%);
-    mask-image: linear-gradient(to bottom, transparent 20%, #000 38%, #000 52%, transparent 64%);
-    opacity: 0.9;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 16%, #000 34%, #000 56%, transparent 70%);
+    mask-image: linear-gradient(to bottom, transparent 16%, #000 34%, #000 56%, transparent 70%);
+    opacity: 0.95;
     animation: heroStardustTwinkle 6.5s ease-in-out infinite;
+}
+
+/* Véu de nebulosa: dá ao "preto" da faixa morta uma textura de céu profundo,
+   constante (independe do trânsito passar). Dois sopros frios desencontrados,
+   blending suave, confinados pela mesma faixa central da poeira. É o tapete
+   sobre o qual os asteroides cruzam. */
+.home-hero-stardust::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(36% 24% at 30% 44%, rgba(48, 116, 168, 0.045), transparent 72%),
+        radial-gradient(32% 20% at 72% 50%, rgba(96, 78, 158, 0.032), transparent 74%),
+        radial-gradient(48% 28% at 50% 46%, rgba(34, 92, 142, 0.022), transparent 80%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 14%, #000 36%, #000 58%, transparent 74%);
+    mask-image: linear-gradient(to bottom, transparent 14%, #000 36%, #000 58%, transparent 74%);
+    animation: heroNebulaDrift 22s ease-in-out infinite;
 }
 
 .home-hero-stardust-field {
@@ -2120,7 +2178,30 @@ body {
         440px -20px 0 0.2px rgba(214, 234, 255, 0.62),
         -380px 70px 0 0 rgba(255, 255, 255, 0.5),
         200px 80px 0 0 rgba(255, 255, 255, 0.5),
-        -160px 100px 0 0 rgba(210, 230, 255, 0.45);
+        -160px 100px 0 0 rgba(210, 230, 255, 0.45),
+        /* Adensamento: pontos extras, alguns menores e mais frios, espalhados
+           pela faixa para o céu não ler como vazio entre os pontos originais. */
+        -510px 20px 0 0 rgba(255, 255, 255, 0.42),
+        -420px -90px 0 0.1px rgba(210, 230, 255, 0.5),
+        -340px 80px 0 0 rgba(255, 255, 255, 0.4),
+        -270px -20px 0 0 rgba(255, 255, 255, 0.5),
+        -180px 40px 0 0 rgba(214, 234, 255, 0.42),
+        -90px -90px 0 0.1px rgba(255, 255, 255, 0.55),
+        -30px 90px 0 0 rgba(210, 230, 255, 0.4),
+        20px -70px 0 0 rgba(255, 255, 255, 0.5),
+        70px 30px 0 0 rgba(255, 255, 255, 0.4),
+        130px -30px 0 0.1px rgba(214, 234, 255, 0.45),
+        220px -80px 0 0 rgba(255, 255, 255, 0.5),
+        300px 70px 0 0 rgba(210, 230, 255, 0.4),
+        320px -50px 0 0 rgba(255, 255, 255, 0.45),
+        400px -70px 0 0.1px rgba(255, 255, 255, 0.42),
+        470px 60px 0 0 rgba(214, 234, 255, 0.4),
+        500px -30px 0 0 rgba(255, 255, 255, 0.46);
+}
+
+@keyframes heroNebulaDrift {
+    0%, 100% { opacity: 0.7; transform: translate3d(0, 0, 0) scale(1); }
+    50% { opacity: 1; transform: translate3d(1.5%, -1%, 0) scale(1.04); }
 }
 
 @keyframes heroStardustTwinkle {
@@ -2129,7 +2210,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .home-hero-stardust {
+    .home-hero-stardust,
+    .home-hero-stardust::before {
         animation: none;
     }
 }

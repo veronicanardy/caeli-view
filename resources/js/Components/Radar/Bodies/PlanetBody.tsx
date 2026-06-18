@@ -12,7 +12,7 @@ import { useFrame } from '@react-three/fiber';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { ScreenLabel } from '../Overlays/SceneLabels';
+import { ResolvedScreenLabel } from '../Overlays/SceneLabels';
 import {
     BODY_ROTATION_EPOCH_UNIX_S,
     BODY_SPHERE_SEGMENTS,
@@ -209,9 +209,17 @@ export function PlanetBody({
             ) : null}
 
             {showLabel ? (
-                <ScreenLabel position={labelPos} protectFromFocus={!isFocused} allowSceneOverlap={isFocused} onClick={isFocused ? undefined : onFocus}>
+                <ResolvedScreenLabel
+                    position={labelPos}
+                    labelId={`planet:${config.label.en.toLowerCase()}`}
+                    labelKind="planet"
+                    selected={isFocused}
+                    emphasized={isFocused}
+                    protectFromFocus={!isFocused}
+                    onClick={isFocused ? undefined : onFocus}
+                >
                     <span className="font-semibold">{locale === 'en' ? config.label.en : config.label.pt}</span>
-                </ScreenLabel>
+                </ResolvedScreenLabel>
             ) : null}
         </group>
     );

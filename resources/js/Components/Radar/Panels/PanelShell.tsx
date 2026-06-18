@@ -18,6 +18,7 @@ import { createContext, useContext, useMemo, useRef, useState, type CSSPropertie
 import { X } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MOBILE_MEDIA_QUERY } from '../radarLayoutConstants';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 import { FOCUS_CARD_SNAP_FRACTION, nextSnapOnTap } from './bottomSheetSnap';
 import type { SheetSnap } from './bottomSheetSnap';
 import { useBottomSheetDrag } from './useBottomSheetDrag';
@@ -78,8 +79,11 @@ export function PanelShell({
     dataTutorial,
 }: PanelShellProps) {
     const isMobile = useMediaQuery(MOBILE_MEDIA_QUERY);
+    const tutorial = useRadarTutorialOptional();
     const sheetRef = useRef<HTMLDivElement>(null);
     const [snap, setSnap] = useState<SheetSnap>('half');
+    const resizeAction = snap === 'full' ? 'collapse-object-panel' : 'expand-object-panel';
+    const canResize = tutorial?.isActionAllowed(resizeAction) ?? true;
     const { dragging, heightStyle, dragRegionProps, wasDraggedRef } = useBottomSheetDrag({
         sheetRef,
         snaps: CARD_SNAPS,
@@ -87,12 +91,17 @@ export function PanelShell({
         onSnapChange: setSnap,
         // Sem onDismiss: fechar o card é decisão explícita (botão X), nunca acidente de gesto.
         fractions: FOCUS_CARD_SNAP_FRACTION,
+        disabled: !canResize,
     });
 
     const onHandleTap = () => {
         // Ignora o click fantasma que o browser dispara logo após um arraste.
         if (wasDraggedRef.current) return;
-        setSnap((current) => nextSnapOnTap(current, CARD_SNAPS));
+        if (!canResize) return;
+        setSnap((current) => {
+            tutorial?.completeStep(current === 'full' ? 'collapse-object-panel' : 'expand-object-panel');
+            return nextSnapOnTap(current, CARD_SNAPS);
+        });
     };
 
     const setRefs = (el: HTMLDivElement | null) => {

@@ -37,6 +37,7 @@
 - `PlanetLayer.tsx`: renderização dos planetas.
 - `PlanetOrbitLayer.tsx`: renderização declarativa das elipses orbitais planetárias a partir de uma lista local de configuração.
 - `AsteroidSceneLayer.tsx`: renderização de asteroides e trajetórias atuais.
+- `KnownAsteroidsLayer.tsx` / `KnownCometsLayer.tsx`: fallback Kepler dos objetos famosos (asteroides e cometas) na régua dos planetas, para que nenhum suma quando o Horizons falha. Recebem `skipIds` com os famosos que já têm posição real do feed e os pulam, evitando duplicar o corpo. Os cometas reusam o modelo genérico recolorido (sem GLB próprio ainda).
 - `HeliocentricScene.tsx`: cena heliocêntrica do objeto selecionado em modo órbita.
 - `KeyboardPan.tsx`: pan da câmera por WASD e setas do teclado, com velocidade proporcional à distância.
 - `SceneWarmup.tsx`: pré-compilação assíncrona de shaders (`compileAsync`) e upload escalonado de texturas (`initTexture`) em momentos ociosos, para que revelar objetos novos ao rotacionar a câmera não dispare compilação síncrona no meio do gesto.

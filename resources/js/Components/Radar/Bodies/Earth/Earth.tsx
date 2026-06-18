@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import { orientEarth } from '@/lib/radar/earthOrientation';
 import { CLOUDS_FRAG, EARTH_FRAG, EARTH_VERT } from '@/lib/radar/shaders/earth.glsl';
 import { EARTH_HITBOX_DL, EARTH_RADIUS_DL } from '@/lib/radar/bodyScale';
-import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { ResolvedScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import { useBodyTexture } from '../useBodyTexture';
 
@@ -59,7 +59,6 @@ export function Earth({
     subsolarLatDeg,
     subsolarLonDeg,
     showLabel,
-    protectLabelFromFocus,
     isFocused = false,
 }: EarthProps) {
     const day = useBodyTexture('/images/earth/blue-marble-land-shallow-topo-2048.jpg', 'raw');
@@ -205,16 +204,19 @@ export function Earth({
             ) : null}
 
             {showLabel ? (
-                <ScreenLabel
+                <ResolvedScreenLabel
                     position={LABEL_POSITION}
+                    labelId="earth"
+                    labelKind="earth"
                     emphasized={hovered}
-                    protectFromFocus={protectLabelFromFocus}
-                    allowSceneOverlap={isFocused}
+                    hovered={hovered}
+                    selected={isFocused}
+                    protectFromFocus={false}
                     onClick={isFocused ? undefined : onFocus}
                     title={isFocused ? undefined : 'Voltar para a visão geral'}
                 >
                     <span className="font-semibold">Terra</span>
-                </ScreenLabel>
+                </ResolvedScreenLabel>
             ) : null}
         </group>
     );

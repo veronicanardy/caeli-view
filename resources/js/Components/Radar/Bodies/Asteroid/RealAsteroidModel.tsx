@@ -19,6 +19,14 @@ interface RealAsteroidModelProps {
     selected?: boolean;
     outlineColor?: string;
     showOutline?: boolean;
+    /**
+     * Tint da superfície quando o GLB tem textura (mistura, não substitui). Default = grafite-frio de
+     * rocha. Cometas passam um tom gelado para distinguir do genérico de asteroide enquanto não há
+     * GLB exclusivo de cometa.
+     */
+    tint?: string;
+    /** Cor de fallback quando o GLB não tem textura alguma. Default = grafite de rocha. */
+    fallbackColor?: string;
 }
 
 function hashSeed(seed: string | number): number {
@@ -138,15 +146,15 @@ function createOutlineMaterial(color: string) {
 }
 
 // Tint sutil grafite-frio — mistura com a textura original sem substituí-la
-const ROCK_TINT = new THREE.Color('#4e5258');
+const ROCK_TINT = '#4e5258';
 // Fallback quando o GLB não tem textura alguma
-const ROCK_FALLBACK_COLOR = new THREE.Color('#34383e');
+const ROCK_FALLBACK_COLOR = '#34383e';
 
 /**
  * Clona os materiais do GLB uma única vez e aplica os ajustes estáticos de superfície.
  * Roda apenas quando o modelo muda — nunca em resposta a dimming/hover.
  */
-function prepareMaterials(obj: THREE.Object3D): void {
+function prepareMaterials(obj: THREE.Object3D, fallbackColor: string): void {
     obj.traverse((child) => {
         const mesh = child as THREE.Mesh;
         if (!mesh.isMesh) return;
@@ -161,7 +169,7 @@ function prepareMaterials(obj: THREE.Object3D): void {
             const existing = src instanceof THREE.MeshStandardMaterial ? src : null;
             const mat = existing
                 ? existing.clone()
-                : new THREE.MeshStandardMaterial({ color: ROCK_FALLBACK_COLOR });
+                : new THREE.MeshStandardMaterial({ color: new THREE.Color(fallbackColor) });
 
             if (!existing) src?.dispose?.();
 
@@ -195,7 +203,9 @@ function prepareMaterials(obj: THREE.Object3D): void {
  * forçando o renderer a reprocessar o material. Cor base é determinística (tint quando
  * há textura, fallback quando não), então pode ser recomputada do zero a cada chamada.
  */
-function applyDimming(obj: THREE.Object3D, opacity: number): void {
+function applyDimming(obj: THREE.Object3D, opacity: number, tint: string, fallbackColor: string): void {
+    const tintColor = new THREE.Color(tint);
+    const fallback = new THREE.Color(fallbackColor);
     obj.traverse((child) => {
         const mesh = child as THREE.Mesh;
         if (!mesh.isMesh) return;
@@ -205,7 +215,7 @@ function applyDimming(obj: THREE.Object3D, opacity: number): void {
             const mat = raw as THREE.MeshStandardMaterial;
             if (!mat?.isMaterial) continue;
 
-            mat.color.copy(mat.map ? ROCK_TINT : ROCK_FALLBACK_COLOR);
+            mat.color.copy(mat.map ? tintColor : fallback);
             mat.opacity = opacity;
             // Usa cor escurecida pra simular dimming sem virar transparente,
             // o que quebraria a ordem de depth com as linhas de trajetória
@@ -223,7 +233,7 @@ function applyDimming(obj: THREE.Object3D, opacity: number): void {
  * Suporta packs de múltiplos asteroides no mesmo arquivo: coleta todos os
  * grupos-raiz com mesh, seleciona um pelo hash do seed, centraliza e normaliza.
  */
-export default function RealAsteroidModel({ asset, opacity, seed, selected = false, outlineColor = '#7ee8fa', showOutline = true }: RealAsteroidModelProps) {
+export default function RealAsteroidModel({ asset, opacity, seed, selected = false, outlineColor = '#7ee8fa', showOutline = true, tint = ROCK_TINT, fallbackColor = ROCK_FALLBACK_COLOR }: RealAsteroidModelProps) {
     const gltf = useGLTF(asset.url) as { scene: THREE.Group };
 
     const { model, scale } = useMemo(() => {
@@ -283,12 +293,12 @@ export default function RealAsteroidModel({ asset, opacity, seed, selected = fal
 
     // Clone e ajustes estáticos uma vez por modelo; dimming separado, in-place, sem novos clones.
     useEffect(() => {
-        prepareMaterials(model);
-    }, [model]);
+        prepareMaterials(model, fallbackColor);
+    }, [model, fallbackColor]);
 
     useEffect(() => {
-        applyDimming(model, opacity);
-    }, [model, opacity]);
+        applyDimming(model, opacity, tint, fallbackColor);
+    }, [model, opacity, tint, fallbackColor]);
 
     useEffect(() => {
         return () => {

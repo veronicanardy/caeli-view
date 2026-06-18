@@ -13,6 +13,7 @@
 
 import type { ReactNode } from 'react';
 import { BookOpen, List, SlidersHorizontal } from 'lucide-react';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 
 type Props = {
     en: boolean;
@@ -24,6 +25,7 @@ type Props = {
 };
 
 export function MobileActionBar({ en, hidden, onOpenObjects, onOpenFilters, onOpenGuide }: Props) {
+    const tutorial = useRadarTutorialOptional();
     if (hidden) return null;
 
     return (
@@ -33,18 +35,21 @@ export function MobileActionBar({ en, hidden, onOpenObjects, onOpenFilters, onOp
                     icon={<List className="size-5" aria-hidden />}
                     label={en ? 'Objects' : 'Objetos'}
                     onClick={onOpenObjects}
+                    disabled={!(tutorial?.isActionAllowed('open-object-panel') ?? true)}
                     dataTutorial="object-list-toggle"
                 />
                 <ActionButton
                     icon={<SlidersHorizontal className="size-5" aria-hidden />}
                     label={en ? 'Filters' : 'Filtros'}
                     onClick={onOpenFilters}
+                    disabled={!(tutorial?.isActionAllowed('open-filter-panel') ?? true)}
                     dataTutorial="radar-filters"
                 />
                 <ActionButton
                     icon={<BookOpen className="size-5" aria-hidden />}
                     label={en ? 'Guide' : 'Guia'}
                     onClick={onOpenGuide}
+                    disabled={!(tutorial?.isActionAllowed('open-guide') ?? true)}
                     dataTutorial="radar-guide"
                 />
             </div>
@@ -52,19 +57,21 @@ export function MobileActionBar({ en, hidden, onOpenObjects, onOpenFilters, onOp
     );
 }
 
-function ActionButton({ icon, label, onClick, dataTutorial }: {
+function ActionButton({ icon, label, onClick, dataTutorial, disabled = false }: {
     icon: ReactNode;
     label: string;
     onClick: () => void;
     dataTutorial?: string;
+    disabled?: boolean;
 }) {
     return (
         <button
             type="button"
             onClick={onClick}
+            disabled={disabled}
             data-tutorial={dataTutorial}
             /* min-w + py garantem área de toque confortável (~88x48px) sem inflar a barra */
-            className="flex min-w-[5.5rem] flex-col items-center gap-0.5 px-4 py-2 text-white/65 transition outline-none hover:bg-white/[0.05] hover:text-white/90 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+            className="flex min-w-[5.5rem] flex-col items-center gap-0.5 px-4 py-2 text-white/65 transition outline-none hover:bg-white/[0.05] hover:text-white/90 focus-visible:ring-2 focus-visible:ring-signal-cyan disabled:cursor-not-allowed disabled:opacity-35"
         >
             <span className="text-signal-cyan/70">{icon}</span>
             <span className="text-[10.5px] font-medium tracking-wide">{label}</span>

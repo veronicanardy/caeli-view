@@ -1,16 +1,22 @@
 /**
  * Item de lista de objetos da cena do radar.
  *
- * Responsabilidade: renderizar nome, cor de paleta, distância ou data de
- * aproximação e estado de seleção para um único objeto próximo. Não decide
- * ranking nem aplica filtros — recebe o objeto já resolvido.
+ * Responsabilidade: renderizar nome, marcador de tipo (bolinha para asteroide,
+ * bolinha com cauda para cometa), distância ou data de aproximação e estado de
+ * seleção para um único objeto próximo. Não decide ranking nem aplica filtros —
+ * recebe o objeto já resolvido (a ordem por distância vem do backend).
  */
 
 import { TriangleAlert } from 'lucide-react';
-import type { ClosestNowObject, SelectionMode, UnifiedApproach } from '@/types';
+import type { ClosestNowObject, SelectionMode, SmallBodyObjectType, UnifiedApproach } from '@/types';
 import { Tooltip } from '../Controls/Tooltip';
 import { isKnownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
+import { isKnownCometId } from '../Bodies/Comet/knownComets';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 import { formatObjectListTrailingLabel } from './radarSceneObjectPresentation';
+
+/** Contador para ids únicos do gradiente de cauda do cometa (um <linearGradient> por marcador). */
+let tailGradientId = 0;
 
 type ObjectListItemProps = {
     object: ClosestNowObject;
@@ -26,12 +32,14 @@ type ObjectListItemProps = {
 // Representa um item interativo da lista do radar sem alterar regras globais de selecao.
 export function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, selectionMode, compact = false, orbitMode = false }: ObjectListItemProps) {
     const en = locale === 'en';
-    // Conhecidos (famosos) são plotados na régua dos planetas via Kepler, sem trajetória geocêntrica:
-    // têm posição, só não a do feed. Não marcar "sem pos." para eles.
-    const isKnown = isKnownAsteroidId(o.approach.id);
+    // Conhecidos (famosos: asteroides e cometas) são plotados na régua dos planetas via Kepler, sem
+    // trajetória geocêntrica: têm posição, só não a do feed. Não marcar "sem pos." para eles.
+    const isKnown = isKnownAsteroidId(o.approach.id) || isKnownCometId(o.approach.id);
     const hasScenePosition = isKnown || Boolean(o.trajectory?.currentPoint);
     const hasOrbit = Boolean(o.trajectory?.orbitalElements);
     const orbitBlocked = orbitMode && !hasOrbit;
+    const tutorial = useRadarTutorialOptional();
+    const tutorialBlocked = !(tutorial?.isActionAllowed('select-object', { objectId: o.approach.id }) ?? true);
     const hazard = o.approach.hazardFlag;
     const trailingLabel = formatObjectListTrailingLabel(selectionMode, o.approach.approachDate, o.currentDistanceKm, locale);
 
@@ -41,12 +49,16 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                própria linha; sem title nativo (regra do sistema: tooltips só via <Tooltip>). */}
             <button
                 type="button"
-                disabled={orbitBlocked}
-                onClick={() => onSelect(o.approach)}
+                disabled={orbitBlocked || tutorialBlocked}
+                onClick={() => {
+                    if (tutorialBlocked) return;
+                    onSelect(o.approach);
+                    tutorial?.completeStep('select-object', { objectId: o.approach.id });
+                }}
                 className={[
                     'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-xl text-left text-[13.5px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
                     compact ? 'px-2 py-1.5' : 'px-2.5 py-2',
-                    orbitBlocked
+                    orbitBlocked || tutorialBlocked
                         ? 'cursor-not-allowed opacity-20'
                         : isSelected
                           /* Selecionado: fundo suave ciano, sem glow forte — indica escolha sem gritar. */
@@ -56,16 +68,10 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                     !orbitBlocked && !hasScenePosition ? 'opacity-30' : '',
                 ].join(' ')}
             >
-                <span
-                    className="col-start-1 row-start-1 self-center rounded-full"
-                    style={{
-                        width: isSelected ? '7px' : '5px',
-                        height: isSelected ? '7px' : '5px',
-                        backgroundColor: palette.future,
-                        opacity: isSelected ? 0.7 : 0.35,
-                        boxShadow: isSelected ? `0 0 4px 0px ${palette.future}66` : undefined,
-                        transition: 'width 0.15s, height 0.15s, opacity 0.15s, box-shadow 0.15s',
-                    }}
+                <ObjectTypeMarker
+                    objectType={o.approach.objectType}
+                    color={palette.future}
+                    selected={isSelected}
                 />
                 <span className="col-start-2 row-start-1 flex min-w-0 items-center gap-1 font-medium">
                     <span className={`min-w-0 truncate ${isSelected ? 'text-white' : ''}`}>{o.approach.displayName ?? o.approach.name}</span>
@@ -92,5 +98,74 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                 </span>
             </button>
         </li>
+    );
+}
+
+/**
+ * Marcador de tipo ao lado do nome na lista: bolinha simples para asteroide, bolinha com cauda para
+ * cometa. Usa a cor da paleta do item e acompanha o estado de seleção (maior e mais opaco quando
+ * selecionado), mantendo a mesma célula do grid que a antiga bolinha ocupava.
+ */
+function ObjectTypeMarker({ objectType, color, selected }: {
+    objectType: SmallBodyObjectType;
+    color: string;
+    selected: boolean;
+}) {
+    const opacity = selected ? 0.7 : 0.35;
+    const filter = selected ? `drop-shadow(0 0 3px ${color}66)` : undefined;
+    const common = 'col-start-1 row-start-1 self-center';
+    const style = { color, opacity, filter, transition: 'opacity 0.15s, filter 0.15s' } as const;
+    // O cometa é desenhado com brilho próprio (gradiente + glow nos elementos), então não recebe o
+    // esmaecimento do SVG inteiro — só uma leve redução quando não selecionado, para não ofuscar.
+    const cometStyle = { color, opacity: selected ? 1 : 0.7, transition: 'opacity 0.15s' } as const;
+
+    if (objectType === 'comet') {
+        // Núcleo (círculo) com uma cauda BRILHANTE que afina apontando para trás. viewBox 12×8: cauda
+        // à esquerda, núcleo à direita, para a cabeça ficar perto do nome. A cauda usa um gradiente
+        // (intensa junto ao núcleo, esmaecendo na ponta) e um leve glow para parecer luminosa.
+        const r = selected ? 2.6 : 2;
+        const gradId = `comet-tail-${tailGradientId++}`;
+        return (
+            <svg
+                className={common}
+                width={selected ? 13 : 11}
+                height={8}
+                viewBox="0 0 12 8"
+                aria-hidden
+                style={cometStyle}
+            >
+                <defs>
+                    <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
+                        {/* Ponta (esquerda): some. Junto ao núcleo (direita): cor cheia. */}
+                        <stop offset="0%" stopColor={color} stopOpacity={0} />
+                        <stop offset="60%" stopColor={color} stopOpacity={0.55} />
+                        <stop offset="100%" stopColor={color} stopOpacity={1} />
+                    </linearGradient>
+                </defs>
+                {/* Cauda: triângulo afilado do núcleo até a borda esquerda, com glow para brilhar. */}
+                <path
+                    d={`M ${9 - r} 4 L 0 2.2 L 0 5.8 Z`}
+                    fill={`url(#${gradId})`}
+                    style={{ filter: `drop-shadow(0 0 2px ${color})` }}
+                />
+                {/* Núcleo, com halo brilhante. */}
+                <circle cx={9} cy={4} r={r} fill={color} style={{ filter: `drop-shadow(0 0 2px ${color})` }} />
+            </svg>
+        );
+    }
+
+    // Asteroide: bolinha simples.
+    return (
+        <span
+            className={`${common} rounded-full`}
+            style={{
+                width: selected ? '7px' : '5px',
+                height: selected ? '7px' : '5px',
+                backgroundColor: color,
+                opacity,
+                boxShadow: selected ? `0 0 4px 0px ${color}66` : undefined,
+                transition: 'width 0.15s, height 0.15s, opacity 0.15s, box-shadow 0.15s',
+            }}
+        />
     );
 }

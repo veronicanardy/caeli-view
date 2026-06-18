@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { compactKm } from '@/lib/format';
+import { TICK_Z_INDEX_RANGE } from '@/lib/radar/radarLabels';
 import type { ClosestApproachSample } from '@/lib/radar/trajectorySampling';
 import { Html } from '@react-three/drei';
 import { FocusProtectedHtml } from '../Overlays/SceneLabels';
@@ -28,7 +29,6 @@ function TimeTick({
     label,
     tooltip,
     color,
-    zOrder,
     visible,
     onClick,
 }: {
@@ -36,11 +36,9 @@ function TimeTick({
     label: string;
     tooltip: string;
     color: string;
-    zOrder: number;
     visible: boolean;
     onClick?: () => void;
 }) {
-    const zTop = Math.max(6 - zOrder, 1);
     return (
         <group position={vec}>
             <mesh>
@@ -48,7 +46,7 @@ function TimeTick({
                 <meshBasicMaterial color={color} transparent opacity={visible ? 0.45 : 0} />
             </mesh>
             {visible ? (
-                <Html position={[0, 0.038, 0]} center zIndexRange={[zTop, 0]}>
+                <Html position={[0, 0.038, 0]} center zIndexRange={TICK_Z_INDEX_RANGE}>
                     <Tooltip content={(() => { const [line1, line2] = tooltip.split('|'); return line2 ? <><span>{line1}</span><br /><span className="text-white/50">{line2}</span></> : <span>{line1}</span>; })()} side="top" offset={28} hideDelay={200}>
                         <span
                             onClick={onClick}
@@ -126,7 +124,6 @@ export function TimeTickGroup({
                     label={tick.label}
                     tooltip={tick.tooltip}
                     color={color}
-                    zOrder={tick.zOrder}
                     visible={visible[i] ?? true}
                     onClick={onFocusPoint ? () => onFocusPoint(tick.vec) : undefined}
                 />

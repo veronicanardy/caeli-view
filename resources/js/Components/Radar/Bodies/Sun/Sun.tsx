@@ -14,7 +14,7 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { SUN_GLOW_FRAG, SUN_GLOW_VERT } from '@/lib/radar/shaders/sun.glsl';
-import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { ResolvedScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import { useBodyTexture } from '../useBodyTexture';
 
@@ -105,7 +105,7 @@ export function Sun({
                     <primitive object={glowMaterial} attach="material" />
                 </mesh>
                 <SunProminences radius={radius} />
-                {onFocus && !isFocused ? (
+                {onFocus ? (
                     <BodyHitbox
                         radius={radius * 2.5}
                         segments={[12, 8]}
@@ -113,9 +113,17 @@ export function Sun({
                     />
                 ) : null}
                 {showLabel ? (
-                    <ScreenLabel position={[0, radius + 0.42, 0]} protectFromFocus={!isFocused} allowSceneOverlap={isFocused} onClick={onFocus}>
+                    <ResolvedScreenLabel
+                        position={[0, radius + 0.42, 0]}
+                        labelId="sun"
+                        labelKind="sun"
+                        selected={isFocused}
+                        emphasized={isFocused}
+                        protectFromFocus={!isFocused}
+                        onClick={onFocus}
+                    >
                         <span className="font-semibold">{en ? 'Sun' : 'Sol'}</span>
-                    </ScreenLabel>
+                    </ResolvedScreenLabel>
                 ) : null}
             </group>
         </group>

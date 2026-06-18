@@ -8,7 +8,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ClosestNowObject, LunarReference, UnifiedApproach } from '@/types';
 import type { SceneMode } from '../Controls/Manual/manualTypes';
-import { Tooltip } from '../Controls/Tooltip';
 import { OrbitWelcomeToast, RadarWelcomeToast } from '../Controls/WelcomeToast';
 import type { PlanetId } from '../Scene/planetConfig';
 import { UnifiedFocusCard } from './UnifiedFocusCard';
@@ -152,37 +151,6 @@ export function RadarFloatingOverlays({
                     </span>
                 ) : null}
                 </div>
-                {/* Badge de modo órbita: aparece quando a elipse osculadora completa é revelada.
-                    Os badges são pointer-events-auto só para o tooltip de hover funcionar. */}
-                {activeMode === 'orbit' ? (
-                    <Tooltip
-                        side="top"
-                        wrap
-                        hideDelay={150}
-                        className="pointer-events-auto"
-                        content={en
-                            ? 'Osculating orbit: best-fit Keplerian ellipse at current epoch. Does not include planetary perturbations. Not a long-term prediction.'
-                            : 'Órbita osculadora: elipse kepleriana ajustada na época atual. Não inclui perturbações planetárias. Não é previsão de longo prazo.'}
-                    >
-                        <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/8 px-2 py-0.5 text-[9px] font-medium text-amber-300/65">
-                            {en ? '⬡ osculating orbit · linear AU scale' : '⬡ órbita osculadora · escala linear UA'}
-                        </span>
-                    </Tooltip>
-                ) : (
-                    <Tooltip
-                        side="top"
-                        wrap
-                        hideDelay={150}
-                        className="pointer-events-auto"
-                        content={en
-                            ? 'Linear AU scale: distances reflect the real proportions between bodies (no compression). Body sizes are amplified for legibility. A close approach is revealed by zooming in.'
-                            : 'Escala linear em UA: as distâncias refletem as proporções reais entre os corpos (sem compressão). Os tamanhos são ampliados para legibilidade. A aproximação aparece com zoom.'}
-                    >
-                        <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-white/10 bg-white/4 px-2 py-0.5 text-[9px] font-medium text-white/28">
-                            {en ? '~ linear scale · AU' : '~ escala linear · UA'}
-                        </span>
-                    </Tooltip>
-                )}
             </div>
 
             {(sceneTransitioning || radarLoading) ? (

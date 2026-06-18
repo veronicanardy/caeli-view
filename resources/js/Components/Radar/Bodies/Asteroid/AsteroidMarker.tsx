@@ -10,7 +10,7 @@ import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { estimateAsteroidDiameterMeters, symbolicRockRadiusFromDiameter } from '@/lib/radar/asteroidScale';
-import { ScreenLabel } from '../../Overlays/SceneLabels';
+import { ResolvedScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import RealAsteroidModel from './RealAsteroidModel';
 import { asteroidRenderableModelFor } from './asteroidModelRegistry';
@@ -116,18 +116,21 @@ export function AsteroidMarker({
             ) : null}
 
             {(showLabel || hovered) ? (
-                <ScreenLabel
+                <ResolvedScreenLabel
                     position={LABEL_POSITION}
+                    labelId={`asteroid:${object.approach.id}`}
+                    labelKind="asteroid"
                     emphasized={isSelected || hovered}
+                    selected={isSelected}
+                    hovered={hovered}
                     protectFromFocus={protectLabelFromFocus}
-                    allowSceneOverlap={isSelected}
                     onClick={() => onSelect(object.approach)}
                     tooltip={isSelected && object.currentDistanceKm != null ? (
                         <><span>O asteroide está aqui agora</span><br /><span className="text-white/50">{new Intl.NumberFormat('pt-BR').format(Math.round(object.currentDistanceKm))} km da Terra</span></>
                     ) : undefined}
                 >
                     {object.approach.displayName ?? object.approach.name}
-                </ScreenLabel>
+                </ResolvedScreenLabel>
             ) : null}
         </group>
     );

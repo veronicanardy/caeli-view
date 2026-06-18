@@ -13,9 +13,9 @@ import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import { LINEAR_AU_SCALE, buildHeliocentricOrbit } from '@/lib/sceneEphemeris';
-import { focusedOrbitSamplePosition } from '@/lib/radar/trajectorySampling';
+import { currentPositionInHelioScene, focusedOrbitSamplePosition, hasRenderableHelioPosition } from '@/lib/radar/trajectorySampling';
 import { OrbitLineHelio } from '../Trajectory/HeliocentricLines';
-import { AsteroidMarker } from '../Bodies/Asteroid/AsteroidMarker';
+import { AsteroidMarker, symbolicRockRadiusForApproach } from '../Bodies/Asteroid/AsteroidMarker';
 import { OBJECT_PALETTE } from '@/lib/radar/palette';
 import { EARTH_RADIUS_DL } from '@/lib/radar/bodyScale';
 import { Sun } from '../Bodies/Sun/Sun';
@@ -24,7 +24,7 @@ import { Moon } from '../Bodies/Moon/Moon';
 import { MoonOrbit } from '../Bodies/Moon/MoonOrbit';
 import { SceneRingsLayer } from '../Overlays/SceneRingsLayer';
 import { StarField } from '../Overlays/StarField';
-import { LabelOccluderContext, SceneObjectOccludersContext, useCompactLabelMode, useHideAsteroidLabelsMode } from '../Overlays/SceneLabels';
+import { LabelOccluderContext, RadarLabelResolutionProvider, SceneObjectOccludersContext, useCompactLabelMode } from '../Overlays/SceneLabels';
 import { AsteroidSceneLayer } from './AsteroidSceneLayer';
 import { CameraRig } from './CameraRig';
 import { MAX_CAMERA_DISTANCE } from './cameraConstants';
@@ -43,7 +43,9 @@ import { LabelBackdropGate } from './LabelBackdropGate';
 import { computeEarthPosition, computeMoonGeoPosition, computeMoonPosition, computeSunDirection, planetScenePositions } from './scenePositions';
 import { useBodyFocus } from './useBodyFocus';
 import { KnownAsteroidsLayer } from './KnownAsteroidsLayer';
+import { KnownCometsLayer } from './KnownCometsLayer';
 import { knownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
+import { knownCometId } from '../Bodies/Comet/knownComets';
 // --------------- Scene ---------------
 
 type RadarSceneProps = {
@@ -79,6 +81,8 @@ type RadarSceneProps = {
     isSunFocused?: boolean;
     /** Quando false, todas as labels 3D (planetas, asteroides, Terra, Lua) ficam ocultas. */
     showLabels?: boolean;
+    /** Quando false, pan/rotate/zoom/teclado da cena ficam bloqueados pelo tutorial. */
+    sceneNavigationEnabled?: boolean;
     /** Mostra os asteroides conhecidos (modelo exclusivo) na régua dos planetas. */
     showKnownAsteroids?: boolean;
     /** Chamado uma única vez após o primeiro frame da cena ser renderizado na GPU. */
@@ -96,7 +100,7 @@ function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
     return null;
 }
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, showKnownAsteroids = false, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, sceneNavigationEnabled = true, showKnownAsteroids = false, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
     // A cena heliocêntrica usa a régua única em UA (LINEAR_AU_SCALE): a efeméride já chega nela
     // (computeSceneEphemeris gera as posições direto na régua), sem reescalonamento intermediário.
     const hasSelection = selectedId !== null;
@@ -104,13 +108,15 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
         () => closestNowObjects.find((object) => object.approach.id === selectedId) ?? null,
         [closestNowObjects, selectedId],
     );
-    // Famosos que já têm posição real do Horizons (trajectory disponível): a camada de fallback
-    // Kepler (KnownAsteroidsLayer) pula esses e só desenha os que o Horizons não resolveu, evitando
-    // duplicar a rocha (uma do AsteroidSceneLayer, outra do Kepler).
+    // Famosos que o AsteroidSceneLayer realmente vai desenhar (ponto do Horizons dentro do limite de
+    // render): a camada de fallback Kepler (KnownAsteroidsLayer/KnownCometsLayer) pula esses e só
+    // desenha os demais, evitando duplicar o corpo. Usa hasRenderableHelioPosition (não só
+    // status==='available') porque cometas distantes têm trajetória disponível mas ponto além do
+    // limite: o feed os descarta, então o fallback Kepler PRECISA desenhá-los, senão somem da cena.
     const knownWithRealPosition = useMemo(
         () => new Set(
             closestNowObjects
-                .filter((o) => o.trajectory?.status === 'available')
+                .filter((o) => hasRenderableHelioPosition(o))
                 .map((o) => o.approach.id),
         ),
         [closestNowObjects],
@@ -149,7 +155,6 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
 
     const planetPositions = useMemo(() => planetScenePositions(ephemeris), [ephemeris]);
     const compactLabels = useCompactLabelMode();
-    const hideAsteroidLabels = useHideAsteroidLabelsMode();
 
     // Foco Terra/Lua fica em hook local para preservar a precedência: seleção > corpo > preset.
     // useCallback evita que funções novas sejam criadas a cada render de RadarScene.
@@ -175,9 +180,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
             selectedId,
             showLabels,
             orbitLabelsOnly,
-            hideAsteroidLabels: showKnownAsteroids ? false : hideAsteroidLabels,
         }),
-        [selectedId, showLabels, orbitLabelsOnly, hideAsteroidLabels, showKnownAsteroids],
+        [selectedId, showLabels, orbitLabelsOnly],
     );
 
     // useMemo evita que novos objetos sejam criados a cada render, prevenindo
@@ -195,13 +199,27 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     // (showFullOrbit, abaixo), sob demanda (botão "Ver a órbita ao redor do Sol").
     const showFullOrbit = orbitMode;
     const sceneObjectOccluders = useMemo(
-        () => computeSceneObjectOccluders({
-            useHelioScene: false,
-            earthPos,
-            moonPos,
-            planetPositions,
-        }),
-        [earthPos, moonPos, planetPositions],
+        () => {
+            const bodyOccluders = computeSceneObjectOccluders({
+                useHelioScene: false,
+                earthPos,
+                moonPos,
+                planetPositions,
+            });
+            const asteroidOccluders = ephemeris?.earthHelioPositionAU
+                ? closestNowObjects.flatMap((object) => {
+                    const position = currentPositionInHelioScene(object, ephemeris.earthHelioPositionAU);
+                    if (!position) return [];
+                    return [{
+                        id: `asteroid:${object.approach.id}`,
+                        center: new THREE.Vector3(...position),
+                        radius: Math.max(symbolicRockRadiusForApproach(object.approach), 0.05),
+                    }];
+                })
+                : [];
+            return [...bodyOccluders, ...asteroidOccluders];
+        },
+        [closestNowObjects, earthPos, ephemeris?.earthHelioPositionAU, moonPos, planetPositions],
     );
 
     // Arbitragem de modo: a cena solar-orbital toma conta quando (a) o usuário pediu modo órbita
@@ -234,7 +252,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     return (
         <SceneObjectOccludersContext.Provider value={sceneObjectOccluders}>
             <LabelOccluderContext.Provider value={labelOccluder}>
-                <color attach="background" args={['#03060d']} />
+                <RadarLabelResolutionProvider>
+                    <color attach="background" args={['#03060d']} />
                 {/* Campo estelar estático — contexto visual de profundidade espacial. */}
                 <StarField />
                 {/* Iluminação global compartilhada por todos os asteroides da cena.
@@ -364,6 +383,21 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         />
                     ) : null}
 
+                    {/* Cometas famosos: mesmo fallback Kepler dos asteroides conhecidos, para que nenhum
+                        cometa suma quando o Horizons falha. Modelo genérico recolorido (sem GLB próprio). */}
+                    {showKnownAsteroids && !(showFullOrbit && focusOrbit) ? (
+                        <KnownCometsLayer
+                            showLabels={showLabels}
+                            selectedId={selectedId}
+                            auScale={LINEAR_AU_SCALE}
+                            skipIds={knownWithRealPosition}
+                            onSelect={(comet) => {
+                                const object = closestNowObjects.find((o) => o.approach.id === knownCometId(comet));
+                                if (object) onSelect(object.approach);
+                            }}
+                        />
+                    ) : null}
+
             {onFirstFrame && <FirstFrameNotifier onFirstFrame={onFirstFrame} />}
 
             {/* Pré-compila shaders e sobe texturas em momentos ociosos para que revelar
@@ -375,6 +409,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
 
             <OrbitControls
                 makeDefault
+                enabled={sceneNavigationEnabled}
                 enablePan
                 enableDamping
                 // Menor damping = deslize mais longo e suave após rotação/pan.
@@ -390,9 +425,13 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                 panSpeed={0.6}
             />
 
-            <InertialZoom minDistance={EARTH_RADIUS_DL * 2.2} maxDistance={MAX_CAMERA_DISTANCE} />
-            <TouchGestures minDistance={EARTH_RADIUS_DL * 2.2} maxDistance={MAX_CAMERA_DISTANCE} />
-            <KeyboardPan />
+            {sceneNavigationEnabled ? (
+                <>
+                    <InertialZoom minDistance={EARTH_RADIUS_DL * 2.2} maxDistance={MAX_CAMERA_DISTANCE} />
+                    <TouchGestures minDistance={EARTH_RADIUS_DL * 2.2} maxDistance={MAX_CAMERA_DISTANCE} />
+                    <KeyboardPan />
+                </>
+            ) : null}
 
                 <CameraRig
                     view={cameraIntent.view}
@@ -404,6 +443,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     panelBiasX={panelBiasX}
                     panelBiasY={panelBiasY}
                 />
+                </RadarLabelResolutionProvider>
             </LabelOccluderContext.Provider>
         </SceneObjectOccludersContext.Provider>
     );
