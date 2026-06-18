@@ -6,7 +6,9 @@
  * Destinado a usuários avançados e desenvolvedores. Conteúdo estático.
  */
 
+import { Info } from 'lucide-react';
 import { KM_PER_AU } from '@/lib/sceneEphemeris';
+import { transparencyCopy } from '@/lib/transparencyCopy';
 import { OrbitGuideDiagram, RadarGuideDiagram } from './ManualDiagrams';
 import {
     FormulaPanel,
@@ -29,8 +31,38 @@ export function TechnicalManual({ mode, locale, lunarDistanceKm }: { mode: Scene
     const auKm = nf.format(KM_PER_AU);
     const ldKm = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(lunarDistanceKm));
 
-    if (mode === 'radar') return <RadarTechnical en={en} ldKm={ldKm} locale={locale} auKm={auKm} />;
-    return <OrbitTechnical en={en} locale={locale} />;
+    return (
+        <div className="space-y-6">
+            {mode === 'radar'
+                ? <RadarTechnical en={en} ldKm={ldKm} locale={locale} auKm={auKm} />
+                : <OrbitTechnical en={en} locale={locale} />}
+            <TransparencyNote locale={locale} />
+        </div>
+    );
+}
+
+/**
+ * Nota de transparência (afiliação, fontes e limites). Antes vivia no rodapé global; no radar a
+ * tela ocupa a viewport inteira sem scroll, então a transparência passou a viver aqui dentro do
+ * guia, na aba de dados e métodos. Usa o copy compartilhado em `@/lib/transparencyCopy`.
+ */
+function TransparencyNote({ locale }: { locale: 'pt-BR' | 'en' }) {
+    const copy = transparencyCopy(locale);
+    return (
+        <section className="border-t border-white/[0.08] pt-5">
+            <p className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-signal-cyan/55">
+                <Info className="size-3" aria-hidden="true" />
+                {copy.label}
+            </p>
+            <h3 className="mt-2 text-[13px] font-medium tracking-tight text-white/70">{copy.title}</h3>
+            <p className="mt-1 text-[12px] leading-relaxed text-white/40">{copy.subtitle}</p>
+            <div className="mt-3 space-y-2">
+                {copy.paragraphs.map((paragraph) => (
+                    <p key={paragraph} className="text-[12px] leading-6 text-white/35">{paragraph}</p>
+                ))}
+            </div>
+        </section>
+    );
 }
 
 function RadarTechnical({ en, auKm, ldKm, locale }: { en: boolean; auKm: string; ldKm: string; locale: 'pt-BR' | 'en' }) {

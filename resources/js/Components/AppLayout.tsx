@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { Earth, Image, Info, LoaderCircle, Menu, Rocket, Telescope, X } from 'lucide-react';
 import { PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { Locale, useTranslation } from '@/i18n';
+import { transparencyCopy } from '@/lib/transparencyCopy';
 import { PageProps } from '@/types';
 
 const navItems = [
@@ -92,33 +93,13 @@ function NavigationProgress() {
     );
 }
 
-export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ hideHeader?: boolean }>) {
+export function AppLayout({ children, hideHeader = false, hideFooter = false }: PropsWithChildren<{ hideHeader?: boolean; hideFooter?: boolean }>) {
     const { url, props } = usePage<PageProps>();
     const { locale, setLocale, t } = useTranslation();
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const appTagline = t('app.tagline');
-    const footerCopy = locale === 'en'
-        ? {
-            label: 'Transparency',
-            title: 'Sources and visualization limits',
-            subtitle: 'Independent educational interface built around public space data.',
-            paragraphs: [
-                'CaeliView is an independent project and is not affiliated with, sponsored by, or endorsed by NASA, JPL, or Caltech.',
-                'Data sources: NASA/JPL CNEOS, NASA/JPL Horizons, and NASA public APIs, as indicated throughout the experience.',
-                'Visualizations are educational and may use visual scale choices, approximations, and fallbacks. For official information, consult the original sources.',
-            ],
-        }
-        : {
-            label: 'Transparência',
-            title: 'Fontes e limites da visualização',
-            subtitle: 'Interface educativa independente construída a partir de dados públicos do espaço.',
-            paragraphs: [
-                'CaeliView é um projeto independente e não é afiliado, patrocinado ou endossado pela NASA, JPL ou Caltech.',
-                'Fontes de dados: NASA/JPL CNEOS, NASA/JPL Horizons e APIs públicas da NASA, conforme indicado ao longo da experiência.',
-                'As visualizações são educativas e podem usar escolhas visuais de escala, aproximações e fallbacks. Para informações oficiais, consulte as fontes originais.',
-            ],
-        };
+    const footerCopy = transparencyCopy(locale);
 
     useEffect(() => {
         setMenuOpen(false);
@@ -143,7 +124,10 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
     }, [menuOpen]);
 
     return (
-        <div className="flex min-h-screen flex-col">
+        /* No radar (hideFooter) a tela ocupa exatamente a viewport e nunca rola: h-[100dvh] +
+           overflow-hidden travam a altura e o radar 3D preenche o espaço restante por flex. Nas
+           demais páginas o layout cresce com o conteúdo (min-h-screen) e rola normalmente. */
+        <div className={`flex flex-col ${hideFooter ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
             <header className={`app-header sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${hideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
                 {/* Hairline ciano de assinatura, espelha a linha do footer */}
                 <div className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-signal-cyan/25 to-transparent" aria-hidden="true" />
@@ -265,8 +249,11 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                     </div>
                 </div>
             ) : null}
-            <main className="page-slide flex-1">{children}</main>
-            {/* Rodapé de transparência: peso visual reduzido para não quebrar a atmosfera da página. */}
+            <main className={`page-slide flex-1 ${hideFooter ? 'min-h-0' : ''}`}>{children}</main>
+            {/* Rodapé de transparência: peso visual reduzido para não quebrar a atmosfera da página.
+                Escondido em telas que ocupam a viewport inteira sem scroll (radar), onde a transparência
+                migra para dentro do guia. */}
+            {hideFooter ? null : (
             <footer className="relative border-t border-white/[0.06] bg-[linear-gradient(180deg,rgba(3,6,13,0),rgba(3,6,13,0.72)_25%,rgba(3,6,13,0.88))]">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-signal-cyan/20 to-transparent" />
                 <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -300,6 +287,7 @@ export function AppLayout({ children, hideHeader = false }: PropsWithChildren<{ 
                     </div>
                 </div>
             </footer>
+            )}
         </div>
     );
 }
