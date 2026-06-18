@@ -36,18 +36,12 @@ export function SceneLegend({
     return (
         /* Legenda visível apenas no desktop: no mobile o guia abre pela action bar
            inferior e o modal abaixo continua montado via portal. */
-        <div className="pointer-events-auto absolute bottom-3 right-3 z-10 hidden overflow-hidden rounded-xl border border-white/20 bg-space-950/90 backdrop-blur-xl lg:block lg:w-[min(22rem,46%)]">
+        <div className="cursor-auto pointer-events-auto absolute bottom-3 right-3 z-10 hidden overflow-hidden rounded-xl border border-white/20 bg-space-950/90 backdrop-blur-xl lg:block lg:w-[min(22rem,46%)]">
             <div className="hidden space-y-2 px-3 pt-3 lg:block">
                 <div className="flex items-baseline justify-between gap-2 text-[13px]">
-                    <Tooltip
-                        wrap
-                        hideDelay={150}
-                        content={en ? 'Current Earth-Moon distance. Varies from ~356,500 km (perigee) to ~406,700 km (apogee). Used as the scene scale ruler.' : 'Distância Terra-Lua atual. Varia de ~356.500 km (perigeu) a ~406.700 km (apogeu). Usada como régua de escala da cena.'}
-                    >
-                        <span className="cursor-help font-medium text-white/75">
+                        <span className="font-medium text-white/75">
                             <span style={{ fontFamily: 'serif' }}>☽</span>{en ? ' 1 LD · Earth-Moon distance' : ' 1 DL · distância Terra-Lua'}
                         </span>
-                    </Tooltip>
                     <span className="font-semibold tabular-nums text-white">{nf.format(lunarReference.distanceKm)} km</span>
                 </div>
                 <div className="flex items-baseline justify-between gap-2 text-[13px]">
