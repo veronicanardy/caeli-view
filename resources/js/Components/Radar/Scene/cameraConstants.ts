@@ -12,8 +12,11 @@ import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
  * Constantes compartilhadas do enquadramento da câmera da cena 3D.
  */
 export const CAMERA_FOV_DEG = 42;
-// Mantem o zoom-out manual amplo o bastante para contexto de orbitas externas.
-export const MAX_CAMERA_DISTANCE = ORBIT_AU_SCALE * 96;
+// Zoom-out máximo. Precisa cobrir cometas famosos distantes: o Halley fica a ~36 UA no afélio (alvo da
+// câmera a ~10.800 unidades da origem) e o zoom é medido A PARTIR do alvo, então o teto tem de ter folga
+// MUITO acima de 36 UA, senão a rotação/zoom em torno do Halley bate no limite e trava por ângulo. 200 UA
+// dá folga ampla sobre o afélio de Halley sem perder o contexto das órbitas internas.
+export const MAX_CAMERA_DISTANCE = ORBIT_AU_SCALE * 200;
 
 /**
  * Plano near da câmera. A precisão do depth buffer escala com a razão far/near: um near minúsculo
@@ -24,9 +27,11 @@ export const MAX_CAMERA_DISTANCE = ORBIT_AU_SCALE * 96;
  *
  * Teto de segurança: a câmera mais próxima fica a ~0,13 unidade da superfície da Terra
  * (minDistance = EARTH_RADIUS_DL * 2.2) e ainda mais perto de corpos pequenos em close-up, então
- * 0,04 dá folga para nunca recortar um corpo, melhorando a precisão de profundidade em ~4× sobre 0,01.
+ * 0,07 dá folga para nunca recortar um corpo. Subido de 0,04 ao ampliar MAX_CAMERA_DISTANCE (far cresceu
+ * junto): a precisão do depth escala com far/near, então o near sobe pra não reintroduzir z-fighting nas
+ * nuvens da Terra agora que o far é maior (para enquadrar cometas distantes como o Halley).
  */
-export const CAMERA_NEAR = 0.04;
+export const CAMERA_NEAR = 0.07;
 
 export const CAMERA_VIEWS = {
     /* perspective é calculado dinamicamente pelo CameraRig em coordenadas solares

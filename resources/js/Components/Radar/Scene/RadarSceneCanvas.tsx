@@ -19,6 +19,7 @@ import type { PlanetId } from './planetConfig';
 import type { CameraIntent } from './cameraIntent';
 import { RadarScene } from './RadarScene';
 import { preloadRealAsteroidModels } from '../Bodies/Asteroid/asteroidModelRegistry';
+import { preloadCometModels } from '../Bodies/Comet/cometModelRegistry';
 import { ZoomHintContext, type ZoomHintState } from '../Bodies/Asteroid/ZoomHintContext';
 import { ZoomHintOverlay } from '../Bodies/Asteroid/ZoomHintOverlay';
 import { PerfProbe, isPerfProbeEnabled } from '../Dev/PerfProbe';
@@ -93,14 +94,6 @@ export function RadarSceneCanvas({
         <ZoomHintContext.Provider value={{ state: zoomHintState, setState: setZoomHintState }}>
         <CameraTweenContext.Provider value={tweenToRef}>
         <LabelNoGoContext.Provider value={noGoRects}>
-            {!sceneReady && (
-                <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
-                    <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-space-950/90 px-4 py-2.5 text-[13px] text-white/70 shadow-glow">
-                        <span className="size-2 animate-pulse rounded-full bg-signal-cyan" aria-hidden />
-                        {locale === 'en' ? 'Loading…' : 'Carregando…'}
-                    </div>
-                </div>
-            )}
             <Canvas
                 camera={{ position: CAMERA_VIEWS.perspective.toArray(), fov: CAMERA_FOV_DEG, near: CAMERA_NEAR, far: MAX_CAMERA_DISTANCE * 3 }}
                 dpr={[1, 1.6]}
@@ -129,6 +122,7 @@ export function RadarSceneCanvas({
                             // Adia o preload dos modelos reais para depois do primeiro frame:
                             // evita competição com recursos críticos durante o carregamento inicial.
                             setTimeout(preloadRealAsteroidModels, 2000);
+                            setTimeout(preloadCometModels, 2000);
                         }}
                         onFocusSun={onFocusSun}
                         isSunFocused={bodyCardOpen === 'sun'}
@@ -151,6 +145,18 @@ export function RadarSceneCanvas({
                     />
                 </Suspense>
             </Canvas>
+            {/* Overlay de carregamento DEPOIS do Canvas no DOM e com z acima dos labels da cena: o drei
+                <Html> monta os rótulos (Terra etc.) num container próprio dentro do pai do canvas, fora
+                do contexto de empilhamento deste overlay; se o overlay viesse antes e com z baixo, os
+                rótulos furavam o "Carregando…". Posicionado por último e em z-40, ele cobre tudo. */}
+            {!sceneReady && (
+                <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
+                    <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-space-950/90 px-4 py-2.5 text-[13px] text-white/70 shadow-glow">
+                        <span className="size-2 animate-pulse rounded-full bg-signal-cyan" aria-hidden />
+                        {locale === 'en' ? 'Loading…' : 'Carregando…'}
+                    </div>
+                </div>
+            )}
         </LabelNoGoContext.Provider>
         </CameraTweenContext.Provider>
         <ZoomHintOverlay />

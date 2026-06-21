@@ -56,6 +56,7 @@ export function CameraRig({
     focusNonce,
     earthPos,
     sunDir,
+    ephemerisReady,
     panelBiasX = 0,
     panelBiasY = 0,
 }: {
@@ -66,6 +67,8 @@ export function CameraRig({
     earthPos: [number, number, number];
     /** Vetor unitário Terra→Sol. Usado para manter a view inicial de costas para o Sol. */
     sunDir: [number, number, number];
+    /** True quando a efeméride real já resolveu (earthPos/sunDir deixaram de ser fallback do servidor). */
+    ephemerisReady: boolean;
     /** Fração [0..1] da largura do canvas coberta pelo trilho esquerdo. Desloca a projeção para a área útil. */
     panelBiasX?: number;
     /** Fração [0..1] da altura do canvas coberta pela UI inferior (bottom sheet). Sobe a projeção para a área livre. */
@@ -106,6 +109,12 @@ export function CameraRig({
 
     // No primeiro frame os OrbitControls já existem: posiciona câmera e target
     // diretamente, sem tween, para que a cena apareça centrada na Terra desde o início.
+    //
+    // initialised só vira true quando o posicionamento é DEFINITIVO, isto é, baseado na
+    // efeméride real. Antes disso a câmera é posicionada com o fallback do servidor (para a
+    // cena não abrir vazia), mas o setup é reexecutado quando a efeméride resolve — senão a
+    // câmera ficaria mirando a Terra-fallback enquanto a Terra real está em outro ponto
+    // heliocêntrico, deixando o usuário "num lugar nada a ver" na primeira abertura.
     const initialised = useRef(false);
 
     // Tweens explícitos só disparam após o mount — mudanças de view, foco de objeto etc.
@@ -150,6 +159,16 @@ export function CameraRig({
         }
         effectiveDesired.current = desired;
     }, [desired]);
+
+    // Se o usuário interagir com a cena ANTES de a efeméride resolver (rede lenta), o setup
+    // inicial não deve mais reposicioná-lo a cada frame: respeita onde ele deixou a câmera.
+    // O evento 'start' dos OrbitControls dispara no início de qualquer gesto (rotação/pan).
+    useEffect(() => {
+        if (!controls) return;
+        const consolidate = () => { initialised.current = true; };
+        controls.addEventListener('start', consolidate);
+        return () => controls.removeEventListener('start', consolidate);
+    }, [controls]);
 
     const tweenCtxRef = useContext(CameraTweenContext);
     useEffect(() => {
@@ -227,15 +246,35 @@ export function CameraRig({
             }
         }
 
-        // Setup inicial: roda uma única vez no primeiro frame em que os controls existem.
+        // Setup inicial: posiciona câmera e target sobre a Terra. Reexecuta enquanto o
+        // posicionamento ainda for provisório (baseado no fallback do servidor), até a
+        // efeméride real chegar — então fica definitivo (initialised = true).
+        //
+        // Guarda: não rouba a câmera se um tween (foco/avulso) já começou. Interação manual
+        // do usuário antes da efeméride é tratada pelo listener 'start' (consolida initialised).
+        // No fluxo normal a efeméride resolve antes de qualquer interação, então o re-snap
+        // é imperceptível.
         if (!initialised.current) {
             if (!controls?.target) return;
-            initialised.current = true;
-            const earth = new THREE.Vector3(...earthPosRef.current);
-            const initOffset = view === 'perspective' ? perspectiveOffset() : CAMERA_VIEWS[view].clone();
+            if (tweening.current || adHocTweening.current) return;
+            // Usa as PROPS diretas (earthPos/sunDir), não as refs: as refs são atualizadas por useEffect,
+            // que pode rodar DEPOIS deste useFrame no commit em que a efeméride real chega. Se snapássemos
+            // pela ref defasada (fallback) E consolidássemos por ephemerisReady (prop, já true), a câmera
+            // travava olhando o vazio no 1º load — o re-snap nunca mais corrigia. Lendo a prop, o snap e a
+            // consolidação ficam sempre coerentes (mesmo frame, mesmos dados).
+            const earth = new THREE.Vector3(...earthPos);
+            let initOffset: THREE.Vector3;
+            if (view === 'perspective') {
+                const towardsSun = new THREE.Vector3(sunDir[0], 0, sunDir[2]).normalize();
+                initOffset = towardsSun.multiplyScalar(PERSPECTIVE_DISTANCE).setY(PERSPECTIVE_ELEVATION);
+            } else {
+                initOffset = CAMERA_VIEWS[view].clone();
+            }
             fc.position.copy(earth).add(initOffset);
             controls.target.copy(earth);
             controls.update();
+            // Só consolida quando o posicionamento veio da efeméride real.
+            if (ephemerisReady) initialised.current = true;
             return;
         }
 
