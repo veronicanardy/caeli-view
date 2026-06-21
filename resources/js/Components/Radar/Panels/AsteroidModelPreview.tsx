@@ -10,8 +10,11 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useRef, Suspense, useEffect } from 'react';
 import type * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
+import type { AsteroidModelAsset } from '../Bodies/Asteroid/asteroidModelRegistry';
 import RealAsteroidModel from '../Bodies/Asteroid/RealAsteroidModel';
 import { asteroidRenderableModelFor } from '../Bodies/Asteroid/asteroidModelRegistry';
+import { cometModelForObject, COMET_67P_COLOR_PREVIEW } from '../Bodies/Comet/cometModelRegistry';
+import { knownCometById } from '../Bodies/Comet/knownComets';
 
 const REAL_ASSET_DISPLAY_NAMES: Record<string, { pt: string; en: string }> = {
     bennu:   { pt: 'Bennu',   en: 'Bennu' },
@@ -20,6 +23,18 @@ const REAL_ASSET_DISPLAY_NAMES: Record<string, { pt: string; en: string }> = {
     itokawa: { pt: 'Itokawa', en: 'Itokawa' },
     vesta:   { pt: 'Vesta',   en: 'Vesta' },
 };
+
+/**
+ * Modelo a exibir no preview: cometa usa seu núcleo real (cometModelForObject); o resto, o modelo de
+ * asteroide. Adaptado ao shape de AsteroidModelAsset que o RealAsteroidModel consome.
+ */
+function previewAsset(object: ClosestNowObject): AsteroidModelAsset {
+    const comet = cometModelForObject(object);
+    if (comet) {
+        return { key: 'generic', url: comet.url, rotation: comet.rotation, aliases: [], numbers: [] };
+    }
+    return asteroidRenderableModelFor(object).asset;
+}
 
 /** Descarta o renderer deste Canvas ao desmontar, evitando Context Lost no Canvas principal. */
 function RendererCleanup() {
@@ -30,7 +45,8 @@ function RendererCleanup() {
 
 function SpinningAsteroid({ object }: { object: ClosestNowObject }) {
     const groupRef = useRef<THREE.Group>(null);
-    const renderModel = asteroidRenderableModelFor(object);
+    const asset = previewAsset(object);
+    const is67P = cometModelForObject(object)?.key === 'c67p';
 
     useFrame((_, delta) => {
         if (groupRef.current) {
@@ -41,10 +57,13 @@ function SpinningAsteroid({ object }: { object: ClosestNowObject }) {
 
     return (
         <group ref={groupRef}>
+            {/* Cometa e asteroide reusam o mesmo GLB genérico texturizado, então a cor bate sem ajuste. O
+                67P tem GLB próprio SEM textura (cinza claro embutido), então recebe a cor escura dedicada. */}
             <RealAsteroidModel
-                asset={renderModel.asset}
+                asset={asset}
                 opacity={1}
                 seed={object.approach.id}
+                {...(is67P ? { fallbackColor: COMET_67P_COLOR_PREVIEW } : {})}
             />
         </group>
     );
@@ -52,13 +71,23 @@ function SpinningAsteroid({ object }: { object: ClosestNowObject }) {
 
 export function AsteroidModelPreview({ object, locale }: { object: ClosestNowObject; locale: 'pt-BR' | 'en' }) {
     const en = locale === 'en';
-    const renderModel = asteroidRenderableModelFor(object);
-    const isReal = renderModel.asset.key !== 'generic';
-    const realName = isReal ? REAL_ASSET_DISPLAY_NAMES[renderModel.asset.key] : null;
 
-    const caption = isReal && realName
-        ? (en ? `3D model of ${realName.en}` : `Modelo 3D de ${realName.pt}`)
-        : (en ? 'Illustrative model' : 'Modelo ilustrativo');
+    const caption = (() => {
+        // Cometa: legenda honesta sobre a origem do núcleo. 67P é o shape model real (Rosetta); os demais
+        // usam um núcleo genérico (mesmo modelo dos asteroides), então é "ilustrativo".
+        if (object.approach.objectType === 'comet') {
+            const comet = knownCometById(object.approach.id);
+            if (comet?.modelKey === 'c67p') {
+                return en ? '3D model of 67P (Rosetta)' : 'Modelo 3D do 67P (Rosetta)';
+            }
+            return en ? 'Illustrative nucleus' : 'Núcleo ilustrativo';
+        }
+        const asset = asteroidRenderableModelFor(object).asset;
+        const realName = asset.key !== 'generic' ? REAL_ASSET_DISPLAY_NAMES[asset.key] : null;
+        return realName
+            ? (en ? `3D model of ${realName.en}` : `Modelo 3D de ${realName.pt}`)
+            : (en ? 'Illustrative model' : 'Modelo ilustrativo');
+    })();
 
     return (
         <div className="mx-3 mt-1.5 lg:mx-4 lg:mt-2.5">
@@ -73,7 +102,10 @@ export function AsteroidModelPreview({ object, locale }: { object: ClosestNowObj
                     style={{ width: '100%', height: '100%' }}
                 >
                     <RendererCleanup />
-                    <ambientLight intensity={1.6} />
+                    {/* Vitrine iluminada (mais que a cena, mas sem lavar): o card mostra o modelo, então
+                        corpos escuros precisam aparecer contra o fundo escuro. A direcional é a principal
+                        (puxa o relevo); o ambiente fica moderado pra não chapar a textura. Luz global. */}
+                    <ambientLight intensity={1.3} />
                     <directionalLight position={[3, 4, 3]} intensity={3.2} />
                     <directionalLight position={[-2, -1, -2]} intensity={1.4} color="#c8eeff" />
                     <directionalLight position={[0, -3, 2]} intensity={1.0} />

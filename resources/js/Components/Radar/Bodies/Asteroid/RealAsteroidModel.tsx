@@ -19,11 +19,7 @@ interface RealAsteroidModelProps {
     selected?: boolean;
     outlineColor?: string;
     showOutline?: boolean;
-    /**
-     * Tint da superfície quando o GLB tem textura (mistura, não substitui). Default = grafite-frio de
-     * rocha. Cometas passam um tom gelado para distinguir do genérico de asteroide enquanto não há
-     * GLB exclusivo de cometa.
-     */
+    /** Tint da superfície quando o GLB tem textura (mistura, não substitui). Default = grafite-frio de rocha. */
     tint?: string;
     /** Cor de fallback quando o GLB não tem textura alguma. Default = grafite de rocha. */
     fallbackColor?: string;
@@ -145,14 +141,23 @@ function createOutlineMaterial(color: string) {
     });
 }
 
-// Tint sutil grafite-frio — mistura com a textura original sem substituí-la
-const ROCK_TINT = '#4e5258';
-// Fallback quando o GLB não tem textura alguma
-const ROCK_FALLBACK_COLOR = '#34383e';
+// Tint grafite-claro — mistura com a textura original sem substituí-la (famosos texturizados). Clareado
+// a pedido (rochas estavam escuras), mas a iluminação/sombra do Sol vem do material, não do emissive:
+// cor clara + emissive baixo = corpo claro COM volume (lado do Sol claro, lado oposto escuro).
+const ROCK_TINT = '#6d727a';
+// Fallback quando o GLB não tem textura alguma (genéricos do feed E núcleos de cometa). Cinza-pedra:
+// realisticamente asteroides tipo C e núcleos de cometa são escuros (albedo ~0.04), mas como decisão de
+// produto (legibilidade) usamos um cinza mais claro, para os corpos aparecerem bem na cena e no card.
+const ROCK_FALLBACK_COLOR = '#525860';
 
 /**
  * Clona os materiais do GLB uma única vez e aplica os ajustes estáticos de superfície.
  * Roda apenas quando o modelo muda — nunca em resposta a dimming/hover.
+ *
+ * `rocky`: acabamento pedregoso para shape models SEM textura nem normal map (núcleos de cometa,
+ * genéricos do feed). Sem mapa de superfície o material fica liso/plástico; `flatShading` faz cada
+ * face do mesh sombrear por conta própria, revelando o relevo REAL da geometria (facetas, crateras
+ * do shape model) sem precisar de textura. Roughness máxima e emissive baixo aprofundam as sombras.
  */
 function prepareMaterials(obj: THREE.Object3D, fallbackColor: string): void {
     obj.traverse((child) => {
@@ -173,21 +178,40 @@ function prepareMaterials(obj: THREE.Object3D, fallbackColor: string): void {
 
             if (!existing) src?.dispose?.();
 
-            mat.roughness = 0.94;
+            // Sem textura nem normal map = shape model "pelado": deixa o relevo da geometria carregar
+            // o visual (flatShading). Com mapa, mantém o acabamento texturizado dos famosos.
+            const rocky = !mat.map && !mat.normalMap;
+
             mat.metalness = 0.0;
             mat.envMapIntensity = 1;
-            /* Emissive mais baixo = sombras mais profundas = mais contraste percebido. */
-            mat.emissive.set(0.06, 0.05, 0.04);
-            mat.emissiveIntensity = 0.08;
-
-            /* Normal scale maior = ranhuras e volumes mais definidos. */
-            if (mat.normalMap) {
-                mat.normalScale.set(0.75, 0.75);
-            }
-
             mat.transparent = false;
             mat.depthWrite = true;
 
+            if (rocky) {
+                // Superfície sem mapa: deixa o relevo da geometria aparecer. Força a cor de fallback
+                // (escura) sobre o baseColorFactor do GLB: alguns shape models sem textura trazem um cinza
+                // claro embutido (ex.: 67P e Tempel 1, ~0.30), que deixaria o corpo lavado, ainda mais sob
+                // luz forte (preview do card). Sem isso, rocha sem textura fica cinza-claro, não carvão.
+                mat.color.copy(new THREE.Color(fallbackColor));
+                mat.roughness = 1.0;
+                mat.flatShading = true;
+                // Emissive BAIXO de propósito: ele é luz própria UNIFORME, então se for alto achata o corpo
+                // e mata a sombra do Sol (perde o volume). O "mais claro" vem da COR base (que o Sol ilumina),
+                // não do emissive. Aqui só um respiro mínimo nas sombras pra não ficar preto puro.
+                mat.emissive.set(0.03, 0.03, 0.035);
+                mat.emissiveIntensity = 0.06;
+            } else {
+                mat.roughness = 0.94;
+                // Emissive baixo: preserva o claro-escuro do Sol (volume). A cor clara vem do tint, não daqui.
+                mat.emissive.set(0.05, 0.05, 0.055);
+                mat.emissiveIntensity = 0.08;
+                /* Normal scale maior = ranhuras e volumes mais definidos. */
+                if (mat.normalMap) {
+                    mat.normalScale.set(0.75, 0.75);
+                }
+            }
+
+            mat.needsUpdate = true;
             return mat;
         });
 
