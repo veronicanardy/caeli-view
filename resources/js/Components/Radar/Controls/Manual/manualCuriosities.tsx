@@ -158,6 +158,63 @@ function AsteroidVsCometDiagram({ en }: { en: boolean }) {
     );
 }
 
+function TailVsTrajectoryDiagram({ en }: { en: boolean }) {
+    return (
+        <Visual>
+            <svg viewBox="0 0 340 150" className="w-full" aria-hidden>
+                <defs>
+                    <radialGradient id="tt-sun" cx="40%" cy="35%" r="60%">
+                        <stop offset="0%" stopColor="#fef08a" /><stop offset="60%" stopColor="#fbbf24" /><stop offset="100%" stopColor="#92400e" />
+                    </radialGradient>
+                    <radialGradient id="tt-sun-halo" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.5" />
+                        <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
+                    </radialGradient>
+                    <radialGradient id="tt-comet" cx="35%" cy="30%" r="65%">
+                        <stop offset="0%" stopColor="#bae6fd" /><stop offset="50%" stopColor="#1a3548" /><stop offset="100%" stopColor="#0c1f2e" />
+                    </radialGradient>
+                    {/* Cauda: brilhante na cabeça, some na ponta. Aponta para LONGE do Sol. */}
+                    <linearGradient id="tt-tail" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.55" />
+                        <stop offset="100%" stopColor="#67e8f9" stopOpacity="0" />
+                    </linearGradient>
+                    <marker id="tt-arrow-move" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+                        <path d="M0,0 L0,7 L7,3.5 z" fill="#c4b5fd" />
+                    </marker>
+                    <filter id="tt-glow">
+                        <feGaussianBlur stdDeviation="2" result="b" />
+                        <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+                    </filter>
+                </defs>
+
+                {/* Sol no canto inferior-esquerdo */}
+                <circle cx="34" cy="116" r="26" fill="url(#tt-sun-halo)" />
+                <circle cx="34" cy="116" r="11" fill="url(#tt-sun)" />
+                <text x="34" y="142" textAnchor="middle" fill="#fbbf24" fontSize="8.5" fontWeight="600">{en ? 'Sun' : 'Sol'}</text>
+
+                {/* Cometa no centro */}
+                <circle cx="176" cy="66" r="7.5" fill="url(#tt-comet)" stroke="#38bdf8" strokeWidth="1" filter="url(#tt-glow)" />
+
+                {/* Linha tracejada Sol→cometa, mostrando que a cauda é o prolongamento dessa direção */}
+                <line x1="44" y1="108" x2="170" y2="71" stroke="#fbbf24" strokeWidth="0.8" strokeOpacity="0.3" strokeDasharray="3 4" />
+
+                {/* CAUDA: parte do cometa e aponta para longe do Sol (mesma reta Sol→cometa, prolongada) */}
+                <path d="M183 61 C228 48 276 38 326 27" fill="none" stroke="url(#tt-tail)" strokeWidth="9" strokeLinecap="round" />
+                <path d="M183 61 C228 48 276 38 326 27" fill="none" stroke="#e0f2fe" strokeWidth="1" strokeOpacity="0.3" strokeLinecap="round" />
+                <text x="300" y="20" textAnchor="middle" fill="#67e8f9" fontSize="8.5" fontWeight="600">{en ? 'Tail' : 'Cauda'}</text>
+                <text x="300" y="31" textAnchor="middle" fill="#475569" fontSize="7">{en ? 'away from Sun' : 'longe do Sol'}</text>
+
+                {/* TRAJETÓRIA: o movimento do cometa, numa direção bem diferente da cauda */}
+                <path d="M150 120 L196 30" fill="none" stroke="#a78bfa" strokeWidth="1.6" strokeOpacity="0.45" strokeDasharray="5 4" />
+                <path d="M188 46 L200 22" fill="none" stroke="#c4b5fd" strokeWidth="1.8" markerEnd="url(#tt-arrow-move)" />
+                <text x="150" y="116" textAnchor="end" fill="#c4b5fd" fontSize="8.5" fontWeight="600">{en ? 'Path' : 'Trajetória'}</text>
+                <text x="150" y="127" textAnchor="end" fill="#475569" fontSize="7">{en ? 'where it moves' : 'para onde vai'}</text>
+            </svg>
+            <VisualLabel>{en ? 'The tail always points straight away from the Sun, no matter which way the comet is travelling. So the bright tail and the path it follows usually point in different directions.' : 'A cauda sempre aponta para o lado oposto ao Sol, não importa para onde o cometa esteja indo. Por isso a cauda brilhante e a trajetória costumam apontar para direções diferentes.'}</VisualLabel>
+        </Visual>
+    );
+}
+
 function TorinoScaleDiagram({ en }: { en: boolean }) {
     const levels  = [0,1,2,3,4,5,6,7,8,9,10];
     // Gradiente de verde a vermelho escuro
@@ -278,52 +335,71 @@ function SizeDiagram({ en }: { en: boolean }) {
 }
 
 function SpeedDiagram({ en }: { en: boolean }) {
-    const items = [
-        { label: en ? 'Plane'             : 'Avião',              km: 0.25, display: '0.25' },
-        { label: en ? 'Bullet'            : 'Bala',               km: 1,    display: '1'    },
-        { label: en ? 'Space Station'    : 'Estação Espacial',    km: 7.7,  display: '7.7'  },
-        { label: en ? 'Asteroid · slowest' : 'Asteroide · mais lento',  km: 10, display: '10' },
-        { label: en ? 'Asteroid · fastest' : 'Asteroide · mais rápido', km: 30, display: '30' },
+    // Avião, bala e Estação Espacial são marcos pontuais (barra da origem até o valor). Os asteroides
+    // são uma FAIXA (de range.from a range.to) que SE SOBREPÕE à Estação: assim o diagrama não dá a
+    // entender que até o mais lento supera a Estação (o texto antigo e as duas barras fixas davam).
+    type Row =
+        | { kind: 'mark'; label: string; km: number; display: string; color: string }
+        | { kind: 'range'; label: string; from: number; to: number; display: string; color: string };
+    const rows: Row[] = [
+        { kind: 'mark',  label: en ? 'Plane' : 'Avião',            km: 0.25, display: '0,25', color: '#475569' },
+        { kind: 'mark',  label: en ? 'Bullet' : 'Bala',            km: 1,    display: '1',    color: '#64748b' },
+        { kind: 'mark',  label: en ? 'Space Station' : 'Estação Espacial', km: 7.7, display: '7,7', color: '#67e8f9' },
+        { kind: 'range', label: en ? 'Asteroids' : 'Asteroides',   from: 5, to: 30, display: '5–30', color: '#a78bfa' },
     ];
-    const colors   = ['#475569','#64748b','#67e8f9','#c4b5fd','#a78bfa'];
-    const bgColors = ['#0f172a','#0f172a','#0c2233','#150f2e','#120a2a'];
-    // escala: 30 km/s → 190 px
-    const scale = 190 / 30;
-    const rowH = 22; const startX = 96; const startY = 8;
+
+    // Geometria. Mantém o plot dentro de uma faixa segura do viewBox, deixando margem à direita para o
+    // valor em km/s não sair da borda. plotW é a largura útil das barras (não 190 cravado).
+    const VIEW_W = 340;
+    const startX = 92;          // espaço à esquerda para os rótulos
+    const plotW = 168;          // largura útil das barras (até x=260, sobra ~80px p/ o valor)
+    const startY = 10;
+    const rowH = 24;
+    const barH = 13;
+    const maxKm = 30;
+    const sx = (km: number) => startX + (Math.min(km, maxKm) / maxKm) * plotW; // km → x, clamp em 30
+    const totalH = startY + rows.length * rowH + 14;
+
     return (
         <Visual>
-            <svg viewBox={`0 0 340 ${startY + items.length * rowH + 4}`} className="w-full" aria-hidden>
-                {/* Linha de grade vertical sutil */}
-                {[0, 5, 10, 15, 20, 25, 30].map(v => (
-                    <line key={v}
-                        x1={startX + v * scale} y1={startY} x2={startX + v * scale} y2={startY + items.length * rowH}
+            <svg viewBox={`0 0 ${VIEW_W} ${totalH}`} className="w-full" aria-hidden>
+                {/* Grade vertical sutil */}
+                {[0, 10, 20, 30].map(v => (
+                    <line key={v} x1={sx(v)} y1={startY} x2={sx(v)} y2={startY + rows.length * rowH}
                         stroke="#1e293b" strokeWidth={v === 0 ? 1.2 : 0.5} />
                 ))}
-                {items.map((item, i) => {
-                    const barW = Math.max(2, item.km * scale);
+
+                {rows.map((row, i) => {
                     const y = startY + i * rowH;
+                    const barY = y + (rowH - barH) / 2 - 2;
+                    const trackEnd = sx(maxKm);
+                    // Início e fim da barra preenchida: marco vai de 0; faixa vai de from a to.
+                    const x1 = row.kind === 'range' ? sx(row.from) : startX;
+                    const x2 = row.kind === 'range' ? sx(row.to) : sx(row.km);
+                    const w = Math.max(2, x2 - x1);
                     return (
-                        <g key={item.label}>
-                            {/* Fundo de linha */}
-                            <rect x={startX} y={y + 4} width={190} height={14} rx="3" fill={bgColors[i]} opacity="0.6" />
-                            {/* Barra */}
-                            <rect x={startX} y={y + 4} width={barW} height={14} rx="3" fill={colors[i]} opacity="0.8" />
-                            {/* Reflexo */}
-                            <rect x={startX} y={y + 4} width={barW} height={6} rx="3" fill="white" opacity="0.07" />
-                            {/* Label de nome */}
-                            <text x={startX - 4} y={y + 14} textAnchor="end" fill="#64748b" fontSize="8.5" dominantBaseline="middle">{item.label}</text>
-                            {/* Valor km/s */}
-                            <text x={startX + barW + 5} y={y + 14} fill={colors[i]} fontSize="8" dominantBaseline="middle" opacity="0.95" fontWeight="600">{item.display} km/s</text>
+                        <g key={row.label}>
+                            {/* Trilho de fundo */}
+                            <rect x={startX} y={barY} width={trackEnd - startX} height={barH} rx="3" fill="#0f172a" opacity="0.55" />
+                            {/* Barra/faixa preenchida */}
+                            <rect x={x1} y={barY} width={w} height={barH} rx="3" fill={row.color} opacity="0.82" />
+                            <rect x={x1} y={barY} width={w} height={barH / 2} rx="3" fill="white" opacity="0.07" />
+                            {/* Rótulo à esquerda */}
+                            <text x={startX - 6} y={barY + barH / 2} textAnchor="end" dominantBaseline="middle"
+                                fill={row.kind === 'range' ? '#c4b5fd' : '#64748b'} fontSize="8.5">{row.label}</text>
+                            {/* Valor à direita da barra */}
+                            <text x={x2 + 6} y={barY + barH / 2} dominantBaseline="middle"
+                                fill={row.color} fontSize="8" fontWeight="600" opacity="0.95">{row.display} km/s</text>
                         </g>
                     );
                 })}
+
                 {/* Eixo de escala */}
                 {[0, 10, 20, 30].map(v => (
-                    <text key={v} x={startX + v * scale} y={startY + items.length * rowH + 10}
-                        textAnchor="middle" fill="#334155" fontSize="7">{v}</text>
+                    <text key={v} x={sx(v)} y={startY + rows.length * rowH + 10} textAnchor="middle" fill="#334155" fontSize="7">{v}</text>
                 ))}
             </svg>
-            <VisualLabel>{en ? 'Speed comparison: plane, bullet, space station, and the range asteroids travel at.' : 'Comparação de velocidades: avião, bala, estação espacial e a faixa em que asteroides viajam.'}</VisualLabel>
+            <VisualLabel>{en ? 'Speed comparison: plane, bullet and the Space Station are fixed marks. Asteroids span a range that overlaps the Station — a few pass slower, most go faster.' : 'Comparação de velocidades: avião, bala e a Estação Espacial são marcos fixos. Os asteroides ocupam uma faixa que se sobrepõe à Estação: alguns passam mais devagar, a maioria mais rápido.'}</VisualLabel>
         </Visual>
     );
 }
@@ -752,6 +828,15 @@ export const EN_CURIOSITIES: CuriosityItemData[] = [
         </>,
     },
     {
+        q: 'Why does a comet\'s tail almost never line up with its path?',
+        a: <>
+            <p>It feels like the tail should trail behind the comet, like smoke behind a moving car. But a comet's tail is not made by its motion. It is made by the Sun.</p>
+            <p className="mt-2">As the comet nears the Sun, its ice turns to gas and dust. The solar wind and the Sun's light then push that material outward, always straight away from the Sun. So the tail points along the line from the Sun through the comet, no matter which direction the comet itself is travelling.</p>
+            <TailVsTrajectoryDiagram en />
+            <p>That is why, on this radar, the glowing tail and the comet's path point in different directions. It is not a glitch: near perihelion a comet can even appear to fly tail-first.</p>
+        </>,
+    },
+    {
         q: 'What makes an asteroid dangerous?',
         a: <>
             <p>Two things matter most: how big it is, and whether its path crosses Earth's. A rock the size of a house burns up in the atmosphere. One the size of a city could cause serious regional damage. Scientists use a numbered scale called the Torino Scale to communicate the risk level clearly.</p>
@@ -770,7 +855,7 @@ export const EN_CURIOSITIES: CuriosityItemData[] = [
     {
         q: 'How fast are these things moving?',
         a: <>
-            <p>Near-Earth asteroids typically travel at 10 to 30 km per second relative to Earth. The International Space Station orbits at about 7.7 km/s, so even the slower ones are moving faster than that.</p>
+            <p>Most near-Earth asteroids travel somewhere between 5 and 30 km per second relative to Earth. For comparison, the International Space Station, the crewed lab that circles the Earth every 90 minutes, orbits at about 7.7 km/s. So their range overlaps the Station: a slow pass can be gentler than it, but most are faster. The exact speed depends a lot on the angle and timing of each encounter.</p>
             <SpeedDiagram en />
             <p>The arrows show each object's direction of motion, derived from the most recent available data.</p>
         </>,
@@ -813,6 +898,15 @@ export const PT_CURIOSITIES: CuriosityItemData[] = [
         </>,
     },
     {
+        q: 'Por que a cauda de um cometa quase nunca coincide com a trajetória dele?',
+        a: <>
+            <p>Parece que a cauda deveria ficar para trás do cometa, como a fumaça atrás de um carro em movimento. Mas a cauda de um cometa não é feita pelo movimento dele. Ela é feita pelo Sol.</p>
+            <p className="mt-2">Quando o cometa se aproxima do Sol, o gelo vira gás e poeira. O vento solar e a luz do Sol então empurram esse material para fora, sempre para o lado oposto ao Sol. Por isso a cauda aponta na linha que vai do Sol passando pelo cometa, não importa para onde o cometa esteja indo.</p>
+            <TailVsTrajectoryDiagram en={false} />
+            <p>É por isso que, neste radar, a cauda brilhante e a trajetória do cometa apontam para direções diferentes. Não é um defeito: perto do periélio um cometa pode até parecer voar de cauda para a frente.</p>
+        </>,
+    },
+    {
         q: 'O que faz um asteroide ser perigoso?',
         a: <>
             <p>Duas coisas importam mais: o tamanho e se o caminho dele cruza o da Terra. Uma rocha do tamanho de uma casa queima na atmosfera. Uma do tamanho de uma cidade pode causar danos sérios numa região inteira. Os cientistas usam uma escala numerada chamada Escala de Torino para comunicar o nível de risco de forma clara.</p>
@@ -831,7 +925,7 @@ export const PT_CURIOSITIES: CuriosityItemData[] = [
     {
         q: 'Com que velocidade essas coisas se movem?',
         a: <>
-            <p>Asteroides próximos à Terra costumam viajar entre 10 e 30 km por segundo em relação à Terra. A Estação Espacial Internacional orbita a cerca de 7,7 km/s, então mesmo os mais lentos vão mais rápido que ela.</p>
+            <p>A maioria dos asteroides próximos da Terra viaja entre 5 e 30 km por segundo em relação à Terra. Para comparar, a Estação Espacial Internacional, o laboratório tripulado que dá a volta na Terra a cada 90 minutos, orbita a cerca de 7,7 km/s. Ou seja, a faixa deles se sobrepõe à da Estação: uma passagem lenta pode ser mais suave que ela, mas a maioria é mais rápida. A velocidade exata depende muito do ângulo e do momento de cada encontro.</p>
             <SpeedDiagram en={false} />
             <p>As setas mostram a direção do movimento de cada objeto, calculada a partir dos dados mais recentes disponíveis.</p>
         </>,

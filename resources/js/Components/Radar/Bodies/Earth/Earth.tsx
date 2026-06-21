@@ -49,6 +49,7 @@ interface EarthProps {
     showLabel: boolean;
     protectLabelFromFocus: boolean;
     isFocused?: boolean;
+    locale: 'pt-BR' | 'en';
 }
 
 // --------------- Componente ---------------------------------------------------------------
@@ -60,7 +61,9 @@ export function Earth({
     subsolarLonDeg,
     showLabel,
     isFocused = false,
+    locale,
 }: EarthProps) {
+    const en = locale === 'en';
     const day = useBodyTexture('/images/earth/blue-marble-land-shallow-topo-2048.jpg', 'raw');
     const night = useBodyTexture('/images/earth/8k_earth_nightmap.jpg', 'raw');
     const clouds = useBodyTexture('/images/earth/8k_earth_clouds.jpg', 'srgb');
@@ -213,9 +216,9 @@ export function Earth({
                     selected={isFocused}
                     protectFromFocus={false}
                     onClick={isFocused ? undefined : onFocus}
-                    title={isFocused ? undefined : 'Voltar para a visão geral'}
+                    title={isFocused ? undefined : (en ? 'Back to the overview' : 'Voltar para a visão geral')}
                 >
-                    <span className="font-semibold">Terra</span>
+                    <span className="font-semibold">{en ? 'Earth' : 'Terra'}</span>
                 </ResolvedScreenLabel>
             ) : null}
         </group>

@@ -67,7 +67,7 @@ Qualquer mudança de linguagem nesses manuais deve preservar esses quatro avisos
 
 - `ObservationControls.tsx`: formulário principal de data, tipo e busca.
 - `CompactConsoleBar.tsx`: barra de filtros do topo da página, somente desktop (a página esconde abaixo de lg:). No mobile os mesmos filtros vivem no bottom sheet aberto pela `MobileActionBar`. Marcada com `data-tutorial="radar-filters"`.
-- `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D. As opções de quantidade são 5, 15, 30 e "Todos" (`'all'`); "Todos" é um sentinela resolvido para o teto de candidatos mapeados pelo backend (`OBJECT_LIMIT_MAX = 45`) na hora do fetch (ver `resolveObjectLimit` em `@/types` e `hooks/useClosestNow.ts`). Os grupos carregam `data-tutorial="radar-filter-criterion"` e `data-tutorial="radar-filter-limit"`; o sheet mobile de filtros (`../Panels/MobileFiltersSheetContent.tsx`) duplica esses marcadores e o tutorial resolve o alvo filtrando por visibilidade real.
+- `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D. As opções de quantidade são 5, 15 e "Todos" (`'all'`); "Todos" é um sentinela resolvido para o teto de candidatos mapeados pelo backend (`OBJECT_LIMIT_MAX = 45`) na hora do fetch (ver `resolveObjectLimit` em `@/types` e `hooks/useClosestNow.ts`). Os grupos carregam `data-tutorial="radar-filter-criterion"` e `data-tutorial="radar-filter-limit"`; o sheet mobile de filtros (`../Panels/MobileFiltersSheetContent.tsx`) duplica esses marcadores e o tutorial resolve o alvo filtrando por visibilidade real.
 
 ## Remoção do radar 2D
 
