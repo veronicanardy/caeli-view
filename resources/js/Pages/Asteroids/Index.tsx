@@ -1,7 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { Activity, Gauge, Ruler, ShieldAlert, Target } from 'lucide-react';
 import { lazy, Suspense } from 'react';
-import { AppLayout } from '@/Components/AppLayout';
 import { AsteroidCard } from '@/Components/AsteroidCard';
 import { AsteroidTable } from '@/Components/AsteroidTable';
 import { DateRangeFilter } from '@/Components/DateRangeFilter';
@@ -46,7 +45,7 @@ function ChartSkeleton() {
 
 export default function AsteroidIndex({ asteroids, stats, filters, errors = {}, error }: Props) {
     return (
-        <AppLayout>
+        <>
             <Head title="Asteroides" />
             <PageHeader
                 eyebrow="NeoWs"
@@ -96,6 +95,6 @@ export default function AsteroidIndex({ asteroids, stats, filters, errors = {}, 
                     <EmptyState title="Nenhum viajante cósmico encontrado nesse intervalo." message="Tente ajustar as datas e iniciar uma nova observação." />
                 )}
             </section>
-        </AppLayout>
+        </>
     );
 }

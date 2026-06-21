@@ -1,6 +1,6 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { AppLayout } from '@/Components/AppLayout';
+import { useAppLayoutOptions } from '@/Components/AppLayout';
 import { CompactConsoleBar } from '@/Components/Radar/Controls/CompactConsoleBar';
 import { RadarTutorialProvider } from '@/Components/Radar/Tutorial/RadarTutorialProvider';
 import { ErrorMessage } from '@/Components/ErrorMessage';
@@ -29,6 +29,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
     const [radarFullscreen, setRadarFullscreen] = useState(false);
     const [selectedFocusId, setSelectedFocusId] = useState<string | null>(null);
     const { locale, t } = useTranslation();
+    useAppLayoutOptions({ hideHeader: radarFullscreen, hideFooter: true });
 
     const { objectLimit, selectionMode, setObjectLimit, setSelectionMode, resetControls } = useRadarControls();
     const [refreshNonce, setRefreshNonce] = useState(0);
@@ -110,7 +111,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
     }, [closestNowData, isFamous, knownDetail, focusApproach]);
 
     return (
-        <AppLayout hideHeader={radarFullscreen} hideFooter>
+        <>
             <Head title={t('observatory.title')} />
 
             {/* Tutorial interativo de primeira visita: observa critério, limite e
@@ -161,7 +162,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
                                     onSelect={(approach) => setSelectedFocusId(approach.id)}
                                     onClearSelection={() => setSelectedFocusId(null)}
                                     onOpenFocus={(approach) => {
-                                        window.location.href = approach.detailRoute;
+                                        router.visit(approach.detailRoute);
                                     }}
                                     lunarReference={lunarReference}
                                     locale={locale}
@@ -175,7 +176,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
                 )}
             </section>
             </RadarTutorialProvider>
-        </AppLayout>
+        </>
     );
 }
 

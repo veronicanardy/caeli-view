@@ -1,7 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { BadgeInfo, Fingerprint, Orbit, Sparkles } from 'lucide-react';
 import { ComponentType, lazy, Suspense } from 'react';
-import { AppLayout } from '@/Components/AppLayout';
 import { EmptyState } from '@/Components/EmptyState';
 import { ErrorMessage } from '@/Components/ErrorMessage';
 import { AsteroidUsefulSummary } from '@/Components/Dossie/AsteroidUsefulSummary';
@@ -33,7 +32,7 @@ export default function SmallBodiesShow({ smallBody, source, error }: Props) {
     const diameter = diameterEstimate(smallBody);
 
     return (
-        <AppLayout>
+        <>
             <Head title={smallBody?.primaryName ?? t('object.title.fallback')} />
             {smallBody ? <OrbitalDossierHeader smallBody={smallBody} /> : null}
             <section className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -168,7 +167,7 @@ export default function SmallBodiesShow({ smallBody, source, error }: Props) {
                     </>
                 )}
             </section>
-        </AppLayout>
+        </>
     );
 }
 

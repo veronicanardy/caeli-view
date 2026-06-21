@@ -1,7 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { Images, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { AppLayout } from '@/Components/AppLayout';
 import { DateFilter } from '@/Components/DateFilter';
 import { EmptyState } from '@/Components/EmptyState';
 import { EpicImageCard } from '@/Components/EpicImageCard';
@@ -81,7 +80,7 @@ export default function EpicIndex({ date, images, filters, errors = {}, error }:
     }, [filters.date, en]);
 
     return (
-        <AppLayout>
+        <>
             <Head title="EPIC" />
             <PageHeader
                 eyebrow="EPIC"
@@ -164,6 +163,6 @@ export default function EpicIndex({ date, images, filters, errors = {}, error }:
                     </div>
                 </div>
             ) : null}
-        </AppLayout>
+        </>
     );
 }

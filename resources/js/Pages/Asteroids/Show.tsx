@@ -1,6 +1,5 @@
-﻿import { Head, Link } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
-import { AppLayout } from '@/Components/AppLayout';
 import { EmptyState } from '@/Components/EmptyState';
 import { ErrorMessage } from '@/Components/ErrorMessage';
 import { PageHeader } from '@/Components/PageHeader';
@@ -14,7 +13,7 @@ type Props = PageProps<{
 
 export default function AsteroidShow({ asteroid, error }: Props) {
     return (
-        <AppLayout>
+        <>
             <Head title={asteroid?.name ?? 'Asteroide'} />
             <PageHeader
                 eyebrow="Detalhe NeoWs"
@@ -94,7 +93,7 @@ export default function AsteroidShow({ asteroid, error }: Props) {
                     </>
                 )}
             </section>
-        </AppLayout>
+        </>
     );
 }
 

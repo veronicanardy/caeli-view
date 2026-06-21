@@ -1,6 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { Earth, Image, Info, LoaderCircle, Menu, Rocket, Telescope, X } from 'lucide-react';
-import { PropsWithChildren, useEffect, useRef, useState } from 'react';
+import { createContext, PropsWithChildren, useContext, useEffect, useRef, useState } from 'react';
 import { Locale, useTranslation } from '@/i18n';
 import { transparencyCopy } from '@/lib/transparencyCopy';
 import { PageProps } from '@/types';
@@ -13,51 +13,109 @@ const navItems = [
     { href: '/sobre', labelKey: 'nav.about', icon: Info },
 ] as const;
 
-const minNavigationProgressMs = 320;
-const navigationProgressFadeMs = 180;
+const navigationProgressDelayMs = 80;
+const navigationProgressFadeMs = 220;
+const navigationProgressMaxMs = 12000;
 
+type AppLayoutOptions = {
+    hideHeader?: boolean;
+    hideFooter?: boolean;
+};
+
+const AppLayoutOptionsContext = createContext<(options: AppLayoutOptions) => void>(() => undefined);
+
+export function useAppLayoutOptions(options: AppLayoutOptions) {
+    const setOptions = useContext(AppLayoutOptionsContext);
+
+    useEffect(() => {
+        setOptions(options);
+
+        return () => setOptions({});
+    }, [options.hideHeader, options.hideFooter, setOptions]);
+}
 function NavigationProgress() {
     const [phase, setPhase] = useState<'hidden' | 'visible' | 'leaving'>('hidden');
     const { locale } = useTranslation();
-    const startedAtRef = useRef(0);
-    const finishTimeoutRef = useRef<number | null>(null);
+    const phaseRef = useRef<'hidden' | 'visible' | 'leaving'>('hidden');
+    const navigationActiveRef = useRef(false);
+    const showTimeoutRef = useRef<number | null>(null);
     const hideTimeoutRef = useRef<number | null>(null);
-    const label = locale === 'en' ? 'Loading screen...' : 'Carregando tela...';
-    const detail = locale === 'en' ? 'Synchronizing view' : 'Sincronizando visualização';
+    const watchdogTimeoutRef = useRef<number | null>(null);
+    const label = locale === 'en' ? 'Loading...' : 'Carregando...';
+    const detail = locale === 'en' ? 'Preparing the route' : 'Preparando a rota';
 
     useEffect(() => {
+        const setNavigationPhase = (nextPhase: 'hidden' | 'visible' | 'leaving') => {
+            phaseRef.current = nextPhase;
+            setPhase(nextPhase);
+        };
+
         const clearTimers = () => {
-            if (finishTimeoutRef.current !== null) {
-                window.clearTimeout(finishTimeoutRef.current);
-                finishTimeoutRef.current = null;
+            if (showTimeoutRef.current !== null) {
+                window.clearTimeout(showTimeoutRef.current);
+                showTimeoutRef.current = null;
             }
+
 
             if (hideTimeoutRef.current !== null) {
                 window.clearTimeout(hideTimeoutRef.current);
                 hideTimeoutRef.current = null;
             }
+
+            if (watchdogTimeoutRef.current !== null) {
+                window.clearTimeout(watchdogTimeoutRef.current);
+                watchdogTimeoutRef.current = null;
+            }
         };
 
         const start = () => {
+            if (navigationActiveRef.current && phaseRef.current !== 'leaving') {
+                return;
+            }
+
             clearTimers();
-            startedAtRef.current = window.performance.now();
-            setPhase('visible');
+            navigationActiveRef.current = true;
+            setNavigationPhase('hidden');
+
+            showTimeoutRef.current = window.setTimeout(() => {
+                showTimeoutRef.current = null;
+                setNavigationPhase('visible');
+            }, navigationProgressDelayMs);
+
+            watchdogTimeoutRef.current = window.setTimeout(() => {
+                navigationActiveRef.current = false;
+                setNavigationPhase('hidden');
+                clearTimers();
+            }, navigationProgressMaxMs);
         };
 
         const finish = () => {
-            const elapsed = window.performance.now() - startedAtRef.current;
-            const remaining = Math.max(0, minNavigationProgressMs - elapsed);
-
-            if (finishTimeoutRef.current !== null) {
-                window.clearTimeout(finishTimeoutRef.current);
+            if (!navigationActiveRef.current) {
+                return;
             }
 
-            finishTimeoutRef.current = window.setTimeout(() => {
-                setPhase('leaving');
-                hideTimeoutRef.current = window.setTimeout(() => {
-                    setPhase('hidden');
-                }, navigationProgressFadeMs);
-            }, remaining);
+            navigationActiveRef.current = false;
+
+            if (watchdogTimeoutRef.current !== null) {
+                window.clearTimeout(watchdogTimeoutRef.current);
+                watchdogTimeoutRef.current = null;
+            }
+
+            if (showTimeoutRef.current !== null) {
+                window.clearTimeout(showTimeoutRef.current);
+                showTimeoutRef.current = null;
+                setNavigationPhase('hidden');
+                return;
+            }
+
+            if (phaseRef.current === 'hidden') {
+                return;
+            }
+
+            setNavigationPhase('leaving');
+            hideTimeoutRef.current = window.setTimeout(() => {
+                setNavigationPhase('hidden');
+            }, navigationProgressFadeMs);
         };
 
         const removeStartListener = router.on('start', start);
@@ -66,6 +124,7 @@ function NavigationProgress() {
         return () => {
             removeStartListener();
             removeFinishListener();
+            navigationActiveRef.current = false;
             clearTimers();
         };
     }, []);
@@ -76,30 +135,36 @@ function NavigationProgress() {
 
     return (
         <div
-            className={`pointer-events-none absolute inset-x-0 bottom-0 translate-y-full px-4 pt-2 transition duration-200 sm:px-6 lg:px-8 ${
+            className={`app-route-loader fixed inset-0 z-[9999] flex items-center justify-center px-4 transition duration-200 ${
                 phase === 'leaving' ? 'opacity-0' : 'opacity-100'
             }`}
-            aria-hidden="true"
+            role="status"
+            aria-live="polite"
         >
-            <div className="mx-auto flex max-w-7xl justify-start">
-                <div className="app-navigation-loader">
-                    <LoaderCircle className="size-4 animate-spin text-signal-cyan" aria-hidden="true" />
-                    <span className="font-medium text-white/85">{label}</span>
-                    <span className="hidden text-white/40 sm:inline">{detail}</span>
-                    <span className="app-navigation-loader-bar" aria-hidden="true" />
-                </div>
+            <div className="app-route-loader-card">
+                <span className="app-route-loader-orbit" aria-hidden="true">
+                    <LoaderCircle className="app-route-loader-spinner size-8 text-signal-cyan" aria-hidden="true" />
+                </span>
+                <span className="app-route-loader-copy">
+                    <span className="app-route-loader-title">{label}</span>
+                    <span className="app-route-loader-detail">{detail}</span>
+                </span>
+                <span className="app-route-loader-bar" aria-hidden="true" />
             </div>
         </div>
     );
 }
 
-export function AppLayout({ children, hideHeader = false, hideFooter = false }: PropsWithChildren<{ hideHeader?: boolean; hideFooter?: boolean }>) {
+export function AppLayout({ children, hideHeader = false, hideFooter = false }: PropsWithChildren<AppLayoutOptions>) {
     const { url, props } = usePage<PageProps>();
     const { locale, setLocale, t } = useTranslation();
     const [menuOpen, setMenuOpen] = useState(false);
+    const [layoutOptions, setLayoutOptions] = useState<AppLayoutOptions>({});
     const menuRef = useRef<HTMLDivElement>(null);
     const appTagline = t('app.tagline');
     const footerCopy = transparencyCopy(locale);
+    const effectiveHideHeader = hideHeader || Boolean(layoutOptions.hideHeader);
+    const effectiveHideFooter = hideFooter || Boolean(layoutOptions.hideFooter);
 
     useEffect(() => {
         setMenuOpen(false);
@@ -124,14 +189,15 @@ export function AppLayout({ children, hideHeader = false, hideFooter = false }: 
     }, [menuOpen]);
 
     return (
-        /* No radar (hideFooter) a tela ocupa exatamente a viewport e nunca rola: h-[100dvh] +
+        <AppLayoutOptionsContext.Provider value={setLayoutOptions}>
+        {/* No radar (hideFooter) a tela ocupa exatamente a viewport e nunca rola: h-[100dvh] +
            overflow-hidden travam a altura e o radar 3D preenche o espaço restante por flex. Nas
-           demais páginas o layout cresce com o conteúdo (min-h-screen) e rola normalmente. */
-        <div className={`flex flex-col ${hideFooter ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
-            <header className={`app-header sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${hideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
+           demais páginas o layout cresce com o conteúdo (min-h-screen) e rola normalmente. */}
+        <div className={`flex flex-col ${effectiveHideFooter ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
+            <NavigationProgress />
+            <header className={`app-header sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${effectiveHideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
                 {/* Hairline ciano de assinatura, espelha a linha do footer */}
                 <div className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-signal-cyan/25 to-transparent" aria-hidden="true" />
-                <NavigationProgress />
                 <div ref={menuRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between lg:h-auto lg:py-4">
                         <Link href="/" prefetch className="app-brand group flex items-center gap-3">
@@ -249,11 +315,11 @@ export function AppLayout({ children, hideHeader = false, hideFooter = false }: 
                     </div>
                 </div>
             ) : null}
-            <main className={`page-slide flex-1 ${hideFooter ? 'min-h-0' : ''}`}>{children}</main>
+            <main className={`page-slide flex-1 ${effectiveHideFooter ? 'min-h-0' : ''}`}>{children}</main>
             {/* Rodapé de transparência: peso visual reduzido para não quebrar a atmosfera da página.
                 Escondido em telas que ocupam a viewport inteira sem scroll (radar), onde a transparência
                 migra para dentro do guia. */}
-            {hideFooter ? null : (
+            {effectiveHideFooter ? null : (
             <footer className="relative border-t border-white/[0.06] bg-[linear-gradient(180deg,rgba(3,6,13,0),rgba(3,6,13,0.72)_25%,rgba(3,6,13,0.88))]">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-signal-cyan/20 to-transparent" />
                 <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -289,5 +355,6 @@ export function AppLayout({ children, hideHeader = false, hideFooter = false }: 
             </footer>
             )}
         </div>
+        </AppLayoutOptionsContext.Provider>
     );
 }

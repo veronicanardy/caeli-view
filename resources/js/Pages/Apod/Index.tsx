@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import { AppLayout } from '@/Components/AppLayout';
 import { ApodFeature } from '@/Components/ApodFeature';
 import { DateFilter } from '@/Components/DateFilter';
 import { ErrorMessage } from '@/Components/ErrorMessage';
@@ -88,7 +87,7 @@ export default function ApodIndex({ apod, filters, errors = {}, error }: Props) 
     }, [filters.date, en]);
 
     return (
-        <AppLayout>
+        <>
             <Head title="APOD" />
             <PageHeader
                 eyebrow="Astronomy Picture of the Day"
@@ -102,6 +101,6 @@ export default function ApodIndex({ apod, filters, errors = {}, error }: Props) 
                 <ErrorMessage message={currentError} />
                 {loading ? <ApodSkeleton /> : <ApodFeature apod={currentApod} />}
             </section>
-        </AppLayout>
+        </>
     );
 }

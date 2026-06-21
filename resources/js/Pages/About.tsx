@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import { Code2, Database, Lock, Server } from 'lucide-react';
-import { AppLayout } from '@/Components/AppLayout';
 import { FeatureCard } from '@/Components/FeatureCard';
 import { PageHeader } from '@/Components/PageHeader';
 import { useTranslation } from '@/i18n';
@@ -10,7 +9,7 @@ export default function About() {
     const en = locale === 'en';
 
     return (
-        <AppLayout>
+        <>
             <Head title={en ? 'About' : 'Sobre'} />
             <PageHeader
                 eyebrow={en ? 'About the project' : 'Sobre o projeto'}
@@ -45,6 +44,6 @@ export default function About() {
                     tone="violet"
                 />
             </section>
-        </AppLayout>
+        </>
     );
 }

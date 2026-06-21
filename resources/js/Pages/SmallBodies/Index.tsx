@@ -1,7 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { Grid2X2, List, Search, SlidersHorizontal } from 'lucide-react';
 import { FormEvent, lazy, ReactNode, Suspense, useMemo, useState } from 'react';
-import { AppLayout } from '@/Components/AppLayout';
 import { EmptyState } from '@/Components/EmptyState';
 import { ErrorMessage } from '@/Components/ErrorMessage';
 import { PageHeader } from '@/Components/PageHeader';
@@ -53,7 +52,7 @@ export default function SmallBodiesIndex({ approaches, summary, charts, filters,
     }
 
     return (
-        <AppLayout>
+        <>
             <Head title="Consulta JPL" />
             <PageHeader
                 eyebrow="JPL Solar System Dynamics"
@@ -128,7 +127,7 @@ export default function SmallBodiesIndex({ approaches, summary, charts, filters,
                     <EmptyState title="Nenhum viajante encontrado nesse recorte." message="Ajuste datas, distância ou tipo de objeto para abrir uma nova janela de observação." />
                 )}
             </section>
-        </AppLayout>
+        </>
     );
 }
 
