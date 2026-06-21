@@ -92,6 +92,17 @@ final class ClosestNowSelector
     ];
 
     /**
+     * Corte de EXIBIÇÃO do modo 'upcoming', em UA. Mais apertado que o dist_max da busca (0,1) de
+     * propósito: a busca larga traz o objeto pelo CAD para a dedup corrigir a distância; este corte
+     * decide o que de fato aparece, sobre a distância já corrigida (JPL quando o objeto existe no CAD).
+     * 0,05 UA (~7,5 milhões de km, ~19,5 distâncias lunares) é o mesmo critério de close-approach do JPL.
+     */
+    private const UPCOMING_DISPLAY_DIST_AU = 0.05;
+
+    /** 1 UA em km — para converter o corte de exibição do upcoming. */
+    private const ASTRONOMICAL_UNIT_KM = 149_597_870.7;
+
+    /**
      * TTL do cache para o resultado resolvido.
      * Curto o suficiente para "mais próximo agora" ficar fresco, longo o suficiente para
      * coalescer recarregamentos simultâneos do frontend.
@@ -203,11 +214,15 @@ final class ClosestNowSelector
         // 'upcoming' usa janela alargada para capturar os próximos 30 dias.
         $anchor        = CarbonImmutable::parse($anchorDate, 'UTC');
         $observeParams = match ($mode) {
+            // dist_max da BUSCA propositalmente mais largo que o corte de EXIBIÇÃO (UPCOMING_DISPLAY_DIST_AU):
+            // garante que objetos de fronteira (ex: a ~0,05–0,07 UA) também venham do CAD, não só do NeoWs.
+            // Assim o merger (CAD tem precedência) corrige a distância para a do JPL antes do corte final,
+            // e o corte fica fiel ao JPL/Eyes em vez de aceitar a distância um pouco menor do NeoWs.
             'upcoming' => [
                 'date_min'      => $anchorDate,
                 'date_max'      => $anchor->addDays(self::MODE_WINDOW_DAYS['upcoming']['future'])->toDateString(),
                 'type'          => 'all',
-                'dist_max'      => '0.05',
+                'dist_max'      => '0.1',
                 'sort'          => 'dist',
                 'distance_unit' => 'km',
             ],
@@ -388,9 +403,13 @@ final class ClosestNowSelector
         $windowStart = $anchorStart->greaterThan($now) ? $anchorStart : $now;
         $anchorEnd   = $anchorStart->addDays(self::MODE_WINDOW_DAYS['upcoming']['future'])->endOfDay();
 
+        // Corte de exibição em km: aplicado sobre a distância já corrigida pelo merger (JPL quando o
+        // objeto existe no CAD), para o upcoming ficar fiel ao critério de close-approach do JPL/Eyes.
+        $displayLimitKm = self::UPCOMING_DISPLAY_DIST_AU * self::ASTRONOMICAL_UNIT_KM;
+
         $filtered = array_values(array_filter(
             $approaches,
-            static function (array $a) use ($windowStart, $anchorEnd): bool {
+            static function (array $a) use ($windowStart, $anchorEnd, $displayLimitKm): bool {
                 $raw = (string) ($a['approachDate'] ?? '');
                 if ($raw === '') {
                     return false;
@@ -400,7 +419,12 @@ final class ClosestNowSelector
                 } catch (\Throwable) {
                     return false;
                 }
-                return $date->greaterThanOrEqualTo($windowStart) && $date->lessThanOrEqualTo($anchorEnd);
+                if (! ($date->greaterThanOrEqualTo($windowStart) && $date->lessThanOrEqualTo($anchorEnd))) {
+                    return false;
+                }
+                // Objetos sem distância conhecida ficam (benefício da dúvida); os demais respeitam o corte.
+                $dist = $a['nominalDistanceKm'] ?? null;
+                return ! is_numeric($dist) || (float) $dist <= $displayLimitKm;
             },
         ));
 

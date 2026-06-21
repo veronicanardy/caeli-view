@@ -34,7 +34,7 @@ O CAD registra a distância no pico de máxima aproximação (um instante fixo).
 
 **Modos de seleção:**
 - `nearest` — top-N por miss_distance nominal + todos os PHAs; janela ±3 dias em torno de agora
-- `upcoming` — próximas 30 dias a partir da data âncora; ordenados por proximidade temporal com agora
+- `upcoming` — próximas 30 dias a partir da data âncora; ordenados por proximidade temporal com agora. A busca usa `dist_max=0.1` (mais largo) para que objetos de fronteira também venham do CAD e o merger corrija a distância para a do JPL; o corte de **exibição** é `UPCOMING_DISPLAY_DIST_AU=0.05` (~19,5 distâncias lunares, mesmo critério de close-approach do JPL/Eyes), aplicado sobre a distância já corrigida
 
 **Estratégia lazy-loading do Horizons:**
 - Apenas os `limit + HORIZONS_MARGIN` candidatos mais próximos consultam o Horizons
@@ -73,6 +73,8 @@ Fonte única de verdade para os filtros padrão do observatório: `date_min/date
 ### ApproachMerger
 
 Combina resultados do NeoWs e do CAD em uma coleção única, removendo duplicatas por chave semântica (`designation:data`) e ordenando conforme o critério selecionado.
+
+Em colisão entre fontes (mesmo objeto+data vindo do NeoWs **e** do CAD), o **CAD vence**: é a solução orbital integrada do JPL (alta precisão), a mesma referência do NASA Eyes. NeoWs e CAD reportam distâncias levemente distintas; preferir a do CAD mantém o radar coerente com o JPL, inclusive nos cortes por distância (um objeto na fronteira do corte não entra só porque a distância do NeoWs ficou abaixo enquanto a do JPL não). Dentro da mesma fonte, mantém a primeira ocorrência.
 
 ### ApproachSummarizer
 

@@ -32,12 +32,20 @@ final class ApproachMerger
 
     /**
      * Remove entradas duplicadas usando a chave semântica de cada objeto.
-     * Em caso de colisão, mantém a primeira ocorrência (prioridade para a fonte primária).
+     *
+     * Em colisão entre fontes (mesmo objeto+data vindo do NeoWs E do CAD), o CAD vence:
+     * é a solução orbital integrada do JPL (alta precisão), a mesma referência do NASA Eyes.
+     * O NeoWs e o CAD reportam distâncias levemente distintas; usar a do CAD mantém o radar
+     * coerente com o JPL, inclusive no corte por dist_max (um objeto na fronteira de 0,05 UA
+     * não entra só porque a distância do NeoWs ficou abaixo do corte enquanto a do JPL não).
+     *
+     * Dentro da MESMA fonte, mantém a primeira ocorrência (ordem de chegada).
      */
     private function deduplicate(Collection $items): Collection
     {
-        $seen   = [];
-        $result = collect();
+        /** @var array<string, UnifiedApproachData> $byKey */
+        $byKey = [];
+        $order = [];
 
         foreach ($items as $approach) {
             if (! $approach instanceof UnifiedApproachData) {
@@ -46,15 +54,19 @@ final class ApproachMerger
 
             $key = $approach->dedupeKey();
 
-            if (isset($seen[$key])) {
+            if (! isset($byKey[$key])) {
+                $byKey[$key] = $approach;
+                $order[]     = $key;
                 continue;
             }
 
-            $seen[$key] = true;
-            $result->push($approach);
+            // Já visto: só substitui se o novo for CAD e o guardado não for (CAD tem precedência).
+            if ($approach->source === 'cad' && $byKey[$key]->source !== 'cad') {
+                $byKey[$key] = $approach;
+            }
         }
 
-        return $result;
+        return collect(array_map(static fn (string $k) => $byKey[$k], $order));
     }
 
     /**
