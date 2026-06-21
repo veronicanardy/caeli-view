@@ -213,7 +213,7 @@ export type ClosestNowObject = {
  * `'all'` é resolvido para OBJECT_LIMIT_MAX na hora do fetch — ver
  * resolveObjectLimit / useClosestNow.
  */
-export const OBJECT_LIMITS = [5, 15, 30, 'all'] as const;
+export const OBJECT_LIMITS = [5, 15, 'all'] as const;
 export type ObjectLimit = (typeof OBJECT_LIMITS)[number];
 
 /** Teto efetivo de objetos retornados pelo backend (cap em ClosestNowSelector::select). */
