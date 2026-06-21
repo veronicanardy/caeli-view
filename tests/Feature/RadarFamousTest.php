@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 /**
  * Testa o endpoint /radar/famous: os objetos famosos (5 asteroides: Ceres, Vesta, Eros, Bennu,
- * Itokawa; e 4 cometas: Halley, Encke, 67P, NEOWISE) resolvidos com posição e trilha curta do JPL
+ * Itokawa; e 3 cometas: Halley, Encke, 67P) resolvidos com posição e trilha curta do JPL
  * Horizons, no mesmo shape do closest-now.
  */
 class RadarFamousTest extends TestCase
@@ -33,18 +33,18 @@ class RadarFamousTest extends TestCase
             ->assertJsonPath('selectionMode', 'famous');
 
         $objects = $response->json('objects');
-        $this->assertCount(9, $objects, '5 asteroides + 4 cometas.');
+        $this->assertCount(8, $objects, '5 asteroides + 3 cometas.');
 
         $ids = array_map(fn ($o) => $o['approach']['id'], $objects);
         $this->assertEqualsCanonicalizing(
             ['known:1', 'known:4', 'known:433', 'known:101955', 'known:25143',
-             'comet:1P', 'comet:2P', 'comet:67P', 'comet:C/2020 F3'],
+             'comet:1P', 'comet:2P', 'comet:67P'],
             $ids,
         );
 
         // Os cometas são marcados como tal no approach sintético.
         $comets = array_filter($objects, fn ($o) => $o['approach']['objectType'] === 'comet');
-        $this->assertCount(4, $comets);
+        $this->assertCount(3, $comets);
 
         foreach ($objects as $obj) {
             $this->assertSame('available', $obj['trajectory']['status']);
@@ -94,7 +94,7 @@ class RadarFamousTest extends TestCase
         $response = $this->getJson('/radar/famous')->assertOk();
 
         $objects = $response->json('objects');
-        $this->assertCount(9, $objects, 'Nenhum famoso (asteroide ou cometa) pode sumir quando o Horizons falha.');
+        $this->assertCount(8, $objects, 'Nenhum famoso (asteroide ou cometa) pode sumir quando o Horizons falha.');
 
         foreach ($objects as $obj) {
             $this->assertNull($obj['trajectory']);
@@ -140,6 +140,6 @@ class RadarFamousTest extends TestCase
         $this->getJson('/radar/famous?force_refresh=1')
             ->assertOk()
             ->assertJsonPath('selectionMode', 'famous')
-            ->assertJsonCount(9, 'objects');
+            ->assertJsonCount(8, 'objects');
     }
 }

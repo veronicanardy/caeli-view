@@ -5,7 +5,7 @@ namespace App\Support\Asteroids;
 use App\Support\DistancePresenter;
 
 /**
- * Cometas famosos (Halley, Encke, 67P, NEOWISE).
+ * Cometas famosos (Halley, Encke, 67P).
  *
  * Responsabilidade: ser a FONTE DE VERDADE no backend da identidade desses cometas (designação,
  * nome, diâmetro estimado do núcleo, comando de busca no Horizons) e montar, para cada um, tanto o
@@ -37,7 +37,6 @@ final class FamousComets
         ['designation' => '1P',        'name' => 'Halley',  'horizonsCommand' => 'DES=1P;CAP',        'diameterMeters' => 11_000],
         ['designation' => '2P',        'name' => 'Encke',   'horizonsCommand' => 'DES=2P;CAP',        'diameterMeters' => 4_800],
         ['designation' => '67P',       'name' => '67P Churyumov-Gerasimenko', 'horizonsCommand' => 'DES=67P;CAP', 'diameterMeters' => 4_000],
-        ['designation' => 'C/2020 F3', 'name' => 'NEOWISE',  'horizonsCommand' => 'DES=C/2020 F3;CAP', 'diameterMeters' => 5_000],
     ];
 
     /**

@@ -16,10 +16,10 @@ class FamousCometsTest extends TestCase
     public function test_lista_tem_os_cometas_famosos_com_designacao(): void
     {
         $comets = FamousComets::all();
-        $this->assertCount(4, $comets);
+        $this->assertCount(3, $comets);
 
         $designations = array_column($comets, 'designation');
-        $this->assertEqualsCanonicalizing(['1P', '2P', '67P', 'C/2020 F3'], $designations);
+        $this->assertEqualsCanonicalizing(['1P', '2P', '67P'], $designations);
     }
 
     public function test_id_sintetico_usa_o_prefixo_comet(): void
@@ -56,8 +56,11 @@ class FamousCometsTest extends TestCase
 
     public function test_payload_horizons_de_cometa_com_designacao_provisoria(): void
     {
-        $neowise = collect(FamousComets::all())->firstWhere('designation', 'C/2020 F3');
-        $payload = FamousComets::horizonsPayload($neowise);
+        // Cometa de designação provisória (com barra e espaço, ex.: um C/AAAA Xn): o comando explícito
+        // DES=...;CAP deve passar intacto, sem o normalizador de asteroides interferir. Montado à mão
+        // porque hoje todos os famosos têm designação numerada (1P/2P/67P).
+        $comet = ['designation' => 'C/2020 F3', 'name' => 'Provisório', 'horizonsCommand' => 'DES=C/2020 F3;CAP', 'diameterMeters' => 5_000];
+        $payload = FamousComets::horizonsPayload($comet);
 
         $commands = (new HorizonsObjectIdentity())->buildCommandCandidates($payload);
 
