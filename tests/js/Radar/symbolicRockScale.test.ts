@@ -1,9 +1,11 @@
 /**
  * Contrato científico da escala visual SIMBÓLICA dos asteroides do feed.
  *
- * Por que existe: o tamanho dos asteroides na cena NÃO é proporcional ao diâmetro real (seria
- * sub-pixel). É uma escala simbólica em degraus por classe de tamanho. Estes testes travam os
- * invariantes que mantêm essa escala honesta e não enganosa, mesmo que os degraus sejam reajustados:
+ * Por que existe: o tamanho dos asteroides na cena NÃO é proporcional LINEAR ao diâmetro real (seria
+ * sub-pixel para os pequenos e gigante para Ceres). É uma escala LOGARÍTMICA contínua dentro de uma
+ * faixa estreita [MIN, MAX], que dá "maior parece maior" de forma monotônica e legível. Estes testes
+ * travam os invariantes que mantêm essa escala honesta e não enganosa, mesmo que a curva seja
+ * reajustada:
  *
  *  1. Monotonicidade: diâmetro maior nunca produz raio visual menor.
  *  2. Teto de honestidade: o maior asteroide ainda é inequivocamente MENOR que a Terra na cena
@@ -63,10 +65,26 @@ describe('symbolicRockRadiusForApproach — invariantes da escala simbólica', (
         }
     });
 
-    it('diâmetro ausente cai num degrau intermediário válido (não quebra)', () => {
+    it('diâmetro ausente cai num valor intermediário válido (não quebra)', () => {
         const r = symbolicRockRadiusForApproach(approachWithDiameter(null));
         expect(Number.isFinite(r)).toBe(true);
         expect(r).toBeGreaterThan(0);
+    });
+
+    it('preserva a ordem por tamanho do elenco real: Itokawa < Bennu < Eros < Vesta < Ceres', () => {
+        // Diâmetros reais (m). A escala log deve dar raios ESTRITAMENTE crescentes para diâmetros
+        // distintos dentro da faixa (sem dois corpos diferentes colapsando no mesmo degrau).
+        const cast: Array<[string, number]> = [
+            ['Itokawa', 330],
+            ['Bennu', 490],
+            ['Eros', 16_840],
+            ['Vesta', 525_400],
+            ['Ceres', 939_400],
+        ];
+        const radii = cast.map(([, d]) => symbolicRockRadiusForApproach(approachWithDiameter(d)));
+        for (let i = 1; i < radii.length; i += 1) {
+            expect(radii[i]).toBeGreaterThan(radii[i - 1]);
+        }
     });
 });
 
