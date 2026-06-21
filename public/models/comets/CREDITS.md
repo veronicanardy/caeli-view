@@ -11,11 +11,15 @@ Modelo de forma científico real, derivado das imagens da câmera OSIRIS/NAVCAM 
 - Convertido de VRML (.wrl) para GLB por `scripts/wrl-to-glb.mjs` (centralizado e normalizado para
   "maior eixo = 2", normais por vértice calculadas). A geometria é a real; só o formato mudou.
 
-## comet_generic.glb, núcleo do cometa 9P/Tempel 1 (usado como genérico realista)
+## comet_generic.glb, núcleo do cometa 9P/Tempel 1 (APOSENTADO do uso na cena)
+
+> Aposentado em 2026-06-20: cometas sem modelo próprio (Halley/Encke) passaram a reusar o MESMO GLB
+> genérico texturizado dos asteroides (`/models/asteroids/Asteroid_2f_small.glb`), pra cor/textura baterem
+> com a rocha por construção. Este arquivo continua aqui pelo crédito e por poder voltar a ser usado.
 
 Modelo de forma científico REAL do núcleo do 9P/Tempel 1, derivado das imagens da missão Deep Impact
-(NASA/JPL/UMD). Usado como representação genérica realista dos cometas SEM modelo próprio (Halley,
-Encke, NEOWISE), por nenhuma sonda ter mapeado os núcleos deles de perto. É um núcleo de cometa real,
+(NASA/JPL/UMD). Era usado como representação genérica realista dos cometas SEM modelo próprio (Halley,
+Encke), por nenhuma sonda ter mapeado os núcleos deles de perto. É um núcleo de cometa real,
 escuro e irregular, coerente com os asteroides reais da cena (e não um modelo cartoon).
 
 - Versão: shape model 2012 (cartesiano), 16.022 vértices, 32.040 triângulos.
@@ -24,6 +28,6 @@ escuro e irregular, coerente com os asteroides reais da cena (e não um modelo c
 - Crédito: NASA/JPL/UMD, missão Deep Impact. Dado público.
 - Convertido de VRML (.wrl) para GLB por `scripts/wrl-to-glb.mjs`, igual ao 67P.
 
-> Observação: por não haver shape model real de Halley/Encke/NEOWISE, os três compartilham este núcleo
+> Observação: por não haver shape model real de Halley/Encke, os dois compartilham este núcleo
 > do Tempel 1 como forma representativa (variada por seed na cena). A cauda do cometa será adicionada
 > manualmente depois (decisão da Verônica). O GLB atual é só o corpo.

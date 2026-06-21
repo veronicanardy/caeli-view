@@ -66,7 +66,7 @@ describe('radarTutorialFlow permissions', () => {
         expect(isTutorialActionAllowed(step('filter-criterion'), 'set-selection-mode', { mode: 'nearest' })).toBe(false);
         expect(isTutorialActionAllowed(step('filter-criterion'), 'set-object-limit', { limit: 15 })).toBe(false);
 
-        expect(isTutorialActionAllowed(step('filter-limit'), 'set-object-limit', { limit: 30 })).toBe(true);
+        expect(isTutorialActionAllowed(step('filter-limit'), 'set-object-limit', { limit: 'all' })).toBe(true);
         expect(isTutorialActionAllowed(step('filter-limit'), 'set-selection-mode', { mode: 'nearest' })).toBe(false);
     });
 

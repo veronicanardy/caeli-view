@@ -111,7 +111,7 @@ Todas as integrações com APIs externas ficam no backend Laravel. As páginas R
 - Combina **NASA NeoWs** e **JPL CAD** em paralelo, deduplica e mescla por identidade
 - Visão padrão com zoom na vizinhança da Terra; painel de referências permite alternar para Sol, Lua ou visão completa com planetas
 - Posições dos asteroides via consultas de efemérides à **API JPL Horizons** com vetores de estado reais
-- **Cometas famosos** (Halley, Encke, 67P, NEOWISE) e asteroides famosos com **modelos 3D reais** e fallback Kepler quando o Horizons falha, para que nenhum objeto suma
+- **Cometas famosos** (Halley, Encke, 67P) e asteroides famosos com **modelos 3D reais** e fallback Kepler quando o Horizons falha, para que nenhum objeto suma
 - Linhas de trajetória com gradiente, cones de direção, marcadores de aproximação; distâncias em **escala linear única em UA** (sem compressão), com a aproximação revelada por zoom de câmera
 - Modo de foco trava a câmera em qualquer corpo; pan e zoom por teclado e toque
 - Card de foco com aba **História** para os objetos famosos, além das métricas, dados físicos e ações

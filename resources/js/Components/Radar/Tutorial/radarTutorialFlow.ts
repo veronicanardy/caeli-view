@@ -33,6 +33,7 @@ export type TutorialAction =
     | 'exit-fullscreen'
     | 'open-guide'
     | 'close-guide'
+    | 'open-dossier'
     | 'refresh';
 
 export type TutorialActionPayload = {
@@ -126,8 +127,8 @@ export function allowedActionsForStep(step: TutorialStep | null): TutorialPermis
 
     return [
         ...explicit,
-        ...(manualNextAllowed ? [{ action: 'manual-next' }] : []),
-        ...(sceneNavigateAllowed ? [{ action: 'scene-navigate' }] : []),
+        ...(manualNextAllowed ? [{ action: 'manual-next' } as TutorialPermission] : []),
+        ...(sceneNavigateAllowed ? [{ action: 'scene-navigate' } as TutorialPermission] : []),
     ];
 }
 

@@ -111,7 +111,7 @@ All external API integrations live in the Laravel backend. React pages receive c
 - Combines **NASA NeoWs** and **JPL CAD** in parallel, deduplicates and merges by identity
 - Default view zooms in on Earth's neighborhood; reference panel lets you switch to Sun, Moon, or full planet view
 - Asteroid positions from **JPL Horizons API** ephemeris queries with real state vectors
-- **Famous comets** (Halley, Encke, 67P, NEOWISE) and famous asteroids with **real 3D models** and a Kepler fallback when Horizons is unavailable, so no object disappears
+- **Famous comets** (Halley, Encke, 67P) and famous asteroids with **real 3D models** and a Kepler fallback when Horizons is unavailable, so no object disappears
 - Gradient trajectory lines, direction cones, approach markers; distances on a single **linear AU scale** (no compression), with a close approach revealed by camera zoom
 - Focus mode locks camera to any body; keyboard and touch pan/zoom
 - Focus card with a **History** tab for the famous objects, alongside metrics, physical data, and actions

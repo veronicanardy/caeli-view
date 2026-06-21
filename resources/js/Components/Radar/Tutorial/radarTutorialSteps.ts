@@ -33,7 +33,7 @@ export type TutorialAdvance =
     | { kind: 'click'; requireSelector?: string }
     /** Avança quando o critério da lista (nearest/upcoming) muda. Espera o radar terminar de carregar. */
     | { kind: 'criterion-change' }
-    /** Avança quando o limite de objetos (5/15/30) muda. Espera o radar terminar de carregar. */
+    /** Avança quando o limite de objetos (5/15/Todos) muda. Espera o radar terminar de carregar. */
     | { kind: 'limit-change' }
     /** Avança quando um objeto é selecionado (selectedId não nulo). */
     | { kind: 'selection' }
@@ -184,10 +184,10 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         sideMobile: 'top',
         titlePt: 'Quantos objetos de uma vez?',
         titleEn: 'How many objects at once?',
-        bodyPt: 'Aqui você escolhe o tamanho da plateia: [[5]] para uma cena limpinha, [[15]] para o equilíbrio, [[30]] ou [[Todos]] para ver o céu cheio. Escolha outra quantidade para continuar.',
-        bodyEn: 'Here you choose the crowd size: [[5]] for a clean scene, [[15]] for balance or [[30]] for a busy sky. Pick another amount to continue.',
-        bodyMobilePt: 'Em Exibir até, escolha [[5]], [[15]] ou [[30]] objetos para continuar.',
-        bodyMobileEn: 'Under Show up to, pick [[5]], [[15]] or [[30]] objects to continue.',
+        bodyPt: 'Aqui você escolhe o tamanho da plateia: [[5]] para uma cena limpinha, [[15]] para o equilíbrio ou [[Todos]] para ver o céu cheio. Escolha outra quantidade para continuar.',
+        bodyEn: 'Here you choose the crowd size: [[5]] for a clean scene, [[15]] for balance or [[All]] for a busy sky. Pick another amount to continue.',
+        bodyMobilePt: 'Em Exibir até, escolha [[5]], [[15]] ou [[Todos]] para continuar.',
+        bodyMobileEn: 'Under Show up to, pick [[5]], [[15]] or [[All]] objects to continue.',
     },
     {
         id: 'filter-done',
@@ -381,8 +381,8 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         sideMobile: 'top',
         titlePt: 'Hora de voltar',
         titleEn: 'Time to head back',
-        bodyPt: 'Passeio feito! Clique em Voltar ao asteroide para retomar a visão de aproximação.',
-        bodyEn: 'Trip done! Click Back to the asteroid to return to the close-up view.',
+        bodyPt: 'Passeio feito! Clique no botão de voltar para retomar a visão de aproximação.',
+        bodyEn: 'Trip done! Click the back button to return to the close-up view.',
     },
     {
         id: 'references-bodies',
