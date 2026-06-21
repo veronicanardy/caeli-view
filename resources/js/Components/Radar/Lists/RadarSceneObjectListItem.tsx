@@ -11,7 +11,7 @@ import { TriangleAlert } from 'lucide-react';
 import type { ClosestNowObject, SelectionMode, SmallBodyObjectType, UnifiedApproach } from '@/types';
 import { Tooltip } from '../Controls/Tooltip';
 import { isKnownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
-import { isKnownCometId } from '../Bodies/Comet/knownComets';
+import { isKnownCometId, knownCometById, knownCometHeliocentricDistanceKm } from '../Bodies/Comet/knownComets';
 import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 import { formatObjectListTrailingLabel } from './radarSceneObjectPresentation';
 
@@ -33,19 +33,28 @@ type ObjectListItemProps = {
 export function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, selectionMode, compact = false, orbitMode = false }: ObjectListItemProps) {
     const en = locale === 'en';
     // Conhecidos (famosos: asteroides e cometas) são plotados na régua dos planetas via Kepler, sem
-    // trajetória geocêntrica: têm posição, só não a do feed. Não marcar "sem pos." para eles.
+    // trajetória geocêntrica: têm posição, só não a do feed. Não marcar "sem posição" para eles.
     const isKnown = isKnownAsteroidId(o.approach.id) || isKnownCometId(o.approach.id);
     const hasScenePosition = isKnown || Boolean(o.trajectory?.currentPoint);
+    // Recém-descoberto: está no catálogo (CAD) mas o Horizons ainda não tem efeméride. NÃO é um
+    // "não achado" qualquer — é um objeto novo e interessante. Fica aceso (não apaga como os demais
+    // sem posição) e ganha um rótulo próprio, em vez do "sem posição" cinza.
+    const recentlyDiscovered = !hasScenePosition && o.trajectory?.horizonsFailureKind === 'no_ephemeris';
     const hasOrbit = Boolean(o.trajectory?.orbitalElements);
     const orbitBlocked = orbitMode && !hasOrbit;
     const tutorial = useRadarTutorialOptional();
     const tutorialBlocked = !(tutorial?.isActionAllowed('select-object', { objectId: o.approach.id }) ?? true);
     const hazard = o.approach.hazardFlag;
-    const trailingLabel = formatObjectListTrailingLabel(selectionMode, o.approach.approachDate, o.currentDistanceKm, locale);
+    // Cometa famoso sem distância do Horizons (ex.: Halley no afélio): usa a distância heliocêntrica da
+    // órbita Kepler local como aproximação, em vez de "Indisponível". Para corpos a dezenas de UA, a
+    // diferença entre distância ao Sol e à Terra (1 UA) é desprezível.
+    const fallbackComet = o.currentDistanceKm == null ? knownCometById(o.approach.id) : null;
+    const distanceKm = o.currentDistanceKm ?? (fallbackComet ? knownCometHeliocentricDistanceKm(fallbackComet) : null);
+    const trailingLabel = formatObjectListTrailingLabel(selectionMode, o.approach.approachDate, distanceKm, locale);
 
     return (
         <li>
-            {/* Estados indisponíveis ("sem órbita", "sem pos.") já aparecem como texto na
+            {/* Estados indisponíveis ("sem órbita", "sem posição") já aparecem como texto na
                própria linha; sem title nativo (regra do sistema: tooltips só via <Tooltip>). */}
             <button
                 type="button"
@@ -65,7 +74,7 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                           ? 'bg-signal-cyan/[0.05] text-white/90 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.16)]'
                           /* Não-selecionado: apagado mas legível — lista é seletor secundário. */
                           : 'text-white/60 hover:bg-white/[0.04] hover:text-white/75',
-                    !orbitBlocked && !hasScenePosition ? 'opacity-30' : '',
+                    !orbitBlocked && !hasScenePosition && !recentlyDiscovered ? 'opacity-30' : '',
                 ].join(' ')}
             >
                 <ObjectTypeMarker
@@ -84,13 +93,21 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
                         </Tooltip>
                     ) : null}
                 </span>
+                {/* R\u00F3tulos de estado: curtos e fixos, ent\u00E3o whitespace-nowrap (n\u00E3o truncate) para nunca
+                   cortar a palavra. Ocupam s\u00F3 as 2 primeiras colunas; a dist\u00E2ncia fica na col-3. */}
                 {orbitBlocked ? (
-                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 truncate text-[10px] text-white/25" aria-hidden>
+                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 whitespace-nowrap text-[10px] text-white/25" aria-hidden>
                         {en ? 'no orbit' : 'sem \u00F3rbita'}
                     </span>
+                ) : recentlyDiscovered ? (
+                    /* Rec\u00E9m-descoberto: r\u00F3tulo aceso (n\u00E3o o cinza de "sem posi\u00E7\u00E3o"), porque \u00E9 um objeto novo
+                       e interessante, n\u00E3o uma falha. O detalhe completo vai no card ao selecionar. */
+                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 whitespace-nowrap text-[10px] text-signal-cyan/70" aria-hidden>
+                        {en ? 'newly found' : 'rec\u00E9m-descoberto'}
+                    </span>
                 ) : !hasScenePosition ? (
-                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 truncate text-[10px] text-amber-200/50" aria-hidden>
-                        {en ? 'no pos.' : 'sem pos.'}
+                    <span className="col-start-1 col-span-2 row-start-2 min-w-0 whitespace-nowrap text-[10px] text-amber-200/50" aria-hidden>
+                        {en ? 'no position' : 'sem posição'}
                     </span>
                 ) : null}
                 <span className={`col-start-3 row-span-2 row-start-1 justify-self-end whitespace-nowrap text-right tabular-nums text-[11.5px] ${isSelected ? 'text-signal-cyan/55' : 'text-white/55'}`}>

@@ -14,12 +14,14 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { Tooltip } from '../Controls/Tooltip';
-import { ArrowRight, Check, ChevronDown, Circle, Clock, Minus, Orbit, Target, TriangleAlert, Undo2, Zap } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Circle, Clock, Info, Minus, Orbit, Target, TriangleAlert, Undo2, Zap } from 'lucide-react';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import { approxKm, compactKm } from '@/lib/format';
 import { formatDistanceAU, formatRelativeDayLabel, formatTimestamp } from '@/lib/radar/format';
 import { isBeyondRenderLimit } from '@/lib/radar/trajectorySampling';
-import { motionLabel, objectTypeEyebrow, riskAssessment, sizeComparison, trajectoryStatusBadge, type StatusBadgeIcon } from './focusCardPresentation';
+import { albedoExplanation, motionLabel, objectTypeEyebrow, orbitClassContext, orbitClassLabel, riskAssessment, rotationExplanation, sizeComparison, smartSummary, trajectoryStatusBadge, velocityComparison, type StatusBadgeIcon } from './focusCardPresentation';
+import { knownCometById, knownCometHeliocentricDistanceKm } from '../Bodies/Comet/knownComets';
+import { orbitFactsFromElements } from '@/lib/keplerOrbit';
 import { famousLoreFor } from './famousLore';
 import { BODIES, type BodyId } from './bodyData';
 import { PanelShell, usePanelSheetState } from './PanelShell';
@@ -185,7 +187,23 @@ function AsteroidCard({
     enterStyle,
 }: Omit<AsteroidProps, 'kind'> & TabState) {
     const a = object.approach;
-const auText = formatDistanceAU(object.currentDistanceKm, locale);
+    // Cometa famoso sem distância do Horizons (ex.: Halley no afélio, ~36 UA): em vez de "Indisponível",
+    // mostra a distância heliocêntrica da órbita Kepler local (estimada). Para corpos a dezenas de UA, a
+    // Terra (1 UA) é desprezível, então isso aproxima a distância da Terra. Sabemos onde ele está; só não
+    // pelo feed do Horizons.
+    const cometKeplerDistanceKm = object.currentDistanceKm == null
+        ? (() => { const c = knownCometById(a.id); return c ? knownCometHeliocentricDistanceKm(c) : null; })()
+        : null;
+    const effectiveDistanceKm = object.currentDistanceKm ?? cometKeplerDistanceKm;
+    const isKeplerDistance = object.currentDistanceKm == null && cometKeplerDistanceKm != null;
+    // Fatos orbitais (distância ao Sol, periélio/afélio, próxima passagem) pela órbita Kepler. Vale pra
+    // qualquer objeto COM elementos: do Horizons (asteroides famosos, NEOs) ou do catálogo de cometa
+    // (Halley & cia.). Enriquecem a aba "Aproximação" pra todos, não só quem tem evento de aproximação.
+    const effectiveElements = object.trajectory?.orbitalElements ?? knownCometById(a.id)?.elements ?? null;
+    const orbitFacts = effectiveElements ? orbitFactsFromElements(effectiveElements) : null;
+    // Ressalva (Resumo) só quando é cometa famoso SEM Horizons: aí os números vêm só da órbita conhecida.
+    const showKeplerOnlyNote = object.trajectory?.status !== 'available' && knownCometById(a.id) != null;
+    const auText = formatDistanceAU(effectiveDistanceKm, locale);
     const motion = motionLabel(object.trajectory?.motionState, en);
     const risk = riskAssessment(a, en);
     const trajectoryStatus = trajectoryStatusBadge(object.trajectory, en);
@@ -197,6 +215,27 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
         (approachDaysAway !== null && approachDaysAway >= 0 && approachDaysAway <= 3);
     const currentVelocity = object.trajectory?.currentVelocityKph ?? null;
     const velocity = currentVelocity ?? a.relativeVelocityKph ?? null;
+
+    // Tamanho efetivo do corpo (m), na mesma ordem de preferência do Perfil físico: diâmetro real,
+    // meio do intervalo estimado, ou estimativa por magnitude absoluta. Usado pelo mini-resumo.
+    const hSummaryMin = a.diameterMeters == null && a.estimatedDiameterMinMeters == null && a.absoluteMagnitude != null
+        ? Math.round((1329 / Math.sqrt(0.25)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000)
+        : null;
+    const hSummaryMax = a.diameterMeters == null && a.estimatedDiameterMinMeters == null && a.absoluteMagnitude != null
+        ? Math.round((1329 / Math.sqrt(0.05)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000)
+        : null;
+    const knownComet = knownCometById(a.id);
+    const summarySizeMeters = knownComet?.diameterMeters
+        ?? (a.diameterMeters != null ? a.diameterMeters
+            : a.estimatedDiameterMinMeters != null && a.estimatedDiameterMaxMeters != null
+                ? Math.round((a.estimatedDiameterMinMeters + a.estimatedDiameterMaxMeters) / 2)
+                : hSummaryMin != null && hSummaryMax != null
+                    ? Math.round((hSummaryMin + hSummaryMax) / 2)
+                    : null);
+    const summary = smartSummary(
+        { objectType: a.objectType, sizeMeters: summarySizeMeters, velocityKph: velocity },
+        en,
+    );
     const approachRelative = a.approachDate ? formatRelativeDayLabel(a.approachDate, Date.now(), locale) : null;
     const TrajectoryStatusIcon = trajectoryStatus ? STATUS_BADGE_ICONS[trajectoryStatus.icon] : null;
 
@@ -272,9 +311,11 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
                 className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 lg:px-4"
                 style={{ transition: 'opacity 0.12s ease', opacity: contentVisible ? 1 : 0 }}
             >
-                {/* min-h estabiliza o card ao trocar abas sem cortar a aba mais alta (Resumo) */}
-                {/* min-h só no desktop (estabiliza troca de abas); no mobile a altura vem do snap */}
-                <div className="lg:min-h-[13rem]">
+                {/* Desktop: altura FIXA do miolo, igual em todas as abas. A aba mais alta (Perfil físico,
+                    com muitos campos) rola DENTRO desta caixa (o pai já tem overflow-y-auto), em vez de
+                    esticar o card. Assim o card mantém a mesma altura ao trocar de aba. No mobile a altura
+                    vem do snap do sheet, então não fixamos. */}
+                <div className="lg:h-[15rem]">
                     {tab === 'summary' ? (
                         <div className="space-y-2.5 lg:space-y-3.5">
                             {isNearClosest ? (
@@ -301,6 +342,26 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
                                     </div>
                                 </div>
                             ) : null}
+                            {/* Mini-resumo: leitura humana do corpo (tamanho e velocidade comparáveis +
+                               tipo), sem números nem o que distância/risco e as outras abas já mostram.
+                               Abre o Resumo dando contexto e convidando a explorar o resto. */}
+                            {summary ? (
+                                <p className="text-[12px] leading-relaxed text-white/55 lg:text-[12.5px]">
+                                    {summary}
+                                </p>
+                            ) : null}
+                            {/* Ressalva: cometa famoso sem dado ao vivo do Horizons (provável que esteja muito
+                               longe, ex.: Halley no afélio). Explica que os números vêm da órbita conhecida. */}
+                            {showKeplerOnlyNote ? (
+                                <div className="flex items-start gap-1.5 rounded-lg border border-yellow-400/25 bg-yellow-400/5 px-2.5 py-2">
+                                    <TriangleAlert className="mt-0.5 size-3 shrink-0 text-yellow-400/75" aria-hidden="true" />
+                                    <p className="text-[11px] leading-relaxed text-white/55">
+                                        {en
+                                            ? 'No live JPL Horizons data for this comet right now, most likely because it is very far from the Sun (near aphelion). The distance and the figures in the Approach tab are computed from its known orbit (Kepler), so they are reliable but not live.'
+                                            : 'Sem dado ao vivo do JPL Horizons para este cometa agora, provavelmente porque ele está muito longe do Sol (perto do afélio). A distância e os números da aba Aproximação são calculados pela órbita conhecida dele (Kepler), então são confiáveis, mas não ao vivo.'}
+                                    </p>
+                                </div>
+                            ) : null}
                             {/* Distância da Terra: métrica principal do card, em bloco próprio.
                                Rótulo e valor em linhas separadas — lado a lado não cabem na largura do card. */}
                             <div>
@@ -312,26 +373,18 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
                                         {!object.hasRealCurrentDistance ? <TriangleAlert className="size-2.5 shrink-0" aria-hidden="true" /> : null}
                                         {object.hasRealCurrentDistance
                                             ? (en ? 'live · Horizons' : 'ao vivo · Horizons')
-                                            : (en ? 'approach dist.' : 'dist. da aprox.')}
+                                            : isKeplerDistance
+                                                ? (en ? 'estimated from orbit' : 'estimado pela órbita')
+                                                : (en ? 'approach distance' : 'distância da aproximação')}
                                     </span>
                                 </div>
                                 <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
                                     {/* Valor aproximado: o dado muda ao vivo e precisão de 1 km seria falsa */}
-                                    <span className="text-lg font-semibold leading-tight text-white">{approxKm(object.currentDistanceKm)}</span>
+                                    <span className="text-lg font-semibold leading-tight text-white">{approxKm(effectiveDistanceKm)}</span>
                                     <span className="text-[11px] text-white/50">· {auText}</span>
                                 </div>
                             </div>
                             <dl className="space-y-2 text-[13px] lg:space-y-3">
-                                {velocity != null ? (
-                                    <Row label={en ? 'Velocity' : 'Velocidade'}>
-                                        <span className="flex flex-col items-end gap-0.5">
-                                            <span className="whitespace-nowrap">{new Intl.NumberFormat(locale).format(Math.round(velocity))} km/h</span>
-                                            <span className="text-[10px] text-white/45">
-                                                {currentVelocity != null ? (en ? 'now' : 'agora') : (en ? 'at closest approach' : 'na máx. aprox.')}
-                                            </span>
-                                        </span>
-                                    </Row>
-                                ) : null}
                                 {trajectoryStatus ? (
                                     <Row label={en ? 'Status' : 'Status'}>
                                         <span className={`flex items-center gap-1 font-medium ${trajectoryStatus.className}`}>
@@ -363,11 +416,23 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
                                 // Limite renderizável é type-aware (cometas vão muito mais longe); a regra
                                 // mora em trajectorySampling para não duplicar o número aqui.
                                 if (!isBeyondRenderLimit(object)) return null;
+                                // Cometa distante tem explicação própria: passa quase todo o tempo longe do
+                                // Sol e só fica perto (e visível) na passagem. Asteroide usa o texto genérico.
+                                const isComet = object.approach.objectType === 'comet';
+                                const tooltipText = isComet
+                                    ? (en
+                                        ? 'Comets spend almost all of their orbit far from the Sun, out in the cold outer Solar System, and only come close around their passage. This one is in that distant stretch now, so its position is off the scale.'
+                                        : 'Os cometas passam quase toda a órbita longe do Sol, lá no Sistema Solar exterior gelado, e só chegam perto na passagem. Este está nesse trecho distante agora, então a posição fica fora da escala da cena.')
+                                    : (en
+                                        ? 'This object is currently too far from Earth to show its position in the scene.'
+                                        : 'Este objeto está longe demais da Terra agora para exibir a posição na cena.');
                                 return (
-                                    <Tooltip side="right" wrap content={en ? 'This object is currently too far from Earth to show its position in the scene.' : 'Este objeto está longe demais da Terra agora para exibir a posição na cena.'}>
+                                    <Tooltip side="right" wrap content={tooltipText}>
                                         <p className="flex items-start gap-1 text-[11px] leading-4 text-amber-400/70 cursor-help">
                                             <TriangleAlert className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
-                                            {en ? 'Position not shown, too far for reliable rendering' : 'Posição não exibida, distância além do limite de renderização'}
+                                            {en
+                                                ? (isComet ? 'Position not shown, the comet is far from the Sun right now' : 'Position not shown, too far for reliable rendering')
+                                                : (isComet ? 'Posição não exibida, o cometa está longe do Sol agora' : 'Posição não exibida, distância além do limite de renderização')}
                                         </p>
                                     </Tooltip>
                                 );
@@ -375,7 +440,72 @@ const auText = formatDistanceAU(object.currentDistanceKm, locale);
                         </div>
                     ) : null}
 
-                    {tab === 'physical' ? (() => {
+                    {/* Cometa conhecido: perfil físico próprio. Núcleo é irregular (não tem "diâmetro"
+                        esférico) e a magnitude é M1/M2, não o H de asteroide — então não reusamos o
+                        bloco de asteroide, que mostraria "diâmetro" enganoso e um campo de H vazio. */}
+                    {tab === 'physical' && knownCometById(a.id) ? (() => {
+                        const comet = knownCometById(a.id)!;
+                        const e = comet.elements.ec;
+                        const periodPt = comet.orbitalPeriodYears >= 1000
+                            ? `${new Intl.NumberFormat('pt-BR').format(Math.round(comet.orbitalPeriodYears))} anos`
+                            : `${comet.orbitalPeriodYears.toLocaleString('pt-BR')} anos`;
+                        const periodEn = comet.orbitalPeriodYears >= 1000
+                            ? `${new Intl.NumberFormat('en').format(Math.round(comet.orbitalPeriodYears))} years`
+                            : `${comet.orbitalPeriodYears} years`;
+                        return (
+                        <dl className="space-y-3 text-[13px]">
+                            <Row label={en ? 'Nucleus' : 'Núcleo'}>
+                                <span className="flex flex-col gap-0.5">
+                                    <span>{en ? comet.nucleusShape.en : comet.nucleusShape.pt}</span>
+                                    {comet.modelKey !== 'c67p' ? (
+                                        <span className="text-[11px] text-white/50">
+                                            {en ? 'size estimated, nucleus never imaged up close' : 'tamanho estimado, núcleo nunca fotografado de perto'}
+                                        </span>
+                                    ) : null}
+                                </span>
+                            </Row>
+                            {/* Medida real do núcleo: espelha a linha "Diâmetro" do asteroide. Núcleo irregular
+                                mostra os eixos (não um diâmetro esférico), por isso vem de nucleusSize, não de um
+                                único número. Mantém coerência entre os cards de rocha e de cometa. */}
+                            <Row label={en ? 'Nucleus size' : 'Tamanho do núcleo'}>
+                                {en ? comet.nucleusSize.en : comet.nucleusSize.pt}
+                            </Row>
+                            <Row label={en ? 'Size compared to' : 'Tamanho comparável a'}>
+                                {sizeComparison(comet.diameterMeters, en)}
+                            </Row>
+                            {/* Velocidade: o número em km/h e, logo abaixo, a comparação humana em linha PRÓPRIA
+                                ("Velocidade comparável a"), espelhando o par Diâmetro / Tamanho comparável a. Só
+                                aparece quando o feed traz velocidade (cometa via Horizons); no fallback Kepler some. */}
+                            {velocity != null ? (
+                                <>
+                                    <Row label={en ? 'Speed' : 'Velocidade'}>
+                                        {new Intl.NumberFormat(locale).format(Math.round(velocity))} km/h
+                                    </Row>
+                                    {velocityComparison(velocity, en) ? (
+                                        <Row label={en ? 'Speed compared to' : 'Velocidade comparável a'}>
+                                            {velocityComparison(velocity, en)}
+                                        </Row>
+                                    ) : null}
+                                </>
+                            ) : null}
+                            <Row label={en ? 'Orbital period' : 'Período orbital'}>
+                                {en ? periodEn : periodPt}
+                            </Row>
+                            <Row label={en ? 'Eccentricity' : 'Excentricidade'}>
+                                <span className="flex flex-col gap-0.5">
+                                    <span>{e.toFixed(e >= 0.99 ? 4 : 3).replace('.', en ? '.' : ',')}</span>
+                                    <span className="text-[11px] text-white/50">
+                                        {e >= 0.99 ? (en ? 'near-parabolic, a one-off visitor' : 'quase parabólica, visitante de passagem única')
+                                            : e >= 0.8 ? (en ? 'highly elongated orbit' : 'órbita bem alongada')
+                                            : (en ? 'elongated orbit' : 'órbita alongada')}
+                                    </span>
+                                </span>
+                            </Row>
+                        </dl>
+                        );
+                    })() : null}
+
+                    {tab === 'physical' && !knownCometById(a.id) ? (() => {
 const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters == null && a.absoluteMagnitude != null
                             ? Math.round((1329 / Math.sqrt(0.25)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000)
                             : null;
@@ -396,13 +526,14 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                                         {a.diameterMeters != null
                                             ? `${Math.round(a.diameterMeters)} m`
                                             : a.estimatedDiameterMinMeters != null
-                                              ? `${Math.round(a.estimatedDiameterMinMeters)}–${Math.round(a.estimatedDiameterMaxMeters ?? 0)} m`
+                                              ? (en
+                                                  ? `Between ${Math.round(a.estimatedDiameterMinMeters)} m and ${Math.round(a.estimatedDiameterMaxMeters ?? 0)} m`
+                                                  : `Entre ${Math.round(a.estimatedDiameterMinMeters)} m e ${Math.round(a.estimatedDiameterMaxMeters ?? 0)} m`)
                                               : hFallbackMin != null
-                                                ? `${hFallbackMin}–${hFallbackMax} m`
+                                                ? (en
+                                                    ? `Between ${hFallbackMin} m and ${hFallbackMax} m`
+                                                    : `Entre ${hFallbackMin} m e ${hFallbackMax} m`)
                                                 : '—'}
-                                        {a.diameterMeters == null && (a.estimatedDiameterMinMeters != null || hFallbackMin != null)
-                                            ? <span className="text-white/50"> · {en ? 'est.' : 'est.'}</span>
-                                            : null}
                                     </span>
                                     {a.diameterMeters == null && a.estimatedDiameterMinMeters != null ? (
                                         <span className="text-[11px] text-white/50">
@@ -411,7 +542,7 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                                     ) : null}
                                     {hFallbackMin != null ? (
                                         <span className="text-[11px] text-white/50">
-                                            {en ? 'estimated from H mag, no size on record' : 'estimado pela magnitude H, sem tamanho catalogado'}
+                                            {en ? 'Estimated from absolute magnitude' : 'Estimado a partir da magnitude absoluta'}
                                         </span>
                                     ) : null}
                                 </span>
@@ -424,23 +555,77 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                                     en,
                                 )}
                             </Row>
+                            {/* Velocidade: número em km/h e, logo abaixo, a comparação em linha PRÓPRIA
+                                ("Velocidade comparável a"), espelhando o par Diâmetro / Tamanho comparável a.
+                                Quando não é a velocidade ao vivo, marca "na máxima aproximação" junto do número. */}
+                            {velocity != null ? (
+                                <>
+                                    <Row label={en ? 'Speed' : 'Velocidade'}>
+                                        <span className="flex flex-col items-end gap-0.5">
+                                            <span className="whitespace-nowrap">{new Intl.NumberFormat(locale).format(Math.round(velocity))} km/h</span>
+                                            {currentVelocity == null ? (
+                                                <span className="text-[10px] font-normal text-white/45">{en ? 'at closest approach' : 'na máxima aproximação'}</span>
+                                            ) : null}
+                                        </span>
+                                    </Row>
+                                    {velocityComparison(velocity, en) ? (
+                                        <Row label={en ? 'Speed compared to' : 'Velocidade comparável a'}>
+                                            {velocityComparison(velocity, en)}
+                                        </Row>
+                                    ) : null}
+                                </>
+                            ) : null}
                             <Row label={en ? 'Absolute magnitude (H)' : 'Magnitude absoluta (H)'}>
-                                {a.absoluteMagnitude != null ? a.absoluteMagnitude.toFixed(1) : '—'}
+                                {a.absoluteMagnitude != null ? (
+                                    /* Número + ícone de info: a leitura contraintuitiva (H maior = corpo menor)
+                                       vive no tooltip, não numa linha extra que inflava o card. */
+                                    <span className="inline-flex items-center gap-1">
+                                        {a.absoluteMagnitude.toFixed(1)}
+                                        <Tooltip side="top" wrap content={en ? 'This number is the object’s brightness, like a light bulb. The higher the number, the fainter the bulb. A faint bulb means a tiny object. A bright one means a giant.' : 'Esse número é o brilho do objeto, como uma lâmpada. Quanto maior o número, mais fraca a lâmpada. Lâmpada fraca, objeto pequeno. Lâmpada forte, objeto gigante.'}>
+                                            <Info className="size-3.5 cursor-help text-signal-cyan/70 transition hover:text-signal-cyan" aria-hidden="true" />
+                                        </Tooltip>
+                                    </span>
+                                ) : '—'}
                             </Row>
                             {/* Campos do SBDB, presentes só quando o detalhe foi carregado (asteroides famosos). */}
                             {a.orbitClass ? (
                                 <Row label={en ? 'Orbit class' : 'Classe orbital'}>
-                                    {a.orbitClassDescription ?? a.orbitClass}
+                                    {/* Nome da família LOCALIZADO (o backend só traz EN); o que a órbita faz
+                                       vai pro tooltip de info, mantendo a linha única. */}
+                                    <span className="inline-flex items-center gap-1">
+                                        {orbitClassLabel(a.orbitClass, en) ?? a.orbitClass}
+                                        {orbitClassContext(a.orbitClass, en) ? (
+                                            <Tooltip side="top" wrap content={orbitClassContext(a.orbitClass, en) as string}>
+                                                <Info className="size-3.5 cursor-help text-signal-cyan/70 transition hover:text-signal-cyan" aria-hidden="true" />
+                                            </Tooltip>
+                                        ) : null}
+                                    </span>
                                 </Row>
                             ) : null}
+                            {/* Albedo e rotação: a explicação vive num tooltip de info, não numa subline cinza.
+                                Empilhar três sublines (classe, albedo, rotação) era o que pesava o card. */}
                             {a.albedo != null ? (
                                 <Row label={en ? 'Albedo' : 'Albedo'}>
-                                    {a.albedo.toFixed(2)}
+                                    <span className="inline-flex items-center gap-1">
+                                        {a.albedo.toFixed(2)}
+                                        {albedoExplanation(a.albedo, en) ? (
+                                            <Tooltip side="top" wrap content={albedoExplanation(a.albedo, en) as string}>
+                                                <Info className="size-3.5 cursor-help text-signal-cyan/70 transition hover:text-signal-cyan" aria-hidden="true" />
+                                            </Tooltip>
+                                        ) : null}
+                                    </span>
                                 </Row>
                             ) : null}
                             {a.rotationPeriodHours != null ? (
                                 <Row label={en ? 'Rotation period' : 'Período de rotação'}>
-                                    {`${a.rotationPeriodHours.toFixed(2)} h`}
+                                    <span className="inline-flex items-center gap-1">
+                                        {`${a.rotationPeriodHours.toFixed(2)} h`}
+                                        {rotationExplanation(a.rotationPeriodHours, en) ? (
+                                            <Tooltip side="top" wrap content={rotationExplanation(a.rotationPeriodHours, en) as string}>
+                                                <Info className="size-3.5 cursor-help text-signal-cyan/70 transition hover:text-signal-cyan" aria-hidden="true" />
+                                            </Tooltip>
+                                        ) : null}
+                                    </span>
                                 </Row>
                             ) : null}
                         </dl>
@@ -449,8 +634,10 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
 
                     {tab === 'approach' ? (
                         <dl className="space-y-3 text-[13px]">
+                            {/* Evento de aproximação (só quando o feed traz: NEOs/genéricos). Famosos distantes
+                               não têm flyby da Terra, então esses campos não aparecem para eles. */}
                             {a.approachDate ? (
-                                <Row label={en ? 'Closest approach' : 'Máxima aproximação'}>
+                                <Row label={en ? 'Closest approach to Earth' : 'Máxima aproximação da Terra'}>
                                     <span className="flex flex-col items-end gap-0.5">
                                         <span>{formatTimestamp(a.approachDate, locale)}</span>
                                         {approachRelative ? (
@@ -459,10 +646,91 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                                     </span>
                                 </Row>
                             ) : null}
-                            <Row label={en ? 'Min. distance' : 'Distância mínima'}>
-                                {a.nominalDistanceKm != null ? compactKm(a.nominalDistanceKm) : '—'}
-                                {a.lunarDistance != null ? <span className="text-white/50"> · {a.lunarDistance.toFixed(2)} DL</span> : null}
-                            </Row>
+                            {a.nominalDistanceKm != null ? (
+                                <Row label={
+                                    <LabelWithInfo
+                                        text={en ? 'Closest distance to Earth' : 'Menor distância da Terra'}
+                                        tip={en
+                                            ? 'The gap between the object and Earth at its closest point. The line above tells you when that happens; this one tells you how close it comes.'
+                                            : 'A distância entre o objeto e a Terra no ponto mais próximo. A linha de cima mostra quando isso acontece; esta mostra o quão perto ele chega.'}
+                                    />
+                                }>
+                                    {compactKm(a.nominalDistanceKm)}
+                                    {a.lunarDistance != null ? <span className="text-white/50"> · {a.lunarDistance.toFixed(2)} {en ? 'LD' : 'DL'}</span> : null}
+                                </Row>
+                            ) : null}
+
+                            {/* Período orbital (quanto leva pra dar uma volta no Sol), pela 3ª lei de Kepler.
+                               Vale pra qualquer objeto com elementos: famosos e genéricos do feed. */}
+                            {orbitFacts ? (
+                                <Row label={
+                                    <LabelWithInfo
+                                        text={en ? 'Orbital period' : 'Período orbital'}
+                                        tip={en
+                                            ? 'How long the object takes to go once around the Sun.'
+                                            : 'Quanto tempo o objeto leva para dar uma volta completa ao redor do Sol.'}
+                                    />
+                                }>
+                                    {formatOrbitalPeriod(orbitFacts.periodYears, en)}
+                                </Row>
+                            ) : null}
+
+                            {/* Fatos da órbita (pela órbita Kepler), só para COMETAS: a órbita excêntrica torna
+                               distância do Sol / periélio / afélio marcantes. Num asteroide do cinturão (órbita
+                               quase circular) seriam pouco informativos, então não aparecem. */}
+                            {orbitFacts && a.objectType === 'comet' ? (
+                                <>
+                                    <Row label={en ? 'Distance from Sun (now)' : 'Distância do Sol (agora)'}>
+                                        <OrbitDistanceValue km={orbitFacts.sunDistanceKm} au={orbitFacts.sunDistanceAu} en={en} />
+                                    </Row>
+                                    <Row label={
+                                        <LabelWithInfo
+                                            text={en ? 'Perihelion' : 'Periélio'}
+                                            tip={en
+                                                ? 'Perihelion is the point in the orbit closest to the Sun. Near it the object moves fastest, and a comet warms up and grows its tail.'
+                                                : 'Periélio é o ponto da órbita mais próximo do Sol. Perto dele o corpo se move mais rápido e o cometa esquenta e ganha cauda.'}
+                                        />
+                                    }>
+                                        <OrbitDistanceValue km={orbitFacts.perihelionKm} au={orbitFacts.perihelionAu} en={en} />
+                                    </Row>
+                                    <Row label={
+                                        <LabelWithInfo
+                                            text={en ? 'Aphelion' : 'Afélio'}
+                                            tip={en
+                                                ? 'Aphelion is the point in the orbit farthest from the Sun, where the object moves slowest. Long-period comets spend most of their time out here.'
+                                                : 'Afélio é o ponto da órbita mais distante do Sol, onde o corpo se move mais devagar. Cometas de período longo passam quase todo o tempo lá.'}
+                                        />
+                                    }>
+                                        <OrbitDistanceValue km={orbitFacts.aphelionKm} au={orbitFacts.aphelionAu} en={en} />
+                                    </Row>
+                                    {orbitFacts.nextPerihelion ? (
+                                        <Row label={en ? 'Next pass near the Sun' : 'Próxima passagem perto do Sol'}>
+                                            <span className="inline-flex items-baseline gap-1">
+                                                {orbitFacts.nextPerihelion.getUTCFullYear()}
+                                                <span className="text-[11px] font-normal text-white/50">· {en ? 'estimated' : 'estimado'}</span>
+                                            </span>
+                                        </Row>
+                                    ) : null}
+                                </>
+                            ) : null}
+
+                            {/* Ressalva de fonte: cometa famoso sem Horizons usa só a órbita conhecida. */}
+                            {showKeplerOnlyNote ? (
+                                <Row label={en ? 'Data source' : 'Fonte dos dados'}>
+                                    <span className="flex flex-col items-end gap-0.5">
+                                        <span className="flex items-center gap-1 text-yellow-400/75">
+                                            <TriangleAlert className="size-3 shrink-0" aria-hidden="true" />
+                                            {en ? 'computed from orbit' : 'calculado pela órbita'}
+                                        </span>
+                                        <span className="text-[11px] text-white/45 text-right">
+                                            {en
+                                                ? 'no live JPL Horizons data; values from the known orbit (Kepler)'
+                                                : 'sem dado ao vivo do JPL Horizons; valores da órbita conhecida (Kepler)'}
+                                        </span>
+                                    </span>
+                                </Row>
+                            ) : null}
+
                             {object.trajectory?.orbitalElements?.epochJd ? (() => {
                                 const epochDate = new Date((object.trajectory.orbitalElements.epochJd - 2440587.5) * 86_400_000);
                                 const ageMs = Date.now() - epochDate.getTime();
@@ -486,16 +754,18 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                                     </Row>
                                 );
                             })() : null}
-                            <Row label={en ? 'Data source' : 'Fonte dos dados'}>
-                                <span className="flex flex-col gap-0.5">
-                                    <span className="text-white/50">{a.sourceLabel}</span>
-                                    <span className="text-[11px] text-white/50">
-                                        {a.source === 'cad'
-                                            ? (en ? 'orbitally integrated, high precision' : 'órbita integrada, alta precisão')
-                                            : (en ? 'broader coverage, lower precision' : 'cobertura ampla, menor precisão')}
+                            {!showKeplerOnlyNote ? (
+                                <Row label={en ? 'Data source' : 'Fonte dos dados'}>
+                                    <span className="flex flex-col gap-0.5">
+                                        <span className="text-white/50">{a.sourceLabel}</span>
+                                        <span className="text-[11px] text-white/50">
+                                            {a.source === 'cad'
+                                                ? (en ? 'orbitally integrated, high precision' : 'órbita integrada, alta precisão')
+                                                : (en ? 'broader coverage, lower precision' : 'cobertura ampla, menor precisão')}
+                                        </span>
                                     </span>
-                                </span>
-                            </Row>
+                                </Row>
+                            ) : null}
                         </dl>
                     ) : null}
 
@@ -519,6 +789,7 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                                 canShowOrbitPosition={canShowOrbitPosition}
                                 onShowOrbit={onShowOrbit}
                                 onShowCloseUp={onShowCloseUp}
+                                isComet={a.objectType === 'comet'}
                                 en={en}
                             />
                         </div>
@@ -660,11 +931,13 @@ type TabState = {
     enterStyle: React.CSSProperties;
 };
 
-function OrbitToggleButton({ orbitMode, canShowOrbitPosition, onShowOrbit, onShowCloseUp, en }: {
+function OrbitToggleButton({ orbitMode, canShowOrbitPosition, onShowOrbit, onShowCloseUp, isComet, en }: {
     orbitMode: boolean;
     canShowOrbitPosition: boolean;
     onShowOrbit: () => void;
     onShowCloseUp: () => void;
+    /** Cometa usa o substantivo certo no botão de voltar ("cometa", não "asteroide"). */
+    isComet: boolean;
     en: boolean;
 }) {
     const disabled = !orbitMode && !canShowOrbitPosition;
@@ -686,7 +959,9 @@ function OrbitToggleButton({ orbitMode, canShowOrbitPosition, onShowOrbit, onSho
                 {orbitMode ? (
                     <>
                         <Undo2 className="size-3.5 shrink-0" aria-hidden="true" />
-                        {en ? 'Back to the asteroid' : 'Voltar ao asteroide'}
+                        {isComet
+                            ? (en ? 'Back to the comet' : 'Voltar ao cometa')
+                            : (en ? 'Back to the asteroid' : 'Voltar ao asteroide')}
                     </>
                 ) : (
                     <>
@@ -788,11 +1063,52 @@ function FocusTabButton({ id, active, onClick, buttonRef, disabled = false, chil
     );
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+function Row({ label, children }: { label: ReactNode; children: ReactNode }) {
     return (
         <div className="flex items-baseline justify-between gap-2">
             <dt className="shrink-0 text-[10.5px] font-normal uppercase tracking-wide text-white/50">{label}</dt>
             <dd className="text-right text-[12px] font-semibold text-white">{children}</dd>
         </div>
+    );
+}
+
+/** Valor de distância orbital: km como principal (unidade do produto) + UA como secundário, entre parênteses. */
+function OrbitDistanceValue({ km, au, en }: { km: number; au: number; en: boolean }) {
+    return (
+        <span className="inline-flex items-baseline gap-1">
+            <span>{approxKm(km)}</span>
+            <span className="text-[11px] font-normal text-white/50">
+                · {au.toLocaleString(en ? 'en' : 'pt-BR', { maximumFractionDigits: au < 10 ? 2 : 1 })} {en ? 'AU' : 'UA'}
+            </span>
+        </span>
+    );
+}
+
+/**
+ * Período orbital legível: "X anos" (1 casa) no caso comum; "N meses" abaixo de 1 ano; e arredonda em
+ * "mil anos" para órbitas muito longas (cometas de período longo), onde a casa decimal não faz sentido.
+ */
+function formatOrbitalPeriod(years: number, en: boolean): string {
+    if (years < 1) {
+        const months = Math.round(years * 12);
+        return en ? `${months} month${months === 1 ? '' : 's'}` : `${months} ${months === 1 ? 'mês' : 'meses'}`;
+    }
+    if (years >= 1000) {
+        const formatted = new Intl.NumberFormat(en ? 'en' : 'pt-BR').format(Math.round(years));
+        return en ? `${formatted} years` : `${formatted} anos`;
+    }
+    const formatted = years.toLocaleString(en ? 'en' : 'pt-BR', { maximumFractionDigits: 1 });
+    return en ? `${formatted} years` : `${formatted} anos`;
+}
+
+/** Rótulo com ícone de info: o tooltip explica o termo (ex.: periélio/afélio) sem inflar o card. */
+function LabelWithInfo({ text, tip }: { text: string; tip: string }) {
+    return (
+        <span className="inline-flex items-center gap-1">
+            {text}
+            <Tooltip side="top" wrap content={tip}>
+                <Info className="size-3 cursor-help text-signal-cyan/70 transition hover:text-signal-cyan" aria-hidden="true" />
+            </Tooltip>
+        </span>
     );
 }

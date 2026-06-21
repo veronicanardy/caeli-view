@@ -10,6 +10,8 @@ import type { ClosestNowObject } from '@/types';
 import { EARTH_RADIUS_DL, MOON_RADIUS_DL } from '@/lib/radar/bodyScale';
 import { currentPositionInHelioScene } from '@/lib/radar/trajectorySampling';
 import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
+import { LINEAR_AU_SCALE } from '@/lib/sceneEphemeris';
+import { knownCometById, knownCometScenePosition } from '../Bodies/Comet/knownComets';
 import type { LabelOccluder } from '../Overlays/SceneLabels';
 import type { FocusFraming } from './cameraFraming';
 import type { SceneVector } from './scenePositions';
@@ -45,16 +47,29 @@ export function shouldShowLabelForObject({
 
 /**
  * Posição de cena ABSOLUTA do objeto focado, na régua heliocêntrica linear (Sol na origem) — a mesma
- * em que os NEOs são desenhados (currentPositionInHelioScene). Alimenta o occluder de labels, que
- * precisa do centro do corpo no espaço-mundo. Retorna null quando falta o objeto ou a posição
- * heliocêntrica da Terra (efeméride ainda não resolvida).
+ * em que os NEOs são desenhados (currentPositionInHelioScene). Alimenta o occluder de labels e o alvo
+ * da câmera, que precisam do centro do corpo no espaço-mundo.
+ *
+ * Fallback Kepler: quando o objeto é um cometa famoso SEM posição do Horizons (ex.: Halley, hoje a ~36 UA
+ * no afélio, que o feed não resolve), usa a posição calculada pela órbita local (knownCometScenePosition),
+ * a MESMA que o KnownCometsLayer desenha. Sem isso o cometa aparecia na cena mas a câmera não tinha alvo
+ * (ficava "indisponível"/inalcançável) por depender só do ponto do Horizons.
  */
 export function focusedObjectScenePosition(
     focusedObject: ClosestNowObject | null,
     earthHelioAU: EarthHelioAU | null,
 ): SceneVector | null {
-    if (!focusedObject || !earthHelioAU) return null;
-    return currentPositionInHelioScene(focusedObject, earthHelioAU);
+    if (!focusedObject) return null;
+    if (earthHelioAU) {
+        const helioPoint = currentPositionInHelioScene(focusedObject, earthHelioAU);
+        if (helioPoint) return helioPoint;
+    }
+    // Sem ponto do Horizons: se for cometa famoso, cai na posição Kepler local (régua dos planetas).
+    const comet = knownCometById(focusedObject.approach.id);
+    if (comet) {
+        return knownCometScenePosition(comet, new Date(), LINEAR_AU_SCALE);
+    }
+    return null;
 }
 
 export function computeLabelOccluder({

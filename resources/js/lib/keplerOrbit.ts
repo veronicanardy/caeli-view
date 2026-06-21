@@ -9,6 +9,7 @@
  */
 import type { OrbitalElements } from '@/types';
 import { perifocalToEclipticAU } from '@/lib/sceneEphemeris';
+import { KM_PER_AU } from '@/lib/physicalConstants';
 
 /**
  * Constante gravitacional gaussiana: k = √(GM_sol) em UA^1.5/dia. Expressar GM_sol assim evita
@@ -36,6 +37,72 @@ export function solveKeplerEquation(meanAnomaly: number, eccentricity: number, i
 }
 
 export type HelioPositionAU = { x: number; y: number; z: number };
+
+export type OrbitFacts = {
+    /** Distância ao Sol AGORA, em UA e km. */
+    sunDistanceAu: number;
+    sunDistanceKm: number;
+    /** Periélio (ponto mais próximo do Sol), em UA e km. */
+    perihelionAu: number;
+    perihelionKm: number;
+    /** Afélio (ponto mais distante do Sol), em UA e km. */
+    aphelionAu: number;
+    aphelionKm: number;
+    /** Semi-eixo maior (UA). */
+    semiMajorAu: number;
+    /** Período orbital em anos (3ª lei de Kepler: P = a^1.5). */
+    periodYears: number;
+    /** Data ESTIMADA do próximo periélio (tpJd + k·período); null se faltar época. */
+    nextPerihelion: Date | null;
+};
+
+/**
+ * Fatos orbitais de QUALQUER objeto a partir dos elementos osculadores (não depende do Horizons ao vivo).
+ * Serve à aba "Aproximação" de famosos e do feed: distância ao Sol agora, periélio/afélio, período e a
+ * próxima passagem perto do Sol. Tudo em UA E km (km é a unidade principal do produto).
+ *
+ * Periélio = qrAu; semi-eixo a = qrAu/(1−e); afélio = a·(1+e). Período por Kepler: P[anos] = a[UA]^1.5
+ * (vale para órbitas heliocêntricas). Próximo periélio: avança de tpJd em passos de um período até passar
+ * de `date`. A estimativa do próximo periélio acumula erro em períodos longos (elementos fixos), então
+ * convém exibir só o ano, como estimativa.
+ */
+export function orbitFactsFromElements(elements: OrbitalElements, date: Date = new Date()): OrbitFacts | null {
+    const { ec, qrAu, tpJd } = elements;
+    if (!Number.isFinite(ec) || !(ec >= 0 && ec < 1)) return null;
+    if (!Number.isFinite(qrAu) || !(qrAu > 0)) return null;
+
+    const helio = heliocentricPositionAU(elements, date);
+    if (!helio) return null;
+
+    const semiMajorAu = qrAu / (1 - ec);
+    const perihelionAu = qrAu;
+    const aphelionAu = semiMajorAu * (1 + ec);
+    const sunDistanceAu = Math.hypot(helio.x, helio.y, helio.z);
+    const periodYears = Math.pow(semiMajorAu, 1.5);
+
+    // Próximo periélio só para períodos CURTOS (≤ 20 anos). Em órbitas longas, propagar muitos períodos
+    // a partir de tpJd com período derivado de a^1.5 acumula anos de erro (ex.: Halley daria ~2064 vs 2061
+    // real), então é mais honesto OMITIR do que mostrar uma data errada.
+    let nextPerihelion: Date | null = null;
+    if (Number.isFinite(tpJd) && tpJd !== 0 && periodYears <= 20) {
+        const periodDays = periodYears * 365.25;
+        const nowJd = julianDayUtc(date);
+        const k = Math.ceil((nowJd - tpJd) / periodDays);
+        nextPerihelion = new Date(((tpJd + k * periodDays) - 2440587.5) * 86_400_000);
+    }
+
+    return {
+        sunDistanceAu,
+        sunDistanceKm: sunDistanceAu * KM_PER_AU,
+        perihelionAu,
+        perihelionKm: perihelionAu * KM_PER_AU,
+        aphelionAu,
+        aphelionKm: aphelionAu * KM_PER_AU,
+        semiMajorAu,
+        periodYears,
+        nextPerihelion,
+    };
+}
 
 /**
  * Posição heliocêntrica eclíptico-J2000 (UA) de um objeto em `date`, a partir dos elementos osculadores.

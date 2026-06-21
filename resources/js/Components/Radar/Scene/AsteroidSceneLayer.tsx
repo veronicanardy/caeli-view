@@ -74,7 +74,14 @@ export function AsteroidSceneLayer({
     const selectedObject = selectedId
         ? closestNowObjects.find((o) => o.approach.id === selectedId) ?? null
         : null;
-    const selectedTrajectoryAvailable = selectedObject?.trajectory?.status === 'available';
+
+    // Trajetória curta só quando vem do Horizons. A versão sintética por Kepler (cometa famoso sem feed,
+    // ex.: Halley) foi removida: no afélio o deslocamento de poucos dias é minúsculo, e a trilha/ticks
+    // ficavam fora de escala/invertidos na cena. Para o Halley, a história fica na órbita completa
+    // (botão "Ver a órbita"), não numa trilha curta.
+    const selectedTrajectory: AsteroidTrajectory | null = selectedObject?.trajectory?.status === 'available'
+        ? selectedObject.trajectory as AsteroidTrajectory
+        : null;
     const selectedIndex = selectedObject
         ? closestNowObjects.findIndex((o) => o.approach.id === selectedObject.approach.id)
         : -1;
@@ -120,9 +127,9 @@ export function AsteroidSceneLayer({
                 fisicamente pequena, aparecendo ao dar zoom na Terra. Em coordenadas absolutas — o
                 projetor já põe os pontos no espaço do Sol, então NÃO há offset de Terra aqui.
                 onFocusPoint enquadra a câmera no tick clicado. */}
-            {showLabels && selectedObject && selectedTrajectoryAvailable ? (
+            {showLabels && selectedObject && selectedTrajectory ? (
                 <NowTrajectory
-                    trajectory={selectedObject.trajectory as AsteroidTrajectory}
+                    trajectory={selectedTrajectory}
                     palette={OBJECT_PALETTE[Math.max(0, selectedIndex) % OBJECT_PALETTE.length]}
                     emphasized
                     dimmed={false}

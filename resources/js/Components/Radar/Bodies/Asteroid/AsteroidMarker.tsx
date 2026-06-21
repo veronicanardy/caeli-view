@@ -14,6 +14,8 @@ import { ResolvedScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import RealAsteroidModel from './RealAsteroidModel';
 import { asteroidRenderableModelFor } from './asteroidModelRegistry';
+import { cometModelForObject, COMET_67P_COLOR } from '../Comet/cometModelRegistry';
+import { CometTail } from '../Comet/CometTail';
 import { ZoomHint } from './ZoomHint';
 
 const DIMMED_OPACITY = 0.4;
@@ -83,15 +85,36 @@ export function AsteroidMarker({
     panelBiasY = 0,
 }: AsteroidMarkerProps) {
     const [hovered, setHovered] = useState(false);
-    const renderModel = useMemo(() => asteroidRenderableModelFor(object), [object]);
+    // Cometa do feed usa seu núcleo (67P real; demais, o genérico texturizado); os outros, o de asteroide.
+    const cometAsset = useMemo(() => cometModelForObject(object), [object]);
+    const renderModel = useMemo(() => {
+        if (cometAsset) {
+            return { kind: 'real' as const, asset: { key: 'generic' as const, url: cometAsset.url, rotation: cometAsset.rotation, aliases: [], numbers: [] } };
+        }
+        return asteroidRenderableModelFor(object);
+    }, [object, cometAsset]);
 
     const rockScale = symbolicRockRadiusForApproach(object.approach);
     const opacity = dimmed ? DIMMED_OPACITY : FULL_OPACITY;
 
     return (
         <group position={position}>
+            {/* Cometa do feed também ganha coma + cauda anti-solar (mesmo do fallback Kepler). */}
+            {cometAsset ? <CometTail scenePosition={position} nucleusRadius={rockScale} opacity={opacity} /> : null}
+
             <group scale={rockScale} renderOrder={1}>
-                <RealAsteroidModel asset={renderModel.asset} opacity={opacity} seed={object.approach.id} selected={isSelected} outlineColor={paletteColor} showOutline={showLabels} />
+                {/* Cometa do feed reusa o MESMO GLB genérico texturizado do asteroide (cometModelRegistry),
+                    então cor/textura batem com a rocha sem ajuste. O 67P tem GLB próprio SEM textura (cinza
+                    claro embutido), então recebe a cor escura dedicada. A distinção do cometa é a cauda. */}
+                <RealAsteroidModel
+                    asset={renderModel.asset}
+                    opacity={opacity}
+                    seed={object.approach.id}
+                    selected={isSelected}
+                    outlineColor={paletteColor}
+                    showOutline={showLabels}
+                    {...(cometAsset?.key === 'c67p' ? { fallbackColor: COMET_67P_COLOR } : {})}
+                />
             </group>
 
             {!isSelected ? (

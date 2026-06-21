@@ -65,8 +65,8 @@ export function currentPositionInHelioScene(
  *
  * Por que existe: a camada de fallback Kepler (KnownAsteroidsLayer/KnownCometsLayer) só deve PULAR
  * um famoso quando o AsteroidSceneLayer realmente vai desenhá-lo. Marcar "tem posição real" só por
- * trajectory.status === 'available' não basta: cometas distantes (Halley, NEOWISE no afélio) têm
- * trajetória disponível mas o ponto fica ALÉM do limite de 750M km, então o AsteroidSceneLayer o
+ * trajectory.status === 'available' não basta: cometas distantes (Halley perto do afélio) têm
+ * trajetória disponível mas o ponto fica ALÉM do limite, então o AsteroidSceneLayer o
  * descarta. Sem este teste o cometa caía no vão entre as duas camadas: pulado pelo fallback e
  * descartado pelo feed, sumindo da cena (e ficando sem hitbox clicável).
  */

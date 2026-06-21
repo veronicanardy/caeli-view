@@ -12,6 +12,7 @@ import { OrbitWelcomeToast, RadarWelcomeToast } from '../Controls/WelcomeToast';
 import type { PlanetId } from '../Scene/planetConfig';
 import { UnifiedFocusCard } from './UnifiedFocusCard';
 import { SceneLegend } from './SceneLegend';
+import { knownCometById } from '../Bodies/Comet/knownComets';
 
 type Props = {
     en: boolean;
@@ -111,7 +112,7 @@ export function RadarFloatingOverlays({
                     onOpenFocus={onOpenFocus}
                     onClose={onCloseFocusedObject}
                     orbitMode={orbitMode}
-                    hasOrbit={Boolean(visibleFocusedObject.trajectory?.orbitalElements)}
+                    hasOrbit={Boolean(visibleFocusedObject.trajectory?.orbitalElements ?? knownCometById(visibleFocusedObject.approach.id)?.elements)}
                     canShowOrbitPosition={canShowOrbitPosition}
                     onShowOrbit={onShowOrbit}
                     onShowCloseUp={onShowCloseUp}

@@ -1,18 +1,19 @@
 /**
- * Camada de FALLBACK dos cometas famosos (Halley, Encke, 67P, NEOWISE) na cena do radar.
+ * Camada de FALLBACK dos cometas famosos (Halley, Encke, 67P) na cena do radar.
  *
- * Responsabilidade: desenhar (modelo genérico recolorido, label e hitbox) os cometas cuja posição NÃO
- * veio do Horizons, na régua LINEAR dos planetas (Sol na origem), via Kepler local (knownComets). É a
- * rede de segurança para que nenhum cometa suma quando o Horizons falha. Contraparte cometária de
+ * Responsabilidade: desenhar (núcleo 3D real, label e hitbox) os cometas cuja posição NÃO veio do
+ * Horizons, na régua LINEAR dos planetas (Sol na origem), via Kepler local (knownComets). É a rede de
+ * segurança para que nenhum cometa suma quando o Horizons falha. Contraparte cometária de
  * KnownAsteroidsLayer.
  *
  * Caminho principal: os cometas vêm do feed /radar/famous com posição real do Horizons e são
  * desenhados pelo AsteroidSceneLayer (igual aos asteroides). Esta camada recebe `skipIds` com os
  * cometas que já têm posição real e os PULA, evitando duplicar o corpo.
  *
- * Visual: enquanto não há GLB exclusivo de cometa, usa o modelo genérico com um tint gelado
- * (COMET_TINT) para distinguir de um asteroide. Quando a NASA fornecer modelos 3D reais, basta
- * registrá-los e trocar o asset, igual aos 5 asteroides com modelo próprio.
+ * Visual: usa o GLB do núcleo de cometa via cometModelRegistry, o 67P tem shape model real (Rosetta);
+ * Halley e Encke reusam o mesmo GLB genérico texturizado dos asteroides como forma representativa,
+ * variada por seed. Cor/textura batem com a rocha por construção. A cauda é desenhada à parte (decisão
+ * de produto), fora deste GLB.
  */
 
 import { useMemo, useState } from 'react';
@@ -22,12 +23,8 @@ import RealAsteroidModel from '../Bodies/Asteroid/RealAsteroidModel';
 import type { AsteroidModelAsset } from '../Bodies/Asteroid/asteroidModelRegistry';
 import type { KnownComet } from '../Bodies/Comet/knownComets';
 import { knownCometId, knownCometPlacements, knownCometVisualScale } from '../Bodies/Comet/knownComets';
-
-/** Modelo genérico de asteroide reusado para o cometa, recolorido pelo tint gelado abaixo. */
-const GENERIC_MODEL_URL = '/models/asteroids/Asteroid_2f_small.glb';
-/** Tint gelado azul-esbranquiçado que distingue o cometa do asteroide enquanto não há GLB próprio. */
-const COMET_TINT = '#cfe9f5';
-const COMET_FALLBACK_COLOR = '#9fc6dc';
+import { cometModelAsset, COMET_67P_COLOR } from '../Bodies/Comet/cometModelRegistry';
+import { CometTail } from '../Bodies/Comet/CometTail';
 
 /** Mesmos pisos de hitbox/label da camada de asteroides (corpos pequenos na cena). */
 const HITBOX_RADIUS_FACTOR = 4;
@@ -48,8 +45,8 @@ type KnownCometsLayerProps = {
 };
 
 /**
- * Renderiza os cometas famosos com modelo genérico recolorido na régua dos planetas (Sol na origem),
- * cada um na região real onde está. As posições são recalculadas por render a partir da data atual.
+ * Renderiza os cometas famosos com núcleo 3D real na régua dos planetas (Sol na origem), cada um na
+ * região real onde está. As posições são recalculadas por render a partir da data atual.
  */
 export function KnownCometsLayer({ showLabels, selectedId, auScale, skipIds, onSelect }: KnownCometsLayerProps) {
     const placements = useMemo(() => knownCometPlacements(new Date(), auScale), [auScale]);
@@ -89,9 +86,12 @@ type KnownCometBodyProps = {
 
 function KnownCometBody({ comet, position, showLabel, dimmed, selected, onSelect }: KnownCometBodyProps) {
     const [hovered, setHovered] = useState(false);
+    // O núcleo do cometa vem do cometModelRegistry (67P real; demais reusam o genérico). RealAsteroidModel
+    // só consome url/rotation/excludedVariants, então adaptamos o asset de cometa ao shape esperado.
+    const model = cometModelAsset(comet.modelKey);
     const asset = useMemo<AsteroidModelAsset>(
-        () => ({ key: 'generic', url: GENERIC_MODEL_URL, rotation: [0, 0, 0], aliases: [], numbers: [] }),
-        [],
+        () => ({ key: 'generic', url: model.url, rotation: model.rotation, aliases: [], numbers: [] }),
+        [model.url, model.rotation],
     );
     const scale = knownCometVisualScale(comet);
     const opacity = dimmed && !hovered ? 0.5 : 1;
@@ -100,15 +100,22 @@ function KnownCometBody({ comet, position, showLabel, dimmed, selected, onSelect
 
     return (
         <group position={position}>
+            {/* Coma + cauda (anti-solar): o que diferencia o cometa do asteroide. Fora do <group scale>
+                porque dimensiona pela própria régua do núcleo (nucleusRadius), não pelo scale do GLB. */}
+            <CometTail scenePosition={position} nucleusRadius={scale} opacity={opacity} />
+
             <group scale={scale}>
+                {/* Cometa sem modelo próprio reusa o MESMO GLB genérico texturizado do asteroide, então
+                    cor/textura batem com a rocha sem ajuste. O 67P tem GLB próprio SEM textura (cinza claro
+                    embutido), então recebe a cor escura dedicada. showOutline acompanha os rótulos pra ter
+                    o mesmo contorno do asteroide do feed (antes só aparecia quando selecionado). */}
                 <RealAsteroidModel
                     asset={asset}
                     opacity={opacity}
                     seed={comet.designation}
                     selected={selected || hovered}
-                    showOutline={selected}
-                    tint={COMET_TINT}
-                    fallbackColor={COMET_FALLBACK_COLOR}
+                    showOutline={showLabel || selected}
+                    {...(comet.modelKey === 'c67p' ? { fallbackColor: COMET_67P_COLOR } : {})}
                 />
             </group>
 

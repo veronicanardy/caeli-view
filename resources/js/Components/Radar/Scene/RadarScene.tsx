@@ -45,7 +45,7 @@ import { useBodyFocus } from './useBodyFocus';
 import { KnownAsteroidsLayer } from './KnownAsteroidsLayer';
 import { KnownCometsLayer } from './KnownCometsLayer';
 import { knownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
-import { knownCometId } from '../Bodies/Comet/knownComets';
+import { knownCometById, knownCometId } from '../Bodies/Comet/knownComets';
 // --------------- Scene ---------------
 
 type RadarSceneProps = {
@@ -227,7 +227,10 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     // Caso contrário permanece no modo radar. Misturar ambas as camadas no mesmo
     // frame era o bug corrigido pela separação de modos: o asteroide nunca ficava sobre sua elipse
     // desenhada pois viviam em regras de escala diferentes.
-    const focusedElements = focusedObject?.trajectory?.orbitalElements ?? null;
+    // Elementos da órbita: do Horizons quando há; senão, do catálogo local (cometa famoso sem feed, ex.:
+    // Halley). Assim o botão "Ver a órbita" funciona pro Halley igual aos outros — temos a órbita dele.
+    const focusedElements = focusedObject?.trajectory?.orbitalElements
+        ?? (focusedObject ? knownCometById(focusedObject.approach.id)?.elements ?? null : null);
     const focusedPalette = focusedObject
         ? OBJECT_PALETTE[Math.max(0, closestNowObjects.findIndex((o) => o.approach.id === focusedObject.approach.id)) % OBJECT_PALETTE.length]
         : OBJECT_PALETTE[0];
@@ -291,6 +294,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                                     showLabel={showLabels && !orbitLabelsOnly}
                                     protectLabelFromFocus={bodyFocus?.body !== 'earth'}
                                     isFocused={bodyFocus?.body === 'earth'}
+                                    locale={locale}
                                 />
                                 <SceneRingsLayer onEarthFocus={focusEarth} showLabels={showLabels && !compactLabels && !orbitLabelsOnly} />
                             </group>
@@ -440,6 +444,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     focusNonce={focusNonce}
                     earthPos={earthPos}
                     sunDir={sunDir}
+                    // earthPos/sunDir são fallback do servidor enquanto ephemeris for null.
+                    ephemerisReady={ephemeris !== null}
                     panelBiasX={panelBiasX}
                     panelBiasY={panelBiasY}
                 />

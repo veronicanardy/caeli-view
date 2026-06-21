@@ -18,6 +18,7 @@ import type { FocusFraming } from './Scene/cameraFraming';
 import { nextCameraNonce } from './Scene/cameraIntent';
 import type { CameraIntent } from './Scene/cameraIntent';
 import { PLANET_CONFIG } from './Scene/planetConfig';
+import { knownCometById } from './Bodies/Comet/knownComets';
 import type { PlanetId } from './Scene/planetConfig';
 import { MOBILE_MEDIA_QUERY } from './radarLayoutConstants';
 
@@ -197,7 +198,11 @@ export function useRadar3DFocusActions({
     }, [onClearSelection, pickView]);
 
     const canShowOrbitPosition = useMemo(() => {
-        const tp = focusedObject?.trajectory?.orbitalElements?.tpJd;
+        // Elementos do Horizons OU do catálogo local (cometa famoso sem feed, ex.: Halley): com qualquer
+        // dos dois dá pra desenhar a órbita, então o botão "Ver a órbita" deve habilitar igual aos outros.
+        const elements = focusedObject?.trajectory?.orbitalElements
+            ?? (focusedObject ? knownCometById(focusedObject.approach.id)?.elements : undefined);
+        const tp = elements?.tpJd;
         return Number.isFinite(tp) && tp !== 0;
     }, [focusedObject]);
 

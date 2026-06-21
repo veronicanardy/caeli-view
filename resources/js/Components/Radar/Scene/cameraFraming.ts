@@ -7,10 +7,12 @@
 
 import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
-import { buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
+import { LINEAR_AU_SCALE, buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
 import { currentPositionInHelioScene } from '@/lib/radar/trajectorySampling';
 import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
+import { estimateAsteroidDiameterMeters, symbolicRockRadiusFromDiameter } from '@/lib/radar/asteroidScale';
+import { knownCometById, knownCometScenePosition } from '../Bodies/Comet/knownComets';
 import { CAMERA_FOV_DEG, CAMERA_VIEWS, MAX_CAMERA_DISTANCE } from './cameraConstants';
 
 /**
@@ -166,6 +168,22 @@ export function framingForTrajectorySegment({
 }
 
 /**
+ * Distância de câmera para o close-up de uma rocha, PROPORCIONAL ao tamanho visual dela. Antes era fixa
+ * (0.1), o que deixava corpos pequenos (Bennu, Itokawa, raio ~0.006) longe na tela e os grandes (Ceres,
+ * Vesta, raio ~0.026) bem mais cheios — porque o modelo NÃO tem tamanho fixo, ele escala com o raio
+ * simbólico. Aqui a câmera fica a ~4 raios do corpo, então todos ocupam a MESMA fração da tela. Piso/teto
+ * evitam grudar no menor ou afastar demais no maior; o teto 0.1 preserva a faixa onde a lupa de trajetória
+ * aparece.
+ */
+const CLOSEUP_RADII = 4;
+const CLOSEUP_MIN = 0.03;
+const CLOSEUP_MAX = 0.1;
+function closeUpDistance(object: ClosestNowObject): number {
+    const radius = symbolicRockRadiusFromDiameter(estimateAsteroidDiameterMeters(object.approach));
+    return THREE.MathUtils.clamp(radius * CLOSEUP_RADII, CLOSEUP_MIN, CLOSEUP_MAX);
+}
+
+/**
  * Enquadramento de câmera para um asteroide selecionado, na régua heliocêntrica única (Sol na origem).
  *   - orbitMode = false: close-up na rocha, mirando a posição heliocêntrica absoluta.
  *   - orbitMode = true: enquadra a órbita Kepleriana completa ao redor do Sol.
@@ -187,12 +205,14 @@ export function computeFocusFraming(
         if (helioPos) {
             const target = new THREE.Vector3(...helioPos);
             const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
-            const distance = 0.1;
+            const distance = closeUpDistance(object);
             return { target, position: target.clone().add(dir.multiplyScalar(distance)), transition: 'preserve_heading' };
         }
     }
-    if (orbitMode && object.trajectory?.orbitalElements) {
-        const elements = object.trajectory.orbitalElements;
+    // Elementos do Horizons OU do catálogo local (cometa famoso sem feed, ex.: Halley).
+    const orbitElements = object.trajectory?.orbitalElements ?? knownCometById(object.approach.id)?.elements ?? null;
+    if (orbitMode && orbitElements) {
+        const elements = orbitElements;
         const orbitPoints = buildHeliocentricOrbit(elements, 256);
         if (orbitPoints) {
             const box = new THREE.Box3();
@@ -231,10 +251,32 @@ export function computeFocusFraming(
 
     // Fallback de close-up (modo órbita sem elipse utilizável): mira a posição heliocêntrica absoluta.
     const helioPos = earthHelioPositionAU ? currentPositionInHelioScene(object, earthHelioPositionAU) : null;
-    if (!helioPos) return null;
-    const target = new THREE.Vector3(...helioPos);
-    const distance = 0.1;
-    const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
-    const position = target.clone().add(dir.multiplyScalar(distance));
-    return { target, position, transition: 'preserve_heading' };
+    if (helioPos) {
+        const target = new THREE.Vector3(...helioPos);
+        const distance = closeUpDistance(object);
+        const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
+        const position = target.clone().add(dir.multiplyScalar(distance));
+        return { target, position, transition: 'preserve_heading' };
+    }
+
+    // Sem ponto do Horizons: cometa famoso distante (ex.: Halley a ~36 UA no afélio) é enquadrado pela
+    // posição Kepler local, a MESMA que o KnownCometsLayer desenha. CLOSE-UP no núcleo: a distância é
+    // relativa ao MODELO (que tem tamanho visual fixo, independente de onde o corpo está na régua), não à
+    // distância do corpo à origem — assim chega perto do Halley igual aos outros, em vez de parar longe.
+    const cometTarget = knownCometFocusTarget(object);
+    if (cometTarget) {
+        const distance = 0.1;
+        const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
+        return { target: cometTarget, position: cometTarget.clone().add(dir.multiplyScalar(distance)), transition: 'default' };
+    }
+
+    return null;
+}
+
+/** Posição de cena (Vector3) de um cometa famoso via órbita Kepler local, ou null se não for cometa. */
+function knownCometFocusTarget(object: ClosestNowObject): THREE.Vector3 | null {
+    const comet = knownCometById(object.approach.id);
+    if (!comet) return null;
+    const pos = knownCometScenePosition(comet, new Date(), LINEAR_AU_SCALE);
+    return pos ? new THREE.Vector3(pos[0], pos[1], pos[2]) : null;
 }
