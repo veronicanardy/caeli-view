@@ -3,6 +3,7 @@ import type { GlobalEvent } from '@inertiajs/core';
 import { Earth, Image, Info, Menu, Rocket, Telescope, X } from 'lucide-react';
 import { createContext, PropsWithChildren, useContext, useEffect, useRef, useState } from 'react';
 import { Locale, useTranslation } from '@/i18n';
+import { consumeForcedRouteProgress } from '@/lib/routeProgressForce';
 import { transparencyCopy } from '@/lib/transparencyCopy';
 import { PageProps } from '@/types';
 
@@ -23,6 +24,13 @@ const navigationProgressFadeMs = 280;
 const navigationProgressTrickleMs = 240;
 const navigationProgressStart = 0.08; // largura inicial assim que a barra aparece
 const navigationProgressCeiling = 0.94; // teto do trickle enquanto a rota não monta
+
+// Quando uma rota é pré-carregada (`prefetch`), a visita resolve do cache antes do
+// atraso de exibição, então a barra nem chega a piscar. Para destinos pesados (o
+// radar, que ainda monta a cena 3D depois da troca de página) queremos a barra mesmo
+// assim, como sinal de que algo está vindo. Um link marca essa intenção no clique
+// (forceNextRouteProgress) e o próximo `start` a consome, mostrando a barra na hora.
+// A lógica pura do sinalizador vive em `lib/routeProgressForce`.
 
 type AppLayoutOptions = {
     hideHeader?: boolean;
@@ -95,6 +103,14 @@ function NavigationProgress() {
             setProgressValue(progressRef.current + remaining * 0.12);
         };
 
+        // Começa a mostrar e a avançar a barra (extraído porque agora é chamado tanto
+        // após o atraso quanto imediatamente, quando um link força a exibição).
+        const beginVisible = () => {
+            show();
+            setProgressValue(navigationProgressStart);
+            trickleIntervalRef.current = window.setInterval(trickle, navigationProgressTrickleMs);
+        };
+
         const start = () => {
             // Reinicia para uma nova navegação (cobre cliques encadeados).
             clearTimers();
@@ -104,15 +120,21 @@ function NavigationProgress() {
             hide();
             setProgress(0);
 
-            // Só mostra após o atraso: navegações instantâneas (cache/prefetch) nem piscam.
+            // Link pediu a barra na hora (destino pesado servido do cache): mostra já,
+            // sem o atraso anti-piscada. A intenção vale só para esta navegação.
+            if (consumeForcedRouteProgress()) {
+                beginVisible();
+                return;
+            }
+
+            // Caso normal: só mostra após o atraso, para navegações instantâneas
+            // (cache/prefetch) nem piscarem.
             showTimeoutRef.current = window.setTimeout(() => {
                 showTimeoutRef.current = null;
                 if (!activeRef.current) {
                     return;
                 }
-                show();
-                setProgressValue(navigationProgressStart);
-                trickleIntervalRef.current = window.setInterval(trickle, navigationProgressTrickleMs);
+                beginVisible();
             }, navigationProgressDelayMs);
         };
 
