@@ -4,6 +4,7 @@ import {
     RADAR_TUTORIAL_STEP_PERMISSIONS,
     doesTutorialActionCompleteStep,
     isTutorialActionAllowed,
+    mobileSheetTransitionAction,
 } from '@/Components/Radar/Tutorial/radarTutorialFlow';
 
 function step(id: string) {
@@ -83,5 +84,23 @@ describe('radarTutorialFlow permissions', () => {
         expect(isTutorialActionAllowed(planetsStep, 'focus-planet', { planetId: 'mars' })).toBe(true);
         expect(doesTutorialActionCompleteStep(planetsStep, 'toggle-planets')).toBe(false);
         expect(doesTutorialActionCompleteStep(planetsStep, 'focus-planet', { planetId: 'mars' })).toBe(true);
+    });
+});
+
+describe('mobileSheetTransitionAction', () => {
+    it('abrir objetos e abrir filtros independem do sheet atual', () => {
+        expect(mobileSheetTransitionAction('objects', null)).toBe('open-object-panel');
+        expect(mobileSheetTransitionAction('objects', 'filters')).toBe('open-object-panel');
+        expect(mobileSheetTransitionAction('filters', null)).toBe('open-filter-panel');
+        expect(mobileSheetTransitionAction('filters', 'objects')).toBe('open-filter-panel');
+    });
+
+    it('fechar (target null) distingue qual sheet estava aberto', () => {
+        expect(mobileSheetTransitionAction(null, 'filters')).toBe('close-filter-panel');
+        expect(mobileSheetTransitionAction(null, 'objects')).toBe('close-object-panel');
+    });
+
+    it('fechar sem nada aberto cai em fechar objetos (padrão)', () => {
+        expect(mobileSheetTransitionAction(null, null)).toBe('close-object-panel');
     });
 });

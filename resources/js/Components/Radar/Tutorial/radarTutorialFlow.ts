@@ -1,5 +1,6 @@
 import type { ObjectLimit, SelectionMode } from '@/types';
 import type { PlanetId } from '../Scene/planetConfig';
+import type { MobileSheetSection } from '../Panels/radarNavigationTypes';
 import type { TutorialStep } from './radarTutorialSteps';
 
 export type TutorialBodyTarget = 'earth' | 'moon';
@@ -53,6 +54,26 @@ export type TutorialPermission = {
     mode?: SelectionMode | SelectionMode[];
     tab?: TutorialTab | TutorialTab[];
 };
+
+/**
+ * Qual `TutorialAction` representa uma troca de sheet mobile (lista de objetos / filtros / fechar).
+ *
+ * Um único gesto da UI (`onMobileSheetChange`) corresponde a quatro ações distintas do tutorial,
+ * conforme o destino e o sheet aberto agora: abrir objetos, abrir filtros, ou FECHAR o que estava
+ * aberto (e fechar filtros é diferente de fechar objetos para o tutorial). Centralizar este mapa
+ * aqui, puro e testável, evita que a árvore de ternários viva escondida no componente orquestrador.
+ *
+ * @param target       Sheet que o usuário está abrindo, ou `null` para fechar o atual.
+ * @param current      Sheet aberto no momento (para saber QUAL fechar quando `target` é `null`).
+ */
+export function mobileSheetTransitionAction(
+    target: MobileSheetSection | null,
+    current: MobileSheetSection | null,
+): TutorialAction {
+    if (target === 'objects') return 'open-object-panel';
+    if (target === 'filters') return 'open-filter-panel';
+    return current === 'filters' ? 'close-filter-panel' : 'close-object-panel';
+}
 
 const finishOnly = permissions({ action: 'manual-next' });
 const sceneOnly = permissions({ action: 'scene-navigate' });
