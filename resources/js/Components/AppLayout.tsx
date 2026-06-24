@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Earth, Image, Info, LoaderCircle, Menu, Rocket, Telescope, X } from 'lucide-react';
+import type { GlobalEvent } from '@inertiajs/core';
+import { Earth, Image, Info, Menu, Rocket, Telescope, X } from 'lucide-react';
 import { createContext, PropsWithChildren, useContext, useEffect, useRef, useState } from 'react';
 import { Locale, useTranslation } from '@/i18n';
 import { transparencyCopy } from '@/lib/transparencyCopy';
@@ -13,9 +14,15 @@ const navItems = [
     { href: '/sobre', labelKey: 'nav.about', icon: Info },
 ] as const;
 
-const navigationProgressDelayMs = 80;
-const navigationProgressFadeMs = 220;
-const navigationProgressMaxMs = 12000;
+// Barra fina ancorada abaixo da navbar (estilo NProgress). Aparece só depois de
+// um pequeno atraso para não piscar em navegações instantâneas, avança com o
+// progresso real do download da rota, faz "trickle" suave quando não há mais dado
+// e completa em 100% quando o esqueleto da nova página monta (evento finish).
+const navigationProgressDelayMs = 120;
+const navigationProgressFadeMs = 280;
+const navigationProgressTrickleMs = 240;
+const navigationProgressStart = 0.08; // largura inicial assim que a barra aparece
+const navigationProgressCeiling = 0.94; // teto do trickle enquanto a rota não monta
 
 type AppLayoutOptions = {
     hideHeader?: boolean;
@@ -34,20 +41,31 @@ export function useAppLayoutOptions(options: AppLayoutOptions) {
     }, [options.hideHeader, options.hideFooter, setOptions]);
 }
 function NavigationProgress() {
-    const [phase, setPhase] = useState<'hidden' | 'visible' | 'leaving'>('hidden');
+    // 'active' enquanto a barra está visível e avançando; vira false no finish, quando
+    // a barra completa em 100% e some. 'leaving' controla apenas o fade-out final.
+    const [active, setActive] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [leaving, setLeaving] = useState(false);
     const { locale } = useTranslation();
-    const phaseRef = useRef<'hidden' | 'visible' | 'leaving'>('hidden');
-    const navigationActiveRef = useRef(false);
+
+    const activeRef = useRef(false);
+    const visibleRef = useRef(false);
+    const progressRef = useRef(0);
     const showTimeoutRef = useRef<number | null>(null);
     const hideTimeoutRef = useRef<number | null>(null);
-    const watchdogTimeoutRef = useRef<number | null>(null);
-    const label = locale === 'en' ? 'Loading...' : 'Carregando...';
-    const detail = locale === 'en' ? 'Preparing the route' : 'Preparando a rota';
+    const trickleIntervalRef = useRef<number | null>(null);
+
+    const label = locale === 'en' ? 'Loading route' : 'Carregando rota';
 
     useEffect(() => {
-        const setNavigationPhase = (nextPhase: 'hidden' | 'visible' | 'leaving') => {
-            phaseRef.current = nextPhase;
-            setPhase(nextPhase);
+        const show = () => {
+            visibleRef.current = true;
+            setActive(true);
+        };
+
+        const hide = () => {
+            visibleRef.current = false;
+            setActive(false);
         };
 
         const clearTimers = () => {
@@ -55,102 +73,125 @@ function NavigationProgress() {
                 window.clearTimeout(showTimeoutRef.current);
                 showTimeoutRef.current = null;
             }
-
-
             if (hideTimeoutRef.current !== null) {
                 window.clearTimeout(hideTimeoutRef.current);
                 hideTimeoutRef.current = null;
             }
-
-            if (watchdogTimeoutRef.current !== null) {
-                window.clearTimeout(watchdogTimeoutRef.current);
-                watchdogTimeoutRef.current = null;
+            if (trickleIntervalRef.current !== null) {
+                window.clearInterval(trickleIntervalRef.current);
+                trickleIntervalRef.current = null;
             }
+        };
+
+        const setProgressValue = (value: number) => {
+            const next = Math.min(navigationProgressCeiling, Math.max(progressRef.current, value));
+            progressRef.current = next;
+            setProgress(next);
+        };
+
+        // Avanço suave e desacelerado: quanto mais perto do teto, menor o passo.
+        const trickle = () => {
+            const remaining = navigationProgressCeiling - progressRef.current;
+            setProgressValue(progressRef.current + remaining * 0.12);
         };
 
         const start = () => {
-            if (navigationActiveRef.current && phaseRef.current !== 'leaving') {
-                return;
-            }
-
+            // Reinicia para uma nova navegação (cobre cliques encadeados).
             clearTimers();
-            navigationActiveRef.current = true;
-            setNavigationPhase('hidden');
+            activeRef.current = true;
+            progressRef.current = 0;
+            setLeaving(false);
+            hide();
+            setProgress(0);
 
+            // Só mostra após o atraso: navegações instantâneas (cache/prefetch) nem piscam.
             showTimeoutRef.current = window.setTimeout(() => {
                 showTimeoutRef.current = null;
-                setNavigationPhase('visible');
+                if (!activeRef.current) {
+                    return;
+                }
+                show();
+                setProgressValue(navigationProgressStart);
+                trickleIntervalRef.current = window.setInterval(trickle, navigationProgressTrickleMs);
             }, navigationProgressDelayMs);
+        };
 
-            watchdogTimeoutRef.current = window.setTimeout(() => {
-                navigationActiveRef.current = false;
-                setNavigationPhase('hidden');
-                clearTimers();
-            }, navigationProgressMaxMs);
+        // Progresso real do download da resposta da rota (quando há Content-Length).
+        const onProgress = (event: GlobalEvent<'progress'>) => {
+            const percentage = event.detail.progress?.percentage;
+            if (!activeRef.current || typeof percentage !== 'number') {
+                return;
+            }
+            // Se o progresso real chegar depois do atraso de exibição, garante a barra visível.
+            if (!visibleRef.current && showTimeoutRef.current === null) {
+                show();
+            }
+            setProgressValue(percentage / 100);
         };
 
         const finish = () => {
-            if (!navigationActiveRef.current) {
+            if (!activeRef.current) {
                 return;
             }
+            activeRef.current = false;
 
-            navigationActiveRef.current = false;
-
-            if (watchdogTimeoutRef.current !== null) {
-                window.clearTimeout(watchdogTimeoutRef.current);
-                watchdogTimeoutRef.current = null;
+            if (trickleIntervalRef.current !== null) {
+                window.clearInterval(trickleIntervalRef.current);
+                trickleIntervalRef.current = null;
             }
 
+            // Navegação resolveu antes da barra aparecer: nem chega a mostrar.
             if (showTimeoutRef.current !== null) {
                 window.clearTimeout(showTimeoutRef.current);
                 showTimeoutRef.current = null;
-                setNavigationPhase('hidden');
+                hide();
+                setProgress(0);
+                progressRef.current = 0;
                 return;
             }
 
-            if (phaseRef.current === 'hidden') {
-                return;
-            }
-
-            setNavigationPhase('leaving');
+            // Completa em 100% e some com um fade curto.
+            progressRef.current = 1;
+            setProgress(1);
+            setLeaving(true);
             hideTimeoutRef.current = window.setTimeout(() => {
-                setNavigationPhase('hidden');
+                hide();
+                setLeaving(false);
+                setProgress(0);
+                progressRef.current = 0;
             }, navigationProgressFadeMs);
         };
 
-        const removeStartListener = router.on('start', start);
-        const removeFinishListener = router.on('finish', finish);
+        const removeStart = router.on('start', start);
+        const removeProgress = router.on('progress', onProgress);
+        const removeFinish = router.on('finish', finish);
 
         return () => {
-            removeStartListener();
-            removeFinishListener();
-            navigationActiveRef.current = false;
+            removeStart();
+            removeProgress();
+            removeFinish();
+            activeRef.current = false;
+            visibleRef.current = false;
             clearTimers();
         };
     }, []);
 
-    if (phase === 'hidden') {
+    if (!active) {
         return null;
     }
 
     return (
         <div
-            className={`app-route-loader fixed inset-0 z-[9999] flex items-center justify-center px-4 transition duration-200 ${
-                phase === 'leaving' ? 'opacity-0' : 'opacity-100'
-            }`}
+            className={`app-route-progress ${leaving ? 'app-route-progress-leaving' : ''}`}
             role="status"
             aria-live="polite"
+            aria-label={label}
         >
-            <div className="app-route-loader-card">
-                <span className="app-route-loader-orbit" aria-hidden="true">
-                    <LoaderCircle className="app-route-loader-spinner size-8 text-signal-cyan" aria-hidden="true" />
-                </span>
-                <span className="app-route-loader-copy">
-                    <span className="app-route-loader-title">{label}</span>
-                    <span className="app-route-loader-detail">{detail}</span>
-                </span>
-                <span className="app-route-loader-bar" aria-hidden="true" />
-            </div>
+            <span
+                className="app-route-progress-bar"
+                style={{ transform: `scaleX(${progress})` }}
+                aria-hidden="true"
+            />
         </div>
     );
 }
@@ -194,10 +235,12 @@ export function AppLayout({ children, hideHeader = false, hideFooter = false }: 
            overflow-hidden travam a altura e o radar 3D preenche o espaço restante por flex. Nas
            demais páginas o layout cresce com o conteúdo (min-h-screen) e rola normalmente. */}
         <div className={`flex flex-col ${effectiveHideFooter ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
-            <NavigationProgress />
             <header className={`app-header sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${effectiveHideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
                 {/* Hairline ciano de assinatura, espelha a linha do footer */}
                 <div className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-signal-cyan/25 to-transparent" aria-hidden="true" />
+                {/* Barra de progresso de rota: ancorada na borda inferior do header,
+                   ocupa a largura toda logo abaixo da navbar. */}
+                <NavigationProgress />
                 <div ref={menuRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between lg:h-auto lg:py-4">
                         <Link href="/" prefetch className="app-brand group flex items-center gap-3">
