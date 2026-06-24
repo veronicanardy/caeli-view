@@ -33,6 +33,20 @@ export const MAX_CAMERA_DISTANCE = ORBIT_AU_SCALE * 200;
  */
 export const CAMERA_NEAR = 0.07;
 
+/**
+ * Distância mínima de zoom (dolly) da câmera ao alvo, em duas calibrações:
+ *
+ *  - EARTH_MIN_DISTANCE: piso quando navegando o sistema / focando a Terra. Mantém a câmera acima do
+ *    brilho da Terra para não mergulhar nela (EARTH_RADIUS_DL * 2.2 ≈ 0.242).
+ *  - ROCK_MIN_DISTANCE: piso quando uma ROCHA está selecionada (close-up). As rochas são minúsculas
+ *    (raio ~0.003 a ~0.026); o piso da Terra (0.242) deixaria a câmera longe demais — a pequena ficava
+ *    a dezenas de raios na tela. Aqui o piso cai para logo acima do CAMERA_NEAR (0.07), o máximo que a
+ *    câmera cola SEM o corpo recortar no plano near. Ceres (grande) já enquadrava bem; este piso resolve
+ *    as pequenas (Itokawa, Bennu) sem afetar as grandes, que param antes no seu close-up proporcional.
+ */
+export const EARTH_MIN_DISTANCE = 0.11 * 2.2;
+export const ROCK_MIN_DISTANCE = 0.08;
+
 export const CAMERA_VIEWS = {
     /* perspective é calculado dinamicamente pelo CameraRig em coordenadas solares
        (de costas para o Sol, olhando para a Terra). Este valor não é lido. */

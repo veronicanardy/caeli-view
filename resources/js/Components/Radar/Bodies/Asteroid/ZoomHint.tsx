@@ -12,11 +12,12 @@ import { framingForTrajectorySegment } from '../../Scene/cameraFraming';
 import { useCameraTween } from '../../Scene/CameraTweenContext';
 import { useZoomHintSetter } from './ZoomHintContext';
 
-// Distância padrão ao selecionar a rocha (ver cameraFraming.ts:110).
-const SELECTION_DISTANCE = 0.1;
-// Só mostra a lupa se a câmera está nessa faixa de distância.
-const SHOW_MIN = SELECTION_DISTANCE * 0.5;
-const SHOW_MAX = SELECTION_DISTANCE * 2.5;
+// Só mostra a lupa se a câmera está nessa faixa de distância. SHOW_MIN fica logo abaixo do piso do
+// close-up colado (CLOSEUP_MIN=0.08 ≈ ROCK_MIN_DISTANCE) para a lupa aparecer na rocha pequena, presa
+// no piso; SHOW_MAX cobre o teto do close-up (CLOSEUP_MAX=0.36, onde Ceres para) mais folga de zoom out
+// manual antes de a lupa sumir. A margem de 0.95 sobre o piso absorve o epsilon de ponto flutuante.
+const SHOW_MIN = 0.08 * 0.95;
+const SHOW_MAX = 0.36 * 2.2;
 // Some temporariamente quando a câmera está se movendo.
 const MOVE_THRESHOLD_SQ = 0.000009; // ~0.003 de deslocamento por frame
 

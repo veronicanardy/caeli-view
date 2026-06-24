@@ -168,16 +168,22 @@ export function framingForTrajectorySegment({
 }
 
 /**
- * Distância de câmera para o close-up de uma rocha, PROPORCIONAL ao tamanho visual dela. Antes era fixa
- * (0.1), o que deixava corpos pequenos (Bennu, Itokawa, raio ~0.006) longe na tela e os grandes (Ceres,
- * Vesta, raio ~0.026) bem mais cheios — porque o modelo NÃO tem tamanho fixo, ele escala com o raio
- * simbólico. Aqui a câmera fica a ~4 raios do corpo, então todos ocupam a MESMA fração da tela. Piso/teto
- * evitam grudar no menor ou afastar demais no maior; o teto 0.1 preserva a faixa onde a lupa de trajetória
- * aparece.
+ * Distância de câmera para o close-up de uma rocha, PROPORCIONAL ao tamanho visual dela, de modo que
+ * TODA rocha ocupe a MESMA fração da tela (pedido da Verônica: "todas enchem igual"). Como a fração de
+ * tela ≈ raio / distância, manter raio/distância constante (= CLOSEUP_RADII) iguala a fração para todas.
+ *
+ * O piso (CLOSEUP_MIN) casa com ROCK_MIN_DISTANCE (cameraConstants): é a distância mais colada que os
+ * OrbitControls permitem com uma rocha selecionada, logo acima do CAMERA_NEAR (0.07). A menor rocha real
+ * (Itokawa, raio ~0.006) já bate nesse piso; o near plane impede colar mais (baixá-lo traz z-fighting nas
+ * nuvens da Terra). Por isso CLOSEUP_RADII é calibrado pela MENOR rocha presa no piso (~0.08/0.006 ≈ 13):
+ * todas as outras miram esse mesmo número de raios, então os GRANDES (Ceres, Vesta) ficam mais LONGE para
+ * ocuparem a mesma fração que a pequena, em vez de encherem mais a tela. O teto (CLOSEUP_MAX) acomoda
+ * Ceres (raio ~0.026 × 13 ≈ 0.34). A faixa da lupa (SHOW_MIN a SHOW_MAX em ZoomHint.tsx) foi alargada
+ * para cobrir esse teto. Ao mexer aqui, confira ZoomHint e ROCK_MIN_DISTANCE.
  */
-const CLOSEUP_RADII = 4;
-const CLOSEUP_MIN = 0.03;
-const CLOSEUP_MAX = 0.1;
+const CLOSEUP_RADII = 13;
+const CLOSEUP_MIN = 0.08;
+const CLOSEUP_MAX = 0.36;
 function closeUpDistance(object: ClosestNowObject): number {
     const radius = symbolicRockRadiusFromDiameter(estimateAsteroidDiameterMeters(object.approach));
     return THREE.MathUtils.clamp(radius * CLOSEUP_RADII, CLOSEUP_MIN, CLOSEUP_MAX);
@@ -197,9 +203,9 @@ export function computeFocusFraming(
     earthHelioPositionAU: EarthHelioAU | null = null,
 ): FocusFraming | null {
     // Close-up: o objeto vive na régua heliocêntrica (Sol na origem), não offsetado pela Terra.
-    // Mira a posição heliocêntrica absoluta da rocha. A DISTÂNCIA fixa (0.1) dá zoom total na rocha
-    // (o MODELO tem o mesmo tamanho visual independentemente da escala da régua, que move posições e
-    // não corpos) E cai na faixa em que a lupa de "ver trajetória" aparece.
+    // Mira a posição heliocêntrica absoluta da rocha. A distância vem de closeUpDistance (proporcional
+    // ao raio visual da rocha, ~2 raios), então toda rocha preenche a MESMA fração da tela, e cai na
+    // faixa em que a lupa de "ver trajetória" aparece.
     if (earthHelioPositionAU && !orbitMode) {
         const helioPos = currentPositionInHelioScene(object, earthHelioPositionAU);
         if (helioPos) {
@@ -265,7 +271,7 @@ export function computeFocusFraming(
     // distância do corpo à origem — assim chega perto do Halley igual aos outros, em vez de parar longe.
     const cometTarget = knownCometFocusTarget(object);
     if (cometTarget) {
-        const distance = 0.1;
+        const distance = CLOSEUP_MAX;
         const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
         return { target: cometTarget, position: cometTarget.clone().add(dir.multiplyScalar(distance)), transition: 'default' };
     }

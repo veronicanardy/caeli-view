@@ -27,8 +27,17 @@
  *     logo nenhum asteroide compete visualmente com um planeta.
  */
 
-/** Raio visual mínimo de um asteroide (DL). Garante que a menor rocha permaneça visível. */
-export const MIN_ROCK_RADIUS_DL = 0.006;
+/**
+ * Raio visual mínimo de um asteroide (DL). Garante que a menor rocha permaneça visível.
+ *
+ * 0,003 (era 0,006): abaixar o piso ABRE a faixa da curva log, então a diferença entre uma rocha
+ * pequena (Itokawa, Bennu) e uma grande (Vesta, Ceres) fica mais perceptível, aproximando-se do
+ * abismo de tamanho real entre elas (Ceres é ~2800× Itokawa). As pequenas ficam mais miúdas, que é
+ * justamente o efeito honesto desejado. A esfera menor não atrapalha o clique: a hitbox é separada e
+ * generosa (HITBOX_RADIUS em AsteroidMarker). A razão Terra:rocha-pequena melhora de graça com isso,
+ * sem mexer no raio da Terra (que ancora a cena inteira).
+ */
+export const MIN_ROCK_RADIUS_DL = 0.003;
 
 /**
  * Raio visual máximo de um asteroide (DL). Fica abaixo do raio visual de Mercúrio (0,028 DL),
