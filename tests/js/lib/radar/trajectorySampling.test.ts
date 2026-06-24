@@ -6,9 +6,11 @@ import {
     collectTimeTicks,
     findClosestApproachPoint,
     hasRenderableHelioPosition,
+    orbitElementsCanAnchorPerihelion,
     trajectoryFramePoints,
     type PointProjector,
 } from '@/lib/radar/trajectorySampling';
+import type { OrbitalElements } from '@/types';
 import { KM_PER_LD } from '@/lib/sceneEphemeris';
 
 /**
@@ -249,5 +251,28 @@ describe('hasRenderableHelioPosition (limite por tipo)', () => {
     it('é false sem trajetória ou sem ponto atual', () => {
         expect(hasRenderableHelioPosition(objectWith(null))).toBe(false);
         expect(hasRenderableHelioPosition(objectWith(makeTrajectory({ currentPoint: null })))).toBe(false);
+    });
+});
+
+describe('orbitElementsCanAnchorPerihelion (guarda do botão "Ver a órbita")', () => {
+    const elementsWith = (tpJd: number): OrbitalElements =>
+        ({ ec: 0.2, qrAu: 1.1, inDeg: 12, omDeg: 80, wDeg: 150, tpJd, epochJd: 2_460_000 });
+
+    it('true quando tpJd é uma época de periélio real (finita e ≠ 0)', () => {
+        expect(orbitElementsCanAnchorPerihelion(elementsWith(2_459_000))).toBe(true);
+    });
+
+    it('false quando tpJd é 0 (sentinela de "ausente" do feed, não JD 0 real)', () => {
+        expect(orbitElementsCanAnchorPerihelion(elementsWith(0))).toBe(false);
+    });
+
+    it('false para NaN e Infinity (valores não finitos)', () => {
+        expect(orbitElementsCanAnchorPerihelion(elementsWith(Number.NaN))).toBe(false);
+        expect(orbitElementsCanAnchorPerihelion(elementsWith(Number.POSITIVE_INFINITY))).toBe(false);
+    });
+
+    it('false sem elementos (objeto sem órbita)', () => {
+        expect(orbitElementsCanAnchorPerihelion(null)).toBe(false);
+        expect(orbitElementsCanAnchorPerihelion(undefined)).toBe(false);
     });
 });

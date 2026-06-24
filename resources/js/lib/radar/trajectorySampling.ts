@@ -112,6 +112,19 @@ export function focusedOrbitSamplePosition(
 }
 
 /**
+ * Os elementos orbitais têm época de periélio utilizável para desenhar a órbita?
+ *
+ * É a guarda do botão "Ver a órbita ao redor do Sol": sem uma época de periélio válida (`tpJd`
+ * finito e diferente de 0) a posição Kepleriana não é computável, e o botão deve ficar desabilitado.
+ * `tpJd === 0` é o sentinela de "ausente" do feed, não uma data real (JD 0 = 4713 a.C.), por isso
+ * é tratado como inválido junto com `null`/`NaN`/`Infinity`.
+ */
+export function orbitElementsCanAnchorPerihelion(elements: OrbitalElements | null | undefined): boolean {
+    const tp = elements?.tpJd;
+    return Number.isFinite(tp) && tp !== 0;
+}
+
+/**
  * Projetor da régua HELIOCÊNTRICA linear em UA: o ponto geocêntrico do Horizons (km) é levado a
  * heliocêntrico (earthHelioAU + ponto/KM_PER_AU) e projetado por helioAUToSunCenteredScene na
  * LINEAR_AU_SCALE. Resultado ABSOLUTO (Sol na origem), igual à rocha em currentPositionInHelioScene,
