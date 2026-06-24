@@ -34,7 +34,7 @@ O CAD registra a distância no pico de máxima aproximação (um instante fixo).
 
 **Modos de seleção:**
 - `nearest` — top-N por miss_distance nominal + todos os PHAs; janela ±3 dias em torno de agora
-- `upcoming` — próximas 30 dias a partir da data âncora; ordenados por proximidade temporal com agora. A busca usa `dist_max=0.1` (mais largo) para que objetos de fronteira também venham do CAD e o merger corrija a distância para a do JPL; o corte de **exibição** é `UPCOMING_DISPLAY_DIST_AU=0.05` (~19,5 distâncias lunares, mesmo critério de close-approach do JPL/Eyes), aplicado sobre a distância já corrigida
+- `upcoming` — próximas 30 dias a partir da data âncora; ordenados por proximidade temporal com agora. A busca usa `dist_max=0.3` (mais largo) para que objetos de fronteira também venham do CAD, incluindo cometas em aproximação (que passam mais longe), e o merger corrija a distância para a do JPL; o corte de **exibição** é por tipo, via `UpcomingDisplayCut` (asteroide 0,05 UA = critério de close-approach do JPL/Eyes; cometa 0,25 UA, mais generoso porque cometas raramente passam perto), aplicado sobre a distância já corrigida
 
 **Estratégia lazy-loading do Horizons:**
 - Apenas os `limit + HORIZONS_MARGIN` candidatos mais próximos consultam o Horizons
@@ -118,6 +118,7 @@ Os testes de unidade relevantes:
 |---------|-------|
 | `UnifiedApproachDataTest` | Normalização NeoWs e CAD para o observatório |
 | `CloseApproachDataTest` | Parse de registro CAD e inferência de tipo |
+| `UpcomingDisplayCutTest` | Corte de exibição do upcoming por tipo (cometa mais generoso que asteroide) |
 | `AsteroidIdentityNormalizerTest` | Parsing de nomes MPC (formatos variados) |
 
 ---
