@@ -13,6 +13,7 @@ import type { PlanetId } from '../Scene/planetConfig';
 import { UnifiedFocusCard } from './UnifiedFocusCard';
 import { SceneLegend } from './SceneLegend';
 import { knownCometById } from '../Bodies/Comet/knownComets';
+import { RadarLoadingOverlay } from '../Overlays/RadarLoadingOverlay';
 
 type Props = {
     en: boolean;
@@ -154,14 +155,13 @@ export function RadarFloatingOverlays({
                 </div>
             </div>
 
-            {(sceneTransitioning || radarLoading) ? (
-                <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
-                    <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-space-950/90 px-4 py-2.5 text-[13px] text-white/70 shadow-glow">
-                        <span className="size-2 animate-pulse rounded-full bg-signal-cyan" aria-hidden />
-                        {en ? 'Loading…' : 'Carregando…'}
-                    </div>
-                </div>
-            ) : null}
+            {/* Troca de critério / refresh com a cena já montada: a barra é dirigida só pela busca de
+                dados (`sceneReady` fixo em true), concluindo assim que os dados chegam. */}
+            <RadarLoadingOverlay
+                active={sceneTransitioning || radarLoading}
+                locale={locale}
+                fetching={radarLoading}
+            />
 
             <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
                 {activeMode === 'radar'

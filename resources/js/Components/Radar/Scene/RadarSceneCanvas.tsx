@@ -23,6 +23,7 @@ import { preloadCometModels } from '../Bodies/Comet/cometModelRegistry';
 import { ZoomHintContext, type ZoomHintState } from '../Bodies/Asteroid/ZoomHintContext';
 import { ZoomHintOverlay } from '../Bodies/Asteroid/ZoomHintOverlay';
 import { PerfProbe, isPerfProbeEnabled } from '../Dev/PerfProbe';
+import { RadarLoadingOverlay } from '../Overlays/RadarLoadingOverlay';
 
 type Props = {
     noGoRects: NoGoRect[];
@@ -145,18 +146,11 @@ export function RadarSceneCanvas({
                     />
                 </Suspense>
             </Canvas>
-            {/* Overlay de carregamento DEPOIS do Canvas no DOM e com z acima dos labels da cena: o drei
-                <Html> monta os rótulos (Terra etc.) num container próprio dentro do pai do canvas, fora
-                do contexto de empilhamento deste overlay; se o overlay viesse antes e com z baixo, os
-                rótulos furavam o "Carregando…". Posicionado por último e em z-40, ele cobre tudo. */}
-            {!sceneReady && (
-                <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[#03060d]/80 backdrop-blur-sm">
-                    <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-space-950/90 px-4 py-2.5 text-[13px] text-white/70 shadow-glow">
-                        <span className="size-2 animate-pulse rounded-full bg-signal-cyan" aria-hidden />
-                        {locale === 'en' ? 'Loading…' : 'Carregando…'}
-                    </div>
-                </div>
-            )}
+            {/* Overlay de carregamento DEPOIS do Canvas no DOM: o drei <Html> monta os rótulos (Terra etc.)
+                num container próprio dentro do pai do canvas; se o overlay viesse antes e com z baixo, os
+                rótulos furavam o "Carregando…". Posicionado por último; o z-[60] interno cobre os labels.
+                Aqui a barra representa a montagem da cena 3D até o primeiro frame (`building` → `done`). */}
+            <RadarLoadingOverlay active={!sceneReady} locale={locale} fetching={false} sceneReady={sceneReady} />
         </LabelNoGoContext.Provider>
         </CameraTweenContext.Provider>
         <ZoomHintOverlay />
