@@ -89,7 +89,7 @@ Os testes unitários ficam em `tests/js/lib/radar/` e seguem o padrão Vitest do
 |-----------------------|-----------------------------------------|--------------------------------------------------------|
 | `coordinates.ts`      | `coordinates.test.ts`                   | Convenção de eixos, normalize3, direção solar          |
 | `earthOrientation.ts` | `earthOrientation.test.ts`              | Orientação da Terra, tidal lock da Lua, degenerados    |
-| `trajectorySampling.ts` | `trajectorySampling.test.ts`          | clipPolyline, findClosest, collectTimeTicks, frame points |
+| `trajectorySampling.ts` | `trajectorySampling.test.ts`          | clipPolyline, findClosest, collectTimeTicks, frame points, limite renderável por tipo, guarda de periélio do botão "Ver a órbita" |
 | `moonTextures.ts`     | `moonTextures.test.ts`                  | PRNG mulberry32 (buildMoonBump requer DOM)              |
 | `format.ts`           | `format.test.ts`                        | Dígitos dinâmicos, locales, fallbacks nulos, dias relativos |
 | `cursor.ts`           | `cursor.test.ts`                        | Contagem de referência, reset, leaves extras           |
