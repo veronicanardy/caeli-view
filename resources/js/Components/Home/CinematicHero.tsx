@@ -18,6 +18,7 @@ import { useSkyObservation } from '@/hooks/useSkyObservation';
 import { locationStatusLabel, useUserLocation } from '@/hooks/useUserLocation';
 import { useVisibleObjects } from '@/hooks/useVisibleObjects';
 import { useTranslation } from '@/i18n';
+import { forceNextRouteProgress } from '@/lib/routeProgressForce';
 import { formatNumber } from '@/lib/format';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import {
@@ -421,6 +422,7 @@ function ObservatoryConsole({
                     <Link
                         href="/radar"
                         prefetch
+                        onClick={forceNextRouteProgress}
                         className="console-cell console-cell-approach console-cell-link group focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan"
                         aria-label={en ? 'Open the radar to see close approaches' : 'Abrir o radar para ver as aproximações'}
                     >
