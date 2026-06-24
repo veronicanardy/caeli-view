@@ -11,7 +11,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { placeTooltip, type TooltipPlacement, type TutorialRect } from './radarTutorialGeometry';
-import { splitBodyChips, stepCopy, stepSide, type TutorialStep } from './radarTutorialSteps';
+import { splitBodyChips, stepCopy, stepSide, tutorialChapterLabel, type TutorialLiveFacts, type TutorialStep } from './radarTutorialSteps';
 
 type Props = {
     step: TutorialStep;
@@ -20,6 +20,8 @@ type Props = {
     en: boolean;
     isMobile: boolean;
     targetRect: TutorialRect | null;
+    /** Fatos reais do céu de agora, para preencher placeholders do passo. */
+    liveFacts: TutorialLiveFacts | null;
     /** Apoio visual do passo (mini teclado, medidores de gesto). */
     extras?: ReactNode;
     onNext: () => void;
@@ -57,12 +59,13 @@ export function TutorialTooltip({
     en,
     isMobile,
     targetRect,
+    liveFacts,
     extras,
     onNext,
     onSkipStep,
     onSkipTutorial,
 }: Props) {
-    const copy = stepCopy(step, en, isMobile);
+    const copy = stepCopy(step, en, isMobile, liveFacts);
     const cardRef = useRef<HTMLDivElement>(null);
     const primaryRef = useRef<HTMLButtonElement>(null);
     const [placement, setPlacement] = useState<TooltipPlacement | null>(null);
@@ -105,7 +108,7 @@ export function TutorialTooltip({
         >
             <div className="flex items-start justify-between gap-3">
                 <span className="text-[10.5px] font-medium uppercase tracking-widest text-signal-cyan/60">
-                    Tutorial · {stepNumber}/{stepCount}
+                    {tutorialChapterLabel(step.id, en)}
                 </span>
                 <button
                     type="button"
@@ -116,6 +119,15 @@ export function TutorialTooltip({
                 >
                     <X className="size-3.5" aria-hidden />
                 </button>
+            </div>
+
+            {/* Trilha de progresso discreta: avança a cada passo, marcando a jornada
+                sem o "N/M" seco. A largura é a proporção de passos concluídos. */}
+            <div className="h-[3px] w-full overflow-hidden rounded-full bg-white/8" aria-hidden>
+                <div
+                    className="h-full rounded-full bg-signal-cyan/55 transition-[width] duration-500 ease-out motion-reduce:transition-none"
+                    style={{ width: `${Math.round((stepNumber / Math.max(stepCount, 1)) * 100)}%` }}
+                />
             </div>
 
             <div aria-live="polite">

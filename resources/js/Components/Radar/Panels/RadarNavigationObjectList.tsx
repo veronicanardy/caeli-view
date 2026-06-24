@@ -59,6 +59,7 @@ export function RadarNavigationObjectList({
                 <ObjectListItem
                     key={object.approach.id}
                     object={object}
+                    isFirst={index === 0}
                     palette={OBJECT_PALETTE[index % OBJECT_PALETTE.length]}
                     isSelected={object.approach.id === selectedId}
                     onSelect={onSelect}

@@ -12,7 +12,7 @@
  */
 
 import { createContext, useContext } from 'react';
-import type { TutorialStep } from './radarTutorialSteps';
+import type { TutorialStep, TutorialLiveFacts } from './radarTutorialSteps';
 import type { TutorialAction, TutorialActionPayload, TutorialPermission } from './radarTutorialFlow';
 
 export type RadarTutorialContextValue = {
@@ -28,6 +28,10 @@ export type RadarTutorialContextValue = {
     locale: 'pt-BR' | 'en';
     /** Ação do passo concluída: o escurecimento sai para o usuário ver a cena (câmera viajando, carregando). */
     settling: boolean;
+    /** Pulso que incrementa quando o tutorial é CONCLUÍDO (não pulado). A cena fecha o guia ao mudar. */
+    completionNonce: number;
+    /** Fatos reais do céu de agora (nome e métrica da rocha no topo), para passos personalizados. */
+    liveFacts: TutorialLiveFacts | null;
     /** Ações permitidas para a etapa atual. Vazio quando o tutorial está inativo. */
     allowedActions: TutorialPermission[];
     /** Reseta o Radar para os filtros padrÃ£o e inicia/reinicia o tutorial do primeiro passo. */

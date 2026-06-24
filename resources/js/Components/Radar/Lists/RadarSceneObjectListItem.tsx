@@ -20,6 +20,8 @@ let tailGradientId = 0;
 
 type ObjectListItemProps = {
     object: ClosestNowObject;
+    /** Primeiro item da lista (a rocha mais próxima). O passo de seleção do tutorial só aceita ele. */
+    isFirst?: boolean;
     palette: { future: string };
     isSelected: boolean;
     onSelect: (approach: UnifiedApproach) => void;
@@ -30,7 +32,7 @@ type ObjectListItemProps = {
 };
 
 // Representa um item interativo da lista do radar sem alterar regras globais de selecao.
-export function ObjectListItem({ object: o, palette, isSelected, onSelect, locale, selectionMode, compact = false, orbitMode = false }: ObjectListItemProps) {
+export function ObjectListItem({ object: o, isFirst = false, palette, isSelected, onSelect, locale, selectionMode, compact = false, orbitMode = false }: ObjectListItemProps) {
     const en = locale === 'en';
     // Conhecidos (famosos: asteroides e cometas) são plotados na régua dos planetas via Kepler, sem
     // trajetória geocêntrica: têm posição, só não a do feed. Não marcar "sem posição" para eles.
@@ -43,7 +45,7 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
     const hasOrbit = Boolean(o.trajectory?.orbitalElements);
     const orbitBlocked = orbitMode && !hasOrbit;
     const tutorial = useRadarTutorialOptional();
-    const tutorialBlocked = !(tutorial?.isActionAllowed('select-object', { objectId: o.approach.id }) ?? true);
+    const tutorialBlocked = !(tutorial?.isActionAllowed('select-object', { objectId: o.approach.id, objectIsFirst: isFirst }) ?? true);
     const hazard = o.approach.hazardFlag;
     // Cometa famoso sem distância do Horizons (ex.: Halley no afélio): usa a distância heliocêntrica da
     // órbita Kepler local como aproximação, em vez de "Indisponível". Para corpos a dezenas de UA, a
@@ -59,10 +61,11 @@ export function ObjectListItem({ object: o, palette, isSelected, onSelect, local
             <button
                 type="button"
                 disabled={orbitBlocked || tutorialBlocked}
+                data-tutorial={isSelected ? 'selected-rock-list-item' : undefined}
                 onClick={() => {
                     if (tutorialBlocked) return;
                     onSelect(o.approach);
-                    tutorial?.completeStep('select-object', { objectId: o.approach.id });
+                    tutorial?.completeStep('select-object', { objectId: o.approach.id, objectIsFirst: isFirst });
                 }}
                 className={[
                     'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-xl text-left text-[13.5px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',

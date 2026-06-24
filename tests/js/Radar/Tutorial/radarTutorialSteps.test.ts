@@ -4,12 +4,14 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+    fillLiveFacts,
     indexAfterGroup,
     RADAR_TUTORIAL_STEPS,
     splitBodyChips,
     stepCopy,
     stepSide,
     stepsForViewport,
+    tutorialChapterLabel,
 } from '@/Components/Radar/Tutorial/radarTutorialSteps';
 
 describe('RADAR_TUTORIAL_STEPS', () => {
@@ -109,6 +111,24 @@ describe('RADAR_TUTORIAL_STEPS', () => {
         }
     });
 
+    it('a contemplação não restaura a cena sozinha: a restauração é ação do usuário no passo seguinte', () => {
+        // Nenhum passo dispara clique automático ao avançar. Religar os nomes /
+        // sair da tela cheia é o que o usuário faz no passo de restauração logo
+        // depois, por clique no próprio botão. Sem isso, a contemplação pulava o
+        // passo seguinte ao satisfazer a condição dele com um clique sintético.
+        for (const step of RADAR_TUTORIAL_STEPS) {
+            expect((step as { autoClickTarget?: unknown }).autoClickTarget, step.id).toBeUndefined();
+        }
+
+        const labelsOn = RADAR_TUTORIAL_STEPS.find((s) => s.id === 'toolbar-labels-on')!;
+        expect(labelsOn.advance).toEqual({ kind: 'click' });
+        expect(labelsOn.targets).toEqual(['[data-tutorial="toggle-labels"]']);
+
+        const fullscreenOff = RADAR_TUTORIAL_STEPS.find((s) => s.id === 'toolbar-fullscreen-off')!;
+        expect(fullscreenOff.advance).toEqual({ kind: 'click' });
+        expect(fullscreenOff.targets).toEqual(['[data-tutorial="toggle-fullscreen"]']);
+    });
+
     it('referências em dois blocos: corpos (Sol/Terra/Lua) com chegada e depois planetas com chegada', () => {
         const bodies = RADAR_TUTORIAL_STEPS.find((s) => s.id === 'references-bodies')!;
         expect(bodies.advance).toEqual({ kind: 'click', requireSelector: '[data-tutorial="reference-body"]' });
@@ -133,6 +153,23 @@ describe('RADAR_TUTORIAL_STEPS', () => {
         expect(select.targets.some((t) => t.includes('radar-canvas'))).toBe(false);
     });
 
+    it('apresenta a rocha na cena iluminada logo após a seleção, antes do card', () => {
+        const ids = RADAR_TUTORIAL_STEPS.map((s) => s.id);
+        // O passo de contemplação entra entre a seleção e a leitura do card.
+        expect(ids.indexOf('meet-rock')).toBe(ids.indexOf('select-object') + 1);
+        expect(ids.indexOf('read-card')).toBe(ids.indexOf('meet-rock') + 1);
+
+        const meet = RADAR_TUTORIAL_STEPS.find((s) => s.id === 'meet-rock')!;
+        // Foca a cena inteira, sem escurecer o céu (vê o objeto real grande).
+        expect(meet.targets).toEqual(['[data-tutorial="radar-canvas"]']);
+        expect(meet.keepSceneBright).toBe(true);
+        // Avança por botão (contemplação), depende de seleção e personaliza com o nome real.
+        expect(meet.advance).toEqual({ kind: 'manual' });
+        expect(meet.requiresSelection).toBe(true);
+        expect(meet.bodyPt).toContain('{rockName}');
+        expect(meet.bodyEn).toContain('{rockName}');
+    });
+
     it('os passos de troca de aba avançam com um clique em aba não selecionada', () => {
         for (const id of ['card-tabs-to-physical', 'card-tabs-to-approach']) {
             const step = RADAR_TUTORIAL_STEPS.find((s) => s.id === id)!;
@@ -141,10 +178,101 @@ describe('RADAR_TUTORIAL_STEPS', () => {
         }
     });
 
+    it('o bloco do objeto é contíguo: pular a seleção salta direto para um passo sem seleção', () => {
+        const steps = stepsForViewport(false);
+        const start = steps.findIndex((s) => s.advance.kind === 'selection');
+        expect(start).toBeGreaterThanOrEqual(0);
+        // A partir da seleção, há uma sequência contígua de passos que dependem de
+        // seleção (o "bloco do objeto"). Pular a seleção salta até o fim dele.
+        let i = start + 1;
+        while (i < steps.length && (steps[i].requiresSelection || steps[i].advance.kind === 'selection')) i += 1;
+        // O destino do salto existe e NÃO depende de seleção (senão o loop voltaria).
+        expect(i).toBeLessThan(steps.length);
+        expect(steps[i].requiresSelection).not.toBe(true);
+        expect(steps[i].advance.kind).not.toBe('selection');
+        // Todos os passos do bloco saltado dependem de seleção (nenhum "vaza").
+        expect(steps.slice(start, i).every((s) => s.advance.kind === 'selection' || s.requiresSelection)).toBe(true);
+    });
+
+    it('ensina a voltar pra perto após ver a trajetória, exigindo o clique na rocha', () => {
+        const ids = RADAR_TUTORIAL_STEPS.map((s) => s.id);
+        // O passo de voltar entra logo após a explicação da trajetória e antes da órbita.
+        expect(ids.indexOf('trajectory-return')).toBe(ids.indexOf('trajectory-explain') + 1);
+        expect(ids.indexOf('trajectory-return')).toBeLessThan(ids.indexOf('orbit-view'));
+
+        const ret = RADAR_TUTORIAL_STEPS.find((s) => s.id === 'trajectory-return')!;
+        // Avança por re-seleção (clique na rocha já selecionada), não por botão.
+        expect(ret.advance).toEqual({ kind: 'reselect-object' });
+        // Exige o clique: passo de ação não tem rótulo de botão primário.
+        expect(ret.primaryLabelPt).toBeUndefined();
+        expect(ret.primaryLabelEn).toBeUndefined();
+        // Depende de seleção (a rocha já está selecionada).
+        expect(ret.requiresSelection).toBe(true);
+        // Spotlight de furo único no item da rocha na lista (alvo estável); a label
+        // na cena é fallback quando a lista está fechada.
+        expect(ret.targets).toEqual([
+            '[data-tutorial="selected-rock-list-item"]',
+            '[data-tutorial="selected-rock-label"]',
+        ]);
+        // Vê a câmera voltar antes de seguir.
+        expect(ret.settleWhileAdvancing).toBe(true);
+    });
+
     it('a explicação da órbita não menciona a Terra (ela não aparece no modo orbital)', () => {
         const orbitExplain = RADAR_TUTORIAL_STEPS.find((s) => s.id === 'orbit-explain')!;
         expect(orbitExplain.bodyPt).not.toContain('Terra');
         expect(orbitExplain.bodyEn).not.toContain('Earth');
+    });
+});
+
+describe('tutorialChapterLabel', () => {
+    it('todo passo pertence a um capítulo com label não vazio (PT e EN)', () => {
+        for (const step of RADAR_TUTORIAL_STEPS) {
+            expect(tutorialChapterLabel(step.id, false).length, step.id).toBeGreaterThan(0);
+            expect(tutorialChapterLabel(step.id, true).length, step.id).toBeGreaterThan(0);
+        }
+    });
+
+    it('agrupa os passos nas fases esperadas', () => {
+        expect(tutorialChapterLabel('camera-zoom', false)).toBe('Câmera');
+        expect(tutorialChapterLabel('filter-criterion', false)).toBe('Objetos');
+        expect(tutorialChapterLabel('select-object', false)).toBe('O objeto');
+        expect(tutorialChapterLabel('orbit-view', false)).toBe('A viagem');
+        expect(tutorialChapterLabel('finale', false)).toBe('Reta final');
+        expect(tutorialChapterLabel('camera-zoom', true)).toBe('Camera');
+    });
+
+    it('id desconhecido cai no capítulo de início, sem quebrar', () => {
+        expect(tutorialChapterLabel('inexistente', false)).toBe('Início');
+    });
+});
+
+describe('fillLiveFacts', () => {
+    it('substitui nome e métrica reais no corpo do passo', () => {
+        const body = 'É o {rockName}, uma rocha de verdade {rockMetric}.';
+        const out = fillLiveFacts(body, { rockName: '2024 XY', rockMetric: 'a 380 mil km da Terra agora' }, false);
+        expect(out).toBe('É o 2024 XY, uma rocha de verdade a 380 mil km da Terra agora.');
+    });
+
+    it('sem nome, cai num termo neutro em vez de quebrar', () => {
+        expect(fillLiveFacts('Veja o {rockName}.', null, false)).toBe('Veja o esta rocha.');
+        expect(fillLiveFacts('See {rockName}.', null, true)).toBe('See this rock.');
+    });
+
+    it('sem métrica, remove o placeholder e limpa espaços e vírgula órfã', () => {
+        const out = fillLiveFacts('É o {rockName}, uma rocha de verdade {rockMetric}.', { rockName: 'Bennu' }, false);
+        expect(out).toBe('É o Bennu, uma rocha de verdade.');
+    });
+
+    it('o passo de seleção usa os placeholders de fato real', () => {
+        const select = RADAR_TUTORIAL_STEPS.find((s) => s.id === 'select-object')!;
+        expect(select.bodyPt).toContain('{rockName}');
+        expect(select.bodyPt).toContain('{rockMetric}');
+        // stepCopy preenche os placeholders quando recebe os fatos.
+        const copy = stepCopy(select, false, false, { rockName: 'Eros', rockMetric: 'a 12 milhões de km da Terra agora' });
+        expect(copy.body).toContain('Eros');
+        expect(copy.body).not.toContain('{rockName}');
+        expect(copy.body).not.toContain('{rockMetric}');
     });
 });
 

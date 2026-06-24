@@ -389,6 +389,7 @@ export function ResolvedScreenLabel({
     onClick,
     title,
     tooltip,
+    dataTutorial,
 }: {
     position: [number, number, number];
     labelId: string;
@@ -402,6 +403,8 @@ export function ResolvedScreenLabel({
     onClick?: () => void;
     title?: string;
     tooltip?: React.ReactNode;
+    /** Marcador `data-tutorial` no botão da label, para o tutorial ancorar o spotlight. */
+    dataTutorial?: string;
 }) {
     const labelRef = useRef<THREE.Group>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -443,6 +446,7 @@ export function ResolvedScreenLabel({
                             onPointerLeave={() => { if (onClick) cursorPointerLeave(); }}
                             title={title}
                             aria-label={title}
+                            data-tutorial={dataTutorial}
                             disabled={!onClick}
                             ref={buttonRef}
                             className={[

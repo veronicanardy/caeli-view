@@ -21,7 +21,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useRadarTutorialOptional, type RadarTutorialContextValue } from './RadarTutorialContext';
-import { findVisibleTarget, isTypingTarget, prefersReducedMotion, rectFromElement } from './radarTutorialDom';
+import {
+    findVisibleTarget,
+    isProgrammaticTutorialClick,
+    isTypingTarget,
+    prefersReducedMotion,
+    programmaticTutorialClick,
+    rectFromElement,
+} from './radarTutorialDom';
+import { manualSkipClickSelectors } from './radarTutorialFlow';
 import { inflateRect, rectsAlmostEqual, type TutorialRect } from './radarTutorialGeometry';
 import type { TutorialStep } from './radarTutorialSteps';
 import { TutorialGestureExtras } from './TutorialGestureExtras';
@@ -111,7 +119,8 @@ function OverlayForStep({ tutorial, step }: { tutorial: RadarTutorialContextValu
     // mesmo botão de resetar vista que o usuário conhecerá depois.
     useEffect(() => {
         if (!step.resetViewOnEnter) return;
-        findVisibleTarget(['[data-tutorial="reset-view"]'], true)?.click();
+        const el = findVisibleTarget(['[data-tutorial="reset-view"]'], true);
+        if (el) programmaticTutorialClick(el);
     }, [step]);
 
     // ─── Detecção das ações que avançam o passo ───────────────────────────────
@@ -140,6 +149,29 @@ function OverlayForStep({ tutorial, step }: { tutorial: RadarTutorialContextValu
         />
     );
 
+    // "Pular passo": executa a ação esperada por baixo (clica a aba, abre a
+    // órbita) e avança UM passo. Assim a imagem que o texto descreve sempre
+    // acontece, mesmo quando o usuário não quer clicar ele mesmo. Sem clique
+    // determinístico (gestos, filtros), só avança um passo. O clique é
+    // programático: as detecções de avanço o ignoram, então o avanço acontece de
+    // forma controlada (um passo), nunca em dobro.
+    //
+    // Exceção: o passo de SELEÇÃO. Pular ali significa "não quero conhecer este
+    // objeto", então salta o bloco do objeto inteiro (card, abas, trajetória,
+    // órbita) via skipUnavailableStep. Selecionar a rocha por baixo só prenderia
+    // a pessoa no bloco que ela quis pular (e a seleção assíncrona causava loop
+    // de volta ao passo de seleção).
+    const handleSkipStep = () => {
+        if (step.advance.kind === 'selection') {
+            tutorial.skipUnavailableStep();
+            return;
+        }
+        const selectors = manualSkipClickSelectors(step);
+        const el = selectors ? findVisibleTarget(selectors, true) : null;
+        if (el) programmaticTutorialClick(el);
+        tutorial.next();
+    };
+
     return createPortal(
         <div className="pointer-events-none fixed inset-0 z-[120]">
             {/* Em settling o escurecimento sai de cena: o usuário vê a câmera viajar ou o radar carregar. */}
@@ -157,17 +189,10 @@ function OverlayForStep({ tutorial, step }: { tutorial: RadarTutorialContextValu
                 en={tutorial.locale === 'en'}
                 isMobile={tutorial.isMobile}
                 targetRect={spotlightRect}
+                liveFacts={tutorial.liveFacts}
                 extras={extras}
-                onNext={() => {
-                    const completed = tutorial.completeStep('manual-next');
-                    if (!completed || !step.autoClickTarget) return;
-                    const selectors = Array.isArray(step.autoClickTarget) ? step.autoClickTarget : [step.autoClickTarget];
-                    setTimeout(() => {
-                        const el = findVisibleTarget(selectors, true);
-                        el?.click();
-                    }, 0);
-                }}
-                onSkipStep={tutorial.skipUnavailableStep}
+                onNext={() => tutorial.completeStep('manual-next')}
+                onSkipStep={handleSkipStep}
                 onSkipTutorial={tutorial.skip}
             />
         </div>,
@@ -189,6 +214,9 @@ function useStepClickAdvance(step: TutorialStep, tutorial: RadarTutorialContextV
         const advance = step.advance;
         if (advance.kind !== 'click') return undefined;
         const onClickCapture = (event: Event) => {
+            // Clique sintetizado pelo próprio tutorial (restauração visual de um
+            // passo de contemplação) não é ação do usuário: nunca avança o passo.
+            if (isProgrammaticTutorialClick()) return;
             const target = event.target;
             if (!(target instanceof Element)) return;
             if (!step.targets.some((selector) => target.closest(selector))) return;

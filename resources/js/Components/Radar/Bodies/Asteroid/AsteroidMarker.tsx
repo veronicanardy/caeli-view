@@ -147,6 +147,7 @@ export function AsteroidMarker({
                     selected={isSelected}
                     hovered={hovered}
                     protectFromFocus={protectLabelFromFocus}
+                    dataTutorial={isSelected ? 'selected-rock-label' : undefined}
                     onClick={() => onSelect(object.approach)}
                     tooltip={isSelected && object.currentDistanceKm != null ? (
                         <><span>O asteroide está aqui agora</span><br /><span className="text-white/50">{new Intl.NumberFormat('pt-BR').format(Math.round(object.currentDistanceKm))} km da Terra</span></>

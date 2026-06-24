@@ -36,7 +36,7 @@ Se a logica passar a decidir comportamento cientifico, recalcular dados de domin
 
 ## Componentes atuais
 
-- `RadarSceneObjectListItem.tsx`
+- `RadarSceneObjectListItem.tsx`: item da lista. Durante o tutorial, o passo de seleção só aceita a PRIMEIRA rocha (prop `isFirst` → `isActionAllowed('select-object', { objectIsFirst })`); as demais ficam `disabled`. O item da rocha selecionada marca `data-tutorial="selected-rock-list-item"`, usado no multi-spotlight de "voltar pra perto" (contrato em `../Tutorial/README.md`).
 - `UnifiedApproachTable.tsx`
 
 ## Regra explicita para IA

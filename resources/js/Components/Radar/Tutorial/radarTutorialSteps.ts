@@ -37,6 +37,8 @@ export type TutorialAdvance =
     | { kind: 'limit-change' }
     /** Avança quando um objeto é selecionado (selectedId não nulo). */
     | { kind: 'selection' }
+    /** Avança quando o usuário re-seleciona a rocha JÁ selecionada (clique na rocha/label), que reaproxima a câmera. Não depende de selectedId mudar. */
+    | { kind: 'reselect-object' }
     /** Avança quando todas as teclas do mini teclado (WASD + setas) foram usadas. */
     | { kind: 'keyboard-pan' }
     /** Avança após zoom de aproximação E de afastamento (medidor de duas fases). */
@@ -69,8 +71,6 @@ export type TutorialStep = {
     requiredClicks?: number;
     /** Ao entrar no passo, aciona o botão de resetar vista para devolver a câmera ao ponto de partida. */
     resetViewOnEnter?: boolean;
-    /** Ao avançar manualmente, dispara um clique automático no botão relacionado. */
-    autoClickTarget?: string | string[];
     side?: TutorialSide;
     /** Lado preferido no mobile quando difere do desktop (ex.: card vira bottom sheet). */
     sideMobile?: TutorialSide;
@@ -115,8 +115,8 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         advance: { kind: 'manual' },
         titlePt: 'Esta é a cena orbital',
         titleEn: 'This is the orbital scene',
-        bodyPt: 'A Terra fica no centro, com a Lua do lado. Cada rocha é um asteroide ou cometa real passando pela nossa vizinhança agora.',
-        bodyEn: 'Earth sits at the centre, with the Moon right beside it. Every rock is a real asteroid or comet passing through our neighbourhood right now.',
+        bodyPt: 'A Terra fica no centro, com a Lua do lado. Cada rocha é um asteroide ou cometa real passando pela nossa vizinhança agora. Antes de explorar, vamos deixar a câmera na sua mão.',
+        bodyEn: 'Earth sits at the centre, with the Moon right beside it. Every rock is a real asteroid or comet passing through our neighbourhood right now. Before we explore, let us put the camera in your hands.',
         primaryLabelPt: 'Próximo',
         primaryLabelEn: 'Next',
     },
@@ -138,10 +138,10 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         targets: ['[data-tutorial="radar-canvas"]'],
         advance: { kind: 'scene-zoom' },
         advanceDelayMs: 1500,
-        titlePt: 'Agora, o zoom',
-        titleEn: 'Now, zoom',
-        bodyPt: 'Scroll sobre a cena: aproxime da Terra, depois afaste para ver tudo. As barrinhas mostram seu progresso.',
-        bodyEn: 'Scroll over the scene: zoom in to Earth, then zoom out to see it all. The bars below show your progress.',
+        titlePt: 'Aproxime, depois afaste',
+        titleEn: 'Zoom in, then out',
+        bodyPt: 'Scroll sobre a cena: chegue pertinho da Terra, depois recue para ver tudo. Repare como a vizinhança inteira cabe num gesto. As barrinhas mostram seu progresso.',
+        bodyEn: 'Scroll over the scene: get up close to Earth, then pull back to see it all. Notice how the whole neighbourhood fits in one gesture. The bars below show your progress.',
         bodyMobilePt: 'Use a pinça: aproxime da Terra, depois afaste para ver tudo. As barrinhas mostram seu progresso.',
         bodyMobileEn: 'Pinch the scene: zoom in to Earth, then zoom out to see it all. The bars below show your progress.',
     },
@@ -157,6 +157,18 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         bodyEn: 'Left button + drag rotates the scene. Right button pans without rotating. Spin until the bar fills up.',
         bodyMobilePt: 'Arraste com um dedo para girar a cena. Gire até preencher a barrinha.',
         bodyMobileEn: 'Drag with one finger to spin around the scene. Spin until the bar fills up.',
+    },
+    {
+        id: 'cheer-camera',
+        audience: 'all',
+        targets: [],
+        advance: { kind: 'manual' },
+        titlePt: 'Câmera dominada',
+        titleEn: 'Camera mastered',
+        bodyPt: 'Você já navega pela cena como quem é de casa. Agora vamos decidir o que aparece nela.',
+        bodyEn: 'You already move through the scene like a regular. Now let us decide what shows up in it.',
+        primaryLabelPt: 'Seguir',
+        primaryLabelEn: 'Onward',
     },
     {
         id: 'filter-criterion',
@@ -196,10 +208,10 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         advance: { kind: 'manual' },
         titlePt: 'Filtros no seu controle',
         titleEn: 'Filters in your control',
-        bodyPt: 'Critério e quantidade ficam disponíveis o tempo todo. A cena atualiza na hora.',
-        bodyEn: 'Criterion and quantity are always there. The scene updates instantly.',
-        primaryLabelPt: 'Entendi',
-        primaryLabelEn: 'Got it',
+        bodyPt: 'Critério e quantidade ficam disponíveis o tempo todo, e a cena atualiza na hora. Agora a parte boa: vamos conhecer um desses objetos de perto.',
+        bodyEn: 'Criterion and quantity are always there, and the scene updates instantly. Now the good part: let us meet one of these objects up close.',
+        primaryLabelPt: 'Quero ver',
+        primaryLabelEn: 'Show me',
     },
     {
         id: 'select-object',
@@ -212,12 +224,30 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         side: 'right',
         /* Mobile: a lista é um bottom sheet; o tooltip fica acima dela. */
         sideMobile: 'top',
-        titlePt: 'Escolha um objeto da lista',
-        titleEn: 'Pick an object from the list',
-        bodyPt: 'Clique em qualquer nome. Eu abro o card dele para você.',
-        bodyEn: 'Click any name. I will open its card for you.',
-        bodyMobilePt: 'Abra Objetos e toque em um nome da lista.',
-        bodyMobileEn: 'Open Objects and tap a name in the list.',
+        titlePt: 'Escolha o primeiro da lista',
+        titleEn: 'Pick the first on the list',
+        bodyPt: 'Clique no primeiro nome da lista. É o {rockName}, uma rocha de verdade {rockMetric}. Eu abro o card dela para você.',
+        bodyEn: 'Click the first name on the list. It is {rockName}, a real rock {rockMetric}. I will open its card for you.',
+        bodyMobilePt: 'Abra Objetos e toque no primeiro nome. É o {rockName}, uma rocha de verdade {rockMetric}.',
+        bodyMobileEn: 'Open Objects and tap the first name. It is {rockName}, a real rock {rockMetric}.',
+    },
+    {
+        /* Contemplação da rocha recém-selecionada: a câmera acabou de chegar nela.
+         * Cena iluminada (keepSceneBright) com o furo do spotlight no canvas, para a
+         * pessoa ver o objeto real grande na tela ANTES de o card escurecer tudo. */
+        id: 'meet-rock',
+        audience: 'all',
+        targets: ['[data-tutorial="radar-canvas"]'],
+        advance: { kind: 'manual' },
+        optional: true,
+        requiresSelection: true,
+        keepSceneBright: true,
+        titlePt: 'Olha ela aí',
+        titleEn: 'There it is',
+        bodyPt: 'A câmera chegou junto do {rockName}. Essa rocha que brilha na cena marca a posição real dele agora. O desenho é uma representação, o tamanho é aumentado só para ajudar a enxergar. Dá uma olhada antes da gente entender o card.',
+        bodyEn: 'The camera has arrived right next to {rockName}. The rock glowing in the scene marks its real position right now. The shape is a representation, its on-screen size is just to help you see it. Take a look before we understand its card.',
+        primaryLabelPt: 'Quero ver o card',
+        primaryLabelEn: 'Show me its card',
     },
     {
         id: 'read-card',
@@ -246,8 +276,8 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         sideMobile: 'top',
         titlePt: 'Comece pelo resumo',
         titleEn: 'Start with the summary',
-        bodyPt: 'O [[Resumo]] mostra distância, velocidade, risco e status. É o cartão de visita.',
-        bodyEn: 'The [[Summary]] shows distance, speed, risk and status. It is the calling card.',
+        bodyPt: 'O [[Resumo]] traz a distância da Terra, o status e o risco do objeto, com uma leitura rápida do que ele é. É o cartão de visita.',
+        bodyEn: 'The [[Summary]] brings the distance from Earth, the status and the risk, with a quick read of what the object is. It is the calling card.',
         primaryLabelPt: 'Entendi',
         primaryLabelEn: 'Got it',
     },
@@ -262,8 +292,8 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         sideMobile: 'top',
         titlePt: 'Veja o perfil físico',
         titleEn: 'See the physical profile',
-        bodyPt: 'Clique em [[Perfil físico]] para ver tamanho, tipo e órbita. A parte nerd bonitinha.',
-        bodyEn: 'Click [[Physical profile]] to see size, type and orbit. The cute nerdy part.',
+        bodyPt: 'Clique em [[Perfil físico]] para ver tamanho, velocidade e brilho do objeto. A parte nerd bonitinha.',
+        bodyEn: 'Click [[Physical profile]] to see the object\'s size, speed and brightness. The cute nerdy part.',
     },
     {
         id: 'card-tabs-physical-done',
@@ -292,8 +322,8 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         sideMobile: 'top',
         titlePt: 'E a aproximação?',
         titleEn: 'And the approach?',
-        bodyPt: 'Clique em [[Aproximação]] para ver data, distância mínima e velocidade no momento da passagem.',
-        bodyEn: 'Click [[Approach]] to see the date, minimum distance and speed at the moment of closest pass.',
+        bodyPt: 'Clique em [[Aproximação]] para ver a data da máxima aproximação e a menor distância que o objeto chega da Terra.',
+        bodyEn: 'Click [[Approach]] to see the date of closest approach and the smallest distance the object reaches from Earth.',
     },
     {
         id: 'card-tabs-approach-done',
@@ -306,10 +336,10 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         sideMobile: 'top',
         titlePt: 'O momento do encontro',
         titleEn: 'The moment of encounter',
-        bodyPt: 'Quando e como a rocha passa mais perto. Você já conhece o card por completo.',
-        bodyEn: 'When and how the rock passes closest. You now know the card inside out.',
-        primaryLabelPt: 'Entendi',
-        primaryLabelEn: 'Got it',
+        bodyPt: 'Quando e como a rocha passa mais perto. Pronto, você decifrou o card inteiro. Agora vamos ver por onde ela anda.',
+        bodyEn: 'When and how the rock passes closest. There, you have decoded the whole card. Now let us see where it travels.',
+        primaryLabelPt: 'Ver o caminho',
+        primaryLabelEn: 'See its path',
     },
     {
         id: 'zoom-trajectory',
@@ -338,6 +368,25 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         bodyEn: 'The line is the estimated trajectory and the arrow shows direction. The [[−24h]], [[−48h]] and [[−72h]] markers show past positions. Rotate the scene to explore.',
         primaryLabelPt: 'Entendi',
         primaryLabelEn: 'Got it',
+    },
+    {
+        id: 'trajectory-return',
+        audience: 'all',
+        /* Destaca o item da rocha na lista de navegação (alvo estável e fácil de
+           emoldurar). A label na cena também volta pra perto ao ser clicada, mas
+           o spotlight foca na lista; o texto convida a clicar nos dois. */
+        targets: ['[data-tutorial="selected-rock-list-item"]', '[data-tutorial="selected-rock-label"]'],
+        advance: { kind: 'reselect-object' },
+        optional: true,
+        requiresSelection: true,
+        settleWhileAdvancing: true,
+        advanceDelayMs: 1200,
+        side: 'right',
+        sideMobile: 'top',
+        titlePt: 'Pertinho de novo',
+        titleEn: 'Back up close',
+        bodyPt: 'Para voltar de perto, clique na rocha outra vez, ou no nome dela na cena. A câmera retorna sozinha para junto do objeto.',
+        bodyEn: 'To get back up close, click the rock again, or its name in the scene. The camera returns to the object on its own.',
     },
     {
         id: 'orbit-view',
@@ -397,10 +446,10 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         sideMobile: 'top',
         titlePt: 'Visite a vizinhança',
         titleEn: 'Visit the neighbourhood',
-        bodyPt: 'Nas Referências, um clique te leva direto para perto de quem você quiser. Escolha [[Lua]] e veja a câmera viajar até lá.',
-        bodyEn: 'In References, one click takes you right next to whoever you like. Pick [[Moon]] and watch the camera travel there.',
-        bodyMobilePt: 'Abra a lista de Objetos e, nas Referências, toque em [[Lua]] para ver a câmera viajar até lá.',
-        bodyMobileEn: 'Open the Objects list and, under References, tap [[Moon]] to watch the camera travel there.',
+        bodyPt: 'Nas Referências, um clique te leva direto para perto de quem você quiser. Por agora, escolha [[Lua]] e veja a câmera viajar até lá. Depois do tutorial, o Sol e a Terra ficam a um clique também.',
+        bodyEn: 'In References, one click takes you right next to whoever you like. For now, pick [[Moon]] and watch the camera travel there. After the tutorial, the Sun and Earth are one click away too.',
+        bodyMobilePt: 'Abra a lista de Objetos e, nas Referências, toque em [[Lua]] para ver a câmera viajar até lá. Depois você visita o Sol e a Terra à vontade.',
+        bodyMobileEn: 'Open the Objects list and, under References, tap [[Moon]] to watch the camera travel there. Later you can visit the Sun and Earth freely.',
     },
     {
         id: 'references-bodies-arrival',
@@ -408,13 +457,14 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         targets: ['[data-tutorial="radar-canvas"]'],
         advance: { kind: 'manual' },
         optional: true,
+        keepSceneBright: true,
         skipGroup: 'ref-bodies',
         side: 'right',
         sideMobile: 'bottom',
-        titlePt: 'Chegamos!',
-        titleEn: 'We\'re here!',
-        bodyPt: 'Estes corpos têm um card próprio com características físicas e história. A navegação pelas abas é a mesma que você já conhece nas rochas, mas as informações são bem diferentes.',
-        bodyEn: 'These bodies have their own card with physical traits and history. The tab navigation works just like the one you know from rocks, but the information is quite different.',
+        titlePt: 'Chegamos na Lua!',
+        titleEn: 'We reached the Moon!',
+        bodyPt: 'Olha ela bem de perto na cena. Estes corpos têm um card próprio com características físicas e história. A navegação pelas abas é a mesma que você já conhece nas rochas, mas as informações são bem diferentes.',
+        bodyEn: 'There it is, up close in the scene. These bodies have their own card with physical traits and history. The tab navigation works just like the one you know from rocks, but the information is quite different.',
         primaryLabelPt: 'Entendi',
         primaryLabelEn: 'Got it',
     },
@@ -442,13 +492,14 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         targets: ['[data-tutorial="radar-canvas"]'],
         advance: { kind: 'manual' },
         optional: true,
+        keepSceneBright: true,
         skipGroup: 'ref-planets',
         side: 'right',
         sideMobile: 'bottom',
-        titlePt: 'Destino escolhido',
-        titleEn: 'Destination chosen',
-        bodyPt: 'Os planetas também têm card próprio com dados básicos. Vale dar uma olhada antes de continuar.',
-        bodyEn: 'Planets have their own card with basic data too. Worth a look before moving on.',
+        titlePt: 'Chegamos no planeta!',
+        titleEn: 'We reached the planet!',
+        bodyPt: 'Aí está ele de pertinho na cena. Os planetas também têm card próprio com dados básicos. Vale dar uma olhada antes de continuar.',
+        bodyEn: 'There it is, up close in the scene. Planets have their own card with basic data too. Worth a look before moving on.',
         primaryLabelPt: 'Entendi',
         primaryLabelEn: 'Got it',
     },
@@ -461,10 +512,10 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         settleWhileAdvancing: true,
         advanceDelayMs: 900,
         side: 'bottom',
-        titlePt: 'Se perdeu? Sem pânico',
-        titleEn: 'Lost? No panic',
-        bodyPt: 'Depois de tanto passeio, que tal voltar para casa? Este botão devolve a câmera para uma posição segura, pertinho da Terra. Clique para ver a mágica.',
-        bodyEn: 'After all this wandering, how about heading home? This button returns the camera to a safe spot, right by Earth. Click and watch the magic.',
+        titlePt: 'Quanta viagem, hein?',
+        titleEn: 'Quite a trip, right?',
+        bodyPt: 'Você visitou a Lua e um planeta, e ainda pode passear pelo Sol e pelos outros quando quiser. Para voltar para casa, este botão devolve a câmera a uma posição segura, pertinho da Terra. Clique para ver a mágica.',
+        bodyEn: 'You visited the Moon and a planet, and you can roam to the Sun and the others whenever you like. To head home, this button returns the camera to a safe spot, right by Earth. Click and watch the magic.',
     },
     {
         id: 'scene-click-hint',
@@ -494,12 +545,12 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         bodyEn: 'These little buttons in the corner adjust the view. This one hides the names and markers. Click it to see the scene clean.',
     },
     {
-        /* Contemplação: o alvo é a cena inteira, então o furo do spotlight deixa o céu visível sem escurecer. */
+        /* Contemplação: o alvo é a cena inteira, então o furo do spotlight deixa o céu visível sem escurecer.
+         * A cena permanece sem marcações: religar os nomes é a ação do PRÓXIMO passo, feita pelo usuário. */
         id: 'labels-view',
         audience: 'all',
         targets: ['[data-tutorial="radar-canvas"]'],
         advance: { kind: 'manual' },
-        autoClickTarget: '[data-tutorial="toggle-labels"]',
         optional: true,
         skipGroup: 'labels',
         titlePt: 'Que limpeza, né?',
@@ -538,12 +589,12 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         bodyEn: 'This button expands the Radar to the whole screen. Click to try it.',
     },
     {
-        /* Contemplação da tela cheia: mesmo truque do furo do spotlight na cena inteira. */
+        /* Contemplação da tela cheia: mesmo truque do furo do spotlight na cena inteira.
+         * A cena continua em tela cheia: sair dela é a ação do PRÓXIMO passo, feita pelo usuário. */
         id: 'fullscreen-view',
         audience: 'all',
         targets: ['[data-tutorial="radar-canvas"]'],
         advance: { kind: 'manual' },
-        autoClickTarget: '[data-tutorial="toggle-fullscreen"]',
         optional: true,
         skipGroup: 'fullscreen',
         titlePt: 'O céu todo para você',
@@ -586,8 +637,8 @@ export const RADAR_TUTORIAL_STEPS: TutorialStep[] = [
         optional: true,
         titlePt: 'Vale a leitura',
         titleEn: 'Worth a read',
-        bodyPt: 'O Guia do Radar está aqui sempre que você precisar. Escalas, símbolos, o que significa cada indicador. Tem também um guia específico para o modo órbita, que aparece quando você estiver por lá. Vale ler os dois. Quando terminar o tutorial, o guia vai abrir para você dar uma olhada.',
-        bodyEn: 'The Radar Guide is here whenever you need it. Scales, symbols, what each indicator means. There is also a specific guide for orbit mode, which appears when you are there. Both are worth reading. When the tutorial ends, the guide will open for you to take a look.',
+        bodyPt: 'O Guia do Radar está aqui sempre que você precisar. Escalas, símbolos, o que significa cada indicador. Tem também um guia específico para o modo órbita, que aparece quando você estiver por lá. Vale ler os dois.',
+        bodyEn: 'The Radar Guide is here whenever you need it. Scales, symbols, what each indicator means. There is also a specific guide for orbit mode, which appears when you are there. Both are worth reading.',
         primaryLabelPt: 'Entendi',
         primaryLabelEn: 'Got it',
     },
@@ -623,11 +674,38 @@ export function indexAfterGroup(steps: TutorialStep[], index: number): number {
     return i;
 }
 
+/**
+ * Fatos reais do céu de agora, injetados em passos que usam placeholders. Vêm
+ * por props da página (nunca da cena 3D direta), mantendo o tutorial desacoplado.
+ *  - `rockName`: nome real da rocha no topo da lista (segundo o filtro ativo).
+ *  - `rockMetric`: frase pronta com a métrica do critério (distância OU data de
+ *    aproximação), já formatada e localizada. Vazia quando não se aplica (famosos).
+ */
+export type TutorialLiveFacts = {
+    rockName?: string | null;
+    rockMetric?: string | null;
+};
+
+/**
+ * Substitui os placeholders {rockName} e {rockMetric} pelo dado real. Quando o
+ * fato falta, usa um termo neutro para a frase não quebrar nem mentir. Pura.
+ */
+export function fillLiveFacts(body: string, facts: TutorialLiveFacts | null, en: boolean): string {
+    const name = facts?.rockName?.trim();
+    const metric = facts?.rockMetric?.trim();
+    let out = body.replace(/\{rockName\}/g, name || (en ? 'this rock' : 'esta rocha'));
+    // {rockMetric} vem com a conjunção embutida (", a 380 mil km..."): se faltar, some.
+    out = out.replace(/\{rockMetric\}/g, metric ? `${metric}` : '');
+    // Limpa espaço duplo deixado por um placeholder vazio.
+    return out.replace(/\s{2,}/g, ' ').replace(/\s+([.,])/g, '$1').trim();
+}
+
 /** Resolve título, corpo e rótulos do passo para o idioma e viewport atuais. */
-export function stepCopy(step: TutorialStep, en: boolean, isMobile: boolean): TutorialStepCopy {
-    const body = isMobile
+export function stepCopy(step: TutorialStep, en: boolean, isMobile: boolean, facts: TutorialLiveFacts | null = null): TutorialStepCopy {
+    const rawBody = isMobile
         ? (en ? step.bodyMobileEn ?? step.bodyEn : step.bodyMobilePt ?? step.bodyPt)
         : (en ? step.bodyEn : step.bodyPt);
+    const body = fillLiveFacts(rawBody, facts, en);
     return {
         title: en ? step.titleEn : step.titlePt,
         body,
@@ -647,4 +725,69 @@ export function stepSide(step: TutorialStep, isMobile: boolean): TutorialSide {
  */
 export function splitBodyChips(body: string): string[] {
     return body.split(/\[\[(.*?)\]\]/g);
+}
+
+/**
+ * Capítulos do tutorial: agrupam os passos em fases nomeadas, para o tooltip
+ * mostrar "Câmera", "O objeto", "A viagem"... em vez de um "7/30" seco. Marca a
+ * trilha como uma jornada, não uma contagem. Pura.
+ */
+type TutorialChapterId = 'intro' | 'camera' | 'objects' | 'object' | 'journey' | 'scene' | 'closing';
+
+const CHAPTER_BY_STEP_ID: Record<string, TutorialChapterId> = {
+    welcome: 'intro',
+    scene: 'intro',
+    'camera-keyboard': 'camera',
+    'camera-zoom': 'camera',
+    'camera-rotate': 'camera',
+    'cheer-camera': 'camera',
+    'filter-criterion': 'objects',
+    'filter-limit': 'objects',
+    'filter-done': 'objects',
+    'select-object': 'object',
+    'meet-rock': 'object',
+    'read-card': 'object',
+    'card-tabs-summary': 'object',
+    'card-tabs-to-physical': 'object',
+    'card-tabs-physical-done': 'object',
+    'card-tabs-to-approach': 'object',
+    'card-tabs-approach-done': 'object',
+    'zoom-trajectory': 'journey',
+    'trajectory-explain': 'journey',
+    'trajectory-return': 'journey',
+    'orbit-view': 'journey',
+    'orbit-explain': 'journey',
+    'orbit-return': 'journey',
+    'references-bodies': 'journey',
+    'references-bodies-arrival': 'journey',
+    'references-planets': 'journey',
+    'references-planets-arrival': 'journey',
+    'reset-view': 'journey',
+    'scene-click-hint': 'scene',
+    'toolbar-labels-off': 'scene',
+    'labels-view': 'scene',
+    'toolbar-labels-on': 'scene',
+    'toolbar-fullscreen-on': 'scene',
+    'fullscreen-view': 'scene',
+    'toolbar-fullscreen-off': 'scene',
+    'radar-guide': 'closing',
+    'guide-invitation': 'closing',
+    finale: 'closing',
+};
+
+const CHAPTER_LABELS: Record<TutorialChapterId, { pt: string; en: string }> = {
+    intro: { pt: 'Início', en: 'Start' },
+    camera: { pt: 'Câmera', en: 'Camera' },
+    objects: { pt: 'Objetos', en: 'Objects' },
+    object: { pt: 'O objeto', en: 'The object' },
+    journey: { pt: 'A viagem', en: 'The journey' },
+    scene: { pt: 'A cena', en: 'The scene' },
+    closing: { pt: 'Reta final', en: 'Home stretch' },
+};
+
+/** Nome do capítulo (fase) ao qual o passo pertence, no idioma atual. */
+export function tutorialChapterLabel(stepId: string, en: boolean): string {
+    const chapter = CHAPTER_BY_STEP_ID[stepId] ?? 'intro';
+    const labels = CHAPTER_LABELS[chapter];
+    return en ? labels.en : labels.pt;
 }

@@ -41,6 +41,7 @@ import { RadarSceneCanvas } from './Scene/RadarSceneCanvas';
 import { useRadarTutorialOptional } from './Tutorial/RadarTutorialContext';
 import type { TutorialAction, TutorialActionPayload } from './Tutorial/radarTutorialFlow';
 import { mobileSheetTransitionAction } from './Tutorial/radarTutorialFlow';
+import { isProgrammaticTutorialClick } from './Tutorial/radarTutorialDom';
 import { deriveActiveMode } from './Scene/sceneMode';
 import { useLabelNoGoRects } from './Scene/useLabelNoGoRects';
 import { useSceneEphemeris } from './Scene/useSceneEphemeris';
@@ -94,6 +95,10 @@ export function DailyOrbitalRadar3D({
     ) => {
         if (!(tutorial?.isActionAllowed(action, payload) ?? true)) return;
         fn();
+        // Clique sintetizado pelo tutorial (restauração visual de um passo de
+        // contemplação) executa o efeito, mas NÃO avança o passo: o avanço espera
+        // uma ação nova do usuário no passo seguinte, não a restauração herdada.
+        if (isProgrammaticTutorialClick()) return;
         tutorial?.completeStep(action, payload);
     }, [tutorial]);
 
@@ -194,8 +199,12 @@ export function DailyOrbitalRadar3D({
     }, [runTutorialAction]);
 
     const selectObjectForTutorial = useCallback((approach: UnifiedApproach) => {
-        runTutorialAction('select-object', { objectId: approach.id }, () => selectObject(approach));
-    }, [runTutorialAction, selectObject]);
+        // O passo de seleção do tutorial só aceita a PRIMEIRA rocha da lista (a mais
+        // próxima). Informa ao gate se este objeto é o primeiro, para a cena e a
+        // lista bloquearem os demais de forma consistente.
+        const objectIsFirst = closestNowObjects[0]?.approach.id === approach.id;
+        runTutorialAction('select-object', { objectId: approach.id, objectIsFirst }, () => selectObject(approach));
+    }, [closestNowObjects, runTutorialAction, selectObject]);
 
     const focusBodyForTutorial = useCallback((body: 'earth' | 'moon') => {
         runTutorialAction('focus-body', { body }, () => focusBody(body));
@@ -216,6 +225,14 @@ export function DailyOrbitalRadar3D({
 
     // Limpa o foco de trajetória quando o usuário interage com outra coisa.
     useEffect(() => { setTrajectoryPointFocus(null); }, [focusTarget, bodyCardOpen]);
+
+    // Ao CONCLUIR o tutorial (não ao pular), garante o guia FECHADO: a tela fica
+    // limpa para a pessoa explorar. Se ela abriu o guia no passo do guia, ele se
+    // fecha aqui. O pulso só incrementa em conclusão, então dispara uma vez.
+    const tutorialCompletionNonce = tutorial?.completionNonce ?? 0;
+    useEffect(() => {
+        if (tutorialCompletionNonce > 0) setManualOpen(false);
+    }, [tutorialCompletionNonce]);
 
     // Ao entrar no critério "Objetos famosos", recua a câmera para enquadrar a régua dos planetas,
     // onde os conhecidos vivem (a ~100–270 unidades do Sol). Sem isso, eles ficam fora do quadro

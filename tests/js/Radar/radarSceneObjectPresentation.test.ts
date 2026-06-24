@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatObjectListTrailingLabel } from '@/Components/Radar/Lists/radarSceneObjectPresentation';
+import {
+    formatObjectListTrailingLabel,
+    tutorialLiveFactsFromTopObject,
+} from '@/Components/Radar/Lists/radarSceneObjectPresentation';
 
 /**
  * `radarSceneObjectPresentation` monta labels do item de lista da cena.
@@ -36,5 +39,33 @@ describe('formatObjectListTrailingLabel', () => {
     it('formata data com formato ISO 2025-06-15T14:30:00 no modo upcoming', () => {
         const result = formatObjectListTrailingLabel('upcoming', '2025-06-15 14:30', 500000, 'en');
         expect(result).toMatch(/\d/);
+    });
+});
+
+// ─── tutorialLiveFactsFromTopObject ──────────────────────────────────────────
+
+describe('tutorialLiveFactsFromTopObject', () => {
+    it('no critério "nearest", a métrica é a distância atual da Terra', () => {
+        const facts = tutorialLiveFactsFromTopObject('2024 XY', 'nearest', null, 384400, 'pt-BR');
+        expect(facts.rockName).toBe('2024 XY');
+        expect(facts.rockMetric).toMatch(/da Terra agora$/);
+        expect(facts.rockMetric).toMatch(/\d/);
+    });
+
+    it('no critério "upcoming", a métrica é a data de aproximação', () => {
+        const facts = tutorialLiveFactsFromTopObject('Apophis', 'upcoming', '2029-Apr-13 21:46', null, 'en');
+        expect(facts.rockName).toBe('Apophis');
+        expect(facts.rockMetric).toMatch(/^arriving on /);
+    });
+
+    it('no critério "famous", não há métrica de proximidade (só o nome)', () => {
+        const facts = tutorialLiveFactsFromTopObject('Bennu', 'famous', null, 999999, 'pt-BR');
+        expect(facts.rockName).toBe('Bennu');
+        expect(facts.rockMetric).toBeNull();
+    });
+
+    it('sem distância e sem data, a métrica fica nula (frase cai no neutro)', () => {
+        const facts = tutorialLiveFactsFromTopObject('2024 ZZ', 'nearest', null, null, 'pt-BR');
+        expect(facts.rockMetric).toBeNull();
     });
 });
