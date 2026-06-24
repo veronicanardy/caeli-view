@@ -28,9 +28,11 @@
 ```txt
 Overlays/
   README.md
+  RadarLoadingOverlay.tsx
   SceneLabels.tsx
   SceneRingsLayer.tsx
   StarField.tsx
+  useLoadingProgress.ts
 ```
 
 ## Labels De Cena
@@ -45,6 +47,16 @@ Dois cuidados adicionais de performance:
 - **Limiares booleanos com histerese:** `useCompactLabelMode` publica apenas o boolean "abaixo do limiar?" (via `useLunarRadiusBelow`), com histerese de 2px. Publicar o raio numérico re-renderizava todos os consumidores a cada ~4 frames durante qualquer zoom contínuo.
 
 O amontoamento de rochas no zoom out NÃO é mais cortado por um limiar global de distância: quem decide se uma rocha some é o resolvedor central (`resolveRadarLabels`, em `@/lib/radar/radarLabels`), pela densidade local de vizinhos. Rochas isoladas continuam visíveis; só somem quando a vizinhança vira pilha. Por isso Sol, Terra, Lua e planetas nunca somem por colisão de label, só quando um corpo 3D real passa na frente do disco.
+
+## Barra De Carregamento
+
+[`RadarLoadingOverlay.tsx`](./RadarLoadingOverlay.tsx) escurece a cena enquanto o radar carrega e mostra uma barra de 0 a 100%. É usado em dois pontos: na montagem da cena 3D (`RadarSceneCanvas`, até o primeiro frame) e na troca de critério/refresh (`RadarFloatingOverlays`). O z-index é `z-[60]` para superar o maior valor que um rótulo da cena recebe via `zIndexRange` do drei `<Html>` (hoje 48): os rótulos são portados para o mesmo pai `relative`, então sem z alto o "Terra" furava o "Carregando…".
+
+A porcentagem NÃO é progresso real do servidor (o radar carrega por um único `fetch` sem eventos de progresso). Ela é ancorada nas etapas reais que o código conhece (buscar dados → montar cena → primeiro frame) e interpolada de forma suave entre elas. A matemática vive em [`@/lib/radar/loadingProgress`](../../../lib/radar/loadingProgress.ts) (pura e testada, incluindo o texto de cada etapa em `loadingStageLabel`); [`useLoadingProgress.ts`](./useLoadingProgress.ts) roda só o laço de `requestAnimationFrame` e devolve `{ progress, stage }`. Cada etapa tem um teto e a barra desacelera ao se aproximar dele, só batendo 100% quando o marco final acontece, nunca fingindo concluir.
+
+O cabeçalho mostra o texto da etapa atual por extenso ("Buscando os dados", "Montando a cena", "Pronto") em vez de um genérico "Carregando", e um brilho sutil (`animate-loading-shimmer`, keyframe em `tailwind.config.js`) percorre a parte preenchida da barra enquanto carrega.
+
+**Conclusão até 100% (armadilha):** o chamador zera `active` no MESMO render em que a cena fica pronta. Se o overlay desmontasse ali, a barra nunca pintaria os 100% (sumia no meio do caminho, perto de onde a montagem terminou). Por isso o overlay se mantém montado por conta própria: ao receber `active=false` ele fixa 100%, segura por `HOLD_AT_FULL_MS` e só então sai com fade de opacidade, desmontando depois. Os call-sites continuam passando `active` cru; a lógica de saída é interna ao overlay.
 
 ## Guias 3D
 

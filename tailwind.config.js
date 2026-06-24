@@ -28,6 +28,16 @@ export default {
             boxShadow: {
                 glow: '0 18px 70px rgba(84, 214, 214, 0.12)',
             },
+            keyframes: {
+                // Brilho que percorre a barra de carregamento do radar, da esquerda para a direita.
+                'loading-shimmer': {
+                    '0%': { transform: 'translateX(-100%)' },
+                    '100%': { transform: 'translateX(100%)' },
+                },
+            },
+            animation: {
+                'loading-shimmer': 'loading-shimmer 1.4s ease-in-out infinite',
+            },
         },
     },
     plugins: [],
