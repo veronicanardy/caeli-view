@@ -34,8 +34,8 @@ const TUNING = {
     // mais perto cruza mais rápido. Estes são os limites do mapa.
     // Asteroide a milhões de km parece quase parado no céu: movimento lento e
     // contemplativo é o mais realista (e o mais elegante na cena).
-    durationFastSec: 10.0,   // objeto próximo, passa um pouco mais ligeiro
-    durationSlowSec: 18.0,   // objeto distante, deriva bem devagar
+    durationFastSec: 18.0,   // objeto proximo, ainda cruza antes, mas sem pressa
+    durationSlowSec: 34.0,   // objeto distante, deriva como algo realmente longe
     // Quantos slots de trânsito existem ao mesmo tempo. Vários objetos cruzando
     // em paralelo enchem a faixa morta de tráfego em vez de um ponto solitário.
     maxConcurrent: 3,
@@ -43,8 +43,8 @@ const TUNING = {
     // Curta: com 3 slots desencontrados, quase sempre há algo na tela.
     gapMinSec: 1.4,
     gapMaxSec: 4.5,
-    headSizePx: 3.4,         // núcleo de rocha, mais presente
-    trailLengthPx: 52,       // borrão de movimento (não cauda de cometa)
+    headSizePx: 3.3,         // base do nucleo; a distancia ajusta por slot
+    trailLengthPx: 48,       // base do borrao; a distancia ajusta por slot
     colorCore: 0xfff0d8,     // núcleo quase branco-quente da rocha iluminada
     colorWarm: 0xffb870,     // âmbar do rastro de movimento (casa com o crepúsculo)
     // Fração do percurso em que o rótulo fica visível (centro da travessia).
@@ -56,6 +56,8 @@ const TUNING = {
 // ~150 mil km (perto) → rápido; ~6 milhões km (longe) → lento.
 const DISTANCE_NEAR_KM = 150_000;
 const DISTANCE_FAR_KM = 6_000_000;
+const VISUAL_SCALE_NEAR = 1.45;
+const VISUAL_SCALE_FAR = 0.52;
 
 /**
  * Duração da travessia a partir da distância do objeto. Pura e testável: mais
@@ -70,11 +72,26 @@ export function transitDurationForDistance(distanceKm: number | null): number {
     return TUNING.durationFastSec + t * (TUNING.durationSlowSec - TUNING.durationFastSec);
 }
 
+/**
+ * Escala aparente do asteroide na home: perto le mais presente, longe le menor
+ * e mais discreto. Usa a mesma faixa de distancia da duracao para manter uma
+ * unica inteligencia visual entre tamanho e movimento.
+ */
+export function transitVisualScaleForDistance(distanceKm: number | null): number {
+    if (distanceKm == null || !Number.isFinite(distanceKm)) {
+        return (VISUAL_SCALE_NEAR + VISUAL_SCALE_FAR) / 2;
+    }
+    const clamped = Math.min(Math.max(distanceKm, DISTANCE_NEAR_KM), DISTANCE_FAR_KM);
+    const t = (clamped - DISTANCE_NEAR_KM) / (DISTANCE_FAR_KM - DISTANCE_NEAR_KM);
+    return VISUAL_SCALE_NEAR + t * (VISUAL_SCALE_FAR - VISUAL_SCALE_NEAR);
+}
+
 // Um slot de trânsito: o estado de uma passagem em andamento (ou aguardando).
 type TransitSlot = {
     active: boolean;
     startTime: number;
     duration: number;
+    visualScale: number;
     nextSpawnAt: number;
     startX: number; startY: number; endX: number; endY: number;
     current: HomeApproachTransit | null;
@@ -139,6 +156,7 @@ export function ApproachTransit({ transits }: Props) {
                 active: false,
                 startTime: 0,
                 duration: TUNING.durationSlowSec,
+                visualScale: transitVisualScaleForDistance(null),
                 // Desencontra os primeiros spawns para os slots não largarem juntos.
                 nextSpawnAt: performance.now() / 1000 + 0.6 + i * 1.3 + Math.random() * 1.2,
                 startX: 0, startY: 0, endX: 0, endY: 0,
@@ -158,6 +176,7 @@ export function ApproachTransit({ transits }: Props) {
                 slot.current = list[cursor % list.length];
                 cursor += 1;
                 slot.duration = transitDurationForDistance(slot.current.distanceKm);
+                slot.visualScale = transitVisualScaleForDistance(slot.current.distanceKm);
 
                 // Trajetória VARIADA (mata o aspecto esteira reta horizontal):
                 // entra por um dos lados, com ângulo e altura próprios.
@@ -187,6 +206,7 @@ export function ApproachTransit({ transits }: Props) {
             // Buffers reutilizados a cada quadro (evita alocação no loop).
             const uActive: number[] = new Array(N).fill(0);
             const uProgress: number[] = new Array(N).fill(0);
+            const uScale: number[] = new Array(N).fill(transitVisualScaleForDistance(null));
             const uStart: import('three').Vector2[] = Array.from({ length: N }, () => new THREE.Vector2());
             const uEnd: import('three').Vector2[] = Array.from({ length: N }, () => new THREE.Vector2());
 
@@ -220,6 +240,7 @@ export function ApproachTransit({ transits }: Props) {
                     }
                     uActive[i] = 1;
                     uProgress[i] = progress;
+                    uScale[i] = slot.visualScale;
                     uStart[i].set(slot.startX, slot.startY);
                     uEnd[i].set(slot.endX, slot.endY);
 
@@ -235,6 +256,7 @@ export function ApproachTransit({ transits }: Props) {
                 // Upload dos arrays (uma vez por quadro).
                 mat.uniforms.uActive.value = uActive;
                 mat.uniforms.uProgress.value = uProgress;
+                mat.uniforms.uScale.value = uScale;
                 mat.uniforms.uStart.value = uStart;
                 mat.uniforms.uEnd.value = uEnd;
 
@@ -320,6 +342,7 @@ function buildStreak(
             uCount: { value: count },
             uActive: { value: new Array(count).fill(0) },
             uProgress: { value: new Array(count).fill(0) },
+            uScale: { value: new Array(count).fill(transitVisualScaleForDistance(null)) },
             uStart: { value: Array.from({ length: count }, () => new THREE.Vector2(0, 0.4)) },
             uEnd: { value: Array.from({ length: count }, () => new THREE.Vector2(1, 0.4)) },
             uResolution: { value: new THREE.Vector2(1, 1) },
@@ -341,6 +364,7 @@ function buildStreak(
             uniform int uCount;
             uniform float uActive[COUNT];
             uniform float uProgress[COUNT];
+            uniform float uScale[COUNT];
             uniform vec2 uStart[COUNT];
             uniform vec2 uEnd[COUNT];
             uniform vec2 uResolution;
@@ -364,6 +388,7 @@ function buildStreak(
                     if (uActive[i] < 0.5) continue;
 
                     float progress = uProgress[i];
+                    float visualScale = clamp(uScale[i], 0.45, 1.55);
                     // uStart/uEnd em coords de tela (y para baixo); UV.y sobe. Flipa.
                     vec2 startPx = vec2(uStart[i].x, 1.0 - uStart[i].y) * uResolution;
                     vec2 endPx = vec2(uEnd[i].x, 1.0 - uEnd[i].y) * uResolution;
@@ -371,24 +396,27 @@ function buildStreak(
                     vec2 headPx = mix(startPx, endPx, progress);
                     vec2 fullDir = endPx - startPx;
                     vec2 dir = length(fullDir) > 0.0 ? normalize(fullDir) : vec2(1.0, 0.0);
-                    vec2 tailPx = headPx - dir * min(uTrailPx, length(headPx - startPx));
+                    float headSizePx = uHeadPx * visualScale;
+                    float trailLengthPx = uTrailPx * clamp(0.72 + visualScale * 0.28, 0.72, 1.16);
+                    vec2 tailPx = headPx - dir * min(trailLengthPx, length(headPx - startPx));
 
                     float headDist = distance(fragPx, headPx);
                     float segDist = distToSegment(fragPx, tailPx, headPx);
 
                     // NÚCLEO de rocha: ponto nítido e brilhante com halo pequeno.
-                    float core = exp(-headDist / uHeadPx);
-                    float halo = exp(-headDist / (uHeadPx * 3.2)) * 0.35;
+                    float core = exp(-headDist / headSizePx);
+                    float halo = exp(-headDist / (headSizePx * 3.2)) * 0.35;
 
                     // RASTRO de movimento curtíssimo: borrão âmbar atrás do núcleo.
-                    float along = clamp(dot(fragPx - tailPx, dir) / max(uTrailPx, 1.0), 0.0, 1.0);
-                    float trailWidth = mix(0.5, uHeadPx * 0.8, along);
+                    float along = clamp(dot(fragPx - tailPx, dir) / max(trailLengthPx, 1.0), 0.0, 1.0);
+                    float trailWidth = mix(0.42, headSizePx * 0.8, along);
                     float trail = exp(-segDist / trailWidth) * along * along * 0.5;
 
                     // Envelope: fade in/out suave para o objeto não "pipocar".
                     float envelope = smoothstep(0.0, 0.09, progress) * smoothstep(1.0, 0.85, progress);
 
-                    float intensity = (core + halo + trail) * envelope;
+                    float depthBrightness = mix(0.42, 1.12, clamp((visualScale - 0.45) / 1.10, 0.0, 1.0));
+                    float intensity = (core + halo + trail) * envelope * depthBrightness;
                     vec3 color = mix(uColorWarm, uColorCore, clamp(core + halo, 0.0, 1.0));
 
                     accColor += color * intensity;
