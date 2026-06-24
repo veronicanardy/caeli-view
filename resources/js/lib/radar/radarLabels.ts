@@ -139,7 +139,7 @@ export function getLabelPriority(candidate: Pick<RadarLabelCandidate, 'kind' | '
     return BASE_PRIORITY[candidate.kind] + (candidate.importance ?? 0);
 }
 
-export function doesLabelCollide(
+function doesLabelCollide(
     rect: RadarLabelRect,
     acceptedRects: AcceptedRadarLabelBounds[],
     objectBounds: RadarLabelObjectBounds[],
@@ -147,7 +147,7 @@ export function doesLabelCollide(
     marginPx: number,
     candidate?: RadarLabelCandidate,
 ): boolean {
-    return acceptedRects.some((accepted) => shouldBlockLabelCollision(candidate, accepted) && rectsIntersect(rect, accepted.rect, marginPx))
+    return acceptedRects.some((accepted) => shouldBlockLabelCollision(candidate) && rectsIntersect(rect, accepted.rect, marginPx))
         || (shouldBlockUiCollision(candidate) && blockedRects.some((blocked) => rectsIntersect(rect, blocked, marginPx)))
         || objectBounds.some((object) => circleOverlapsLabelRect(object, rect, marginPx));
 }
@@ -260,11 +260,12 @@ export function resolveRadarLabels(
     const marginPx = options.marginPx ?? (options.mobile ? 8 : 12);
     const objectBounds = options.objectBounds ?? [];
     const blockedRects = options.blockedRects ?? [];
+    // O cap só vale no zoom out (senão é ilimitado). Lá, mobile cabe menos label que desktop.
     const maxSecondaryLabels = !options.zoomedOut
         ? Number.POSITIVE_INFINITY
         : options.mobile
-        ? (options.zoomedOut ? 3 : 7)
-        : (options.zoomedOut ? 6 : 14);
+        ? 3
+        : 6;
 
     const sorted = [...candidates]
         .map((candidate) => ({ candidate, priority: getLabelPriority(candidate) }))
@@ -276,7 +277,6 @@ export function resolveRadarLabels(
 
     for (const { candidate, priority } of sorted) {
         const isSelected = candidate.selected || candidate.kind === 'selected';
-        const fixedAsteroid = isFixedAsteroidLabel(candidate);
         if (shouldApplyDistanceCap(candidate) && secondaryAccepted >= maxSecondaryLabels) {
             resolvedById.set(candidate.id, hidden(candidate, priority, 'behind-cap'));
             continue;
@@ -367,7 +367,7 @@ function isOwnOccluder(object: RadarLabelObjectBounds, candidate: RadarLabelCand
     return base(object.id) === base(candidate.id);
 }
 
-function shouldBlockLabelCollision(candidate: RadarLabelCandidate | undefined, accepted: AcceptedRadarLabelBounds): boolean {
+function shouldBlockLabelCollision(candidate: RadarLabelCandidate | undefined): boolean {
     if (!candidate) return true;
     if (candidate.kind === 'asteroid' && !candidate.selected) return false;
     if (isPrimaryLabel(candidate)) return false;

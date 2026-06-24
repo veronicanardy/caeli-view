@@ -90,7 +90,7 @@ export function isBeyondRenderLimit(object: ClosestNowObject): boolean {
 }
 
 /**
- * [Modo linear] Posição do NEO focado AMOSTRADA NA PRÓPRIA ELIPSE Kepleriana desenhada, no ν de
+ * Posição do NEO focado AMOSTRADA NA PRÓPRIA ELIPSE Kepleriana desenhada, no ν de
  * agora — a mesma estratégia dos planetas (sampleHeliocentricEllipseAtNu) e do modo órbita
  * (HeliocentricScene). Quando a órbita do objeto está sendo desenhada, a rocha DEVE vir desta
  * polilinha (não do ponto Horizons de currentPositionInHelioScene), senão fica deslocada da linha:

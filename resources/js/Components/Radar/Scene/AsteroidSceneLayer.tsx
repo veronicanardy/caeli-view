@@ -50,7 +50,7 @@ export function AsteroidSceneLayer({
     /** Posição heliocêntrica da Terra (AU). Sem ela (efeméride não resolvida) a camada não renderiza. */
     earthHelioAU?: EarthHelioAU | null;
     /**
-     * [Modo linear] Id do objeto cuja rocha é desenhada FORA desta camada, sobre a própria órbita
+     * Id do objeto cuja rocha é desenhada FORA desta camada, sobre a própria órbita
      * (RadarScene). Pulamos aqui para não duplicar o corpo: a posição amostrada da elipse e o ponto
      * Horizons divergem, e renderizar os dois mostraria duas rochas.
      */
