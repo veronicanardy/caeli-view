@@ -130,6 +130,20 @@ describe('computeFocusFraming', () => {
         expect(framing).not.toBeNull();
         expect(framing!.transition).toBe('preserve_heading');
     });
+
+    it('o close-up fica DENTRO da faixa em que a lupa de trajetória aparece (0.076 a 0.792)', () => {
+        // ZoomHint só mostra a lupa entre SHOW_MIN (0.08*0.95=0.076) e SHOW_MAX (0.36*2.2=0.792).
+        // Se o close-up sair dessa faixa, o passo de trajetória do tutorial perde o botão. Vale
+        // para um corpo minúsculo (cai no piso colado) e um gigante (Ceres, cai perto do teto).
+        for (const diameterMeters of [10, 939_400]) {
+            const obj = makeObjectWithPosition();
+            (obj.approach as { diameterMeters: number | null }).diameterMeters = diameterMeters;
+            const framing = computeFocusFraming(obj, false, EARTH_HELIO)!;
+            const distance = framing.position.distanceTo(framing.target);
+            expect(distance, `d=${diameterMeters}`).toBeGreaterThanOrEqual(0.076);
+            expect(distance, `d=${diameterMeters}`).toBeLessThanOrEqual(0.792);
+        }
+    });
 });
 
 

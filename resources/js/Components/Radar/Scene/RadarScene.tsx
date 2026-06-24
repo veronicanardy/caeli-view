@@ -17,7 +17,6 @@ import { currentPositionInHelioScene, focusedOrbitSamplePosition, hasRenderableH
 import { OrbitLineHelio } from '../Trajectory/HeliocentricLines';
 import { AsteroidMarker, symbolicRockRadiusForApproach } from '../Bodies/Asteroid/AsteroidMarker';
 import { OBJECT_PALETTE } from '@/lib/radar/palette';
-import { EARTH_RADIUS_DL } from '@/lib/radar/bodyScale';
 import { Sun } from '../Bodies/Sun/Sun';
 import { Earth } from '../Bodies/Earth/Earth';
 import { Moon } from '../Bodies/Moon/Moon';
@@ -27,7 +26,7 @@ import { StarField } from '../Overlays/StarField';
 import { LabelOccluderContext, RadarLabelResolutionProvider, SceneObjectOccludersContext, useCompactLabelMode } from '../Overlays/SceneLabels';
 import { AsteroidSceneLayer } from './AsteroidSceneLayer';
 import { CameraRig } from './CameraRig';
-import { MAX_CAMERA_DISTANCE } from './cameraConstants';
+import { EARTH_MIN_DISTANCE, MAX_CAMERA_DISTANCE, ROCK_MIN_DISTANCE } from './cameraConstants';
 import type { FocusFraming } from './cameraFraming';
 import type { CameraIntent } from './cameraIntent';
 import { InertialZoom } from './InertialZoom';
@@ -169,6 +168,11 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     });
 
     const orbitLabelsOnly = orbitMode && selectedHasOrbit;
+
+    // Piso de zoom dinâmico: com uma rocha selecionada em close-up (fora do modo órbita, que precisa de
+    // zoom out amplo), a câmera pode colar perto do corpo minúsculo; senão mantém o piso da Terra, que
+    // evita mergulhar nela. Ver cameraConstants (EARTH_MIN_DISTANCE / ROCK_MIN_DISTANCE).
+    const minZoomDistance = hasSelection && !orbitMode ? ROCK_MIN_DISTANCE : EARTH_MIN_DISTANCE;
 
     // Labels visíveis para todos os objetos enquanto a câmera não estiver muito afastada.
     // No modo "Asteroides famosos" o enquadramento começa longe de propósito; nesse caso
@@ -421,8 +425,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                 // O zoom é tratado pelo <InertialZoom> abaixo (dolly deslizante), então o zoom
                 // de roda nativo está desabilitado para evitar dois sistemas conflitando no dolly.
                 enableZoom={false}
-                // Não deixa a câmera mergulhar na Terra: mantém distância mínima acima do brilho.
-                minDistance={EARTH_RADIUS_DL * 2.2}
+                // Piso de zoom: colado na rocha selecionada, ou acima do brilho da Terra ao navegar.
+                minDistance={minZoomDistance}
                 // Recua o suficiente para ver órbitas completas de asteroides selecionados.
                 maxDistance={MAX_CAMERA_DISTANCE}
                 rotateSpeed={0.8}
@@ -431,8 +435,8 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
 
             {sceneNavigationEnabled ? (
                 <>
-                    <InertialZoom minDistance={EARTH_RADIUS_DL * 2.2} maxDistance={MAX_CAMERA_DISTANCE} />
-                    <TouchGestures minDistance={EARTH_RADIUS_DL * 2.2} maxDistance={MAX_CAMERA_DISTANCE} />
+                    <InertialZoom minDistance={minZoomDistance} maxDistance={MAX_CAMERA_DISTANCE} />
+                    <TouchGestures minDistance={minZoomDistance} maxDistance={MAX_CAMERA_DISTANCE} />
                     <KeyboardPan />
                 </>
             ) : null}
