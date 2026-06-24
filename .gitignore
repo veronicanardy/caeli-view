@@ -36,5 +36,5 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
-# Claude Code — personal settings (machine-specific, never commit)
-.claude/settings.local.json
+# Claude Code — configuração local da máquina (skills, settings), nunca versionar
+.claude/
