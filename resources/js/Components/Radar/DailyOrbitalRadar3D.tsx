@@ -40,6 +40,7 @@ import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import { RadarSceneCanvas } from './Scene/RadarSceneCanvas';
 import { useRadarTutorialOptional } from './Tutorial/RadarTutorialContext';
 import type { TutorialAction, TutorialActionPayload } from './Tutorial/radarTutorialFlow';
+import { mobileSheetTransitionAction } from './Tutorial/radarTutorialFlow';
 import { deriveActiveMode } from './Scene/sceneMode';
 import { useLabelNoGoRects } from './Scene/useLabelNoGoRects';
 import { useSceneEphemeris } from './Scene/useSceneEphemeris';
@@ -177,13 +178,7 @@ export function DailyOrbitalRadar3D({
     const [trajectoryPointFocus, setTrajectoryPointFocus] = useState<FocusFraming | null>(null);
 
     const changeMobileSheet = useCallback((sheet: MobileSheetSection | null) => {
-        const action: TutorialAction = sheet === 'objects'
-            ? 'open-object-panel'
-            : sheet === 'filters'
-                ? 'open-filter-panel'
-                : mobileSheet === 'filters'
-                    ? 'close-filter-panel'
-                    : 'close-object-panel';
+        const action = mobileSheetTransitionAction(sheet, mobileSheet);
         runTutorialAction(action, {}, () => setMobileSheet(sheet));
     }, [mobileSheet, runTutorialAction]);
 
