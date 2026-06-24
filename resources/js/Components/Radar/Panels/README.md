@@ -76,6 +76,8 @@ Helpers de texto e status devem ficar em arquivos locais de apresentação quand
 
 Filtros, referências, abertura de planetas, seleção de objetos, modo orbital e colapso devem preservar os contratos recebidos por props.
 
+No desktop, o compartimento de planetas (`planet-flyout`) fecha ao clicar fora dele: um listener de `pointerdown` em fase de captura chama `onPlanetsOpenChange(false)`, ignorando cliques no próprio flyout e no botão "Planetas" (`reference-planets`, que já alterna sozinho). Durante o tutorial (`tutorial?.active`) o fechamento por clique fora é suspenso, porque o passo de planetas guia a abertura do flyout.
+
 ## Tutorial Interativo
 
 Alguns painéis carregam marcadores `data-tutorial` consumidos pelo tutorial de primeira visita (`../Tutorial/`): `selected-card` (via prop `dataTutorial` do `PanelShell`), `card-tabs`, `orbit-button` e `object-list-toggle` (botão "Lista" do eyebrow mobile) no `UnifiedFocusCard`, `object-list` e `planet-flyout` no `RadarNavigationPanel` (desktop e sheet mobile), `radar-filter-criterion`/`radar-filter-limit` no `MobileFiltersSheetContent`, e `radar-guide` no `SceneLegend`. São atributos passivos, sem lógica: ao renomear ou mover esses elementos, atualize o contrato em `../Tutorial/README.md` e `radarTutorialSteps.ts`.

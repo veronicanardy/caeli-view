@@ -41,6 +41,8 @@ export type TutorialActionPayload = {
     body?: TutorialReferenceTarget;
     planetId?: PlanetId;
     objectId?: string;
+    /** O objeto é o PRIMEIRO da lista. O passo de seleção só aceita a primeira rocha. */
+    objectIsFirst?: boolean;
     mode?: SelectionMode;
     limit?: ObjectLimit;
     tab?: 'summary' | 'physical' | 'approach' | 'history';
@@ -88,6 +90,7 @@ export const RADAR_TUTORIAL_STEP_PERMISSIONS: Record<string, TutorialPermission[
     'camera-keyboard': sceneOnly,
     'camera-zoom': sceneOnly,
     'camera-rotate': sceneOnly,
+    'cheer-camera': readOnly,
     'filter-criterion': permissions(
         { action: 'open-filter-panel' },
         { action: 'set-selection-mode', mode: 'upcoming' },
@@ -102,6 +105,7 @@ export const RADAR_TUTORIAL_STEP_PERMISSIONS: Record<string, TutorialPermission[
         { action: 'expand-object-panel' },
         { action: 'select-object' },
     ),
+    'meet-rock': readOnly,
     'read-card': readOnly,
     'card-tabs-summary': readOnly,
     'card-tabs-to-physical': permissions({ action: 'card-tab', tab: 'physical' }),
@@ -110,6 +114,10 @@ export const RADAR_TUTORIAL_STEP_PERMISSIONS: Record<string, TutorialPermission[
     'card-tabs-approach-done': readOnly,
     'zoom-trajectory': permissions({ action: 'show-trajectory' }),
     'trajectory-explain': readOnly,
+    'trajectory-return': permissions(
+        { action: 'scene-navigate' },
+        { action: 'select-object' },
+    ),
     'orbit-view': permissions({ action: 'enter-orbit' }),
     'orbit-explain': readOnly,
     'orbit-return': permissions({ action: 'exit-orbit' }),
@@ -139,6 +147,45 @@ export const RADAR_TUTORIAL_STEP_PERMISSIONS: Record<string, TutorialPermission[
     finale: finishOnly,
 };
 
+/**
+ * Seletores a clicar para "pular o passo fazendo a ação por baixo".
+ *
+ * O "Pular passo" não deve descartar a etapa sem efeito: isso quebra a conexão
+ * imagem-texto (o usuário avança vários passos sem nunca ver a aba abrir, a
+ * órbita aparecer, o objeto ser selecionado). Em vez disso, o "Pular passo"
+ * EXECUTA a ação esperada e avança UM passo, então a imagem sempre acontece
+ * junto do texto que a explica.
+ *
+ * Retorna a lista de seletores (mais específico primeiro) do elemento real a
+ * acionar, ou `null` quando o passo não tem um clique determinístico que o
+ * represente (gestos de câmera, troca de filtro): nesses casos o "Pular passo"
+ * apenas avança um passo, sem efeito colateral.
+ */
+export function manualSkipClickSelectors(step: TutorialStep | null): string[] | null {
+    if (!step) return null;
+
+    if (step.advance.kind === 'selection') {
+        // Seleciona o primeiro objeto disponível da lista (o próprio item dispara onSelect).
+        return ['[data-tutorial="object-list"] button:not(:disabled)'];
+    }
+
+    if (step.advance.kind === 'click') {
+        const requireSelector = step.advance.requireSelector;
+        if (!requireSelector) return step.targets;
+        // Restringe ao elemento exato que o passo espera (aba não selecionada,
+        // botão de corpo, opção de planeta), procurando-o dentro de cada alvo e
+        // também solto (alvos como reference-body/planet-option já são o seletor).
+        return [
+            ...step.targets.map((target) => `${target} ${requireSelector}`),
+            requireSelector,
+        ];
+    }
+
+    // Gestos (teclado, zoom, rotação) e filtros (critério, limite): sem clique
+    // único que represente a ação. O "Pular passo" só avança um passo.
+    return null;
+}
+
 export function allowedActionsForStep(step: TutorialStep | null): TutorialPermission[] {
     if (!step) return [];
     const explicit = RADAR_TUTORIAL_STEP_PERMISSIONS[step.id] ?? [];
@@ -163,6 +210,13 @@ export function isTutorialActionAllowed(
     if (action === 'manual-next' && step.advance.kind === 'manual') return true;
     if (action === 'scene-navigate' && step.advance.kind === 'manual') return true;
 
+    // No passo de escolher a rocha, só a PRIMEIRA da lista é clicável: torna a
+    // seleção determinística e deixa o passo seguinte (voltar pra perto) sempre
+    // apontar para a mesma rocha. As demais rochas ficam bloqueadas.
+    if (step.advance.kind === 'selection' && action === 'select-object' && !payload.objectIsFirst) {
+        return false;
+    }
+
     return allowedActionsForStep(step).some((permission) => permissionMatches(permission, action, payload));
 }
 
@@ -181,6 +235,9 @@ export function doesTutorialActionCompleteStep(
         case 'limit-change':
             return action === 'set-object-limit';
         case 'selection':
+        case 'reselect-object':
+            // Re-selecionar a rocha (mesmo id) reaproxima a câmera. Não depende de
+            // selectedId mudar: o avanço vem deste completeStep, não do observer.
             return action === 'select-object';
         case 'click':
             return completesClickStep(step.id, action, payload);

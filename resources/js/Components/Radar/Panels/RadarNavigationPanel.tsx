@@ -8,8 +8,10 @@
  * fica em componentes locais; seleção, ranking e regras orbitais não moram aqui.
  */
 
+import { useEffect } from 'react';
 import { List, PanelLeftClose, X } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 import { PlanetFlyout } from '../Controls/ReferenceControls';
 import { Tooltip } from '../Controls/Tooltip';
 import { MOBILE_MEDIA_QUERY } from '../radarLayoutConstants';
@@ -138,6 +140,25 @@ function DesktopNavigationPanel({
     onFocusPlanet,
     onFocusSun,
 }: RadarNavigationPanelProps) {
+    const tutorial = useRadarTutorialOptional();
+    const flyoutOpen = planetsOpen && !orbitMode && !desktopCollapsed;
+
+    // Clicar fora do compartimento de planetas o fecha. Ignora cliques no próprio
+    // flyout e no botão "Planetas" (que já alterna sozinho). Durante o tutorial o
+    // flyout é guiado pelo passo, então não fechamos por clique fora ali.
+    useEffect(() => {
+        if (!flyoutOpen || tutorial?.active) return undefined;
+        const onPointerDown = (event: PointerEvent) => {
+            const target = event.target;
+            if (!(target instanceof Node)) return;
+            if (planetFlyoutRef.current?.contains(target)) return;
+            if (target instanceof Element && target.closest('[data-tutorial="reference-planets"]')) return;
+            onPlanetsOpenChange(false);
+        };
+        document.addEventListener('pointerdown', onPointerDown, true);
+        return () => document.removeEventListener('pointerdown', onPointerDown, true);
+    }, [flyoutOpen, tutorial?.active, planetFlyoutRef, onPlanetsOpenChange]);
+
     return (
         <div className="pointer-events-none absolute left-3 top-3 z-40">
             <div className="pointer-events-auto relative flex items-start gap-2 overflow-visible flex-row cursor-auto">
@@ -203,7 +224,7 @@ function DesktopNavigationPanel({
                     )}
                 </div>
 
-                {planetsOpen && !orbitMode && !desktopCollapsed ? (
+                {flyoutOpen ? (
                     <div
                         ref={planetFlyoutRef}
                         data-tutorial="planet-flyout"

@@ -9,6 +9,7 @@ import { useClosestNow } from '@/hooks/useClosestNow';
 import { useKnownAsteroidDetail } from '@/hooks/useKnownAsteroidDetail';
 import { useRadarControls } from '@/hooks/useRadarControls';
 import { isKnownAsteroidId } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
+import { tutorialLiveFactsFromTopObject } from '@/Components/Radar/Lists/radarSceneObjectPresentation';
 import {
     ApproachObservatoryFilters,
     PageProps,
@@ -70,6 +71,20 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
 
     const lunarReference = closestNowData?.lunarReference;
 
+    // Fatos reais da rocha do topo da lista, para personalizar o passo de seleção
+    // do tutorial. A métrica respeita o critério ativo (distância agora ou data).
+    const tutorialLiveFacts = useMemo(() => {
+        const top = closestNowData?.objects[0];
+        if (!top) return null;
+        return tutorialLiveFactsFromTopObject(
+            top.approach.displayName ?? top.approach.name,
+            selectionMode,
+            top.approach.approachDate,
+            top.currentDistanceKm,
+            locale,
+        );
+    }, [closestNowData, selectionMode, locale]);
+
     const focusApproach = useMemo(() => {
         if (!selectedFocusId) return null;
         return closestNowApproaches.find((approach) => approach.id === selectedFocusId) ?? null;
@@ -121,6 +136,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
                 selectionMode={selectionMode}
                 objectLimit={objectLimit}
                 selectedId={focusApproach?.id ?? null}
+                liveFacts={tutorialLiveFacts}
                 radarReady={Boolean(closestNowData && lunarReference && !closestNowLoading)}
                 radarLoading={closestNowLoading}
                 onResetRadarState={resetRadarForTutorial}

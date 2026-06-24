@@ -52,3 +52,31 @@ export function isTypingTarget(target: EventTarget | null): boolean {
     const tag = (target as HTMLElement | null)?.tagName;
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 }
+
+/**
+ * Marca que um clique está sendo SINTETIZADO pelo próprio tutorial (restauração
+ * visual de um passo de contemplação, ex.: religar as marcações ou sair da tela
+ * cheia). Enquanto o flag está ligado, as detecções de avanço (listener DOM do
+ * overlay e `completeStep` da página) devem ignorar o clique: ele não é uma ação
+ * nova do usuário e não pode satisfazer a condição do passo seguinte.
+ *
+ * O clique sintético despacha o evento de forma SÍNCRONA, então o `onClick` do
+ * React roda dentro da janela do flag. Por isso um booleano simples basta, sem
+ * janela temporal: liga antes do `.click()`, desliga logo depois.
+ */
+let programmaticClickDepth = 0;
+
+/** Dispara um clique sintético no elemento, marcado como originado pelo tutorial. */
+export function programmaticTutorialClick(el: HTMLElement): void {
+    programmaticClickDepth += 1;
+    try {
+        el.click();
+    } finally {
+        programmaticClickDepth -= 1;
+    }
+}
+
+/** True enquanto um clique sintético do tutorial está em andamento. */
+export function isProgrammaticTutorialClick(): boolean {
+    return programmaticClickDepth > 0;
+}

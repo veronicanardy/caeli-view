@@ -13,7 +13,7 @@ import type { ObjectLimit, SelectionMode } from '@/types';
 import { MOBILE_MEDIA_QUERY } from '../radarLayoutConstants';
 import { RadarTutorialContext, type RadarTutorialContextValue } from './RadarTutorialContext';
 import { RadarTutorialOverlay } from './RadarTutorialOverlay';
-import { indexAfterGroup, stepsForViewport, type TutorialStep } from './radarTutorialSteps';
+import { indexAfterGroup, stepsForViewport, type TutorialStep, type TutorialLiveFacts } from './radarTutorialSteps';
 import {
     allowedActionsForStep,
     doesTutorialActionCompleteStep,
@@ -45,6 +45,8 @@ type Props = {
     radarLoading: boolean;
     /** Normaliza controles externos do Radar antes de iniciar/reiniciar o tutorial. */
     onResetRadarState?: () => void;
+    /** Fatos reais do céu de agora (nome/métrica da rocha no topo), para passos personalizados. */
+    liveFacts?: TutorialLiveFacts | null;
     children: ReactNode;
 };
 
@@ -56,6 +58,7 @@ export function RadarTutorialProvider({
     radarReady,
     radarLoading,
     onResetRadarState,
+    liveFacts = null,
     children,
 }: Props) {
     const [phase, setPhase] = useState<Phase>('boot');
@@ -63,6 +66,9 @@ export function RadarTutorialProvider({
     const [stepIndex, setStepIndex] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
     const [settling, setSettling] = useState(false);
+    // Pulso que incrementa só quando o tutorial é CONCLUÍDO (não pulado): a cena
+    // observa para garantir o guia fechado no fim, deixando a tela limpa.
+    const [completionNonce, setCompletionNonce] = useState(0);
 
     // Refs espelhando o estado para callbacks estáveis (sem stale closures).
     const phaseRef = useRef(phase);
@@ -131,6 +137,8 @@ export function RadarTutorialProvider({
         loadWaitRef.current = null;
         setSettling(false);
         setPhase('done');
+        // Concluído (chegou ao fim), não pulado: sinaliza a cena para fechar o guia.
+        if (status === 'completed') setCompletionNonce((n) => n + 1);
         persistRadarTutorialOutcome(status, {
             markOrbitToastSeen: status === 'completed' && sawOrbitExplain.current,
         });
@@ -154,10 +162,14 @@ export function RadarTutorialProvider({
         const steps = stepsRef.current;
         const index = stepIndexRef.current;
         const step = steps[index];
-        // Passo de seleção ou passo que depende de seleção sem objeto selecionado:
-        // pula direto para o primeiro passo que não precisa de seleção.
-        const needsSelection = step?.advance.kind === 'selection' || step?.requiresSelection;
-        if (needsSelection && !selectedIdRef.current) {
+        // Pular o passo de SELEÇÃO (intenção: não conhecer o objeto) ou um passo
+        // que depende de seleção sem objeto escolhido salta o BLOCO do objeto
+        // inteiro, até o primeiro passo que não precisa de rocha selecionada.
+        // No passo de seleção, salta mesmo que já haja uma seleção herdada: o
+        // usuário pediu para pular o bloco, não para entrar nele.
+        const isSelectionStep = step?.advance.kind === 'selection';
+        const needsSelection = isSelectionStep || step?.requiresSelection;
+        if (needsSelection && (isSelectionStep || !selectedIdRef.current)) {
             let i = index + 1;
             while (i < steps.length && (steps[i].requiresSelection || steps[i].advance.kind === 'selection')) i += 1;
             advanceTo(i);
@@ -324,6 +336,8 @@ export function RadarTutorialProvider({
         isMobile,
         locale,
         settling,
+        completionNonce,
+        liveFacts,
         allowedActions: phase === 'running' ? allowedActionsForStep(steps[stepIndex] ?? null) : [],
         start: prepareStart,
         next,
@@ -333,7 +347,7 @@ export function RadarTutorialProvider({
         skipUnavailableStep,
         isActionAllowed,
         completeStep,
-    }), [phase, steps, stepIndex, isMobile, locale, settling, prepareStart, next, skip, advanceFromAction, advanceAfterSettle, skipUnavailableStep, isActionAllowed, completeStep]);
+    }), [phase, steps, stepIndex, isMobile, locale, settling, completionNonce, liveFacts, prepareStart, next, skip, advanceFromAction, advanceAfterSettle, skipUnavailableStep, isActionAllowed, completeStep]);
 
     return (
         <RadarTutorialContext.Provider value={value}>

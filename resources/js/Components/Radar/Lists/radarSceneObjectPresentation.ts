@@ -7,8 +7,41 @@
 
 import { compactKm } from '@/lib/format';
 import type { SelectionMode } from '@/types';
+import type { TutorialLiveFacts } from '../Tutorial/radarTutorialSteps';
 
 type ObservatoryLocale = 'pt-BR' | 'en';
+
+/**
+ * Monta os fatos reais da rocha do TOPO da lista para o tutorial: nome e uma
+ * frase de métrica conforme o critério ativo (distância agora OU data de
+ * aproximação). A frase já vem com a conjunção embutida, pronta para entrar no
+ * lugar do placeholder {rockMetric}. Pura.
+ *
+ * @param name           Nome de exibição da rocha (ou null).
+ * @param selectionMode  Critério ativo: decide se a métrica é distância ou data.
+ * @param approachDate   Data de aproximação (usada no critério upcoming).
+ * @param currentDistanceKm  Distância atual em km (usada no critério nearest).
+ */
+export function tutorialLiveFactsFromTopObject(
+    name: string | null,
+    selectionMode: SelectionMode,
+    approachDate: string | null,
+    currentDistanceKm: number | null,
+    locale: ObservatoryLocale,
+): TutorialLiveFacts {
+    const en = locale === 'en';
+    let rockMetric: string | null = null;
+
+    if (selectionMode === 'upcoming' && approachDate) {
+        const label = formatObjectListTrailingLabel(selectionMode, approachDate, currentDistanceKm, locale);
+        if (label) rockMetric = en ? `arriving on ${label}` : `com aproximação em ${label}`;
+    } else if (selectionMode !== 'famous' && currentDistanceKm != null) {
+        const label = compactKm(currentDistanceKm);
+        if (label) rockMetric = en ? `${label} from Earth right now` : `a ${label} da Terra agora`;
+    }
+
+    return { rockName: name, rockMetric };
+}
 
 // Helpers locais de apresentacao do item da cena do radar.
 export function formatObjectListTrailingLabel(
