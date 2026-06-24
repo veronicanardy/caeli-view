@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { transitDurationForDistance } from '@/Components/Home/ApproachTransit';
+import { transitDurationForDistance, transitVisualScaleForDistance } from '@/Components/Home/ApproachTransit';
 
 /**
  * `transitDurationForDistance` mapeia a distância do objeto para a duração da
@@ -37,5 +37,31 @@ describe('transitDurationForDistance', () => {
     it('trata valores não finitos como ausência de distância', () => {
         expect(transitDurationForDistance(Number.NaN)).toBe(transitDurationForDistance(null));
         expect(transitDurationForDistance(Number.POSITIVE_INFINITY)).toBe(transitDurationForDistance(null));
+    });
+});
+
+describe('transitVisualScaleForDistance', () => {
+    it('mostra o objeto perto maior que o distante', () => {
+        const near = transitVisualScaleForDistance(200_000);
+        const far = transitVisualScaleForDistance(5_000_000);
+        expect(near).toBeGreaterThan(far);
+    });
+
+    it('faz clamp nos extremos da escala aparente', () => {
+        expect(transitVisualScaleForDistance(1_000)).toBe(transitVisualScaleForDistance(150_000));
+        expect(transitVisualScaleForDistance(50_000_000)).toBe(transitVisualScaleForDistance(6_000_000));
+    });
+
+    it('usa o meio da faixa visual quando nao ha distancia', () => {
+        const fallback = transitVisualScaleForDistance(null);
+        const nearest = transitVisualScaleForDistance(150_000);
+        const farthest = transitVisualScaleForDistance(6_000_000);
+        expect(fallback).toBeLessThan(nearest);
+        expect(fallback).toBeGreaterThan(farthest);
+    });
+
+    it('trata valores nao finitos como ausencia de distancia', () => {
+        expect(transitVisualScaleForDistance(Number.NaN)).toBe(transitVisualScaleForDistance(null));
+        expect(transitVisualScaleForDistance(Number.POSITIVE_INFINITY)).toBe(transitVisualScaleForDistance(null));
     });
 });
