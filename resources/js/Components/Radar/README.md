@@ -35,7 +35,7 @@ Arquivos dessa regra:
 | Arquivo | Papel |
 |---|---|
 | `resources/js/lib/radar/radarLabels.ts` | Núcleo puro: prioridade, colisão, Terra soberana (`yieldsToEarth`, `collidesWithAcceptedEarth`), densidade local (`countCrowdingNeighbors`, `ASTEROID_CROWDING_LIMIT`), z-index (`labelZIndexRange`). Sem React/DOM/three. |
-| `tests/js/Radar/radarLabels.test.ts` | Trava todas as regras acima. Editar junto ao núcleo. |
+| `tests/js/lib/radar/radarLabels.test.ts` | Trava todas as regras acima. Editar junto ao núcleo. |
 | `Overlays/SceneLabels.tsx` | Camada React: projeta cada label por frame, alimenta `resolveRadarLabels` e aplica o resultado (`ResolvedScreenLabel`, `labelZIndexRange`). Também faz oclusão por foco/zona proibida. |
 | `Scene/sceneOcclusion.ts` | Monta os oclusores 3D (discos do Sol/Terra/Lua/planetas) consumidos como `objectBounds`. |
 | `Scene/sceneFocus.ts` | `shouldShowLabelForObject`: portão grosso (toggle global + modo órbita). NÃO corta por zoom — o amontoamento é do resolvedor. |
