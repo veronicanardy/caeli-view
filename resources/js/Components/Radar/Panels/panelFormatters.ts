@@ -24,20 +24,6 @@ const EN_MONTH_NUMBER: Record<string, string> = {
 
 const ASTRONOMICAL_UNIT_KM = 149_597_870.7;
 
-export function formatIsoToLocal(value: string, locale: 'pt-BR' | 'en'): string {
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-    return new Intl.DateTimeFormat(locale, {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'UTC',
-        timeZoneName: 'short',
-    }).format(parsed);
-}
-
 /** Formata a data e hora da aproximação (DD/MM + HH:MM + timezone) — inclui dia e mês. */
 export function formatApproachDateTime(value: string | null, locale: 'pt-BR' | 'en'): string {
     if (!value) return '—';

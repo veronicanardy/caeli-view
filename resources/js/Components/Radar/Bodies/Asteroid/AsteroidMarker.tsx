@@ -29,8 +29,8 @@ const LABEL_POSITION: [number, number, number] = [0, 0.04, 0];
  *
  * Adaptador fino sobre a política central (lib/radar/asteroidScale): estima o diâmetro a partir
  * do que o feed traz (diâmetro, faixa estimada ou magnitude absoluta H) e mapeia para o raio
- * visual em degraus. A mesma política é usada pelos asteroides conhecidos, garantindo que o
- * MESMO corpo tenha o MESMO tamanho independente do pipeline que o desenha.
+ * visual por escala logarítmica contínua. A mesma política é usada pelos asteroides conhecidos,
+ * garantindo que o MESMO corpo tenha o MESMO tamanho independente do pipeline que o desenha.
  */
 export function symbolicRockRadiusForApproach(a: UnifiedApproach): number {
     return symbolicRockRadiusFromDiameter(estimateAsteroidDiameterMeters(a));

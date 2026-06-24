@@ -23,6 +23,7 @@ que precise do mesmo pipeline gráfico.
 - Formatadores específicos da cena (timestamp UTC, distância em UA, rótulo relativo de dias)
 - Geração procedural da bump map da Lua (`moonTextures.ts`)
 - Resolvedor puro de visibilidade dos rótulos (`radarLabels.ts`): quem aparece e quem some, sem React
+- Progresso puro da barra de carregamento (`loadingProgress.ts`): etapas reais → porcentagem suave, sem React
 
 ## O que NÃO fica aqui
 
@@ -71,9 +72,10 @@ deve ler isto antes.
 - **Sol: ÚNICO corpo no raio físico (1×, sem exagero)** (`bodyRenderConstants.ts`,
   `SUN_PHYSICAL_RADIUS_DL`/`SUN_VISUAL_RADIUS_DL`). Já é gigante o bastante para dominar (~9,5× o
   raio visual de Júpiter); exagerar seria absurdo, reduzir o faria competir com planetas.
-- **Asteroides (feed E conhecidos): UMA política simbólica em degraus por diâmetro real**
+- **Asteroides (feed E conhecidos): UMA política simbólica logarítmica contínua por diâmetro real**
   (`asteroidScale.ts` → `symbolicRockRadiusFromDiameter`). Não é proporcional ao diâmetro (seria
-  sub-pixel); apenas pista de maior/menor. Piso `MIN_ROCK_RADIUS_DL` (visibilidade) e teto
+  sub-pixel) nem em degraus (achatava vizinhos); a curva log dá "maior parece maior, menor parece
+  menor" de forma monotônica. Apenas pista de maior/menor. Piso `MIN_ROCK_RADIUS_DL` (visibilidade) e teto
   `MAX_ROCK_RADIUS_DL` ABAIXO de Mercúrio (nenhuma rocha compete com planeta). Os conhecidos usam
   a MESMA função a partir do seu diâmetro real (`knownAsteroidVisualScale`), então Ceres > Bennu e
   o mesmo corpo tem o mesmo tamanho venha ele do Horizons ou do fallback Kepler.
