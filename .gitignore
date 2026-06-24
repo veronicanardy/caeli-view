@@ -36,5 +36,8 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
-# Claude Code — configuração local da máquina (skills, settings), nunca versionar
+# Claude Code, configuração local da máquina (skills, settings), nunca versionar
 .claude/
+
+# Memória dos agentes: preferências pessoais, fora do repositório público
+.agents/MEMORY.md

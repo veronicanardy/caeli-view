@@ -1,0 +1,7 @@
+interface:
+  display_name: "Radar"
+  short_description: "Convenções do radar 3D de aproximações"
+  default_prompt: "Use $radar para trabalhar com segurança no radar 3D deste projeto."
+
+policy:
+  allow_implicit_invocation: true
