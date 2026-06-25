@@ -1,8 +1,9 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { cursorPointerEnter, cursorPointerLeave, cursorReset } from '@/lib/radar/cursor';
 
-// Em ambiente Node, `document` é undefined. O cursor.ts faz guard de `typeof document`,
-// por isso os testes validam apenas a lógica de contagem de referência — sem efeitos de DOM.
+function fakeTarget() {
+    return { style: { cursor: '' } } as Pick<HTMLElement, 'style'>;
+}
 
 // Cada teste começa com o contador zerado via cursorReset para evitar vazamento entre testes.
 beforeEach(() => {
@@ -32,6 +33,31 @@ describe('cursorPointerEnter e cursorPointerLeave', () => {
         // Deve voltar ao estado neutro sem erro
         expect(() => cursorPointerEnter()).not.toThrow();
     });
+    it('mantém pointer no alvo até o último leave', () => {
+        const target = fakeTarget();
+
+        cursorPointerEnter(target);
+        cursorPointerEnter(target);
+        cursorPointerLeave(target);
+
+        expect(target.style.cursor).toBe('pointer');
+
+        cursorPointerLeave(target);
+
+        expect(target.style.cursor).toBe('');
+    });
+
+    it('controla alvos diferentes de forma independente', () => {
+        const canvas = fakeTarget();
+        const labelHost = fakeTarget();
+
+        cursorPointerEnter(canvas);
+        cursorPointerEnter(labelHost);
+        cursorPointerLeave(canvas);
+
+        expect(canvas.style.cursor).toBe('');
+        expect(labelHost.style.cursor).toBe('pointer');
+    });
 });
 
 // ─── cursorReset ──────────────────────────────────────────────────────────────
@@ -56,5 +82,16 @@ describe('cursorReset', () => {
         // Agora o estado é limpo: um enter seguido de um leave não deve causar problemas
         cursorPointerEnter();
         expect(() => cursorPointerLeave()).not.toThrow();
+    });
+    it('limpa o cursor de todos os alvos registrados', () => {
+        const canvas = fakeTarget();
+        const labelHost = fakeTarget();
+        cursorPointerEnter(canvas);
+        cursorPointerEnter(labelHost);
+
+        cursorReset();
+
+        expect(canvas.style.cursor).toBe('');
+        expect(labelHost.style.cursor).toBe('');
     });
 });

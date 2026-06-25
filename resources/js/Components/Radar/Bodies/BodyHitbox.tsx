@@ -6,8 +6,8 @@
  * O componente nao decide foco global, camera, selecao ou regra de exibicao.
  */
 
-import { type ThreeEvent } from '@react-three/fiber';
-import { useEffect } from 'react';
+import { type ThreeEvent, useThree } from '@react-three/fiber';
+import { useEffect, useRef } from 'react';
 import { cursorPointerEnter, cursorPointerLeave } from '@/lib/radar/cursor';
 import { BODY_HITBOX_MATERIAL } from './bodyRenderConstants';
 
@@ -24,22 +24,31 @@ export function BodyHitbox({
     onClick,
     onHoverChange,
 }: BodyHitboxProps) {
+    const canvas = useThree((state) => state.gl.domElement);
+    const hoveredRef = useRef(false);
+
     useEffect(() => {
         return () => {
-            cursorPointerLeave();
-            onHoverChange?.(false);
+            if (hoveredRef.current) {
+                cursorPointerLeave(canvas);
+                onHoverChange?.(false);
+            }
         };
-    }, [onHoverChange]);
+    }, [canvas, onHoverChange]);
 
     const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
         event.stopPropagation();
+        if (hoveredRef.current) return;
+        hoveredRef.current = true;
         onHoverChange?.(true);
-        cursorPointerEnter();
+        cursorPointerEnter(canvas);
     };
 
     const handlePointerOut = () => {
+        if (!hoveredRef.current) return;
+        hoveredRef.current = false;
         onHoverChange?.(false);
-        cursorPointerLeave();
+        cursorPointerLeave(canvas);
     };
 
     const handleClick = (event: ThreeEvent<PointerEvent>) => {

@@ -19,7 +19,7 @@ que precise do mesmo pipeline gráfico.
 - Constantes físicas e visuais dos planetas ambientes (`planetData.ts`)
 - Política ÚNICA de tamanho visual dos asteroides (`asteroidScale.ts`)
 - Paleta de cores dos objetos rastreados (`palette.ts`)
-- Gerenciamento do cursor da cena 3D (`cursor.ts`)
+- Gerenciamento do cursor da cena 3D por alvo, incluindo o canvas e labels (`cursor.ts`)
 - Formatadores específicos da cena (timestamp UTC, distância em UA, rótulo relativo de dias)
 - Geração procedural da bump map da Lua (`moonTextures.ts`)
 - Resolvedor puro de visibilidade dos rótulos (`radarLabels.ts`): quem aparece e quem some, sem React

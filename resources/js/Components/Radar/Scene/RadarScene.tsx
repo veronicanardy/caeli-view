@@ -26,7 +26,7 @@ import { StarField } from '../Overlays/StarField';
 import { LabelOccluderContext, RadarLabelResolutionProvider, SceneObjectOccludersContext, useCompactLabelMode } from '../Overlays/SceneLabels';
 import { AsteroidSceneLayer } from './AsteroidSceneLayer';
 import { CameraRig } from './CameraRig';
-import { EARTH_MIN_DISTANCE, MAX_CAMERA_DISTANCE, ROCK_MIN_DISTANCE } from './cameraConstants';
+import { MAX_CAMERA_DISTANCE, resolveMinZoomDistance } from './cameraConstants';
 import type { FocusFraming } from './cameraFraming';
 import type { CameraIntent } from './cameraIntent';
 import { InertialZoom } from './InertialZoom';
@@ -169,10 +169,13 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
 
     const orbitLabelsOnly = orbitMode && selectedHasOrbit;
 
-    // Piso de zoom dinâmico: com uma rocha selecionada em close-up (fora do modo órbita, que precisa de
-    // zoom out amplo), a câmera pode colar perto do corpo minúsculo; senão mantém o piso da Terra, que
-    // evita mergulhar nela. Ver cameraConstants (EARTH_MIN_DISTANCE / ROCK_MIN_DISTANCE).
-    const minZoomDistance = hasSelection && !orbitMode ? ROCK_MIN_DISTANCE : EARTH_MIN_DISTANCE;
+    // Piso de zoom dinâmico: rochas permitem close-up; Urano e Netuno mantêm distância própria para
+    // evitar instabilidade visual quando a câmera chega perto demais; os demais usam o piso da Terra.
+    const minZoomDistance = resolveMinZoomDistance({
+        hasSelection,
+        orbitMode,
+        iceGiantFocused: isUranusFocused || isNeptuneFocused,
+    });
 
     // Labels visíveis para todos os objetos enquanto a câmera não estiver muito afastada.
     // No modo "Asteroides famosos" o enquadramento começa longe de propósito; nesse caso

@@ -25,6 +25,8 @@ export type FocusFraming = {
     position: THREE.Vector3;
     /** Sugere ao rig como transitar até o enquadramento. */
     transition?: 'default' | 'preserve_heading';
+    /** Duração específica do voo em segundos. Quando ausente, usa o padrão do CameraRig. */
+    durationSeconds?: number;
 };
 
 /**
