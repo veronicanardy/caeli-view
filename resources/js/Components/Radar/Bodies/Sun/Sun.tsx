@@ -105,9 +105,9 @@ export function Sun({
                     <primitive object={glowMaterial} attach="material" />
                 </mesh>
                 <SunProminences radius={radius} />
-                {onFocus ? (
+                {onFocus && !isFocused ? (
                     <BodyHitbox
-                        radius={radius * 2.5}
+                        radius={radius}
                         segments={[12, 8]}
                         onClick={onFocus}
                     />
@@ -120,7 +120,7 @@ export function Sun({
                         selected={isFocused}
                         emphasized={isFocused}
                         protectFromFocus={!isFocused}
-                        onClick={onFocus}
+                        onClick={isFocused ? undefined : onFocus}
                     >
                         <span className="font-semibold">{en ? 'Sun' : 'Sol'}</span>
                     </ResolvedScreenLabel>

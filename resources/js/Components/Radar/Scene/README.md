@@ -52,9 +52,13 @@ O **piso de zoom é dinâmico** (`minDistance` dos OrbitControls/`InertialZoom`/
 
 O voo da câmera é **ininterrupto**: enquanto um tween está em andamento, o `CameraRig` desabilita os OrbitControls (`controls.enabled = false`), e as demais camadas de input (`InertialZoom`, `TouchGestures`, `KeyboardPan`) respeitam esse flag. Assim rotação, pan, zoom (roda/pinça) e teclado ficam inertes durante a navegação, que segue até o destino. O controle volta ao usuário automaticamente quando a câmera chega.
 
-O voo em si é o lerp suave original (fator 0,055, com `controls.update()` por frame); ao cruzar o limiar de proximidade o tween termina e os controles são reabilitados. Não há teleporte nem encaixe no fim: o lerp desacelera de forma assintótica e a câmera já está praticamente imóvel quando o controle volta, sem "tranco" perceptível. A única diferença em relação ao comportamento anterior é que a interação não cancela mais o voo no meio, ela só fica inerte até a chegada.
+O foco do Sol usa uma chegada mais recuada que o enquadramento padrão dos corpos. O multiplicador é `24` no desktop e `34` no mobile, preservando espaço para o disco e a corona sem perder a sensação de aproximação. Esse voo dura `1` segundo; os demais continuam com `1,7` segundo.
 
-Como o voo desabilita os OrbitControls, é obrigatório garantir a soltura. O foco de asteroide usa `transition: 'preserve_heading'` e mira um alvo distante (a rocha na escala da cena); com damping, o teste de proximidade `1e-4` pode oscilar e nunca cruzar, deixando os controles presos em `disabled` (o usuário não conseguiria mais girar/zoom depois de chegar). Por isso há o teto `MAX_TWEEN_FRAMES`: ao atingi-lo o tween encerra e reabilita os controles **sem mexer na câmera** (não teleporta, o lerp para onde já está, então sem tranco). É só rede de segurança, ~3,3s a 60fps, bem além de qualquer voo real.
+Júpiter, Saturno, Urano e Netuno usam multiplicador de foco `10`, em vez do padrão `20`, para chegarem 50% mais perto. Os planetas rochosos preservam o enquadramento padrão. Os anéis de Saturno continuam inteiros no campo de visão.
+
+Quando Urano ou Netuno estão focados, o zoom manual respeita distância mínima de `0,65` unidade. A chegada automática permanece em aproximadamente `1,3` e `1,2` unidades, mas a câmera não entra na faixa muito próxima que causa tremor visual.
+
+O voo usa duração fixa de `1,7` segundo e interpolação absoluta com `ease-out` cúbico. No fim, câmera e alvo chegam exatamente ao destino e os controles são reabilitados, sem cauda assintótica nem teste de proximidade. O relógio acompanha o tempo real mesmo abaixo de 30 quadros por segundo, importante perto do Sol, onde a renderização pode ser mais pesada. Apenas pausas anormais acima de `0,1` segundo por frame são limitadas para evitar saltos ao retornar de uma aba em segundo plano.
 
 ## Régua única heliocêntrica
 

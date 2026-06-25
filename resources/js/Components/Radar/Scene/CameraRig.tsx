@@ -95,7 +95,11 @@ export function CameraRig({
     // Views predefinidas são offsets relativos à Terra: somamos earthPos para que
     // Reset/Superior/Lateral continuem centrados na Terra em qualquer posição orbital.
     const desired = useMemo(() => {
-        if (focusTarget) return { position: focusTarget.position.clone(), target: focusTarget.target.clone() };
+        if (focusTarget) return {
+            position: focusTarget.position.clone(),
+            target: focusTarget.target.clone(),
+            durationSeconds: focusTarget.durationSeconds,
+        };
         const earth = new THREE.Vector3(...earthPosRef.current);
         const offset = view === 'perspective' ? perspectiveOffset() : CAMERA_VIEWS[view].clone();
         return { position: earth.clone().add(offset), target: earth };
@@ -153,6 +157,7 @@ export function CameraRig({
                 effectiveDesired.current = {
                     position: focusTarget.target.clone().add(offsetDir.multiplyScalar(desiredDistance)),
                     target: focusTarget.target.clone(),
+                    durationSeconds: focusTarget.durationSeconds,
                 };
                 return;
             }
@@ -196,7 +201,7 @@ export function CameraRig({
        true quando o voo terminou (t ≥ 1, câmera EXATAMENTE no destino). dt é o delta de tempo real. */
     const advanceTween = (
         fc: THREE.Camera,
-        dest: { position: THREE.Vector3; target: THREE.Vector3 },
+        dest: { position: THREE.Vector3; target: THREE.Vector3; durationSeconds?: number },
         dt: number,
     ): boolean => {
         if (!tweenFrom.current) {
@@ -206,7 +211,8 @@ export function CameraRig({
             };
         }
         tweenElapsed.current += dt;
-        const t = Math.min(1, tweenElapsed.current / TWEEN_DURATION_S);
+        const duration = dest.durationSeconds ?? TWEEN_DURATION_S;
+        const t = Math.min(1, tweenElapsed.current / duration);
         const e = easeOutCubic(t);
         const from = tweenFrom.current;
         fc.position.lerpVectors(from.position, dest.position, e);
@@ -220,8 +226,10 @@ export function CameraRig({
     };
 
     useFrame(({ camera: fc }, delta) => {
-        // delta pode disparar (aba em background, GC); limita o passo para o voo não "pular".
-        const dt = Math.min(delta, 1 / 30);
+        // Preserva a duração real mesmo quando a cena cai abaixo de 30 FPS, situação mais perceptível
+        // perto do Sol. Só limita pausas anormais, como retorno de aba em segundo plano, para o voo
+        // não saltar vários segundos em um único frame.
+        const dt = Math.min(Math.max(delta, 0), 0.1);
         // Compensação de painéis na projeção: o centro visual desloca para a área
         // livre (direita do trilho no desktop, acima do sheet no mobile) sem mexer
         // no alvo dos OrbitControls. Interpolada para transições suaves.

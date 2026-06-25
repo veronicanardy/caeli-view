@@ -46,6 +46,22 @@ export const CAMERA_NEAR = 0.07;
  */
 export const EARTH_MIN_DISTANCE = 0.11 * 2.2;
 export const ROCK_MIN_DISTANCE = 0.08;
+/** Piso de zoom para Urano e Netuno focados, evitando instabilidade visual muito perto do globo. */
+export const ICE_GIANT_MIN_DISTANCE = 0.65;
+
+/** Resolve o piso de zoom conforme o alvo que está sob foco na cena. */
+export function resolveMinZoomDistance({
+    hasSelection,
+    orbitMode,
+    iceGiantFocused,
+}: {
+    hasSelection: boolean;
+    orbitMode: boolean;
+    iceGiantFocused: boolean;
+}): number {
+    if (iceGiantFocused) return ICE_GIANT_MIN_DISTANCE;
+    return hasSelection && !orbitMode ? ROCK_MIN_DISTANCE : EARTH_MIN_DISTANCE;
+}
 
 export const CAMERA_VIEWS = {
     /* perspective é calculado dinamicamente pelo CameraRig em coordenadas solares

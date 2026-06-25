@@ -37,4 +37,12 @@ describe('PLANET_CONFIG', () => {
     it('Vênus é enquadrado com raio maior que Marte (regressão do bug de framing 0,038)', () => {
         expect(PLANET_CONFIG.venus.framingRadius).toBeGreaterThan(PLANET_CONFIG.mars.framingRadius);
     });
+    it('aproxima Júpiter, Saturno, Urano e Netuno no foco sem alterar os rochosos', () => {
+        for (const id of ['jupiter', 'saturn', 'uranus', 'neptune'] as PlanetId[]) {
+            expect(PLANET_CONFIG[id].focusDistanceMultiplier).toBe(10);
+        }
+        for (const id of ['mercury', 'venus', 'mars'] as PlanetId[]) {
+            expect(PLANET_CONFIG[id].focusDistanceMultiplier).toBeUndefined();
+        }
+    });
 });

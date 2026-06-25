@@ -173,7 +173,7 @@ export function useRadar3DFocusActions({
                 const planetToSun = planetVec.clone().negate().normalize();
                 // Leve elevação para evitar enquadramento raso no plano eclíptico.
                 planetToSun.add(new THREE.Vector3(0, 0.25, 0)).normalize();
-                setPlanetFocusTargets({ [id]: framingForBody(planetVec, cfg.framingRadius, planetToSun) });
+                setPlanetFocusTargets({ [id]: framingForBody(planetVec, cfg.framingRadius, planetToSun, cfg.focusDistanceMultiplier) });
             } else {
                 setPlanetFocusTargets({});
             }
@@ -187,9 +187,13 @@ export function useRadar3DFocusActions({
             setBodyCardOpen('sun');
             clearPlanetTargets();
             collapseNavigationForMobile();
-            // No mobile, recua mais para que o Sol não domine a composição.
+            // Mantém a chegada um pouco mais afastada para o disco e a corona respirarem no quadro.
+            // No mobile, recua ainda mais para que o Sol não domine a composição.
             const isMobile = typeof window !== 'undefined' && window.matchMedia(MOBILE_MEDIA_QUERY).matches;
-            setSunFocusTarget(framingForBody(new THREE.Vector3(0, 0, 0), 0.5, undefined, isMobile ? 30 : 20));
+            setSunFocusTarget({
+                ...framingForBody(new THREE.Vector3(0, 0, 0), 0.5, undefined, isMobile ? 34 : 24),
+                durationSeconds: 1,
+            });
         });
     }, [clearPlanetTargets, collapseNavigationForMobile, onClearSelection, withOrbitExit]);
 

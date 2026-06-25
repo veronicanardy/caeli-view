@@ -26,6 +26,8 @@ type PlanetCfg = {
      * Travado por planetConfig.test.ts contra futura dessincronização.
      */
     framingRadius: number;
+    /** Multiplicador de distância do foco. Gigantes usam chegada mais próxima que os rochosos. */
+    focusDistanceMultiplier?: number;
 };
 
 const PLANET_DATA: Record<PlanetId, PlanetDatum> = {
@@ -48,9 +50,16 @@ const EPHEMERIS_KEY: Record<PlanetId, PlanetCfg['ephemerisKey']> = {
     neptune: 'neptuneScenePosition',
 };
 
+const GIANT_PLANETS = new Set<PlanetId>(['jupiter', 'saturn', 'uranus', 'neptune']);
+const GIANT_FOCUS_DISTANCE_MULTIPLIER = 10;
+
 export const PLANET_CONFIG: Record<PlanetId, PlanetCfg> = Object.fromEntries(
     (Object.keys(EPHEMERIS_KEY) as PlanetId[]).map((id) => [
         id,
-        { ephemerisKey: EPHEMERIS_KEY[id], framingRadius: PLANET_DATA[id].visualRadiusDl },
+        {
+            ephemerisKey: EPHEMERIS_KEY[id],
+            framingRadius: PLANET_DATA[id].visualRadiusDl,
+            focusDistanceMultiplier: GIANT_PLANETS.has(id) ? GIANT_FOCUS_DISTANCE_MULTIPLIER : undefined,
+        },
     ]),
 ) as Record<PlanetId, PlanetCfg>;
