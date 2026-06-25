@@ -30,7 +30,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
     const [radarFullscreen, setRadarFullscreen] = useState(false);
     const [selectedFocusId, setSelectedFocusId] = useState<string | null>(null);
     const { locale, t } = useTranslation();
-    useAppLayoutOptions({ hideHeader: radarFullscreen, hideFooter: true });
+    useAppLayoutOptions({ hideHeader: radarFullscreen, hideFooter: true, lockViewport: true });
 
     const { objectLimit, selectionMode, setObjectLimit, setSelectionMode, resetControls } = useRadarControls();
     const [refreshNonce, setRefreshNonce] = useState(0);

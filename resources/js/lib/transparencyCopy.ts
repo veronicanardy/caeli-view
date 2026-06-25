@@ -21,8 +21,9 @@ export function transparencyCopy(locale: 'pt-BR' | 'en'): TransparencyCopy {
             subtitle: 'Independent educational interface built around public space data.',
             paragraphs: [
                 'CaeliView is an independent project and is not affiliated with, sponsored by, or endorsed by NASA, JPL, or Caltech.',
-                'Data sources: NASA/JPL CNEOS, NASA/JPL Horizons, and NASA public APIs, as indicated throughout the experience.',
-                'Visualizations are educational and may use visual scale choices, approximations, and fallbacks. For official information, consult the original sources.',
+                'Data sources: NASA NeoWs, NASA APOD, NASA EPIC (DSCOVR), NASA/JPL CNEOS, and NASA/JPL Horizons, along with public imagery made available by NASA, JPL, and associated missions, subject to their usage guidelines and the credits indicated throughout the experience.',
+                'Visualizations are educational and may use visual scale choices, approximations, and fallbacks.',
+                'Data is provided as is, with no guarantee of accuracy or timeliness, and does not replace official sources. CaeliView is not responsible for decisions made based on this visualization.',
             ],
         };
     }
@@ -33,8 +34,9 @@ export function transparencyCopy(locale: 'pt-BR' | 'en'): TransparencyCopy {
         subtitle: 'Interface educativa independente construída a partir de dados públicos do espaço.',
         paragraphs: [
             'CaeliView é um projeto independente e não é afiliado, patrocinado ou endossado pela NASA, JPL ou Caltech.',
-            'Fontes de dados: NASA/JPL CNEOS, NASA/JPL Horizons e APIs públicas da NASA, conforme indicado ao longo da experiência.',
-            'As visualizações são educativas e podem usar escolhas visuais de escala, aproximações e fallbacks. Para informações oficiais, consulte as fontes originais.',
+            'Fontes de dados: NASA NeoWs, NASA APOD, NASA EPIC (DSCOVR), NASA/JPL CNEOS e NASA/JPL Horizons, além de imagens públicas disponibilizadas pela NASA, JPL e missões associadas, observadas as diretrizes de uso e os créditos indicados ao longo da experiência.',
+            'As visualizações são educativas e podem usar escolhas visuais de escala, aproximações e fallbacks.',
+            'Os dados são fornecidos como estão, sem garantia de exatidão ou atualidade, e não substituem as fontes oficiais. O CaeliView não se responsabiliza por decisões tomadas com base nesta visualização.',
         ],
     };
 }
