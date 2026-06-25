@@ -10,6 +10,7 @@ use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\ReverseGeocodeProxyController;
 use App\Http\Controllers\Web\SkyObservationProxyController;
 use App\Http\Controllers\Web\SmallBodiesController;
+use App\Http\Controllers\Web\TermsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->middleware('throttle:nasa')->name('home');
@@ -17,6 +18,7 @@ Route::get('/proxy/sky-observation', SkyObservationProxyController::class)->midd
 Route::get('/proxy/reverse-geocode', ReverseGeocodeProxyController::class)->middleware('throttle:60,1')->name('proxy.reverse-geocode');
 Route::get('/home/astronomy-feed', HomeAstronomyFeedController::class)->middleware('throttle:nasa')->name('home.astronomy-feed');
 Route::get('/sobre', AboutController::class)->name('about');
+Route::get('/termos', TermsController::class)->name('terms');
 
 Route::middleware('throttle:nasa')->group(function (): void {
     Route::get('/radar', [RadarController::class, 'index'])->name('radar.index');

@@ -6,6 +6,7 @@ const en = {
     'nav.earth': 'Earth',
     'nav.discovery': 'Discovery',
     'nav.about': 'About',
+    'nav.terms': 'Terms of use',
     'language.label': 'Language',
     'language.pt-BR': 'PT',
     'language.en': 'EN',

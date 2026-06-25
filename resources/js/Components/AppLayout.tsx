@@ -35,6 +35,10 @@ const navigationProgressCeiling = 0.94; // teto do trickle enquanto a rota não 
 type AppLayoutOptions = {
     hideHeader?: boolean;
     hideFooter?: boolean;
+    // Trava a altura na viewport (h-[100dvh] + overflow-hidden) para telas que NÃO rolam, como o
+    // radar, onde a cena 3D preenche o espaço restante por flex. Sem isto, esconder o rodapé não
+    // deve impedir o scroll: páginas longas sem footer (ex.: Termos) continuam rolando normalmente.
+    lockViewport?: boolean;
 };
 
 const AppLayoutOptionsContext = createContext<(options: AppLayoutOptions) => void>(() => undefined);
@@ -46,7 +50,7 @@ export function useAppLayoutOptions(options: AppLayoutOptions) {
         setOptions(options);
 
         return () => setOptions({});
-    }, [options.hideHeader, options.hideFooter, setOptions]);
+    }, [options.hideHeader, options.hideFooter, options.lockViewport, setOptions]);
 }
 function NavigationProgress() {
     // 'active' enquanto a barra está visível e avançando; vira false no finish, quando
@@ -218,7 +222,7 @@ function NavigationProgress() {
     );
 }
 
-export function AppLayout({ children, hideHeader = false, hideFooter = false }: PropsWithChildren<AppLayoutOptions>) {
+export function AppLayout({ children, hideHeader = false, hideFooter = false, lockViewport = false }: PropsWithChildren<AppLayoutOptions>) {
     const { url, props } = usePage<PageProps>();
     const { locale, setLocale, t } = useTranslation();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -228,6 +232,7 @@ export function AppLayout({ children, hideHeader = false, hideFooter = false }: 
     const footerCopy = transparencyCopy(locale);
     const effectiveHideHeader = hideHeader || Boolean(layoutOptions.hideHeader);
     const effectiveHideFooter = hideFooter || Boolean(layoutOptions.hideFooter);
+    const effectiveLockViewport = lockViewport || Boolean(layoutOptions.lockViewport);
 
     useEffect(() => {
         setMenuOpen(false);
@@ -253,10 +258,11 @@ export function AppLayout({ children, hideHeader = false, hideFooter = false }: 
 
     return (
         <AppLayoutOptionsContext.Provider value={setLayoutOptions}>
-        {/* No radar (hideFooter) a tela ocupa exatamente a viewport e nunca rola: h-[100dvh] +
+        {/* No radar (lockViewport) a tela ocupa exatamente a viewport e nunca rola: h-[100dvh] +
            overflow-hidden travam a altura e o radar 3D preenche o espaço restante por flex. Nas
-           demais páginas o layout cresce com o conteúdo (min-h-screen) e rola normalmente. */}
-        <div className={`flex flex-col ${effectiveHideFooter ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
+           demais páginas o layout cresce com o conteúdo (min-h-screen) e rola normalmente, mesmo
+           quando o rodapé está escondido (ex.: Termos). */}
+        <div className={`flex flex-col ${effectiveLockViewport ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
             <header className={`app-header sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${effectiveHideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
                 {/* Hairline ciano de assinatura, espelha a linha do footer */}
                 <div className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-signal-cyan/25 to-transparent" aria-hidden="true" />
@@ -380,41 +386,31 @@ export function AppLayout({ children, hideHeader = false, hideFooter = false }: 
                     </div>
                 </div>
             ) : null}
-            <main className={`page-slide flex-1 ${effectiveHideFooter ? 'min-h-0' : ''}`}>{children}</main>
-            {/* Rodapé de transparência: peso visual reduzido para não quebrar a atmosfera da página.
-                Escondido em telas que ocupam a viewport inteira sem scroll (radar), onde a transparência
-                migra para dentro do guia. */}
+            <main className={`page-slide flex-1 ${effectiveLockViewport ? 'min-h-0' : ''}`}>{children}</main>
+            {/* Rodapé de transparência enxuto: só a não-afiliação (a linha que precisa estar sempre
+                visível) e um botão chamativo para os Termos de uso, onde vivem as fontes, os limites e a
+                isenção completos. Escondido em telas que ocupam a viewport inteira sem scroll (radar),
+                onde a transparência migra para dentro do guia. */}
             {effectiveHideFooter ? null : (
             <footer className="relative border-t border-white/[0.06] bg-[linear-gradient(180deg,rgba(3,6,13,0),rgba(3,6,13,0.72)_25%,rgba(3,6,13,0.88))]">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-signal-cyan/20 to-transparent" />
-                <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-                    <div className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8">
-                        <div className="space-y-2">
-                            <span className="inline-flex items-center gap-1.5 text-[0.62rem] font-medium uppercase tracking-[0.24em] text-signal-cyan/45">
-                                <Info className="size-3" aria-hidden="true" />
+                <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-1.5">
+                            <span className="inline-flex items-center gap-1.5 text-[0.66rem] font-semibold uppercase tracking-[0.24em] text-signal-cyan/70">
+                                <Info className="size-3.5" aria-hidden="true" />
                                 {footerCopy.label}
                             </span>
-                            <div className="space-y-1.5">
-                                <h2 className="max-w-xs text-[13px] font-medium tracking-tight text-white/55">
-                                    {footerCopy.title}
-                                </h2>
-                                <p className="max-w-xs text-[12px] leading-relaxed text-white/28">
-                                    {footerCopy.subtitle}
-                                </p>
-                            </div>
+                            <p className="max-w-xl text-[13px] leading-relaxed text-white/60">
+                                {footerCopy.paragraphs[0]}
+                            </p>
                         </div>
-                        <div className="grid gap-3 border-l-0 border-white/[0.06] lg:border-l lg:pl-8">
-                            {footerCopy.paragraphs.map((paragraph, index) => (
-                                <p
-                                    key={paragraph}
-                                    className={`max-w-4xl text-[12px] leading-6 text-white/32 ${
-                                        index > 0 ? 'border-t border-white/[0.05] pt-3' : ''
-                                    }`}
-                                >
-                                    {paragraph}
-                                </p>
-                            ))}
-                        </div>
+                        <Link
+                            href="/termos"
+                            className="shrink-0 text-[13px] font-medium text-signal-cyan/80 underline decoration-signal-cyan/30 decoration-1 underline-offset-4 transition hover:text-signal-cyan hover:decoration-signal-cyan/70"
+                        >
+                            {t('nav.terms')}
+                        </Link>
                     </div>
                 </div>
             </footer>

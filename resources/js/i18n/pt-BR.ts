@@ -6,6 +6,7 @@ const ptBR = {
     'nav.earth': 'Terra',
     'nav.discovery': 'Descoberta',
     'nav.about': 'Sobre',
+    'nav.terms': 'Termos de uso',
     'language.label': 'Idioma',
     'language.pt-BR': 'PT',
     'language.en': 'EN',
