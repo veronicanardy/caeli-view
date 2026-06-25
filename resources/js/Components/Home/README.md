@@ -17,9 +17,10 @@ A Terra não é um globo ao lado do texto: é um horizonte colossal na base da t
 - `CinematicHero.tsx`: orquestrador do hero. Bloco editorial central (badge, marca, frase-promessa, descrição de apoio, microcopy NASA/JPL, CTA com cena de opções), console de observação com localização integrada no cabeçalho e overlays de vignette.
 - `CinematicEarthScene.tsx`: horizonte da Terra em Three.js puro. Câmera a `ORBIT_ALTITUDE` acima da superfície (constantes de enquadramento no topo do arquivo), texturas reais NASA com cascata de fallback, nuvens com sombra projetada, luzes noturnas Black Marble, brilho oceânico e arco atmosférico fresnel no limbo. Fallback de horizonte em CSS quando tudo falha.
 - `CinematicSpaceBackdrop.tsx`: fundo em um único canvas Three.js: nebulosa FBM, três camadas de estrelas estáticas com parallax e cometa ocasional confinado ao céu superior.
+- `ApproachTransit.tsx`: trânsito de aproximação exibido no hero, alimentado por `useHomeApproachTransits`.
 - `heroSkyCopy.ts`: funções puras de copy do céu (nota de observação, visibilidade, lista de planetas, data de aproximação, fase lunar). Testadas em `tests/js/Home/heroSkyCopy.test.ts`.
 
-Legado não montado atualmente (versões anteriores do hero, mantidas para referência): `InteractiveHero.tsx`, `EarthStage.tsx`, `LiveSkyDashboard.tsx`, `SpaceBackground.tsx`, `StarField.tsx`, `StarfieldParallax.tsx`, `HomeBackgroundEffects.tsx`, `AtmosphereGlow.tsx`, `FloatingMissionCard.tsx`, `MissionMetricCard.tsx`, `NasaHighlightCard.tsx`, `OrbitalFeatureCard.tsx`.
+Legado não montado atualmente (versões anteriores do hero, mantidas para referência): `InteractiveHero.tsx`, `EarthStage.tsx`, `SpaceBackground.tsx`, `StarField.tsx`, `StarfieldParallax.tsx`, `HomeBackgroundEffects.tsx`, `AtmosphereGlow.tsx`, `FloatingMissionCard.tsx`, `MissionMetricCard.tsx`, `NasaHighlightCard.tsx`, `OrbitalFeatureCard.tsx`.
 
 ## Padrões Locais
 
