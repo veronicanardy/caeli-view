@@ -38,6 +38,8 @@ import { RadarFloatingOverlays } from './Panels/RadarFloatingOverlays';
 import { RadarNavigationPanel } from './Panels/RadarNavigationPanel';
 import type { MobileSheetSection } from './Panels/radarNavigationTypes';
 import { RadarSceneCanvas } from './Scene/RadarSceneCanvas';
+import { knownSpacecraftId, knownSpacecraftToClosestNowObject } from './Bodies/Spacecraft/knownSpacecraft';
+import { useSpacecraftPositions } from '@/hooks/useSpacecraftPositions';
 import { useRadarTutorialOptional } from './Tutorial/RadarTutorialContext';
 import type { TutorialAction, TutorialActionPayload } from './Tutorial/radarTutorialFlow';
 import { mobileSheetTransitionAction } from './Tutorial/radarTutorialFlow';
@@ -108,6 +110,10 @@ export function DailyOrbitalRadar3D({
     const deferredObjects = useDeferredValue(closestNowObjects);
     const sceneObjects = radarLoading ? deferredObjects : closestNowObjects;
 
+    // Posições ao vivo das naves (Horizons). Mapa horizonsId → vetor heliocêntrico. Naves ausentes
+    // do mapa caem no vetor fixo local. Alimenta a cena, o foco de câmera e o card.
+    const { positions: spacecraftPositions } = useSpacecraftPositions();
+
     // Fallback síncrono para a direção do Sol: o servidor já conhece a longitude solar atual
     // (Meeus, SunDirectionCalculator) e a envia pelo Inertia. Até o astronomy-engine resolver
     // seu import lazy, a cena ilumina a partir deste vetor, nunca de um cardinal arbitrário.
@@ -137,6 +143,9 @@ export function DailyOrbitalRadar3D({
     }, [onFullscreenChange, runTutorialAction]);
     const [showLabels, setShowLabels] = useState(true);
     const [planetsOpen, setPlanetsOpen] = useState(false);
+    // Flyout de naves nas Referências, irmão do de planetas. Mutuamente exclusivo com ele: abrir um
+    // fecha o outro, para não termos dois painéis flutuantes lado a lado disputando espaço.
+    const [spacecraftOpen, setSpacecraftOpen] = useState(false);
     // Sheet mobile aberto (objetos ou filtros). Null = nenhum, cena livre.
     const [mobileSheet, setMobileSheet] = useState<MobileSheetSection | null>(null);
     // Desktop: painel de navegação recolhido em pill (modo explorar). O card
@@ -149,6 +158,7 @@ export function DailyOrbitalRadar3D({
         closeFocusedObject,
         focusBody,
         focusPlanet,
+        focusSpacecraft,
         focusSun,
         frameFamousBelt,
         knownFocusTarget,
@@ -156,10 +166,12 @@ export function DailyOrbitalRadar3D({
         planetFocusTargets,
         resetView,
         selectObject,
+        selectedSpacecraft,
         setBodyCardOpen,
         showCloseUp,
         showNavigationPanel,
         showOrbit,
+        spacecraftFocusTarget,
         sunFocusTarget,
         visibleFocusedObject,
     } = useRadar3DFocusActions({
@@ -171,6 +183,7 @@ export function DailyOrbitalRadar3D({
         setMobileSheet,
         setPlanetsOpen,
         triggerTransition,
+        spacecraftPositions,
     });
     // Enquadramento derivado da intenção explícita de seleção/foco, sem reiniciar a câmera a cada tick de efeméride.
     const focusTarget = useSelectionFocusFraming(
@@ -179,6 +192,17 @@ export function DailyOrbitalRadar3D({
         orbitMode,
         ephemeris?.earthHelioPositionAU ?? null,
     );
+
+    // Nave selecionada: vira um objeto sintético local que reaproveita TODA a máquina de card
+    // (kind="asteroid", aba História pelo id spacecraft:<id>). Como a nave não está no feed, este
+    // objeto vive só aqui. selectedSpacecraftId destaca a nave na cena (label/realce do marcador).
+    const spacecraftCardObject = useMemo(
+        () => (selectedSpacecraft ? knownSpacecraftToClosestNowObject(selectedSpacecraft, spacecraftPositions) : null),
+        [selectedSpacecraft, spacecraftPositions],
+    );
+    const selectedSpacecraftId = selectedSpacecraft ? knownSpacecraftId(selectedSpacecraft) : null;
+    // O card mostra a nave selecionada quando há uma; senão, o objeto do feed em foco.
+    const effectiveFocusedObject = spacecraftCardObject ?? visibleFocusedObject;
 
     const [trajectoryPointFocus, setTrajectoryPointFocus] = useState<FocusFraming | null>(null);
 
@@ -195,8 +219,16 @@ export function DailyOrbitalRadar3D({
     }, [runTutorialAction]);
 
     const changePlanetsOpen = useCallback((open: boolean) => {
-        runTutorialAction('toggle-planets', {}, () => setPlanetsOpen(open));
+        runTutorialAction('toggle-planets', {}, () => {
+            setPlanetsOpen(open);
+            if (open) setSpacecraftOpen(false);
+        });
     }, [runTutorialAction]);
+
+    const changeSpacecraftOpen = useCallback((open: boolean) => {
+        setSpacecraftOpen(open);
+        if (open) setPlanetsOpen(false);
+    }, []);
 
     const selectObjectForTutorial = useCallback((approach: UnifiedApproach) => {
         // O passo de seleção do tutorial só aceita a PRIMEIRA rocha da lista (a mais
@@ -217,6 +249,11 @@ export function DailyOrbitalRadar3D({
     const focusPlanetForTutorial = useCallback((id: Parameters<typeof focusPlanet>[0]) => {
         runTutorialAction('focus-planet', { planetId: id }, () => focusPlanet(id));
     }, [focusPlanet, runTutorialAction]);
+
+    // Naves não fazem parte do roteiro do tutorial: foco direto, sem gate.
+    const focusSpacecraftDirect = useCallback((craft: Parameters<typeof focusSpacecraft>[0]) => {
+        focusSpacecraft(craft);
+    }, [focusSpacecraft]);
 
     const setShowLabelsForTutorial = useCallback((value: SetStateAction<boolean>) => {
         const next = typeof value === 'function' ? value(showLabels) : value;
@@ -312,6 +349,10 @@ export function DailyOrbitalRadar3D({
                     sunFocusTarget={sunFocusTarget}
                     knownFocusTarget={knownFocusTarget}
                     planetFocusTargets={planetFocusTargets}
+                    spacecraftFocusTarget={spacecraftFocusTarget}
+                    selectedSpacecraftId={selectedSpacecraftId}
+                    onFocusSpacecraft={focusSpacecraftDirect}
+                    spacecraftPositions={spacecraftPositions}
                     ephemeris={ephemeris}
                     fallbackSunDirection={fallbackSunDirection}
                     locale={locale}
@@ -342,6 +383,8 @@ export function DailyOrbitalRadar3D({
                     onDesktopCollapsedChange={changeDesktopPanelCollapsed}
                     planetsOpen={planetsOpen}
                     onPlanetsOpenChange={changePlanetsOpen}
+                    spacecraftOpen={spacecraftOpen}
+                    onSpacecraftOpenChange={changeSpacecraftOpen}
                     bodyCardOpen={bodyCardOpen}
                     sidePanelRef={sidePanelRef}
                     planetFlyoutRef={planetFlyoutRef}
@@ -349,11 +392,13 @@ export function DailyOrbitalRadar3D({
                     onFocusBody={focusBodyForTutorial}
                     onFocusPlanet={focusPlanetForTutorial}
                     onFocusSun={focusSunForTutorial}
+                    onFocusSpacecraft={focusSpacecraftDirect}
+                    selectedSpacecraftId={selectedSpacecraftId}
                 />
                 {/* Barra de ações mobile: some enquanto um sheet ou card ocupa o rodapé. */}
                 <MobileActionBar
                     en={en}
-                    hidden={mobileSheet !== null || Boolean(visibleFocusedObject) || Boolean(bodyCardOpen)}
+                    hidden={mobileSheet !== null || Boolean(effectiveFocusedObject) || Boolean(bodyCardOpen)}
                     onOpenObjects={() => runTutorialAction('open-object-panel', {}, showNavigationPanel)}
                     onOpenFilters={() => changeMobileSheet('filters')}
                     onOpenGuide={() => runTutorialAction('open-guide', {}, () => setManualOpen(true))}
@@ -371,7 +416,7 @@ export function DailyOrbitalRadar3D({
                     en={en}
                     locale={locale}
                     desktopPanelCollapsed={desktopPanelCollapsed}
-                    visibleFocusedObject={visibleFocusedObject}
+                    visibleFocusedObject={effectiveFocusedObject}
                     onOpenFocus={onOpenFocus ? (approach) => runTutorialAction('open-dossier', {}, () => onOpenFocus(approach)) : undefined}
                     onCloseFocusedObject={() => runTutorialAction('close-card', {}, closeFocusedObject)}
                     orbitMode={orbitMode}

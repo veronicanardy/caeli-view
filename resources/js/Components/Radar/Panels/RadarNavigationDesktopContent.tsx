@@ -22,6 +22,8 @@ export function RadarNavigationDesktopContent({
     onRefresh,
     planetsOpen,
     onPlanetsOpenChange,
+    spacecraftOpen,
+    onSpacecraftOpenChange,
     onSelectObject,
     onFocusBody,
     onFocusSun,
@@ -33,6 +35,8 @@ export function RadarNavigationDesktopContent({
                 orbitMode={orbitMode}
                 planetsOpen={planetsOpen}
                 onPlanetsOpenChange={onPlanetsOpenChange}
+                spacecraftOpen={spacecraftOpen}
+                onSpacecraftOpenChange={onSpacecraftOpenChange}
                 onFocusEarth={() => onFocusBody('earth')}
                 onFocusMoon={() => onFocusBody('moon')}
                 onFocusSun={onFocusSun}

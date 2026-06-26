@@ -12,6 +12,7 @@ use App\Services\Approaches\AsteroidModelResolverService;
 use App\Services\Approaches\ClosestNowSelector;
 use App\Services\Approaches\FamousAsteroidsSelector;
 use App\Services\Approaches\RadarService;
+use App\Services\Approaches\SpacecraftPositionSelector;
 use App\Services\Jpl\Horizons\HorizonsTrajectoryService;
 use App\Services\Jpl\Sbdb\SmallBodyService;
 use App\Support\DistancePresenter;
@@ -30,6 +31,7 @@ class RadarController
         private readonly HorizonsTrajectoryService $horizons,
         private readonly ClosestNowSelector $closestNow,
         private readonly FamousAsteroidsSelector $famous,
+        private readonly SpacecraftPositionSelector $spacecraft,
         private readonly SmallBodyService $smallBodies,
     ) {
     }
@@ -106,6 +108,30 @@ class RadarController
             Log::error('[famous] falha ao resolver asteroides famosos', ['error' => $e->getMessage()]);
 
             $payload = $this->emptyClosestNowPayload('famous', '', '', 5);
+        }
+
+        return response()->json($payload)
+            ->header('Cache-Control', 'public, max-age=1800, stale-while-revalidate=1800');
+    }
+
+    /**
+     * Responsabilidade: retorna a posição ATUAL das naves famosas (Voyager 1/2, Pioneer 10, New
+     * Horizons, Juno) como vetor heliocêntrico em UA, do JPL Horizons. As naves vivem na cena como os
+     * planetas (sempre presentes); o front usa esta posição ao vivo e cai num vetor fixo local quando
+     * o Horizons falha (a nave nunca some).
+     *
+     * Lista fixa: o único parâmetro aceito é force_refresh.
+     */
+    public function spacecraft(RadarClosestNowRequest $request): JsonResponse
+    {
+        $forceRefresh = (bool) ($request->input('force_refresh', false));
+
+        try {
+            $payload = $this->spacecraft->select($forceRefresh);
+        } catch (\Throwable $e) {
+            Log::error('[spacecraft] falha ao resolver posições das naves', ['error' => $e->getMessage()]);
+
+            $payload = ['generatedAt' => CarbonImmutable::now('UTC')->toIso8601String(), 'objects' => []];
         }
 
         return response()->json($payload)

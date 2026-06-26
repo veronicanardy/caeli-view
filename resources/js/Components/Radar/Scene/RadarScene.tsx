@@ -43,8 +43,10 @@ import { computeEarthPosition, computeMoonGeoPosition, computeMoonPosition, comp
 import { useBodyFocus } from './useBodyFocus';
 import { KnownAsteroidsLayer } from './KnownAsteroidsLayer';
 import { KnownCometsLayer } from './KnownCometsLayer';
+import { KnownSpacecraftLayer } from './KnownSpacecraftLayer';
 import { knownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
 import { knownCometById, knownCometId } from '../Bodies/Comet/knownComets';
+import type { KnownSpacecraft, LiveSpacecraftPositions } from '../Bodies/Spacecraft/knownSpacecraft';
 // --------------- Scene ---------------
 
 type RadarSceneProps = {
@@ -84,6 +86,12 @@ type RadarSceneProps = {
     sceneNavigationEnabled?: boolean;
     /** Mostra os asteroides conhecidos (modelo exclusivo) na régua dos planetas. */
     showKnownAsteroids?: boolean;
+    /** Id da nave selecionada (knownSpacecraftId), realça o marcador na cena. */
+    selectedSpacecraftId?: string | null;
+    /** Foca/seleciona uma nave a partir do clique no marcador da cena. */
+    onFocusSpacecraft?: (craft: KnownSpacecraft) => void;
+    /** Posições ao vivo das naves (Horizons). Naves ausentes usam o vetor fixo local. */
+    spacecraftPositions?: LiveSpacecraftPositions;
     /** Chamado uma única vez após o primeiro frame da cena ser renderizado na GPU. */
     onFirstFrame?: () => void;
     onFocusTrajectoryPoint?: (framing: FocusFraming) => void;
@@ -99,7 +107,7 @@ function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
     return null;
 }
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, sceneNavigationEnabled = true, showKnownAsteroids = false, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, sceneNavigationEnabled = true, showKnownAsteroids = false, selectedSpacecraftId = null, onFocusSpacecraft, spacecraftPositions, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
     // A cena heliocêntrica usa a régua única em UA (LINEAR_AU_SCALE): a efeméride já chega nela
     // (computeSceneEphemeris gera as posições direto na régua), sem reescalonamento intermediário.
     const hasSelection = selectedId !== null;
@@ -118,6 +126,13 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                 .filter((o) => hasRenderableHelioPosition(o))
                 .map((o) => o.approach.id),
         ),
+        [closestNowObjects],
+    );
+    // Naves NÃO passam pelo AsteroidSceneLayer: o AsteroidMarker só sabe desenhar rocha/cometa e
+    // pintaria uma nave como rocha. Elas são SEMPRE desenhadas pela KnownSpacecraftLayer (marcador
+    // estilizado), com a posição heliocêntrica fixa. Removê-las aqui evita o corpo duplicado/errado.
+    const naturalBodyObjects = useMemo(
+        () => closestNowObjects.filter((o) => o.approach.objectType !== 'spacecraft'),
         [closestNowObjects],
     );
     // A seleção exibe a trajetória geocêntrica local. A órbita Kepleriana solar aparece somente
@@ -363,7 +378,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                         sem os demais objetos nem a trilha curta. */}
                     {!(showFullOrbit && focusOrbit) ? (
                         <AsteroidSceneLayer
-                            closestNowObjects={closestNowObjects}
+                            closestNowObjects={naturalBodyObjects}
                             selectedId={selectedId}
                             hasSelection={hasSelection}
                             onSelect={onSelect}
@@ -406,6 +421,19 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                                 const object = closestNowObjects.find((o) => o.approach.id === knownCometId(comet));
                                 if (object) onSelect(object.approach);
                             }}
+                        />
+                    ) : null}
+
+                    {/* Naves famosas: SEMPRE na cena, como os planetas (não dependem do modo famosos).
+                        Marcador estilizado na posição heliocêntrica fixa. Fora da régua de órbita Kepler
+                        (showFullOrbit), que isola um único corpo + Sol. Clique foca a câmera e abre o card. */}
+                    {!(showFullOrbit && focusOrbit) ? (
+                        <KnownSpacecraftLayer
+                            showLabels={showLabels}
+                            selectedId={selectedSpacecraftId}
+                            auScale={LINEAR_AU_SCALE}
+                            livePositions={spacecraftPositions}
+                            onSelect={onFocusSpacecraft}
                         />
                     ) : null}
 

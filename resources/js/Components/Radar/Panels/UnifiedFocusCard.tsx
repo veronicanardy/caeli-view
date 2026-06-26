@@ -26,6 +26,7 @@ import { famousLoreFor } from './famousLore';
 import { BODIES, type BodyId } from './bodyData';
 import { PanelShell, usePanelSheetState } from './PanelShell';
 import { AsteroidModelPreview } from './AsteroidModelPreview';
+import { SpacecraftCardPreview } from './SpacecraftCardPreview';
 import { BodyImagePreview } from './BodyImagePreview';
 import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 
@@ -291,7 +292,9 @@ function AsteroidCard({
             dataTutorial="selected-card"
         >
             <SheetAwarePreview>
-                <AsteroidModelPreview object={object} locale={locale} />
+                {a.objectType === 'spacecraft'
+                    ? <SpacecraftCardPreview name={a.displayName ?? a.name} />
+                    : <AsteroidModelPreview object={object} locale={locale} />}
             </SheetAwarePreview>
 
             {/* Abas — visíveis em mobile e desktop */}
@@ -398,19 +401,23 @@ function AsteroidCard({
                                         <span className={`font-medium ${motion.className}`}>{motion.text}</span>
                                     </Row>
                                 ) : null}
-                                <div>
-                                    <Row label={en ? 'Risk' : 'Risco'}>
-                                        <span className={`flex items-center justify-end gap-1 font-medium ${a.hazardFlag ? 'text-yellow-200/100' : 'text-emerald-300'}`}>
-                                            {!a.hazardFlag ? <Check className="size-3 shrink-0" aria-hidden="true" /> : null}
-                                            {risk.title}
-                                        </span>
-                                    </Row>
-                                    {a.hazardFlag ? (
-                                        <p className="mt-1 text-[10.5px] leading-relaxed text-white/40">
-                                            {risk.subtitle}
-                                        </p>
-                                    ) : null}
-                                </div>
+                                {/* "Risco de impacto" não se aplica a uma nave (não é um corpo em rota
+                                    de aproximação da Terra). Só asteroides/cometas mostram esta linha. */}
+                                {a.objectType !== 'spacecraft' ? (
+                                    <div>
+                                        <Row label={en ? 'Risk' : 'Risco'}>
+                                            <span className={`flex items-center justify-end gap-1 font-medium ${a.hazardFlag ? 'text-yellow-200/100' : 'text-emerald-300'}`}>
+                                                {!a.hazardFlag ? <Check className="size-3 shrink-0" aria-hidden="true" /> : null}
+                                                {risk.title}
+                                            </span>
+                                        </Row>
+                                        {a.hazardFlag ? (
+                                            <p className="mt-1 text-[10.5px] leading-relaxed text-white/40">
+                                                {risk.subtitle}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                ) : null}
                             </dl>
                             {(() => {
                                 // Limite renderizável é type-aware (cometas vão muito mais longe); a regra
@@ -794,7 +801,9 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                             />
                         </div>
                     ) : null}
-                    {onOpenFocus ? (
+                    {/* Naves não têm dossiê (não são small-bodies do SBDB). O botão só aparece para
+                        asteroides/cometas, que têm página de detalhe. */}
+                    {onOpenFocus && a.objectType !== 'spacecraft' ? (
                         <>
                             {/* Desktop: botão completo; mobile: pill compacto ao lado da órbita */}
                             <button

@@ -1,0 +1,121 @@
+/**
+ * Camada das naves famosas (Voyager 1/2, Pioneer 10, New Horizons, Juno) na cena do radar.
+ *
+ * Responsabilidade: desenhar (marcador estilizado, label e hitbox) as naves na régua LINEAR dos
+ * planetas (Sol na origem), a partir da posição heliocêntrica fixa de knownSpacecraft. É a contraparte
+ * de KnownCometsLayer para objetos artificiais, com duas diferenças deliberadas: usa o SpacecraftMarker
+ * (forma simbólica, sem GLB), e a posição vem de um vetor FIXO, não de Kepler (naves não seguem órbita
+ * kepleriana simples).
+ *
+ * Caminho principal x fallback: igual aos cometas, as naves também chegam pelo feed /radar/famous com
+ * posição REAL do Horizons. As naves cuja posição real cai DENTRO do limite de render do AsteroidSceneLayer
+ * seriam desenhadas lá; para não virarem "rocha" (o AsteroidMarker só sabe desenhar rocha/cometa), o
+ * RadarScene as exclui daquela camada e elas são SEMPRE desenhadas aqui. `skipIds` continua existindo por
+ * simetria, mas na prática as naves não são puladas: esta é a única camada que sabe desenhá-las.
+ *
+ * As naves distantes (Voyager a ~167 UA) ficam no extremo da régua honesta. Isso é intencional: revela a
+ * escala real do Sistema Solar. Não há cauda (decisão: nave não é cometa).
+ */
+
+import { useState } from 'react';
+import { ResolvedScreenLabel } from '../Overlays/SceneLabels';
+import { BodyHitbox } from '../Bodies/BodyHitbox';
+import { SpacecraftMarker } from '../Bodies/Spacecraft/SpacecraftMarker';
+import type { KnownSpacecraft, LiveSpacecraftPositions } from '../Bodies/Spacecraft/knownSpacecraft';
+import { knownSpacecraftId, knownSpacecraftPlacements, SPACECRAFT_VISUAL_SCALE } from '../Bodies/Spacecraft/knownSpacecraft';
+
+/** Hitbox/label generosos para corpos pequenos, no mesmo espírito da camada de cometas. */
+const HITBOX_RADIUS_FACTOR = 4;
+const MIN_HITBOX_RADIUS = 0.06;
+const SPACECRAFT_HITBOX_SEGMENTS: [number, number] = [16, 16];
+const LABEL_OFFSET_FACTOR = 8;
+
+type KnownSpacecraftLayerProps = {
+    showLabels: boolean;
+    /** Id da nave atualmente selecionada (formato knownSpacecraftId), ou null. */
+    selectedId?: string | null;
+    /** Escala AU própria (modo linear); default = ORBIT_AU_SCALE da régua normal. */
+    auScale?: number;
+    /** Posições ao vivo das naves (Horizons). Naves ausentes usam o vetor fixo local. */
+    livePositions?: LiveSpacecraftPositions;
+    /** Abre o card da nave clicada. */
+    onSelect?: (craft: KnownSpacecraft) => void;
+};
+
+/**
+ * Renderiza as naves famosas com marcador estilizado na régua dos planetas (Sol na origem), cada uma na
+ * região real onde está. Usa a posição ao vivo do Horizons (livePositions) quando disponível, senão o
+ * vetor heliocêntrico fixo local.
+ */
+export function KnownSpacecraftLayer({ showLabels, selectedId, auScale, livePositions, onSelect }: KnownSpacecraftLayerProps) {
+    const placements = knownSpacecraftPlacements(auScale, livePositions);
+    const hasSelection = Boolean(selectedId);
+
+    return (
+        <group>
+            {placements.map(({ craft, scenePosition }) => {
+                const id = knownSpacecraftId(craft);
+                const isSelected = id === selectedId;
+                return (
+                    <KnownSpacecraftBody
+                        key={craft.horizonsId}
+                        craft={craft}
+                        position={scenePosition}
+                        showLabel={showLabels}
+                        dimmed={hasSelection && !isSelected}
+                        selected={isSelected}
+                        onSelect={onSelect ? () => onSelect(craft) : undefined}
+                    />
+                );
+            })}
+        </group>
+    );
+}
+
+type KnownSpacecraftBodyProps = {
+    craft: KnownSpacecraft;
+    position: [number, number, number];
+    showLabel: boolean;
+    dimmed: boolean;
+    selected: boolean;
+    onSelect?: () => void;
+};
+
+function KnownSpacecraftBody({ craft, position, showLabel, dimmed, selected, onSelect }: KnownSpacecraftBodyProps) {
+    const [hovered, setHovered] = useState(false);
+    const opacity = dimmed && !hovered ? 0.5 : 1;
+    const hitboxRadius = Math.max(SPACECRAFT_VISUAL_SCALE * HITBOX_RADIUS_FACTOR, MIN_HITBOX_RADIUS);
+    const labelOffset: [number, number, number] = [0, Math.max(SPACECRAFT_VISUAL_SCALE * LABEL_OFFSET_FACTOR, 0.05), 0];
+
+    return (
+        <group position={position}>
+            <group scale={SPACECRAFT_VISUAL_SCALE}>
+                <SpacecraftMarker emphasized={selected || hovered} opacity={opacity} />
+            </group>
+
+            {!selected ? (
+                <BodyHitbox
+                    radius={hitboxRadius}
+                    segments={SPACECRAFT_HITBOX_SEGMENTS}
+                    onClick={() => onSelect?.()}
+                    onHoverChange={setHovered}
+                />
+            ) : null}
+
+            {(showLabel || hovered || selected) ? (
+                <ResolvedScreenLabel
+                    position={labelOffset}
+                    labelId={`known-spacecraft:${knownSpacecraftId(craft)}`}
+                    labelKind="asteroid"
+                    emphasized={hovered || selected}
+                    selected={selected}
+                    hovered={hovered}
+                    protectFromFocus={!hovered && !selected}
+                    onClick={() => onSelect?.()}
+                >
+                    {craft.name}
+                </ResolvedScreenLabel>
+            ) : null}
+        </group>
+    );
+}

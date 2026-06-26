@@ -12,7 +12,7 @@ import { useEffect } from 'react';
 import { List, PanelLeftClose, X } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
-import { PlanetFlyout } from '../Controls/ReferenceControls';
+import { PlanetFlyout, SpacecraftFlyout } from '../Controls/ReferenceControls';
 import { Tooltip } from '../Controls/Tooltip';
 import { MOBILE_MEDIA_QUERY } from '../radarLayoutConstants';
 import type { PlanetId } from '../Scene/planetConfig';
@@ -47,6 +47,8 @@ function MobileNavigationSheets({
     onMobileSheetChange,
     planetsOpen,
     onPlanetsOpenChange,
+    spacecraftOpen,
+    onSpacecraftOpenChange,
     bodyCardOpen,
     sidePanelRef,
     planetFlyoutRef,
@@ -54,10 +56,13 @@ function MobileNavigationSheets({
     onFocusBody,
     onFocusPlanet,
     onFocusSun,
+    onFocusSpacecraft,
+    selectedSpacecraftId,
 }: RadarNavigationPanelProps) {
     const closeSheet = () => {
         onMobileSheetChange(null);
         onPlanetsOpenChange(false);
+        onSpacecraftOpenChange(false);
     };
 
     if (mobileSheet === 'objects') {
@@ -82,10 +87,14 @@ function MobileNavigationSheets({
                     radarLoading={radarLoading}
                     planetsOpen={planetsOpen}
                     onPlanetsOpenChange={onPlanetsOpenChange}
+                    spacecraftOpen={spacecraftOpen}
+                    onSpacecraftOpenChange={onSpacecraftOpenChange}
                     onSelectObject={onSelectObject}
                     onFocusBody={onFocusBody}
                     onFocusSun={onFocusSun}
                     onFocusPlanet={onFocusPlanet}
+                    onFocusSpacecraft={onFocusSpacecraft}
+                    selectedSpacecraftId={selectedSpacecraftId}
                     bodyCardOpen={bodyCardOpen}
                 />
             </MobileSheet>
@@ -132,6 +141,8 @@ function DesktopNavigationPanel({
     onDesktopCollapsedChange,
     planetsOpen,
     onPlanetsOpenChange,
+    spacecraftOpen,
+    onSpacecraftOpenChange,
     bodyCardOpen,
     sidePanelRef,
     planetFlyoutRef,
@@ -139,25 +150,32 @@ function DesktopNavigationPanel({
     onFocusBody,
     onFocusPlanet,
     onFocusSun,
+    onFocusSpacecraft,
+    selectedSpacecraftId,
 }: RadarNavigationPanelProps) {
     const tutorial = useRadarTutorialOptional();
     const flyoutOpen = planetsOpen && !orbitMode && !desktopCollapsed;
+    const spacecraftFlyoutOpen = spacecraftOpen && !orbitMode && !desktopCollapsed;
 
     // Clicar fora do compartimento de planetas o fecha. Ignora cliques no próprio
     // flyout e no botão "Planetas" (que já alterna sozinho). Durante o tutorial o
     // flyout é guiado pelo passo, então não fechamos por clique fora ali.
     useEffect(() => {
-        if (!flyoutOpen || tutorial?.active) return undefined;
+        if ((!flyoutOpen && !spacecraftFlyoutOpen) || tutorial?.active) return undefined;
         const onPointerDown = (event: PointerEvent) => {
             const target = event.target;
             if (!(target instanceof Node)) return;
             if (planetFlyoutRef.current?.contains(target)) return;
+            if (target instanceof Element && target.closest('[data-tutorial="planet-flyout"]')) return;
+            if (target instanceof Element && target.closest('[data-tutorial="spacecraft-flyout"]')) return;
             if (target instanceof Element && target.closest('[data-tutorial="reference-planets"]')) return;
+            if (target instanceof Element && target.closest('[data-tutorial="reference-spacecraft"]')) return;
             onPlanetsOpenChange(false);
+            onSpacecraftOpenChange(false);
         };
         document.addEventListener('pointerdown', onPointerDown, true);
         return () => document.removeEventListener('pointerdown', onPointerDown, true);
-    }, [flyoutOpen, tutorial?.active, planetFlyoutRef, onPlanetsOpenChange]);
+    }, [flyoutOpen, spacecraftFlyoutOpen, tutorial?.active, planetFlyoutRef, onPlanetsOpenChange, onSpacecraftOpenChange]);
 
     return (
         <div className="pointer-events-none absolute left-3 top-3 z-40">
@@ -216,9 +234,13 @@ function DesktopNavigationPanel({
                                 onRefresh={onRefresh}
                                 planetsOpen={planetsOpen}
                                 onPlanetsOpenChange={onPlanetsOpenChange}
+                                spacecraftOpen={spacecraftOpen}
+                                onSpacecraftOpenChange={onSpacecraftOpenChange}
                                 onSelectObject={onSelectObject}
                                 onFocusBody={onFocusBody}
                                 onFocusSun={onFocusSun}
+                                onFocusSpacecraft={onFocusSpacecraft}
+                                selectedSpacecraftId={selectedSpacecraftId}
                             />
                         </>
                     )}
@@ -249,6 +271,34 @@ function DesktopNavigationPanel({
                             en={en}
                             focusedId={bodyCardOpen as PlanetId | null}
                             onFocus={onFocusPlanet}
+                        />
+                    </div>
+                ) : null}
+
+                {spacecraftFlyoutOpen ? (
+                    <div
+                        data-tutorial="spacecraft-flyout"
+                        className="flex flex-col overflow-y-auto rounded-2xl border border-white/[0.08] bg-space-950/88 backdrop-blur-xl
+                                   shadow-[0_2px_16px_rgba(0,0,0,0.4)]
+                                   h-[min(20rem,40vh)] w-[min(14rem,40vw)]"
+                    >
+                        <div className="flex items-center justify-between px-3 pt-2 pb-1.5 border-b border-white/[0.07]">
+                            <span className="text-[9.5px] font-medium uppercase tracking-widest text-white/50">
+                                {en ? 'Spacecraft' : 'Naves'}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => onSpacecraftOpenChange(false)}
+                                className="-mr-1 rounded-full p-1 text-white/40 transition outline-none hover:bg-white/8 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-signal-cyan"
+                                aria-label={en ? 'Close spacecraft' : 'Fechar naves'}
+                            >
+                                <X className="size-3.5" aria-hidden />
+                            </button>
+                        </div>
+                        <SpacecraftFlyout
+                            en={en}
+                            focusedId={selectedSpacecraftId}
+                            onFocus={onFocusSpacecraft}
                         />
                     </div>
                 ) : null}

@@ -24,6 +24,7 @@ Route::middleware('throttle:nasa')->group(function (): void {
     Route::get('/radar', [RadarController::class, 'index'])->name('radar.index');
     Route::get('/radar/closest-now', [RadarController::class, 'closestNow'])->name('radar.closest-now');
     Route::get('/radar/famous', [RadarController::class, 'famous'])->name('radar.famous');
+    Route::get('/radar/spacecraft', [RadarController::class, 'spacecraft'])->name('radar.spacecraft');
     Route::get('/radar/trajectory', [RadarController::class, 'trajectory'])->name('radar.trajectory');
     Route::get('/radar/asteroid-model', [RadarController::class, 'asteroidModel'])->name('radar.asteroid-model');
     Route::get('/radar/small-body/{identifier}', [RadarController::class, 'smallBody'])

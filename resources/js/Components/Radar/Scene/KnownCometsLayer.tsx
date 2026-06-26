@@ -137,7 +137,7 @@ function KnownCometBody({ comet, position, showLabel, dimmed, selected, onSelect
                     selected={selected}
                     hovered={hovered}
                     protectFromFocus={!hovered && !selected}
-                    onClick={selected ? undefined : () => onSelect?.()}
+                    onClick={() => onSelect?.()}
                 >
                     {comet.name}
                 </ResolvedScreenLabel>

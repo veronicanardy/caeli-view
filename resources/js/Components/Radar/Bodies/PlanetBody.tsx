@@ -216,7 +216,7 @@ export function PlanetBody({
                     selected={isFocused}
                     emphasized={isFocused}
                     protectFromFocus={!isFocused}
-                    onClick={isFocused ? undefined : onFocus}
+                    onClick={onFocus}
                 >
                     <span className="font-semibold">{locale === 'en' ? config.label.en : config.label.pt}</span>
                 </ResolvedScreenLabel>

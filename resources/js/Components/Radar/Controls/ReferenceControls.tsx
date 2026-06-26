@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 import type { PlanetId } from '../Scene/planetConfig';
+import type { KnownSpacecraft } from '../Bodies/Spacecraft/knownSpacecraft';
+import { KNOWN_SPACECRAFT, knownSpacecraftId } from '../Bodies/Spacecraft/knownSpacecraft';
 
 export function ReferenceSection({
     en,
     orbitMode = false,
     planetsOpen,
     onPlanetsOpenChange,
+    spacecraftOpen,
+    onSpacecraftOpenChange,
     onFocusEarth,
     onFocusMoon,
     onFocusSun,
@@ -18,6 +22,8 @@ export function ReferenceSection({
     orbitMode?: boolean;
     planetsOpen: boolean;
     onPlanetsOpenChange: (open: boolean) => void;
+    spacecraftOpen: boolean;
+    onSpacecraftOpenChange: (open: boolean) => void;
     onFocusEarth: () => void;
     onFocusMoon: () => void;
     onFocusSun: () => void;
@@ -91,6 +97,17 @@ export function ReferenceSection({
                             chevron
                             chevronOpen={planetsOpen}
                             dataTutorial="reference-planets"
+                            labelAlways={labelsAlwaysVisible}
+                        />
+                        <Divider />
+                        <AstroButton
+                            symbol={'\u29bf'}
+                            label={en ? 'Spacecraft' : 'Naves'}
+                            onClick={() => onSpacecraftOpenChange(!spacecraftOpen)}
+                            active={spacecraftOpen}
+                            chevron
+                            chevronOpen={spacecraftOpen}
+                            dataTutorial="reference-spacecraft"
                             labelAlways={labelsAlwaysVisible}
                         />
                     </>
@@ -209,6 +226,65 @@ export function PlanetFlyout({ en, focusedId, onFocus }: { en: boolean; focusedI
                             style={{ backgroundColor: p.color, opacity: p.id === focusedId ? 0.8 : 0.45 }}
                         />
                         <span className="font-medium">{en ? p.labelEn : p.labelPt}</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+/** Cor discreta do marcador de nave no flyout (mesmo tom frio do SpacecraftMarker). */
+const SPACECRAFT_DOT_COLOR = '#9fc0e8';
+
+/**
+ * Lista de naves famosas no flyout de Referências, espelho do PlanetFlyout. Cada item foca a câmera na
+ * nave e abre o card dela. As naves estão sempre na cena (como os planetas), então não há gate de modo.
+ */
+export function SpacecraftFlyout({
+    en,
+    focusedId,
+    onFocus,
+}: {
+    en: boolean;
+    focusedId: string | null;
+    onFocus: (craft: KnownSpacecraft) => void;
+}) {
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+        const t = requestAnimationFrame(() => setVisible(true));
+        return () => cancelAnimationFrame(t);
+    }, []);
+
+    return (
+        <div
+            className="px-1 py-1 space-y-0.5"
+            style={{
+                transition: 'opacity 0.18s ease, transform 0.20s cubic-bezier(0.25,0.46,0.45,0.94)',
+                opacity: visible ? 1 : 0,
+                transform: visible ? 'translateY(0)' : 'translateY(-6px)',
+            }}
+        >
+            {KNOWN_SPACECRAFT.map((craft) => {
+                const id = knownSpacecraftId(craft);
+                const isFocused = id === focusedId;
+                return (
+                    <button
+                        key={craft.horizonsId}
+                        type="button"
+                        onClick={() => onFocus(craft)}
+                        data-tutorial="spacecraft-option"
+                        className={[
+                            'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] transition outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan',
+                            isFocused
+                                ? 'bg-white/[0.04] text-white/85'
+                                : 'text-white/60 hover:bg-white/[0.04] hover:text-white/75',
+                        ].join(' ')}
+                    >
+                        <span
+                            className="inline-block size-1.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: SPACECRAFT_DOT_COLOR, opacity: isFocused ? 0.8 : 0.45 }}
+                        />
+                        <span className="font-medium">{craft.name}</span>
                     </button>
                 );
             })}

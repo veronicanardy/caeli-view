@@ -30,7 +30,7 @@ export type AsteroidStats = {
     topLargest: Array<{ name: string; diameterKm: number | null }>;
 };
 
-export type SmallBodyObjectType = 'asteroid' | 'comet' | 'other';
+export type SmallBodyObjectType = 'asteroid' | 'comet' | 'spacecraft' | 'other';
 
 export type JplCloseApproach = {
     designation: string;

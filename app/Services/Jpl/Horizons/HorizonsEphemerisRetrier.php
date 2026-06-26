@@ -44,6 +44,7 @@ final class HorizonsEphemerisRetrier
         string $stopTime,
         string $stepSize,
         ?string $designationForSbdb = null,
+        ?float $maxGeocentricDistanceKm = null,
     ): HorizonsVectorFetchResultData {
         if ($commands === []) {
             return HorizonsVectorFetchResultData::unavailable('no_command_candidates');
@@ -53,7 +54,7 @@ final class HorizonsEphemerisRetrier
         $lastFailureReason = null;
         $hadTransientFailure = false;
 
-        $result = $this->tryCommands($commands, $startTime, $stopTime, $stepSize, $lastFailureReason, $hadTransientFailure);
+        $result = $this->tryCommands($commands, $startTime, $stopTime, $stepSize, $lastFailureReason, $hadTransientFailure, $maxGeocentricDistanceKm);
         if ($result !== null) {
             return $result;
         }
@@ -62,7 +63,7 @@ final class HorizonsEphemerisRetrier
         if ($hadTransientFailure) {
             foreach (self::RETRY_DELAYS_MS as $delayMs) {
                 Sleep::usleep($delayMs * 1000);
-                $result = $this->tryCommands($commands, $startTime, $stopTime, $stepSize, $lastFailureReason, $hadTransientFailure);
+                $result = $this->tryCommands($commands, $startTime, $stopTime, $stepSize, $lastFailureReason, $hadTransientFailure, $maxGeocentricDistanceKm);
                 if ($result !== null) {
                     Log::info('Horizons: sucesso após retry transiente.', ['commands' => $commands, 'delay_ms' => $delayMs]);
 
@@ -78,7 +79,7 @@ final class HorizonsEphemerisRetrier
                         'designation' => $designationForSbdb,
                         'spkId' => $spkId,
                     ]);
-                    $result = $this->tryCommands([$spkId], $startTime, $stopTime, $stepSize, $lastFailureReason, $hadTransientFailure);
+                    $result = $this->tryCommands([$spkId], $startTime, $stopTime, $stepSize, $lastFailureReason, $hadTransientFailure, $maxGeocentricDistanceKm);
                     if ($result !== null) {
                         Log::info('Horizons: sucesso via SPKID do SBDB.', ['spkId' => $spkId]);
 
@@ -104,6 +105,7 @@ final class HorizonsEphemerisRetrier
         string $stepSize,
         ?string &$lastFailureReason,
         bool &$hadTransientFailure,
+        ?float $maxGeocentricDistanceKm = null,
     ): ?HorizonsVectorFetchResultData {
         foreach ($commands as $command) {
             try {
@@ -114,7 +116,7 @@ final class HorizonsEphemerisRetrier
                     continue;
                 }
 
-                $points = $this->parser->parseVectorPoints($content);
+                $points = $this->parser->parseVectorPoints($content, $maxGeocentricDistanceKm);
                 if (count($points) >= 1) {
                     return HorizonsVectorFetchResultData::available(
                         $points,
