@@ -20,6 +20,7 @@ import type { CameraIntent } from './cameraIntent';
 import { RadarScene } from './RadarScene';
 import { preloadRealAsteroidModels } from '../Bodies/Asteroid/asteroidModelRegistry';
 import { preloadCometModels } from '../Bodies/Comet/cometModelRegistry';
+import { preloadSpacecraftModels } from '../Bodies/Spacecraft/spacecraftModelRegistry';
 import { ZoomHintContext, type ZoomHintState } from '../Bodies/Asteroid/ZoomHintContext';
 import { ZoomHintOverlay } from '../Bodies/Asteroid/ZoomHintOverlay';
 import { PerfProbe, isPerfProbeEnabled } from '../Dev/PerfProbe';
@@ -139,6 +140,7 @@ export function RadarSceneCanvas({
                             // evita competição com recursos críticos durante o carregamento inicial.
                             setTimeout(preloadRealAsteroidModels, 2000);
                             setTimeout(preloadCometModels, 2000);
+                            setTimeout(preloadSpacecraftModels, 2000);
                         }}
                         onFocusSun={onFocusSun}
                         isSunFocused={bodyCardOpen === 'sun'}
