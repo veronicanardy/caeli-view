@@ -7,7 +7,7 @@
  * Não decide ranking nem seleção global: repassa intenções por props.
  */
 
-import { PlanetFlyout, ReferenceSection } from '../Controls/ReferenceControls';
+import { PlanetFlyout, ReferenceSection, SpacecraftFlyout } from '../Controls/ReferenceControls';
 import type { PlanetId } from '../Scene/planetConfig';
 import type { NavigationContentProps } from './radarNavigationTypes';
 import { RadarNavigationObjectList } from './RadarNavigationObjectList';
@@ -28,10 +28,14 @@ export function RadarNavigationMobileContent({
     radarLoading,
     planetsOpen,
     onPlanetsOpenChange,
+    spacecraftOpen,
+    onSpacecraftOpenChange,
     onSelectObject,
     onFocusBody,
     onFocusSun,
     onFocusPlanet,
+    onFocusSpacecraft,
+    selectedSpacecraftId,
     bodyCardOpen,
 }: Props) {
     return (
@@ -42,6 +46,8 @@ export function RadarNavigationMobileContent({
                     orbitMode={orbitMode}
                     planetsOpen={planetsOpen}
                     onPlanetsOpenChange={onPlanetsOpenChange}
+                    spacecraftOpen={spacecraftOpen}
+                    onSpacecraftOpenChange={onSpacecraftOpenChange}
                     onFocusEarth={() => onFocusBody('earth')}
                     onFocusMoon={() => onFocusBody('moon')}
                     onFocusSun={onFocusSun}
@@ -54,6 +60,15 @@ export function RadarNavigationMobileContent({
                             en={en}
                             focusedId={bodyCardOpen as PlanetId | null}
                             onFocus={onFocusPlanet}
+                        />
+                    </div>
+                ) : null}
+                {spacecraftOpen && !orbitMode ? (
+                    <div data-tutorial="spacecraft-flyout" className="mt-1 max-h-44 overflow-y-auto rounded-xl border border-white/[0.07] bg-white/[0.02]">
+                        <SpacecraftFlyout
+                            en={en}
+                            focusedId={selectedSpacecraftId}
+                            onFocus={onFocusSpacecraft}
                         />
                     </div>
                 ) : null}

@@ -45,11 +45,14 @@ final class HorizonsTextParser
     private const MIN_COLUMNS     = 5;
 
     /**
-     * Teto físico da distância geocêntrica (km) aceita para um ponto de efeméride: 750 milhões de km
-     * (≈ 5 UA). Nenhum objeto deste radar chega perto disso. Os famosos mais distantes (Ceres, no
-     * cinturão externo) ficam em ~3,7 UA da Terra; os NEOs, muito menos. Eros, por exemplo, tem afélio
-     * ≈ 1,78 UA, então a distância máxima à Terra é ≈ 1,78 + 1 = 2,78 UA ≈ 418 M km. Acima do teto, o
-     * ponto não pode ser o objeto pedido e é descartado em parseVectorPoints.
+     * Teto físico PADRÃO da distância geocêntrica (km) aceita para um ponto de efeméride: 750 milhões
+     * de km (≈ 5 UA). Nenhum NEO nem famoso do cinturão interno chega perto disso. Os famosos mais
+     * distantes (Ceres) ficam em ~3,7 UA da Terra. Acima do teto, o ponto não pode ser o objeto pedido
+     * (já vimos efemérides de outro corpo entrarem sob o id errado) e é descartado.
+     *
+     * EXCEÇÃO: corpos legitimamente distantes (naves interplanetárias, ex.: Juno ~6 UA, Voyager ~160 UA)
+     * passam um teto MAIOR via parseVectorPoints($content, $maxKm), senão todos os seus pontos seriam
+     * descartados como "impossíveis". O default protege o caso comum (NEOs) sem afrouxar a guarda.
      */
     private const MAX_GEOCENTRIC_DISTANCE_KM = 750_000_000.0;
 
@@ -71,13 +74,17 @@ final class HorizonsTextParser
      * A distância é derivada de RG (range) quando disponível; caso contrário, usa a
      * norma euclidiana de (X, Y, Z).
      *
+     * @param  float|null  $maxGeocentricDistanceKm  Teto de distância para descartar pontos corrompidos.
+     *         Null usa o default (≈5 UA, bom para NEOs). Naves passam um teto bem maior.
      * @return array<int, HorizonsVectorPointData>
      */
-    public function parseVectorPoints(string $result): array
+    public function parseVectorPoints(string $result, ?float $maxGeocentricDistanceKm = null): array
     {
         if (! $this->hasEphemeris($result)) {
             return [];
         }
+
+        $maxDistanceKm = $maxGeocentricDistanceKm ?? self::MAX_GEOCENTRIC_DISTANCE_KM;
 
         $table = trim(str($result)->between('$$SOE', '$$EOE')->toString());
         $points = [];
@@ -106,7 +113,7 @@ final class HorizonsTextParser
             // Quando acontece, o ponto está corrompido (já vimos efemérides de outro corpo entrarem
             // sob o id errado): DESCARTAMOS o ponto em vez de só logar, para que um valor absurdo nunca
             // seja propagado ao card nem gravado no cache de trajetória e fique preso lá.
-            if ($distanceKm > self::MAX_GEOCENTRIC_DISTANCE_KM) {
+            if ($distanceKm > $maxDistanceKm) {
                 \Illuminate\Support\Facades\Log::warning('[HorizonsTextParser] ponto descartado: distância geocêntrica impossível', [
                     'distanceKm'  => $distanceKm,
                     'rangeKm'     => $rangeKm,

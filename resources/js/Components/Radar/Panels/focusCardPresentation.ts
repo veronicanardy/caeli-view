@@ -25,6 +25,12 @@ export function objectTypeEyebrow(
             dotColor: '#f8c76b',
         };
     }
+    if (objectType === 'spacecraft') {
+        return {
+            label: en ? 'Spacecraft · Mission' : 'Nave · Missão',
+            dotColor: '#9fc0e8',
+        };
+    }
     return {
         label: en ? 'Asteroid · NEO' : 'Asteroide · NEO',
         dotColor: '#54d6d6',
@@ -159,6 +165,14 @@ export function smartSummary(
     input: { objectType: SmallBodyObjectType; sizeMeters: number | null; velocityKph: number | null },
     en: boolean,
 ): string | null {
+    // Nave: não é corpo natural; não tem porte/velocidade no feed. O resumo dá o caráter honesto
+    // (objeto construído por pessoas, posição real do Horizons) e remete à História para o resto.
+    if (input.objectType === 'spacecraft') {
+        return en
+            ? 'A spacecraft built and launched by people, shown here at its real position from JPL Horizons. The History tab tells its mission.'
+            : 'Uma nave construída e lançada por pessoas, mostrada aqui na posição real do JPL Horizons. A aba História conta a missão dela.';
+    }
+
     const isComet = input.objectType === 'comet';
     const hasSize = input.sizeMeters != null && input.sizeMeters > 0;
     const kph = input.velocityKph;

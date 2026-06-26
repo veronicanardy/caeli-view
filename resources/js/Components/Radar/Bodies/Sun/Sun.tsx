@@ -120,7 +120,7 @@ export function Sun({
                         selected={isFocused}
                         emphasized={isFocused}
                         protectFromFocus={!isFocused}
-                        onClick={isFocused ? undefined : onFocus}
+                        onClick={onFocus}
                     >
                         <span className="font-semibold">{en ? 'Sun' : 'Sol'}</span>
                     </ResolvedScreenLabel>

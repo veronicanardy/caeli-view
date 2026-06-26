@@ -127,8 +127,8 @@ export function Moon({
                     hovered={hovered}
                     selected={isFocused}
                     protectFromFocus={protectLabelFromFocus}
-                    onClick={isFocused ? undefined : onFocus}
-                    title={isFocused ? undefined : title}
+                    onClick={onFocus}
+                    title={title}
                 >
                     {labelName}
                 </ResolvedDistanceCulledScreenLabel>

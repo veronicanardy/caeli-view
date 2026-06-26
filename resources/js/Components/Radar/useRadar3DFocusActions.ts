@@ -19,6 +19,9 @@ import { nextCameraNonce } from './Scene/cameraIntent';
 import type { CameraIntent } from './Scene/cameraIntent';
 import { PLANET_CONFIG } from './Scene/planetConfig';
 import { knownCometById } from './Bodies/Comet/knownComets';
+import type { KnownSpacecraft, LiveSpacecraftPositions } from './Bodies/Spacecraft/knownSpacecraft';
+import { knownSpacecraftScenePosition, SPACECRAFT_FOCUS_RADIUS } from './Bodies/Spacecraft/knownSpacecraft';
+import { LINEAR_AU_SCALE } from '@/lib/sceneEphemeris';
 import { orbitElementsCanAnchorPerihelion } from '@/lib/radar/trajectorySampling';
 import type { PlanetId } from './Scene/planetConfig';
 import { MOBILE_MEDIA_QUERY } from './radarLayoutConstants';
@@ -34,6 +37,8 @@ type Args = {
     setMobileSheet: (sheet: MobileSheetSection | null) => void;
     setPlanetsOpen: (open: boolean) => void;
     triggerTransition: (fn: () => void) => void;
+    /** Posições ao vivo das naves (Horizons). O foco mira na posição efetiva (ao vivo ou fixa). */
+    spacecraftPositions?: LiveSpacecraftPositions;
 };
 
 /**
@@ -48,6 +53,7 @@ export function useRadar3DFocusActions({
     setMobileSheet,
     setPlanetsOpen,
     triggerTransition,
+    spacecraftPositions,
 }: Args) {
     const [cameraIntent, setCameraIntent] = useState<CameraIntent>({
         kind: 'preset',
@@ -62,6 +68,10 @@ export function useRadar3DFocusActions({
     // Enquadramento dos asteroides famosos: voo até um conhecido (clique) ou panorama da régua dos
     // planetas (entrada no modo). Vive no mesmo trilho de foco dos planetas/Sol no RadarSceneCanvas.
     const [knownFocusTarget, setKnownFocusTarget] = useState<FocusFraming | null>(null);
+    // Naves vivem na cena como os planetas (sempre presentes, fora do feed). A selecionada e seu
+    // enquadramento de câmera ficam aqui, no mesmo trilho de foco dos planetas/Sol.
+    const [selectedSpacecraft, setSelectedSpacecraft] = useState<KnownSpacecraft | null>(null);
+    const [spacecraftFocusTarget, setSpacecraftFocusTarget] = useState<FocusFraming | null>(null);
 
     const visibleFocusedObject = focusedObject && focusedObject.approach.id !== dismissedFocusObjectId
         ? focusedObject
@@ -71,6 +81,8 @@ export function useRadar3DFocusActions({
         setPlanetFocusTargets({});
         setSunFocusTarget(null);
         setKnownFocusTarget(null);
+        setSelectedSpacecraft(null);
+        setSpacecraftFocusTarget(null);
     }, []);
 
     /** Recua a câmera para enquadrar toda a régua dos planetas (onde vivem os famosos). */
@@ -165,6 +177,10 @@ export function useRadar3DFocusActions({
             setDismissedFocusObjectId(null);
             setBodyCardOpen(id);
             setSunFocusTarget(null);
+            // Limpa a nave selecionada: sem isto o spacecraftFocusTarget (que vence o planetFocusTargets
+            // na prioridade do canvas) prenderia a câmera na nave e o foco no planeta seria ignorado.
+            setSelectedSpacecraft(null);
+            setSpacecraftFocusTarget(null);
             collapseNavigationForMobile();
             if (pos) {
                 // Câmera do lado iluminado: fica entre o Sol (origem) e o planeta.
@@ -179,6 +195,62 @@ export function useRadar3DFocusActions({
             }
         });
     }, [collapseNavigationForMobile, ephemeris, onClearSelection, withOrbitExit]);
+
+    const focusSpacecraft = useCallback((craft: KnownSpacecraft) => {
+        onClearSelection?.();
+        withOrbitExit(() => {
+            setDismissedFocusObjectId(null);
+            // Card da nave (kind="asteroid" via objeto sintético) é mostrado pelo container; aqui o
+            // bodyCard fica nulo (nave não é corpo do tipo planeta/Terra).
+            setBodyCardOpen(null);
+            setPlanetFocusTargets({});
+            setSunFocusTarget(null);
+            setKnownFocusTarget(null);
+            collapseNavigationForMobile();
+            setSelectedSpacecraft(craft);
+            // CLOSE-UP na nave: a câmera cola no marcador, mostrando a sonda de perto (o resto do Sistema
+            // Solar fica fora do quadro, e tudo bem). A distância da câmera é proporcional ao RAIO DO
+            // MARCADOR (SPACECRAFT_FOCUS_RADIUS), não à distância da nave à origem (dezenas de milhares de
+            // unidades): assim o enquadramento é o mesmo close-up confortável para qualquer nave, perto ou
+            // longe. Câmera num ângulo 3/4 fixo (não pela direção do Sol, que a dezenas de UA é quase
+            // paralela e dava enquadramentos rasos). ×8 deixa a sonda inteira no quadro com folga.
+            const pos = knownSpacecraftScenePosition(craft, LINEAR_AU_SCALE, spacecraftPositions);
+            const craftVec = new THREE.Vector3(...pos);
+
+            // CASO ESPECIAL DA JUNO: ela orbita Júpiter, então a graça é vê-la COM Júpiter ao fundo. A
+            // câmera fica do lado oposto a Júpiter (na direção Júpiter→Juno estendida) e olha de volta
+            // para a Juno: a sonda fica em primeiro plano e o disco de Júpiter aparece atrás dela. Como
+            // estão a só ~0,034 UA (~10 unidades de cena), enquadramos um pouco mais largo (×14) para o
+            // planeta caber no fundo. Sem a posição de Júpiter (efeméride não resolvida) cai no close-up
+            // genérico abaixo.
+            const jupiter = ephemeris?.jupiterScenePosition;
+            if (craft.horizonsId === '-61' && jupiter) {
+                const jupiterVec = new THREE.Vector3(...jupiter);
+                const sep = craftVec.distanceTo(jupiterVec);
+                if (sep > 1e-3) {
+                    // CLOSE-UP na Juno COM Júpiter ao fundo: a câmera cola na Juno (sonda grande, como nas
+                    // outras naves), mas posicionada do lado da Juno OPOSTO a Júpiter, olhando ATRAVÉS da
+                    // Juno em direção a Júpiter. Assim a Juno fica em primeiro plano e o disco de Júpiter
+                    // aparece pequeno atrás dela, na linha de visão. A distância é a do close-up genérico
+                    // (proporcional ao marcador), só a DIREÇÃO muda para alinhar Júpiter no fundo. Leve
+                    // elevação para não ficar raso. O alvo é a própria Juno.
+                    const awayFromJupiter = craftVec.clone().sub(jupiterVec).normalize();
+                    const camDir = awayFromJupiter.add(new THREE.Vector3(0, 0.18, 0)).normalize();
+                    setSpacecraftFocusTarget({ ...framingForBody(craftVec, SPACECRAFT_FOCUS_RADIUS, camDir, 8), durationSeconds: 1.3 });
+                    return;
+                }
+            }
+
+            // CLOSE-UP genérico (demais naves, sozinhas no espaço): a câmera cola no marcador, mostrando a
+            // sonda de perto (o resto do Sistema Solar fica fora do quadro, e tudo bem). A distância da
+            // câmera é proporcional ao RAIO DO MARCADOR (SPACECRAFT_FOCUS_RADIUS), não à distância da nave
+            // à origem (dezenas de milhares de unidades): assim o enquadramento é o mesmo close-up
+            // confortável para qualquer nave, perto ou longe. Ângulo 3/4 fixo (a direção do Sol, a dezenas
+            // de UA, é quase paralela e dava enquadramentos rasos). ×8 deixa a sonda inteira no quadro.
+            const viewDir = new THREE.Vector3(0.5, 0.4, 0.75).normalize();
+            setSpacecraftFocusTarget({ ...framingForBody(craftVec, SPACECRAFT_FOCUS_RADIUS, viewDir, 8), durationSeconds: 1.2 });
+        });
+    }, [collapseNavigationForMobile, ephemeris, onClearSelection, withOrbitExit, spacecraftPositions]);
 
     const focusSun = useCallback(() => {
         onClearSelection?.();
@@ -233,9 +305,12 @@ export function useRadar3DFocusActions({
         closeFocusedObject,
         focusBody,
         focusPlanet,
+        focusSpacecraft,
         focusSun,
         frameFamousBelt,
         knownFocusTarget,
+        selectedSpacecraft,
+        spacecraftFocusTarget,
         orbitMode,
         pickView,
         planetFocusTargets,

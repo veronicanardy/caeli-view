@@ -136,9 +136,9 @@ function KnownAsteroidBody({ known, position, showLabel, dimmed, selected, onSel
                     selected={selected}
                     hovered={hovered}
                     protectFromFocus={!hovered && !selected}
-                    /* Como nos planetas: o label seleciona quando o corpo NÃO está focado; já focado,
-                       não re-dispara (mesma regra da hitbox). */
-                    onClick={selected ? undefined : () => onSelect?.()}
+                    /* O label é SEMPRE clicável (decisão da Verônica): mesmo com o corpo já focado,
+                       clicar no label re-seleciona/re-enquadra. Só a hitbox 3D some quando focado. */
+                    onClick={() => onSelect?.()}
                 >
                     {known.name}
                 </ResolvedScreenLabel>

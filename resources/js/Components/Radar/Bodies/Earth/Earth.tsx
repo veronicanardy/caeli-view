@@ -215,8 +215,8 @@ export function Earth({
                     hovered={hovered}
                     selected={isFocused}
                     protectFromFocus={false}
-                    onClick={isFocused ? undefined : onFocus}
-                    title={isFocused ? undefined : (en ? 'Back to the overview' : 'Voltar para a visão geral')}
+                    onClick={onFocus}
+                    title={en ? 'Back to the overview' : 'Voltar para a visão geral'}
                 >
                     <span className="font-semibold">{en ? 'Earth' : 'Terra'}</span>
                 </ResolvedScreenLabel>

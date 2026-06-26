@@ -1,10 +1,11 @@
 /**
- * História dos objetos famosos do radar (5 asteroides + 3 cometas).
+ * História dos objetos famosos do radar (5 asteroides + 3 cometas + 5 naves).
  *
  * Responsabilidade: guardar o texto da aba "História" de cada objeto famoso, em PT e EN, indexado
- * pelo id sintético (known:<numero> para asteroides, comet:<designacao> para cometas). Função pura
- * de consulta (famousLoreFor): dado o id e o locale, devolve o parágrafo ou null quando o objeto não
- * tem história cadastrada (todo asteroide comum do feed, por exemplo).
+ * pelo id sintético (known:<numero> para asteroides, comet:<designacao> para cometas,
+ * spacecraft:<horizonsId> para naves). Função pura de consulta (famousLoreFor): dado o id e o locale,
+ * devolve o parágrafo ou null quando o objeto não tem história cadastrada (todo asteroide comum do
+ * feed, por exemplo).
  *
  * O card só exibe a aba História quando esta consulta retorna texto, então asteroides comuns seguem
  * com as 3 abas de sempre (Resumo, Perfil físico, Aproximação).
@@ -51,6 +52,28 @@ const FAMOUS_LORE: Record<string, Lore> = {
     'comet:67P': {
         pt: 'O cometa 67P Churyumov-Gerasimenko foi descoberto em 1969 pelos astrônomos soviéticos Klim Churyumov e Svetlana Gerasimenko, que lhe deram o nome. Foi palco da missão Rosetta da ESA, a primeira a orbitar um cometa e a pousar nele. Em 2014 o módulo Philae tocou sua superfície de dois lóbulos, em formato de pato de borracha. Rosetta acompanhou o cometa por dois anos enquanto ele se aquecia perto do Sol, mostrando jatos de gás e poeira nascendo do gelo.',
         en: 'Comet 67P Churyumov-Gerasimenko was discovered in 1969 by the Soviet astronomers Klim Churyumov and Svetlana Gerasimenko, who gave it its name. It was the stage for ESA’s Rosetta mission, the first to orbit a comet and land on one. In 2014 the Philae module touched down on its two-lobed, rubber-duck-shaped surface. Rosetta followed the comet for two years as it warmed near the Sun, revealing jets of gas and dust born from the ice.',
+    },
+
+    // ─── Naves e missões ───
+    'spacecraft:-31': {
+        pt: 'A Voyager 1 foi lançada pela NASA em 1977 e é o objeto construído por pessoas mais distante da Terra. Visitou Júpiter e Saturno, revelou vulcões ativos na lua Io e detalhes dos anéis, e seguiu rumo ao espaço entre as estrelas. Em 2012 cruzou a fronteira onde o vento do Sol dá lugar ao meio interestelar, a primeira sonda a fazer isso. Leva a bordo o Disco de Ouro, com sons e imagens da Terra, e ainda envia sinais que levam mais de 22 horas para chegar até aqui.',
+        en: 'Voyager 1 was launched by NASA in 1977 and is the most distant human-made object from Earth. It visited Jupiter and Saturn, revealed active volcanoes on the moon Io and details of the rings, and then headed toward the space between the stars. In 2012 it crossed the boundary where the Sun’s wind gives way to the interstellar medium, the first probe to do so. It carries the Golden Record, with sounds and images of Earth, and still sends back signals that take more than 22 hours to reach us.',
+    },
+    'spacecraft:-32': {
+        pt: 'A Voyager 2 partiu pouco antes da Voyager 1, em 1977, e é a única sonda a visitar os quatro planetas gigantes: Júpiter, Saturno, Urano e Netuno. Suas imagens de Urano e Netuno, feitas nos anos 1980, ainda são quase tudo que vemos de perto desses dois mundos. Em 2018 também alcançou o espaço interestelar, por um caminho diferente do da irmã. Como ela, carrega um Disco de Ouro e continua transmitindo, agora a mais de 130 vezes a distância da Terra ao Sol.',
+        en: 'Voyager 2 set off shortly before Voyager 1, in 1977, and is the only probe to visit all four giant planets: Jupiter, Saturn, Uranus and Neptune. Its images of Uranus and Neptune, taken in the 1980s, are still almost everything we have seen up close of those two worlds. In 2018 it too reached interstellar space, by a different path from its sister. Like it, it carries a Golden Record and keeps transmitting, now more than 130 times the Earth-Sun distance away.',
+    },
+    'spacecraft:-23': {
+        pt: 'A Pioneer 10 foi lançada pela NASA em 1972 e abriu o caminho para o Sistema Solar exterior. Foi a primeira nave a atravessar o cinturão de asteroides e a primeira a passar perto de Júpiter, em 1973, enviando as primeiras imagens próximas do planeta gigante. Leva uma placa gravada com a figura de um casal humano e a posição da Terra, pensada para um eventual encontro futuro. O último sinal fraco chegou em 2003; desde então ela segue muda, levada pela própria velocidade rumo às estrelas.',
+        en: 'Pioneer 10 was launched by NASA in 1972 and opened the way to the outer Solar System. It was the first spacecraft to cross the asteroid belt and the first to fly past Jupiter, in 1973, sending back the first close images of the giant planet. It carries a plaque engraved with a human couple and Earth’s location, meant for a possible future encounter. Its last faint signal arrived in 2003; since then it drifts silent, carried by its own speed toward the stars.',
+    },
+    'spacecraft:-98': {
+        pt: 'A New Horizons foi lançada pela NASA em 2006 como a sonda mais rápida já enviada, a caminho de Plutão. Em 2015 fez o primeiro sobrevoo próximo de Plutão e suas luas, revelando montanhas de gelo e uma grande planície em forma de coração num mundo que se imaginava morto. Depois seguiu mais fundo no cinturão de Kuiper e visitou Arrokoth, o objeto mais distante já explorado de perto. Hoje viaja rumo à borda do Sistema Solar, ainda enviando dados.',
+        en: 'New Horizons was launched by NASA in 2006 as the fastest probe ever sent, bound for Pluto. In 2015 it made the first close flyby of Pluto and its moons, revealing ice mountains and a large heart-shaped plain on a world once thought to be dead. It then went deeper into the Kuiper Belt and visited Arrokoth, the most distant object ever explored up close. Today it travels toward the edge of the Solar System, still sending back data.',
+    },
+    'spacecraft:-61': {
+        pt: 'A Juno foi lançada pela NASA em 2011 e chegou a Júpiter em 2016 para estudar o maior planeta do Sistema Solar por dentro. Em vez de uma órbita regular, ela mergulha em arcos longos que passam perto das nuvens e fogem dos cinturões de radiação intensa do planeta. Mediu o campo magnético, sondou o que há sob as nuvens e fez retratos impressionantes dos ciclones nos polos. É movida a energia solar, algo raro tão longe do Sol, com três grandes painéis abertos como pás.',
+        en: 'Juno was launched by NASA in 2011 and reached Jupiter in 2016 to study the largest planet in the Solar System from within. Instead of a regular orbit, it dives in long arcs that skim close to the clouds and escape the planet’s intense radiation belts. It has measured the magnetic field, probed what lies beneath the clouds and taken striking portraits of the cyclones at the poles. It runs on solar power, rare this far from the Sun, with three large panels spread like blades.',
     },
 };
 

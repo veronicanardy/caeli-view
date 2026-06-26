@@ -131,12 +131,20 @@ final class HorizonsTrajectoryService
         ['commands' => $commands, 'identity' => $identity] = $this->identity->buildCommandCandidatesWithIdentity($object);
         $designation = $this->identity->resolveDesignation($object, $identity);
 
+        // Corpos legitimamente distantes (naves: Juno ~6 UA, Voyager ~160 UA) declaram um teto de
+        // distância maior, senão o parser descartaria todos os pontos como "impossíveis" (o default
+        // é ~5 UA, calibrado para NEOs). Vem no payload (FamousSpacecraft::horizonsPayload).
+        $maxDistanceKm = isset($object['maxGeocentricDistanceKm']) && is_numeric($object['maxGeocentricDistanceKm'])
+            ? (float) $object['maxGeocentricDistanceKm']
+            : null;
+
         $fetch = $this->retrier->fetch(
             $commands,
             $windowStart->format('Y-M-d H:i'),
             $windowEnd->format('Y-M-d H:i'),
             $stepSize,
             $designation,
+            $maxDistanceKm,
         );
         $points = $fetch->pointsToArray();
         $approachTime = $this->parseTime($object['approachTime'] ?? null);

@@ -109,6 +109,27 @@ TEXT;
         $this->assertEqualsWithDelta(161775801.50, $points[0]['rangeKm'], 1e-2);
     }
 
+    public function test_parse_vector_points_keeps_distant_points_when_a_larger_max_is_given(): void
+    {
+        // Regressão (naves): Juno está a ~6 UA e os Voyager a ~160 UA da Terra, MUITO acima do teto
+        // padrão de ~5 UA calibrado para NEOs. Sem um teto maior, TODOS os pontos da nave eram
+        // descartados como "impossíveis" e a nave caía no fallback (posição fixa errada). Passando um
+        // teto generoso (~200 UA), os pontos distantes são preservados.
+        $text = <<<'TEXT'
+$$SOE
+2461217.047222222, A.D. 2026-Jun-25 13:08:00.0000, -441406187.07, 809749631.39, 2042834.42, -40.64, -8.58, 2.40, 3076.0, 922246203.95, 11.92
+$$EOE
+TEXT;
+
+        // Com o default (~5 UA), o ponto a ~6 UA é descartado.
+        $this->assertCount(0, $this->parser()->parseVectorPoints($text), 'No default, ponto a ~6 UA é descartado.');
+
+        // Com teto de ~200 UA (3e10 km), o ponto é preservado.
+        $points = $this->parser()->parseVectorPoints($text, 3.0e10);
+        $this->assertCount(1, $points, 'Com teto maior, o ponto distante da nave é preservado.');
+        $this->assertEqualsWithDelta(922246203.95, $points[0]->rangeKm, 1e-2);
+    }
+
     public function test_parse_vector_points_returns_empty_array_when_sentinels_missing(): void
     {
         $this->assertSame([], $this->parser()->parseVectorPoints('no sentinels here'));

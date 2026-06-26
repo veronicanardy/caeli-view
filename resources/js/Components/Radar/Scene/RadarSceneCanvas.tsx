@@ -39,6 +39,14 @@ type Props = {
     /** Enquadramento dos asteroides famosos (voo a um conhecido ou panorama da régua dos planetas). */
     knownFocusTarget: FocusFraming | null;
     planetFocusTargets: Partial<Record<PlanetId, FocusFraming>>;
+    /** Enquadramento de câmera de uma nave selecionada (Voyager, Juno...). */
+    spacecraftFocusTarget: FocusFraming | null;
+    /** Id da nave selecionada (knownSpacecraftId), realça o marcador na cena. */
+    selectedSpacecraftId: string | null;
+    /** Foca/seleciona uma nave a partir da cena (clique no marcador). */
+    onFocusSpacecraft: (craft: import('../Bodies/Spacecraft/knownSpacecraft').KnownSpacecraft) => void;
+    /** Posições ao vivo das naves (Horizons). Naves ausentes usam o vetor fixo local. */
+    spacecraftPositions: import('../Bodies/Spacecraft/knownSpacecraft').LiveSpacecraftPositions;
     ephemeris: SceneEphemeris | null;
     fallbackSunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
@@ -72,6 +80,10 @@ export function RadarSceneCanvas({
     sunFocusTarget,
     knownFocusTarget,
     planetFocusTargets,
+    spacecraftFocusTarget,
+    selectedSpacecraftId,
+    onFocusSpacecraft,
+    spacecraftPositions,
     ephemeris,
     fallbackSunDirection,
     locale,
@@ -84,9 +96,9 @@ export function RadarSceneCanvas({
     onFocusBody,
     onFocusTrajectoryPoint,
 }: Props) {
-    // Prioridade de foco: seleção de objeto > foco no Sol > conhecido (famosos) > foco em planeta.
+    // Prioridade de foco: seleção de objeto > foco no Sol > nave > conhecido (famosos) > foco em planeta.
     // Garante que a câmera siga a seleção do usuário antes de qualquer alvo secundário.
-    const activeFocusTarget = focusTarget ?? sunFocusTarget ?? knownFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
+    const activeFocusTarget = focusTarget ?? sunFocusTarget ?? spacecraftFocusTarget ?? knownFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
     const [sceneReady, setSceneReady] = useState(false);
     const tweenToRef = useRef<TweenTo>(() => {});
     const [zoomHintState, setZoomHintState] = useState<ZoomHintState | null>(null);
@@ -118,6 +130,9 @@ export function RadarSceneCanvas({
                         showLabels={showLabels}
                         sceneNavigationEnabled={sceneNavigationEnabled}
                         showKnownAsteroids={showKnownAsteroids}
+                        selectedSpacecraftId={selectedSpacecraftId}
+                        onFocusSpacecraft={onFocusSpacecraft}
+                        spacecraftPositions={spacecraftPositions}
                         onFirstFrame={() => {
                             setSceneReady(true);
                             // Adia o preload dos modelos reais para depois do primeiro frame:

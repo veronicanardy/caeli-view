@@ -9,6 +9,7 @@
 import type { RefObject } from 'react';
 import type { ClosestNowObject, ObjectLimit, SelectionMode, UnifiedApproach } from '@/types';
 import type { PlanetId } from '../Scene/planetConfig';
+import type { KnownSpacecraft } from '../Bodies/Spacecraft/knownSpacecraft';
 
 /** Sheets mobile da navegação: lista de objetos ou filtros. Null = nenhum aberto. */
 export type MobileSheetSection = 'objects' | 'filters';
@@ -32,6 +33,8 @@ export type RadarNavigationPanelProps = {
     onDesktopCollapsedChange: (collapsed: boolean) => void;
     planetsOpen: boolean;
     onPlanetsOpenChange: (open: boolean) => void;
+    spacecraftOpen: boolean;
+    onSpacecraftOpenChange: (open: boolean) => void;
     bodyCardOpen: 'earth' | 'moon' | 'sun' | PlanetId | null;
     sidePanelRef: RefObject<HTMLDivElement | null>;
     planetFlyoutRef: RefObject<HTMLDivElement | null>;
@@ -39,10 +42,16 @@ export type RadarNavigationPanelProps = {
     onFocusBody: (body: 'earth' | 'moon') => void;
     onFocusPlanet: (id: PlanetId) => void;
     onFocusSun: () => void;
+    /** Foca a câmera numa nave (Voyager, Juno...) e abre o card dela. */
+    onFocusSpacecraft: (craft: KnownSpacecraft) => void;
+    /** Id da nave selecionada (knownSpacecraftId), para realçar no flyout. */
+    selectedSpacecraftId: string | null;
 };
 
 export type NavigationContentProps = Pick<RadarNavigationPanelProps,
     'en' | 'locale' | 'orbitMode' | 'closestNowObjects' | 'selectedId' | 'objectLimit' |
     'selectionMode' | 'radarLoading' | 'onRefresh' |
-    'planetsOpen' | 'onPlanetsOpenChange' | 'onSelectObject' | 'onFocusBody' | 'onFocusSun'
+    'planetsOpen' | 'onPlanetsOpenChange' | 'spacecraftOpen' | 'onSpacecraftOpenChange' |
+    'onSelectObject' | 'onFocusBody' | 'onFocusSun' |
+    'onFocusSpacecraft' | 'selectedSpacecraftId'
 >;
