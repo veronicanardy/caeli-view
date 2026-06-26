@@ -1,11 +1,11 @@
 /**
  * Camada das naves famosas (Voyager 1/2, Pioneer 10, New Horizons, Juno) na cena do radar.
  *
- * Responsabilidade: desenhar (marcador estilizado, label e hitbox) as naves na régua LINEAR dos
- * planetas (Sol na origem), a partir da posição heliocêntrica fixa de knownSpacecraft. É a contraparte
- * de KnownCometsLayer para objetos artificiais, com duas diferenças deliberadas: usa o SpacecraftMarker
- * (forma simbólica, sem GLB), e a posição vem de um vetor FIXO, não de Kepler (naves não seguem órbita
- * kepleriana simples).
+ * Responsabilidade: desenhar (modelo 3D real, label e hitbox) as naves na régua LINEAR dos planetas
+ * (Sol na origem), a partir da posição heliocêntrica de knownSpacecraft. É a contraparte de
+ * KnownCometsLayer para objetos artificiais, com duas diferenças deliberadas: o corpo é o GLB oficial
+ * da NASA (SpacecraftModel; cai no marcador estilizado SpacecraftMarker se o GLB não carregar), e a
+ * posição vem de um vetor (ao vivo ou fixo), não de Kepler (naves não seguem órbita kepleriana).
  *
  * Caminho principal x fallback: igual aos cometas, as naves também chegam pelo feed /radar/famous com
  * posição REAL do Horizons. As naves cuja posição real cai DENTRO do limite de render do AsteroidSceneLayer
@@ -17,10 +17,12 @@
  * escala real do Sistema Solar. Não há cauda (decisão: nave não é cometa).
  */
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { ResolvedScreenLabel } from '../Overlays/SceneLabels';
 import { BodyHitbox } from '../Bodies/BodyHitbox';
 import { SpacecraftMarker } from '../Bodies/Spacecraft/SpacecraftMarker';
+import { SpacecraftModel } from '../Bodies/Spacecraft/SpacecraftModel';
+import { spacecraftModelAsset } from '../Bodies/Spacecraft/spacecraftModelRegistry';
 import type { KnownSpacecraft, LiveSpacecraftPositions } from '../Bodies/Spacecraft/knownSpacecraft';
 import { knownSpacecraftId, knownSpacecraftPlacements, SPACECRAFT_VISUAL_SCALE } from '../Bodies/Spacecraft/knownSpacecraft';
 
@@ -86,11 +88,25 @@ function KnownSpacecraftBody({ craft, position, showLabel, dimmed, selected, onS
     const opacity = dimmed && !hovered ? 0.5 : 1;
     const hitboxRadius = Math.max(SPACECRAFT_VISUAL_SCALE * HITBOX_RADIUS_FACTOR, MIN_HITBOX_RADIUS);
     const labelOffset: [number, number, number] = [0, Math.max(SPACECRAFT_VISUAL_SCALE * LABEL_OFFSET_FACTOR, 0.05), 0];
+    // GLB real da NASA quando há (Voyager/Juno/Pioneer/New Horizons); senão o marcador estilizado.
+    const model = spacecraftModelAsset(craft.horizonsId);
 
     return (
         <group position={position}>
             <group scale={SPACECRAFT_VISUAL_SCALE}>
-                <SpacecraftMarker emphasized={selected || hovered} opacity={opacity} />
+                {model ? (
+                    // Suspense: enquanto o GLB carrega, mostra o marcador estilizado (sem buraco na cena).
+                    <Suspense fallback={<SpacecraftMarker emphasized={selected || hovered} opacity={opacity} />}>
+                        <SpacecraftModel
+                            asset={model}
+                            opacity={opacity}
+                            selected={selected || hovered}
+                            showOutline={showLabel || selected}
+                        />
+                    </Suspense>
+                ) : (
+                    <SpacecraftMarker emphasized={selected || hovered} opacity={opacity} />
+                )}
             </group>
 
             {!selected ? (
