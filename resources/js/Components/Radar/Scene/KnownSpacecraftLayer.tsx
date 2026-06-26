@@ -97,12 +97,7 @@ function KnownSpacecraftBody({ craft, position, showLabel, dimmed, selected, onS
                 {model ? (
                     // Suspense: enquanto o GLB carrega, mostra o marcador estilizado (sem buraco na cena).
                     <Suspense fallback={<SpacecraftMarker emphasized={selected || hovered} opacity={opacity} />}>
-                        <SpacecraftModel
-                            asset={model}
-                            opacity={opacity}
-                            selected={selected || hovered}
-                            showOutline={showLabel || selected}
-                        />
+                        <SpacecraftModel asset={model} opacity={opacity} />
                     </Suspense>
                 ) : (
                     <SpacecraftMarker emphasized={selected || hovered} opacity={opacity} />
