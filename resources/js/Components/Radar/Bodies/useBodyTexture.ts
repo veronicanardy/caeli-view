@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { TextureLoader } from 'three';
+import { registerBodyTexture } from '@/lib/radar/bodyTextureRegistry';
 
 /**
  * Carrega uma textura de corpo celeste de forma imperativa e retorna `null`
@@ -88,9 +89,17 @@ export function useBodyTexture(
 
         const loader = new TextureLoader();
 
+        // Registra esta textura no contador global de corpos para que a barra de
+        // carregamento só conclua depois que a cena estiver de fato vestida. `settle`
+        // é idempotente: marca como resolvida no sucesso OU na falha, nunca prende o
+        // usuário no carregamento se a imagem não chegar.
+        const settle = registerBodyTexture();
+
         loader.load(
             url,
             (loaded) => {
+                settle();
+
                 if (!active) {
                     loaded.dispose();
                     return;
@@ -109,6 +118,8 @@ export function useBodyTexture(
             },
             undefined,
             () => {
+                settle();
+
                 if (!active) return;
 
                 setTexture(null);

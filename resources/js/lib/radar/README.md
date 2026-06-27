@@ -24,6 +24,7 @@ que precise do mesmo pipeline gráfico.
 - Geração procedural da bump map da Lua (`moonTextures.ts`)
 - Resolvedor puro de visibilidade dos rótulos (`radarLabels.ts`): quem aparece e quem some, sem React
 - Progresso puro da barra de carregamento (`loadingProgress.ts`): etapas reais → porcentagem suave, sem React
+- Registrador de texturas dos corpos (`bodyTextureRegistry.ts`): conta texturas que começaram a carregar e que já resolveram, para a barra só concluir com a cena vestida, não no primeiro frame com materiais de fallback
 
 ## O que NÃO fica aqui
 
@@ -95,6 +96,7 @@ Os testes unitários ficam em `tests/js/lib/radar/` e seguem o padrão Vitest do
 | `cursor.ts`           | `cursor.test.ts`                        | Contagem de referência, reset, leaves extras           |
 | `bodyScale.ts`        | `bodyScale.test.ts`                     | Invariantes hitbox > raio visual                       |
 | `radarLabels.ts`      | `../../Radar/radarLabels.test.ts`       | Prioridade, primários nunca somem por colisão, densidade local das rochas, oclusão 3D forte |
+| `bodyTextureRegistry.ts` | `bodyTextureRegistry.test.ts`        | Decisão pura "todas resolveram", incremento de registrados/resolvidos, idempotência do settle |
 | _(transversal)_       | `helioSceneProjection.test.ts`          | Firewall científico: a projeção heliocêntrica preserva direção, alinhamento relativo no mesmo frame, objeto na região de Júpiter, unidades/eixos aplicados uma vez |
 
 `helioSceneProjection.test.ts` não cobre um arquivo específico: trava INVARIANTES da pipeline de posicionamento (a régua é fiel à direção e à UA) contra regressões, mesmo que a implementação seja reescrita. A independência entre posição científica e modelo 3D vive em `tests/js/Radar/modelPositionIndependence.test.ts`.
