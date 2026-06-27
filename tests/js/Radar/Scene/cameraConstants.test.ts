@@ -4,34 +4,28 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-    EARTH_MIN_DISTANCE,
-    ICE_GIANT_MIN_DISTANCE,
+    CAMERA_NEAR,
     ROCK_MIN_DISTANCE,
     resolveMinZoomDistance,
 } from '@/Components/Radar/Scene/cameraConstants';
 
 describe('resolveMinZoomDistance', () => {
-    it('impõe o piso próprio quando Urano ou Netuno estão focados', () => {
-        expect(resolveMinZoomDistance({
-            hasSelection: false,
-            orbitMode: false,
-            iceGiantFocused: true,
-        })).toBe(ICE_GIANT_MIN_DISTANCE);
+    it('sem corpo colável (raio omitido) usa o piso BASE único (ROCK_MIN_DISTANCE)', () => {
+        // Navegação livre: chegar perto é igual para todos (Terra/gelo removidos). Sem corpo selecionado
+        // o raio é 0 e o piso é o base de sempre.
+        expect(resolveMinZoomDistance()).toBe(ROCK_MIN_DISTANCE);
     });
 
-    it('preserva o close-up de rochas fora do modo órbita', () => {
-        expect(resolveMinZoomDistance({
-            hasSelection: true,
-            orbitMode: false,
-            iceGiantFocused: false,
-        })).toBe(ROCK_MIN_DISTANCE);
-    });
-
-    it('usa o piso geral ao navegar ou mostrar uma órbita completa', () => {
-        expect(resolveMinZoomDistance({
-            hasSelection: true,
-            orbitMode: true,
-            iceGiantFocused: false,
-        })).toBe(EARTH_MIN_DISTANCE);
+    it('soma o raio do corpo para a FACE parar sempre à mesma folga segura do near plane', () => {
+        // O bug: a câmera para a `piso` do CENTRO, mas a face está `raio` mais perto. Com piso fixo, uma
+        // rocha de raio não-desprezível tinha a face abaixo do near e recortava. Somando o raio ao piso, a
+        // face para sempre a ROCK_MIN_DISTANCE da câmera, acima do near, qualquer que seja o raio.
+        for (const radius of [0.012, 0.026]) { // desconhecida e maior rocha (Ceres/Vesta)
+            const floor = resolveMinZoomDistance(radius);
+            expect(floor).toBeGreaterThan(ROCK_MIN_DISTANCE);
+            // A face (piso − raio) fica exatamente no piso base, confortavelmente à frente do near.
+            expect(floor - radius).toBeCloseTo(ROCK_MIN_DISTANCE, 10);
+            expect(floor - radius).toBeGreaterThan(CAMERA_NEAR);
+        }
     });
 });

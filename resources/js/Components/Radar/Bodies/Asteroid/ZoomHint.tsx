@@ -12,12 +12,14 @@ import { framingForTrajectorySegment } from '../../Scene/cameraFraming';
 import { useCameraTween } from '../../Scene/CameraTweenContext';
 import { useZoomHintSetter } from './ZoomHintContext';
 
-// Só mostra a lupa se a câmera está nessa faixa de distância. SHOW_MIN fica logo abaixo do piso do
-// close-up colado (CLOSEUP_MIN=0.08 ≈ ROCK_MIN_DISTANCE) para a lupa aparecer na rocha pequena, presa
-// no piso; SHOW_MAX cobre o teto do close-up (CLOSEUP_MAX=0.36, onde Ceres para) mais folga de zoom out
-// manual antes de a lupa sumir. A margem de 0.95 sobre o piso absorve o epsilon de ponto flutuante.
-const SHOW_MIN = 0.08 * 0.95;
-const SHOW_MAX = 0.36 * 2.2;
+// Só mostra a lupa se a câmera está na faixa do close-up das rochas. Com a regra única de foco a
+// distância do close-up é raio × BODY_FOCUS_MULTIPLIER (cameraFraming.closeUpDistance), clampada a
+// [ROCK_MIN_DISTANCE, ...]. Logo a faixa vai do piso (rocha minúscula presa em ROCK_MIN_DISTANCE ≈ 0.072)
+// ao teto (maior rocha: MAX_ROCK_RADIUS_DL 0.026 × 12 ≈ 0.31). SHOW_MIN fica logo abaixo do piso para a
+// lupa aparecer na rocha pequena (margem 0.95 absorve epsilon); SHOW_MAX cobre o teto mais folga de zoom
+// out manual antes de a lupa sumir. Ao mexer no multiplicador, no piso ou em MAX_ROCK_RADIUS_DL, recalibre aqui.
+const SHOW_MIN = 0.072 * 0.95;
+const SHOW_MAX = 0.31 * 1.9;
 // Some temporariamente quando a câmera está se movendo.
 const MOVE_THRESHOLD_SQ = 0.000009; // ~0.003 de deslocamento por frame
 

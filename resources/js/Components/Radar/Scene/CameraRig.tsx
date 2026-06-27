@@ -18,8 +18,9 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useContext, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { CAMERA_VIEWS } from './cameraConstants';
+import { CAMERA_NEAR, CAMERA_VIEWS } from './cameraConstants';
 import type { CameraViewKey } from './cameraConstants';
+import { isFiniteFraming } from './cameraFraming';
 import type { FocusFraming } from './cameraFraming';
 import { CameraTweenContext } from './CameraTweenContext';
 
@@ -47,6 +48,37 @@ const TWEEN_DURATION_S = 1.7;
 function easeOutCubic(t: number): number {
     const u = 1 - t;
     return 1 - u * u * u;
+}
+
+/* Piso de segurança do destino: a câmera nunca deve ATERRISSAR mais perto que o near plane, senão o
+   corpo recorta no fim do voo. É independente do piso DINÂMICO de zoom (resolveMinZoomDistance), que
+   limita o gesto manual do usuário; este só protege o destino calculado. Folga de 1.2× sobre o near. */
+const DESTINATION_MIN_DISTANCE = CAMERA_NEAR * 1.2;
+
+/**
+ * Sanitiza um destino de voo antes de a câmera partir, tornando o rig à prova de bug:
+ *  - rejeita destinos não finitos (NaN/Infinity de um raio ou efeméride degenerada) devolvendo null —
+ *    o chamador então NÃO voa e o usuário mantém o controle, em vez de a câmera ir para o infinito;
+ *  - afasta a câmera ao longo da MESMA direção se o destino nasceu dentro do near plane, preservando o
+ *    ângulo de chegada. Sempre devolve uma cópia nova (não muta a entrada).
+ */
+function sanitizeDestination(
+    dest: { position: THREE.Vector3; target: THREE.Vector3; durationSeconds?: number },
+): { position: THREE.Vector3; target: THREE.Vector3; durationSeconds?: number } | null {
+    if (!isFiniteFraming(dest)) return null;
+    const target = dest.target.clone();
+    const offset = dest.position.clone().sub(target);
+    const distance = offset.length();
+    let position: THREE.Vector3;
+    if (distance < 1e-6) {
+        // Posição coincide com o alvo: usa uma direção padrão estável para não dividir por zero.
+        position = target.clone().add(new THREE.Vector3(0.4, 0.45, 0.8).normalize().multiplyScalar(DESTINATION_MIN_DISTANCE));
+    } else if (distance < DESTINATION_MIN_DISTANCE) {
+        position = target.clone().add(offset.multiplyScalar(DESTINATION_MIN_DISTANCE / distance));
+    } else {
+        position = dest.position.clone();
+    }
+    return { position, target, durationSeconds: dest.durationSeconds };
 }
 
 export function CameraRig({
@@ -144,25 +176,32 @@ export function CameraRig({
         if (!mounted.current) { mounted.current = true; return; }
         // Não sobrescreve um tween avulso em andamento — a câmera fica onde o usuário a deixou.
         if (adHocTweening.current) return;
-        tweening.current = true;
-        tweenElapsed.current = 0;
-        tweenFrom.current = null; // recapturado no 1º frame do voo (origem real da câmera)
-        /* Resolve o desired no momento da mudança, preservando o ângulo atual da câmera
-           sem forçar virada — o usuário chega ao asteroide pelo heading que já tem. */
+
+        /* Resolve o destino, preservando o ângulo atual da câmera sem forçar virada quando pedido
+           (o usuário chega ao asteroide pelo heading que já tem). */
+        let resolved = desired;
         if (focusTarget?.transition === 'preserve_heading' && controls?.target) {
             const currentOffset = camera.position.clone().sub(controls.target);
             if (currentOffset.lengthSq() > 1e-8) {
                 const desiredDistance = focusTarget.position.distanceTo(focusTarget.target);
                 const offsetDir = currentOffset.normalize();
-                effectiveDesired.current = {
+                resolved = {
                     position: focusTarget.target.clone().add(offsetDir.multiplyScalar(desiredDistance)),
                     target: focusTarget.target.clone(),
                     durationSeconds: focusTarget.durationSeconds,
                 };
-                return;
             }
         }
-        effectiveDesired.current = desired;
+
+        // Guarda anti-bug: destino não finito (raio/efeméride degenerada) NÃO inicia voo — o usuário
+        // mantém o controle em vez de a câmera ir para o infinito. O piso de near também é garantido.
+        const safe = sanitizeDestination(resolved);
+        if (!safe) return;
+
+        tweening.current = true;
+        tweenElapsed.current = 0;
+        tweenFrom.current = null; // recapturado no 1º frame do voo (origem real da câmera)
+        effectiveDesired.current = safe;
     }, [desired]);
 
     // Se o usuário interagir com a cena ANTES de a efeméride resolver (rede lenta), o setup
@@ -179,7 +218,10 @@ export function CameraRig({
     useEffect(() => {
         if (!tweenCtxRef) return;
         tweenCtxRef.current = (position, target) => {
-            adHocDesired.current = { position: position.clone(), target: target.clone() };
+            // Mesma guarda anti-bug do voo de foco: destino não finito não inicia voo avulso.
+            const safe = sanitizeDestination({ position, target });
+            if (!safe) return;
+            adHocDesired.current = { position: safe.position, target: safe.target };
             adHocTweening.current = true;
             tweening.current = false;
             tweenElapsed.current = 0;

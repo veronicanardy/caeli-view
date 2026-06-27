@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { framingForBody, framingForOverview, framingForTrajectorySegment, computeFocusFraming } from '@/Components/Radar/Scene/cameraFraming';
+import { framingForBody, framingForOverview, framingForTrajectorySegment, computeFocusFraming, isFiniteFraming } from '@/Components/Radar/Scene/cameraFraming';
+import { BODY_FOCUS_MULTIPLIER, ROCK_MIN_DISTANCE, resolveMinZoomDistance } from '@/Components/Radar/Scene/cameraConstants';
+import { MIN_ROCK_RADIUS_DL } from '@/lib/radar/asteroidScale';
 import type { ClosestNowObject } from '@/types';
 
 /**
@@ -20,11 +22,22 @@ describe('framingForBody', () => {
         expect(target.z).toBeCloseTo(3, 10);
     });
 
-    it('a câmera fica a distância = radius × 20 do center por padrão', () => {
+    it('a câmera fica a distância = radius × BODY_FOCUS_MULTIPLIER do center por padrão', () => {
         const center = new THREE.Vector3(0, 0, 0);
         const radius = 1;
         const { position } = framingForBody(center, radius);
-        expect(position.distanceTo(center)).toBeCloseTo(radius * 20, 6);
+        expect(position.distanceTo(center)).toBeCloseTo(radius * BODY_FOCUS_MULTIPLIER, 6);
+    });
+
+    it('dois corpos de raios diferentes ocupam a MESMA fração da tela (regra "tudo igual")', () => {
+        // A fração de tela ≈ raio / distância. Como o multiplicador é único, raio/distância é constante
+        // para qualquer raio acima do piso de 0.2 — a prova direta do pedido da Verônica.
+        const small = framingForBody(new THREE.Vector3(0, 0, 0), 0.05);
+        const big = framingForBody(new THREE.Vector3(0, 0, 0), 0.5);
+        const fractionSmall = 0.05 / small.position.distanceTo(small.target);
+        const fractionBig = 0.5 / big.position.distanceTo(big.target);
+        expect(fractionSmall).toBeCloseTo(fractionBig, 9);
+        expect(fractionSmall).toBeCloseTo(1 / BODY_FOCUS_MULTIPLIER, 9);
     });
 
     it('usa distanceMultiplier quando fornecido', () => {
@@ -131,18 +144,57 @@ describe('computeFocusFraming', () => {
         expect(framing!.transition).toBe('preserve_heading');
     });
 
-    it('o close-up fica DENTRO da faixa em que a lupa de trajetória aparece (0.076 a 0.792)', () => {
-        // ZoomHint só mostra a lupa entre SHOW_MIN (0.08*0.95=0.076) e SHOW_MAX (0.36*2.2=0.792).
+    it('o close-up fica DENTRO da faixa em que a lupa de trajetória aparece', () => {
+        // ZoomHint só mostra a lupa entre SHOW_MIN (ROCK_MIN_DISTANCE*0.95) e SHOW_MAX (0.31*1.9=0.589).
         // Se o close-up sair dessa faixa, o passo de trajetória do tutorial perde o botão. Vale
-        // para um corpo minúsculo (cai no piso colado) e um gigante (Ceres, cai perto do teto).
+        // para um corpo minúsculo (cai no piso ROCK_MIN_DISTANCE) e um gigante (Ceres, cai no teto).
+        const SHOW_MIN = ROCK_MIN_DISTANCE * 0.95;
         for (const diameterMeters of [10, 939_400]) {
             const obj = makeObjectWithPosition();
             (obj.approach as { diameterMeters: number | null }).diameterMeters = diameterMeters;
             const framing = computeFocusFraming(obj, false, EARTH_HELIO)!;
             const distance = framing.position.distanceTo(framing.target);
-            expect(distance, `d=${diameterMeters}`).toBeGreaterThanOrEqual(0.076);
-            expect(distance, `d=${diameterMeters}`).toBeLessThanOrEqual(0.792);
+            expect(distance, `d=${diameterMeters}`).toBeGreaterThanOrEqual(SHOW_MIN);
+            expect(distance, `d=${diameterMeters}`).toBeLessThanOrEqual(0.589);
         }
+    });
+
+    it('o close-up da menor rocha nunca cola mais que o piso de segurança (near + raio + folga)', () => {
+        const obj = makeObjectWithPosition();
+        (obj.approach as { diameterMeters: number | null }).diameterMeters = 1; // minúscula → bate no piso
+        const framing = computeFocusFraming(obj, false, EARTH_HELIO)!;
+        // O piso conta o raio do corpo: a menor rocha para em resolveMinZoomDistance(MIN_ROCK_RADIUS_DL),
+        // não no piso BASE cru. toBeCloseTo absorve o epsilon de ponto flutuante do clamp.
+        const expectedFloor = resolveMinZoomDistance(MIN_ROCK_RADIUS_DL);
+        expect(expectedFloor).toBeGreaterThan(ROCK_MIN_DISTANCE); // o raio empurrou o piso acima do base
+        expect(framing.position.distanceTo(framing.target)).toBeCloseTo(expectedFloor, 6);
+    });
+});
+
+// ─── isFiniteFraming ─────────────────────────────────────────────────────────
+
+describe('isFiniteFraming', () => {
+    it('aceita um enquadramento totalmente finito', () => {
+        expect(isFiniteFraming({
+            target: new THREE.Vector3(1, 2, 3),
+            position: new THREE.Vector3(4, 5, 6),
+        })).toBe(true);
+    });
+
+    it('rejeita null/undefined', () => {
+        expect(isFiniteFraming(null)).toBe(false);
+        expect(isFiniteFraming(undefined)).toBe(false);
+    });
+
+    it('rejeita NaN ou Infinity em position ou target', () => {
+        expect(isFiniteFraming({
+            target: new THREE.Vector3(0, 0, 0),
+            position: new THREE.Vector3(NaN, 0, 0),
+        })).toBe(false);
+        expect(isFiniteFraming({
+            target: new THREE.Vector3(0, Infinity, 0),
+            position: new THREE.Vector3(0, 0, 0),
+        })).toBe(false);
     });
 });
 

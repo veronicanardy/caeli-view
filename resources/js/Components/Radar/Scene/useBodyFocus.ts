@@ -61,14 +61,12 @@ export function useBodyFocus({
             }
         }
 
-        // A Lua é pequena (raio 0.035): no multiplicador padrão (20×) a câmera para
-        // longe e ela fica miúda na tela. Aproxima mais (10×) para preencher o quadro,
-        // como pedido. A Terra (âncora central da cena) mantém o enquadramento padrão.
-        const distanceMultiplier = body === 'moon' ? 10 : undefined;
-
+        // Terra e Lua seguem a regra única (sem override): ambas enquadradas pelo seu raio visual com o
+        // multiplicador compartilhado, ocupando a MESMA fração da tela. A Lua (raio 0.035) aparece menor
+        // que a Terra (0.11) na tela apenas por ser menor de fato, não por uma chegada especial.
         setBodyFocus({
             body,
-            framing: framingForBody(center, radius, preferredDir, distanceMultiplier),
+            framing: framingForBody(center, radius, preferredDir),
             nonce: cameraIntent.nonce,
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps

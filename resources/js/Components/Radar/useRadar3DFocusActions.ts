@@ -189,7 +189,8 @@ export function useRadar3DFocusActions({
                 const planetToSun = planetVec.clone().negate().normalize();
                 // Leve elevação para evitar enquadramento raso no plano eclíptico.
                 planetToSun.add(new THREE.Vector3(0, 0.25, 0)).normalize();
-                setPlanetFocusTargets({ [id]: framingForBody(planetVec, cfg.framingRadius, planetToSun, cfg.focusDistanceMultiplier) });
+                // Foco único: o planeta usa o BODY_FOCUS_MULTIPLIER padrão (não passa multiplicador próprio).
+                setPlanetFocusTargets({ [id]: framingForBody(planetVec, cfg.framingRadius, planetToSun) });
             } else {
                 setPlanetFocusTargets({});
             }

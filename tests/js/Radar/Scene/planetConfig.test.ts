@@ -37,12 +37,12 @@ describe('PLANET_CONFIG', () => {
     it('Vênus é enquadrado com raio maior que Marte (regressão do bug de framing 0,038)', () => {
         expect(PLANET_CONFIG.venus.framingRadius).toBeGreaterThan(PLANET_CONFIG.mars.framingRadius);
     });
-    it('aproxima Júpiter, Saturno, Urano e Netuno no foco sem alterar os rochosos', () => {
-        for (const id of ['jupiter', 'saturn', 'uranus', 'neptune'] as PlanetId[]) {
-            expect(PLANET_CONFIG[id].focusDistanceMultiplier).toBe(10);
-        }
-        for (const id of ['mercury', 'venus', 'mars'] as PlanetId[]) {
-            expect(PLANET_CONFIG[id].focusDistanceMultiplier).toBeUndefined();
+
+    it('nenhum planeta carrega multiplicador de foco próprio (regra única "tudo na mesma fração")', () => {
+        // O split gigante/rochoso foi removido: todo planeta usa BODY_FOCUS_MULTIPLIER. A config só
+        // guarda o RAIO (que difere o tamanho do globo), nunca a distância de chegada.
+        for (const id of Object.keys(EXPECTED) as PlanetId[]) {
+            expect(PLANET_CONFIG[id]).not.toHaveProperty('focusDistanceMultiplier');
         }
     });
 });

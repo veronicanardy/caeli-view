@@ -49,17 +49,25 @@
 
 Constantes de câmera ficam em `cameraConstants.ts`. Cálculos de enquadramento ficam em `cameraFraming.ts`. `CameraRig.tsx` apenas executa transições de câmera a partir de intenções explícitas.
 
-O **piso de zoom é dinâmico** (`minDistance` dos OrbitControls/`InertialZoom`/`TouchGestures`): ao navegar o sistema ou focar a Terra usa `EARTH_MIN_DISTANCE` (não mergulha na Terra); com uma rocha selecionada em close-up (fora do modo órbita) cai para `ROCK_MIN_DISTANCE`, logo acima do `CAMERA_NEAR`, para a câmera colar nos corpos minúsculos. Ambos em `cameraConstants.ts`. O close-up em si (`closeUpDistance` em `cameraFraming.ts`) mantém raio/distância constante para TODA rocha ocupar a mesma fração da tela: como o near plane impede colar mais a menor rocha (presa no piso), os corpos grandes (Ceres) ficam mais longe em vez de encherem mais. A faixa da lupa de trajetória (`ZoomHint.tsx`) precisa cobrir do piso ao teto desse close-up.
+### Regra única de foco: "tudo na mesma fração da tela"
+
+Todo corpo focado (Sol, planetas, Terra, Lua, rochas, cometas, naves) é enquadrado pelo MESMO multiplicador, `BODY_FOCUS_MULTIPLIER` em `cameraConstants.ts`. A câmera fica a `raio × BODY_FOCUS_MULTIPLIER` do alvo (`framingForBody`), então a fração de tela que o corpo ocupa (`≈ raio / distância = 1 / multiplicador`) é IDÊNTICA para todos, grande ou pequeno. Júpiter aparece com globo maior que a Lua só porque seu raio visual é maior, não por uma chegada especial. É decisão de produto da Verônica: ao trocar o foco entre corpos, a sensação de aproximação é sempre a mesma.
+
+O close-up das rochas (`closeUpDistance` em `cameraFraming.ts`) usa exatamente essa regra (`raio simbólico × BODY_FOCUS_MULTIPLIER`), com clamp APENAS de segurança: piso `resolveMinZoomDistance(raio)` (a face da rocha não recorta no near plane, ver abaixo) e teto `MAX_CAMERA_DISTANCE`. A faixa da lupa de trajetória (`ZoomHint.tsx`) cobre do piso ao teto desse close-up; ao mudar o multiplicador ou `MAX_ROCK_RADIUS_DL`, recalibre `SHOW_MIN`/`SHOW_MAX`.
+
+**Exceções nomeadas (só duas):**
+- **Panorama dos famosos** (`frameFamousBelt`): recuo proposital com multiplicador próprio para caber a régua inteira no quadro. Não é foco de corpo.
+- **Juno** (`focusSpacecraft`, `horizonsId === '-61'`): mesma DISTÂNCIA das demais naves (mesma fração), só a DIREÇÃO da câmera é especial, para Júpiter aparecer ao fundo.
+
+### Voo ininterrupto e robustez
 
 O voo da câmera é **ininterrupto**: enquanto um tween está em andamento, o `CameraRig` desabilita os OrbitControls (`controls.enabled = false`), e as demais camadas de input (`InertialZoom`, `TouchGestures`, `KeyboardPan`) respeitam esse flag. Assim rotação, pan, zoom (roda/pinça) e teclado ficam inertes durante a navegação, que segue até o destino. O controle volta ao usuário automaticamente quando a câmera chega.
 
-O foco do Sol usa uma chegada mais recuada que o enquadramento padrão dos corpos. O multiplicador é `24` no desktop e `34` no mobile, preservando espaço para o disco e a corona sem perder a sensação de aproximação. Esse voo dura `1` segundo; os demais continuam com `1,7` segundo.
+**À prova de bug:** todo destino de voo passa por `sanitizeDestination` no `CameraRig` antes de a câmera partir. Um destino não finito (NaN/Infinity de um raio ou efeméride degenerada) é validado por `isFiniteFraming` (`cameraFraming.ts`) e simplesmente NÃO inicia voo (o usuário mantém o controle), em vez de a câmera ir para o infinito. Um destino que nasça dentro do near plane é afastado ao longo da mesma direção até `DESTINATION_MIN_DISTANCE`. Vale para o voo de foco e para o tween avulso (zoom out de trajetória).
 
-Júpiter, Saturno, Urano e Netuno usam multiplicador de foco `10`, em vez do padrão `20`, para chegarem 50% mais perto. Os planetas rochosos preservam o enquadramento padrão. Os anéis de Saturno continuam inteiros no campo de visão.
+O **piso de zoom tem base única** (`resolveMinZoomDistance` em `cameraConstants.ts`, aplicado por `InertialZoom`/`TouchGestures`/OrbitControls): chegar perto é igual para todo corpo. Mas o piso **conta o raio do corpo selecionado**: ele é `ROCK_MIN_DISTANCE + raio`. A câmera para a `piso` do CENTRO, então a FACE da rocha para sempre a `ROCK_MIN_DISTANCE` da câmera (folga segura sobre o `CAMERA_NEAR`), qualquer que seja o tamanho. Com o piso fixo antigo, uma rocha grande/desconhecida (raio 0,012 a 0,026) tinha a face `raio` mais perto que o piso, abaixo do near, e "furava"/atravessava cedo demais ao colar o zoom. `RadarScene` deriva o raio do corpo colável selecionado (rocha/cometa via `symbolicRockRadiusForApproach`, nave via `SPACECRAFT_VISUAL_SCALE`); sem seleção colável o raio é 0 e o piso é `ROCK_MIN_DISTANCE`. Os pisos especiais antigos (Terra `EARTH_MIN_DISTANCE`, gelo `ICE_GIANT_MIN_DISTANCE`) foram removidos a pedido da Verônica, para planetas e Terra colarem tanto quanto as rochas/famosas.
 
-Quando Urano ou Netuno estão focados, o zoom manual respeita distância mínima de `0,65` unidade. A chegada automática permanece em aproximadamente `1,3` e `1,2` unidades, mas a câmera não entra na faixa muito próxima que causa tremor visual.
-
-O voo usa duração fixa de `1,7` segundo e interpolação absoluta com `ease-out` cúbico. No fim, câmera e alvo chegam exatamente ao destino e os controles são reabilitados, sem cauda assintótica nem teste de proximidade. O relógio acompanha o tempo real mesmo abaixo de 30 quadros por segundo, importante perto do Sol, onde a renderização pode ser mais pesada. Apenas pausas anormais acima de `0,1` segundo por frame são limitadas para evitar saltos ao retornar de uma aba em segundo plano.
+O foco do Sol dura `1` segundo; a Juno e as naves duram `1,3`/`1,2` segundo; os demais voos duram `1,7` segundo. A duração é fixa, com interpolação absoluta e `ease-out` cúbico. No fim, câmera e alvo chegam exatamente ao destino e os controles são reabilitados, sem cauda assintótica nem teste de proximidade. O relógio acompanha o tempo real mesmo abaixo de 30 quadros por segundo, importante perto do Sol, onde a renderização pode ser mais pesada. Apenas pausas anormais acima de `0,1` segundo por frame são limitadas para evitar saltos ao retornar de uma aba em segundo plano.
 
 ## Régua única heliocêntrica
 

@@ -20,14 +20,14 @@ type PlanetCfg = {
         'mercuryScenePosition' | 'venusScenePosition' | 'marsScenePosition' |
         'jupiterScenePosition' | 'saturnScenePosition' | 'uranusScenePosition' | 'neptuneScenePosition'>;
     /**
-     * Raio usado pelo enquadramento de câmera (framingForBody → distância = raio × multiplicador).
+     * Raio usado pelo enquadramento de câmera (framingForBody → distância = raio × BODY_FOCUS_MULTIPLIER).
      * É DERIVADO de planetData.visualRadiusDl, nunca repetido à mão: uma cópia manual ficou para trás
      * uma vez (Vênus em 0,038 enquanto o globo já renderizava 0,10), enquadrando o planeta colado.
-     * Travado por planetConfig.test.ts contra futura dessincronização.
+     * Travado por planetConfig.test.ts contra futura dessincronização. Como TODO planeta usa o mesmo
+     * multiplicador único, este raio é o que faz Júpiter ter globo maior que Mercúrio na tela — mas
+     * ambos ocupam a MESMA fração do quadro (regra "tudo igual" da Verônica).
      */
     framingRadius: number;
-    /** Multiplicador de distância do foco. Gigantes usam chegada mais próxima que os rochosos. */
-    focusDistanceMultiplier?: number;
 };
 
 const PLANET_DATA: Record<PlanetId, PlanetDatum> = {
@@ -50,16 +50,12 @@ const EPHEMERIS_KEY: Record<PlanetId, PlanetCfg['ephemerisKey']> = {
     neptune: 'neptuneScenePosition',
 };
 
-const GIANT_PLANETS = new Set<PlanetId>(['jupiter', 'saturn', 'uranus', 'neptune']);
-const GIANT_FOCUS_DISTANCE_MULTIPLIER = 10;
-
 export const PLANET_CONFIG: Record<PlanetId, PlanetCfg> = Object.fromEntries(
     (Object.keys(EPHEMERIS_KEY) as PlanetId[]).map((id) => [
         id,
         {
             ephemerisKey: EPHEMERIS_KEY[id],
             framingRadius: PLANET_DATA[id].visualRadiusDl,
-            focusDistanceMultiplier: GIANT_PLANETS.has(id) ? GIANT_FOCUS_DISTANCE_MULTIPLIER : undefined,
         },
     ]),
 ) as Record<PlanetId, PlanetCfg>;

@@ -13,7 +13,7 @@ import { currentPositionInHelioScene } from '@/lib/radar/trajectorySampling';
 import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
 import { estimateAsteroidDiameterMeters, symbolicRockRadiusFromDiameter } from '@/lib/radar/asteroidScale';
 import { knownCometById, knownCometScenePosition } from '../Bodies/Comet/knownComets';
-import { CAMERA_FOV_DEG, CAMERA_VIEWS, MAX_CAMERA_DISTANCE } from './cameraConstants';
+import { BODY_FOCUS_MULTIPLIER, CAMERA_FOV_DEG, CAMERA_VIEWS, MAX_CAMERA_DISTANCE, resolveMinZoomDistance } from './cameraConstants';
 
 /**
  * Helpers puros de enquadramento para câmera, sem tocar nos controles da cena.
@@ -31,10 +31,11 @@ export type FocusFraming = {
 
 /**
  * Monta um enquadramento de câmera centrado em um corpo celeste na posição de cena `center`
- * com raio visual `radius`. Aceita:
+ * com raio visual `radius`. A câmera fica a `radius × BODY_FOCUS_MULTIPLIER`, de modo que TODO corpo
+ * ocupe a MESMA fração da tela (ver BODY_FOCUS_MULTIPLIER). Aceita:
  * - `preferredDir`: direção preferencial de câmera (ex: Terra→Sol para focar o lado diurno).
- * - `distanceMultiplier`: substitui o multiplicador padrão (20×) — útil para afastar mais
- *   a câmera de corpos que dominam demais o campo de visão (ex: Sol no mobile).
+ * - `distanceMultiplier`: substitui o multiplicador único. Reservado às DUAS exceções nomeadas
+ *   (panorama dos famosos e Juno); o foco comum de corpo NUNCA passa este parâmetro.
  */
 export function framingForBody(
     center: THREE.Vector3,
@@ -45,9 +46,21 @@ export function framingForBody(
     const dir = preferredDir
         ? preferredDir.clone().normalize()
         : new THREE.Vector3(0.4, 0.45, 0.8).normalize();
-    const multiplier = distanceMultiplier ?? 20;
+    const multiplier = distanceMultiplier ?? BODY_FOCUS_MULTIPLIER;
     const distance = Math.max(radius * multiplier, 0.2);
     return { target: center.clone(), position: center.clone().add(dir.multiplyScalar(distance)), transition: 'default' };
+}
+
+/**
+ * Guarda anti-bug: um enquadramento só é seguro se posição e alvo forem totalmente finitos. Um raio
+ * degenerado (ex.: efeméride não resolvida, NaN propagado) produziria um destino com NaN/Infinity que,
+ * interpolado pelo CameraRig, jogaria a câmera para o infinito (o bug clássico "a câmera some"). O rig
+ * checa isto antes de iniciar qualquer voo e simplesmente NÃO voa quando o destino é inseguro.
+ */
+export function isFiniteFraming(framing: FocusFraming | null | undefined): framing is FocusFraming {
+    if (!framing) return false;
+    const finite = (v: THREE.Vector3) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
+    return finite(framing.position) && finite(framing.target);
 }
 
 export function framingForOverview(): FocusFraming {
@@ -170,25 +183,22 @@ export function framingForTrajectorySegment({
 }
 
 /**
- * Distância de câmera para o close-up de uma rocha, PROPORCIONAL ao tamanho visual dela, de modo que
- * TODA rocha ocupe a MESMA fração da tela (pedido da Verônica: "todas enchem igual"). Como a fração de
- * tela ≈ raio / distância, manter raio/distância constante (= CLOSEUP_RADII) iguala a fração para todas.
+ * Distância de câmera para o close-up de uma rocha/cometa selecionado. Usa A MESMA regra de TODO corpo
+ * (raio × BODY_FOCUS_MULTIPLIER), então a rocha ocupa a MESMA fração da tela que um planeta ou a Lua —
+ * é o "tudo igual" pedido pela Verônica, agora unificado com o foco dos demais corpos.
  *
- * O piso (CLOSEUP_MIN) casa com ROCK_MIN_DISTANCE (cameraConstants): é a distância mais colada que os
- * OrbitControls permitem com uma rocha selecionada, logo acima do CAMERA_NEAR (0.07). A menor rocha real
- * (Itokawa, raio ~0.006) já bate nesse piso; o near plane impede colar mais (baixá-lo traz z-fighting nas
- * nuvens da Terra). Por isso CLOSEUP_RADII é calibrado pela MENOR rocha presa no piso (~0.08/0.006 ≈ 13):
- * todas as outras miram esse mesmo número de raios, então os GRANDES (Ceres, Vesta) ficam mais LONGE para
- * ocuparem a mesma fração que a pequena, em vez de encherem mais a tela. O teto (CLOSEUP_MAX) acomoda
- * Ceres (raio ~0.026 × 13 ≈ 0.34). A faixa da lupa (SHOW_MIN a SHOW_MAX em ZoomHint.tsx) foi alargada
- * para cobrir esse teto. Ao mexer aqui, confira ZoomHint e ROCK_MIN_DISTANCE.
+ * Os clamps são APENAS de SEGURANÇA, não estéticos:
+ *  - piso resolveMinZoomDistance(raio): a distância mais colada que os OrbitControls permitem com ESTA
+ *    rocha selecionada. O piso conta o raio do corpo (`near + raio + folga`), então o foco nunca mira mais
+ *    perto que o zoom manual permite, e a FACE da rocha nunca fura o near plane (o piso fixo antigo deixava
+ *    a rocha grande/desconhecida recortar). Calculado com o MESMO raio que dimensiona a rocha.
+ *  - teto MAX_CAMERA_DISTANCE: impede um raio absurdo de mandar a câmera além do far plane.
+ * Fora desses extremos a fração é idêntica à dos planetas. A faixa da lupa (ZoomHint.tsx) acompanha
+ * esta regra; ao mexer no multiplicador, confira SHOW_MIN/SHOW_MAX lá.
  */
-const CLOSEUP_RADII = 13;
-const CLOSEUP_MIN = 0.08;
-const CLOSEUP_MAX = 0.36;
 function closeUpDistance(object: ClosestNowObject): number {
     const radius = symbolicRockRadiusFromDiameter(estimateAsteroidDiameterMeters(object.approach));
-    return THREE.MathUtils.clamp(radius * CLOSEUP_RADII, CLOSEUP_MIN, CLOSEUP_MAX);
+    return THREE.MathUtils.clamp(radius * BODY_FOCUS_MULTIPLIER, resolveMinZoomDistance(radius), MAX_CAMERA_DISTANCE);
 }
 
 /**
@@ -273,7 +283,10 @@ export function computeFocusFraming(
     // distância do corpo à origem — assim chega perto do Halley igual aos outros, em vez de parar longe.
     const cometTarget = knownCometFocusTarget(object);
     if (cometTarget) {
-        const distance = CLOSEUP_MAX;
+        // closeUpDistance é função do TAMANHO estimado do corpo, não da posição: posição-independente
+        // por construção. Assim chega perto do Halley (a ~36 UA no afélio) igual aos outros, na mesma
+        // fração de tela, sem parar longe por causa da distância à origem.
+        const distance = closeUpDistance(object);
         const dir = new THREE.Vector3(0.5, 0.45, 0.74).normalize();
         return { target: cometTarget, position: cometTarget.clone().add(dir.multiplyScalar(distance)), transition: 'default' };
     }

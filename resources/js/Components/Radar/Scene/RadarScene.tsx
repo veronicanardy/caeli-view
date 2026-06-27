@@ -46,7 +46,7 @@ import { KnownCometsLayer } from './KnownCometsLayer';
 import { KnownSpacecraftLayer } from './KnownSpacecraftLayer';
 import { knownAsteroidId } from '../Bodies/Asteroid/knownAsteroids';
 import { knownCometById, knownCometId } from '../Bodies/Comet/knownComets';
-import type { KnownSpacecraft, LiveSpacecraftPositions } from '../Bodies/Spacecraft/knownSpacecraft';
+import { SPACECRAFT_VISUAL_SCALE, type KnownSpacecraft, type LiveSpacecraftPositions } from '../Bodies/Spacecraft/knownSpacecraft';
 // --------------- Scene ---------------
 
 type RadarSceneProps = {
@@ -184,13 +184,17 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
 
     const orbitLabelsOnly = orbitMode && selectedHasOrbit;
 
-    // Piso de zoom dinâmico: rochas permitem close-up; Urano e Netuno mantêm distância própria para
-    // evitar instabilidade visual quando a câmera chega perto demais; os demais usam o piso da Terra.
-    const minZoomDistance = resolveMinZoomDistance({
-        hasSelection,
-        orbitMode,
-        iceGiantFocused: isUranusFocused || isNeptuneFocused,
-    });
+    // Piso de zoom: chegar perto é igual para todo corpo (mesmo das rochas/famosas). O piso BASE é único
+    // (ROCK_MIN_DISTANCE), mas precisa contar o raio do corpo colável selecionado: uma rocha grande/
+    // desconhecida (ou a nave) furava o near plane antes de a câmera bater no piso fixo, então o piso é
+    // empurrado para `near + raio + folga` quando há um corpo selecionado com raio não-desprezível. Sem
+    // seleção colável (planeta/Terra/Lua/Sol focam longe via raio × 12), o raio é 0 e fica no piso base.
+    const selectedBodyRadius = useMemo(() => {
+        if (focusedObject) return symbolicRockRadiusForApproach(focusedObject.approach);
+        if (selectedSpacecraftId) return SPACECRAFT_VISUAL_SCALE;
+        return 0;
+    }, [focusedObject, selectedSpacecraftId]);
+    const minZoomDistance = resolveMinZoomDistance(selectedBodyRadius);
 
     // Labels visíveis para todos os objetos enquanto a câmera não estiver muito afastada.
     // No modo "Asteroides famosos" o enquadramento começa longe de propósito; nesse caso
