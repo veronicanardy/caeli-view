@@ -22,7 +22,7 @@ import { isBeyondRenderLimit } from '@/lib/radar/trajectorySampling';
 import { albedoExplanation, motionLabel, objectTypeEyebrow, orbitClassContext, orbitClassLabel, riskAssessment, rotationExplanation, sizeComparison, smartSummary, trajectoryStatusBadge, velocityComparison, type StatusBadgeIcon } from './focusCardPresentation';
 import { knownCometById, knownCometHeliocentricDistanceKm } from '../Bodies/Comet/knownComets';
 import { knownSpacecraftById, knownSpacecraftHeliocentricDistanceKm } from '../Bodies/Spacecraft/knownSpacecraft';
-import { spacecraftContext, spacecraftMilestones } from './spacecraftData';
+import { spacecraftContext, spacecraftMilestones, spacecraftMissionIntro } from './spacecraftData';
 import { orbitFactsFromElements } from '@/lib/keplerOrbit';
 import { tabsForFocusObject, type FocusObjectKind } from '@/lib/radar/focusCardTabs';
 import { famousLoreFor } from './famousLore';
@@ -943,6 +943,7 @@ function SpacecraftCard({
     const context = spacecraftContext(a.id, locale)
         ?? smartSummary({ objectType: 'spacecraft', sizeMeters: null, velocityKph: null }, en);
     const milestones = spacecraftMilestones(a.id);
+    const missionIntro = spacecraftMissionIntro(a.id, locale);
     // No radar a distância importante é DA TERRA. A dezenas/centenas de UA, a Terra (~1 UA) é desprezível
     // perto da distância heliocêntrica, então este número (heliocêntrico) também é a distância da Terra,
     // com erro desprezível — rotulamos como "da Terra", que é o que o usuário quer ler aqui.
@@ -1038,6 +1039,11 @@ function SpacecraftCard({
 
                     {tab === 'mission' ? (
                         <div className="space-y-3.5">
+                            {/* Abertura que dá sentido à linha do tempo: o "porquê" da missão antes do "o quê
+                                e quando" dos marcos. Conteúdo curado em spacecraftData (missionIntro). */}
+                            {missionIntro ? (
+                                <p className="text-[12px] leading-relaxed text-white/55 lg:text-[12.5px]">{missionIntro}</p>
+                            ) : null}
                             {operator ? (
                                 <dl className="space-y-3 text-[13px]">
                                     <Row label={en ? 'Operator' : 'Operadora'}>{operator}</Row>

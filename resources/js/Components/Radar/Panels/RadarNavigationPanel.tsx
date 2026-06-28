@@ -8,10 +8,8 @@
  * fica em componentes locais; seleção, ranking e regras orbitais não moram aqui.
  */
 
-import { useEffect } from 'react';
 import { List, PanelLeftClose, X } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 import { PlanetFlyout, SpacecraftFlyout } from '../Controls/ReferenceControls';
 import { Tooltip } from '../Controls/Tooltip';
 import { MOBILE_MEDIA_QUERY } from '../radarLayoutConstants';
@@ -153,29 +151,8 @@ function DesktopNavigationPanel({
     onFocusSpacecraft,
     selectedSpacecraftId,
 }: RadarNavigationPanelProps) {
-    const tutorial = useRadarTutorialOptional();
     const flyoutOpen = planetsOpen && !orbitMode && !desktopCollapsed;
     const spacecraftFlyoutOpen = spacecraftOpen && !orbitMode && !desktopCollapsed;
-
-    // Clicar fora do compartimento de planetas o fecha. Ignora cliques no próprio
-    // flyout e no botão "Planetas" (que já alterna sozinho). Durante o tutorial o
-    // flyout é guiado pelo passo, então não fechamos por clique fora ali.
-    useEffect(() => {
-        if ((!flyoutOpen && !spacecraftFlyoutOpen) || tutorial?.active) return undefined;
-        const onPointerDown = (event: PointerEvent) => {
-            const target = event.target;
-            if (!(target instanceof Node)) return;
-            if (planetFlyoutRef.current?.contains(target)) return;
-            if (target instanceof Element && target.closest('[data-tutorial="planet-flyout"]')) return;
-            if (target instanceof Element && target.closest('[data-tutorial="spacecraft-flyout"]')) return;
-            if (target instanceof Element && target.closest('[data-tutorial="reference-planets"]')) return;
-            if (target instanceof Element && target.closest('[data-tutorial="reference-spacecraft"]')) return;
-            onPlanetsOpenChange(false);
-            onSpacecraftOpenChange(false);
-        };
-        document.addEventListener('pointerdown', onPointerDown, true);
-        return () => document.removeEventListener('pointerdown', onPointerDown, true);
-    }, [flyoutOpen, spacecraftFlyoutOpen, tutorial?.active, planetFlyoutRef, onPlanetsOpenChange, onSpacecraftOpenChange]);
 
     return (
         <div className="pointer-events-none absolute left-3 top-3 z-40">

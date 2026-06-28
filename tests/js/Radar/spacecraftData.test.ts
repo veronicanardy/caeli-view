@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { spacecraftContext, spacecraftMilestones } from '@/Components/Radar/Panels/spacecraftData';
+import { spacecraftContext, spacecraftMilestones, spacecraftMissionIntro } from '@/Components/Radar/Panels/spacecraftData';
 
 describe('spacecraftData', () => {
     it('dá contexto rico bilíngue para cada nave conhecida', () => {
@@ -13,6 +13,19 @@ describe('spacecraftData', () => {
     it('devolve null para id sem conteúdo cadastrado', () => {
         expect(spacecraftContext('spacecraft:-999', 'pt-BR')).toBeNull();
         expect(spacecraftMilestones('spacecraft:-999')).toEqual([]);
+        expect(spacecraftMissionIntro('spacecraft:-999', 'pt-BR')).toBeNull();
+    });
+
+    it('cada nave tem abertura de missão bilíngue, distinta do resumo', () => {
+        for (const id of ['spacecraft:-31', 'spacecraft:-32', 'spacecraft:-23', 'spacecraft:-98', 'spacecraft:-61']) {
+            const introPt = spacecraftMissionIntro(id, 'pt-BR');
+            const introEn = spacecraftMissionIntro(id, 'en');
+            expect(introPt).toBeTruthy();
+            expect(introEn).toBeTruthy();
+            expect(introPt).not.toEqual(introEn);
+            // A abertura da Missão não deve só repetir o Resumo (abas com trabalhos distintos).
+            expect(introPt).not.toEqual(spacecraftContext(id, 'pt-BR'));
+        }
     });
 
     it('cada nave tem marcos, com pelo menos uma previsão futura', () => {
