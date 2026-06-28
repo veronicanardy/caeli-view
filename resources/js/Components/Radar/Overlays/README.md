@@ -56,7 +56,13 @@ A porcentagem NÃO é progresso real do servidor (o radar carrega por um único 
 
 O cabeçalho mostra o texto da etapa atual por extenso ("Buscando os dados", "Montando a cena", "Pronto") em vez de um genérico "Carregando", e um brilho sutil (`animate-loading-shimmer`, keyframe em `tailwind.config.js`) percorre a parte preenchida da barra enquanto carrega.
 
-**Espera pelas texturas dos corpos:** a etapa `done` (que conclui a barra) NÃO dispara mais no primeiro frame da cena. O primeiro frame só pinta os corpos com materiais de fallback; as texturas de Terra, Lua, Sol e planetas chegam depois, de forma assíncrona (`useBodyTexture` é não-bloqueante de propósito). Para o usuário não ver as texturas "estalando" depois que a barra some, o `FirstFrameNotifier` (em `Scene/RadarScene.tsx`) só chama `onFirstFrame` quando o primeiro frame pintou **e** todas as texturas de corpos resolveram, contadas pelo registrador puro `@/lib/radar/bodyTextureRegistry` (que conta falhas como resolvidas e tem um timeout de segurança de 8 s, para nunca prender o usuário). Enquanto espera, a barra fica na etapa `building` (teto 92%).
+**Espera pelas texturas e pelo aquecimento da GPU:** a etapa `done` (que conclui a barra) NÃO dispara mais no primeiro frame da cena. O `FirstFrameNotifier` (em `Scene/RadarScene.tsx`) só chama `onFirstFrame` depois de três marcos, todos atrás do overlay:
+
+1. **primeiro frame pintou** (a cena está visível, ainda com materiais de fallback);
+2. **texturas dos corpos baixaram** — Terra, Lua, Sol e planetas; sem isso o usuário via as texturas "estalando" depois que a barra sumia. A contagem é do registrador puro `@/lib/radar/bodyTextureRegistry` (conta falhas como resolvidas; timeout de segurança de 8 s);
+3. **GPU aquecida** — `warmupSceneOnce` (de `Scene/sceneWarmupGpu.ts`) compila os shaders e sobe as texturas para a GPU; sem isso o primeiro gesto de câmera após entrar congelava por causa do upload/compilação sob demanda. Timeout de segurança próprio (6 s).
+
+Cada marco tem timeout, então nada prende o usuário no carregamento. Enquanto espera, a barra fica na etapa `building` (teto 92%). O custo do passo 3 é justamente por que a barra dura um pouco mais: paga-se o engasgo escondido, em troca de uma cena fluida ao entrar.
 
 **Conclusão até 100% (armadilha):** o chamador zera `active` no MESMO render em que a cena fica pronta. Se o overlay desmontasse ali, a barra nunca pintaria os 100% (sumia no meio do caminho, perto de onde a montagem terminou). Por isso o overlay se mantém montado por conta própria: ao receber `active=false` ele fixa 100%, segura por `HOLD_AT_FULL_MS` e só então sai com fade de opacidade, desmontando depois. Os call-sites continuam passando `active` cru; a lógica de saída é interna ao overlay.
 

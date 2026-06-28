@@ -7,13 +7,14 @@
  */
 
 import { OrbitControls } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef, useCallback } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { useMemo, useRef, useCallback, useEffect } from 'react';
 import * as THREE from 'three';
 import type { ClosestNowObject, UnifiedApproach } from '@/types';
 import type { SceneEphemeris } from '@/lib/sceneEphemeris';
 import { LINEAR_AU_SCALE, buildHeliocentricOrbit } from '@/lib/sceneEphemeris';
 import { currentPositionInHelioScene, focusedOrbitSamplePosition, hasRenderableHelioPosition } from '@/lib/radar/trajectorySampling';
+import { allBodyTexturesSettled, getBodyTextureProgress } from '@/lib/radar/bodyTextureRegistry';
 import { OrbitLineHelio } from '../Trajectory/HeliocentricLines';
 import { AsteroidMarker, symbolicRockRadiusForApproach } from '../Bodies/Asteroid/AsteroidMarker';
 import { OBJECT_PALETTE } from '@/lib/radar/palette';
@@ -38,6 +39,7 @@ import { computeLabelOccluder, focusedObjectScenePosition, shouldShowLabelForObj
 import { SUN_RADIUS_SCENE } from '../Bodies/bodyRenderConstants';
 import { computeSceneObjectOccluders } from './sceneOcclusion';
 import { SceneWarmup } from './SceneWarmup';
+import { warmupSceneOnce } from './sceneWarmupGpu';
 import { LabelBackdropGate } from './LabelBackdropGate';
 import { computeEarthPosition, computeMoonGeoPosition, computeMoonPosition, computeSunDirection, planetScenePositions } from './scenePositions';
 import { useBodyFocus } from './useBodyFocus';
@@ -97,10 +99,72 @@ type RadarSceneProps = {
     onFocusTrajectoryPoint?: (framing: FocusFraming) => void;
 };
 
+/**
+ * Tempo máximo (ms) que o "Pronto" espera pelas texturas dos corpos depois do primeiro
+ * frame. Rede de segurança: se uma textura demorar demais ou nunca chegar (mesmo já
+ * contando falhas como resolvidas), a barra conclui assim mesmo, nunca prendendo o
+ * usuário no carregamento. Em condições normais as texturas resolvem antes disso.
+ */
+const TEXTURE_WAIT_TIMEOUT_MS = 8000;
+
+/**
+ * Tempo máximo (ms) que o "Pronto" espera o aquecimento da GPU (compilar shaders + subir
+ * texturas) depois das texturas baixadas. Outra rede de segurança: se o `compileAsync`
+ * travar ou demorar, conclui assim mesmo em vez de prender o usuário no carregamento.
+ */
+const WARMUP_TIMEOUT_MS = 6000;
+
+/**
+ * Dispara `onFirstFrame` (conclusão da barra de carregamento) só depois de:
+ *   1. o primeiro frame ter pintado;
+ *   2. as texturas dos corpos terem baixado (evita o "estalo" de ver Terra, Lua, Sol e
+ *      planetas vestirem a textura depois que a barra some);
+ *   3. a GPU estar AQUECIDA (shaders compilados e texturas enviadas via `warmupSceneOnce`),
+ *      pago atrás do overlay para não congelar o primeiro gesto de câmera após entrar.
+ *
+ * Cada espera tem timeout de segurança próprio, então nada prende o usuário no carregamento.
+ */
 function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
+    const gl = useThree((s) => s.gl);
+    const scene = useThree((s) => s.scene);
+    const camera = useThree((s) => s.camera);
+    const uploadedTextures = useRef(new WeakSet<THREE.Texture>());
+
     const fired = useRef(false);
+    // Etapa 2→3: aquecimento iniciado e concluído.
+    const warmupStarted = useRef(false);
+    const warmupDone = useRef(false);
+    // Timeouts de segurança de cada etapa.
+    const texturesDeadline = useRef(false);
+    const warmupDeadline = useRef(false);
+
+    useEffect(() => {
+        const t = setTimeout(() => { texturesDeadline.current = true; }, TEXTURE_WAIT_TIMEOUT_MS);
+        return () => clearTimeout(t);
+    }, []);
+
     useFrame(() => {
         if (fired.current) return;
+
+        // Etapa 2: o primeiro frame já pintou (cena visível, ainda com materiais de
+        // fallback). Espera as texturas dos corpos baixarem antes de aquecer.
+        const texturesReady = allBodyTexturesSettled(getBodyTextureProgress());
+        if (!texturesReady && !texturesDeadline.current) return;
+
+        // Etapa 3: texturas baixadas. Aquece a GPU UMA vez, atrás do overlay; o engasgo
+        // de upload/compilação acontece aqui, escondido, em vez de no primeiro gesto.
+        if (!warmupStarted.current) {
+            warmupStarted.current = true;
+            const warmupTimer = setTimeout(() => { warmupDeadline.current = true; }, WARMUP_TIMEOUT_MS);
+            warmupSceneOnce(gl, scene, camera, uploadedTextures.current)
+                .finally(() => {
+                    clearTimeout(warmupTimer);
+                    warmupDone.current = true;
+                });
+        }
+
+        if (!warmupDone.current && !warmupDeadline.current) return;
+
         fired.current = true;
         onFirstFrame();
     });
