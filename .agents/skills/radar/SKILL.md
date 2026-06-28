@@ -91,7 +91,20 @@ aqui, porque envelhecem. Esta seção explica o *porquê* de cada armadilha e ap
 Valem as diretrizes de texto e estilo do projeto (travessão, texto por extenso, tooltip,
 comparações honestas, mudanças visuais incrementais). Estão em `AGENTS.md` / `.agents/MEMORY.md`,
 não duplicadas aqui. Uma específica do radar: a barra de carregamento mostra porcentagem ancorada
-em etapas reais, nunca um progresso inventado.
+em etapas reais, nunca um progresso inventado. A conclusão (`done`) espera, atrás do overlay: (1) o
+primeiro frame pintar; (2) as texturas dos corpos baixarem (`useBodyTexture` registra cada uma em
+`lib/radar/bodyTextureRegistry.ts`); (3) a GPU aquecer (`Scene/sceneWarmupGpu.ts` →
+`warmupSceneOnce`: compila shaders e sobe texturas, para o primeiro gesto de câmera não engasgar).
+Tudo no `FirstFrameNotifier` (em `Scene/RadarScene.tsx`), cada passo com timeout de segurança. Todo
+novo corpo deve carregar textura por `useBodyTexture`, nunca por um `TextureLoader` solto, senão sua
+textura não entra na conta da barra nem no aquecimento.
+
+**Resolução de textura** (o peso domina o tempo de boot, que o usuário baixa): corpo pequeno na
+cena → **2k seco** (paths em `lib/radar/planetData.ts`); corpo grande e visível ao entrar (Lua) →
+**LOD progressivo** via `Bodies/useProgressiveBodyTexture` (2k entra e conta na barra; 8k carrega em
+segundo plano e troca **in-place no uniform**, nunca recriando o material — é o que evita travada ao
+aproximar). Terra usa 2k (dia/nuvens/noite); Sol fica 8k. Decisão pura "qual textura expor" em
+`lib/radar/progressiveTexture.ts`. Detalhes em `Bodies/README.md` ("Resolução de textura").
 
 ## Ao concluir uma feature
 

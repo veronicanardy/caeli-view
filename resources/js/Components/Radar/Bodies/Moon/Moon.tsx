@@ -6,7 +6,7 @@ import { MOON_FRAG, MOON_VERT } from '@/lib/radar/shaders/moon.glsl';
 import { ResolvedDistanceCulledScreenLabel } from '../../Overlays/SceneLabels';
 import { BodyHitbox } from '../BodyHitbox';
 import { directionFromBodyToSceneSun } from '../bodyLighting';
-import { useBodyTexture } from '../useBodyTexture';
+import { useProgressiveBodyTexture } from '../useProgressiveBodyTexture';
 
 /**
  * Lua na cena do radar orbital.
@@ -48,14 +48,22 @@ export function Moon({
     const en = locale === 'en';
     const [hovered, setHovered] = useState(false);
 
+    // LOD progressivo: a 2k entra rápido (e conta na barra de carregamento); a 8k carrega
+    // em segundo plano e, quando já está na GPU, vira a melhor textura (`highReady`).
     // Shader customizado: a textura entra como RAW e o decode sRGB é feito no GLSL.
-    const texture = useBodyTexture('/images/moon/moon-8k.jpg', 'raw');
+    const { texture, highReady } = useProgressiveBodyTexture(
+        '/images/moon/moon-2k.jpg',
+        '/images/moon/moon-8k.jpg',
+        'raw',
+    );
     const earthToMoonVector = geocentricPosition ?? position;
 
     const meshRef = useRef<THREE.Mesh>(null);
 
-    // Material estável por textura: os uniforms são atualizados in-place no efeito abaixo.
-    // Recriar o ShaderMaterial a cada tick de efeméride forçava recompilação/relink no renderer.
+    // Material criado UMA vez, quando a primeira textura (2k) chega, e mantido estável: a
+    // troca 2k→8k é feita in-place no uniform (efeito abaixo), nunca recriando o material.
+    // Recriar o ShaderMaterial forçaria recompilação/relink no renderer — a travadinha que o
+    // LOD existe para evitar. Por isso o useMemo NÃO depende de `texture`, só do primeiro valor.
     const material = useMemo(() => {
         if (!texture) return null;
 
@@ -69,11 +77,22 @@ export function Moon({
             vertexShader: MOON_VERT,
             fragmentShader: MOON_FRAG,
         });
-    }, [texture]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [texture != null]);
 
     useEffect(() => () => {
         material?.dispose();
     }, [material]);
+
+    // Troca 2k→8k in-place: só o ponteiro do uniform muda, sem recriar/recompilar o material.
+    // A 8k já está na GPU quando `highReady` (o upload foi pago em segundo plano), então isto
+    // custa ~1 frame e não congela um gesto de câmera em andamento.
+    useEffect(() => {
+        if (material && texture) {
+            material.uniforms.surfaceMap.value = texture;
+            texture.needsUpdate = true;
+        }
+    }, [material, highReady, texture]);
 
     // Orientação tidal e uniforms dependem só da efeméride (posição, vetor Terra→Lua, fase),
     // que muda por tick de dados e não por frame. Em useFrame isso alocava ~12 Vector3/Matrix4
