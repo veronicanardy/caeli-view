@@ -8,7 +8,6 @@ import { useTranslation } from '@/i18n';
 import { useClosestNow } from '@/hooks/useClosestNow';
 import { useKnownAsteroidDetail } from '@/hooks/useKnownAsteroidDetail';
 import { useRadarControls } from '@/hooks/useRadarControls';
-import { isKnownAsteroidId } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
 import { tutorialLiveFactsFromTopObject } from '@/Components/Radar/Lists/radarSceneObjectPresentation';
 import {
     ApproachObservatoryFilters,
@@ -58,8 +57,6 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
 
     // O critério "famosos" também vem do backend agora (endpoint /radar/famous, via useClosestNow),
     // com posição e trilha curta do Horizons. Tudo a jusante consome `closestNowData` indistintamente.
-    // `isFamous` segue só para o detalhe SBDB progressivo do famoso em foco.
-    const isFamous = selectionMode === 'famous';
     const closestNowData = fetchedData;
     const closestNowLoading = fetchLoading;
     const closestNowError = fetchError;
@@ -90,18 +87,21 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
         return closestNowApproaches.find((approach) => approach.id === selectedFocusId) ?? null;
     }, [closestNowApproaches, selectedFocusId]);
 
-    // Detalhe SBDB do conhecido selecionado (carregamento progressivo): só busca quando o objeto em
-    // foco é um asteroide famoso. O número de catálogo (permanentNumber) é o identificador da consulta.
-    const knownDetailIdentifier = isFamous && focusApproach && isKnownAsteroidId(focusApproach.id)
-        ? focusApproach.permanentNumber ?? null
+    // Detalhe SBDB do asteroide selecionado (carregamento progressivo): busca para QUALQUER asteroide
+    // em foco, famoso ou do feed, para enriquecer o card com classe orbital, albedo e rotação. Cometas
+    // e naves não têm essa ficha no SBDB de asteroide, então ficam de fora. O identificador é o número
+    // de catálogo quando há (famosos e NEOs numerados), senão a designação (NEOs provisórios).
+    const focusIsAsteroid = focusApproach?.objectType === 'asteroid';
+    const sbdbDetailIdentifier = focusApproach && focusIsAsteroid
+        ? focusApproach.permanentNumber ?? focusApproach.designation ?? null
         : null;
-    const { detail: knownDetail } = useKnownAsteroidDetail(knownDetailIdentifier);
+    const { detail: knownDetail } = useKnownAsteroidDetail(sbdbDetailIdentifier);
 
-    // Mescla os campos vivos do SBDB sobre o objeto sintético do conhecido em foco. A base já está
-    // visível; quando o detalhe chega, o card ganha classe orbital, albedo, rotação, etc.
+    // Mescla os campos vivos do SBDB sobre o objeto em foco. A base já está visível; quando o detalhe
+    // chega, o card ganha classe orbital, albedo, rotação, etc. (carregamento progressivo).
     const sceneData = useMemo(() => {
         if (!closestNowData) return closestNowData;
-        if (!isFamous || !knownDetail || !focusApproach) return closestNowData;
+        if (!knownDetail || !focusApproach) return closestNowData;
         const refinedDiameterM = knownDetail.diameterKm != null ? Math.round(knownDetail.diameterKm * 1000) : null;
         return {
             ...closestNowData,
@@ -123,7 +123,7 @@ export default function ApproachObservatoryIndex({ filters, initialSunDirection 
                 };
             }),
         };
-    }, [closestNowData, isFamous, knownDetail, focusApproach]);
+    }, [closestNowData, knownDetail, focusApproach]);
 
     return (
         <>

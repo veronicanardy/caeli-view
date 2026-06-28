@@ -206,18 +206,38 @@ function NavigationProgress() {
         return null;
     }
 
+    const percent = Math.round(progress * 100);
+
+    // Overlay que cobre a TELA TODA (não só uma barra fina sob a navbar): a troca de rota fica
+    // explícita, sem tela em branco aparentando travamento. Fica até o evento `finish` do Inertia
+    // (página de destino montada); destinos pesados como o radar entregam ao próprio overlay deles.
     return (
         <div
-            className={`app-route-progress ${leaving ? 'app-route-progress-leaving' : ''}`}
+            className={`app-route-overlay ${leaving ? 'app-route-overlay-leaving' : ''}`}
             role="status"
             aria-live="polite"
             aria-label={label}
         >
-            <span
-                className="app-route-progress-bar"
-                style={{ transform: `scaleX(${progress})` }}
-                aria-hidden="true"
-            />
+            <div className="app-route-overlay-card">
+                <div className="app-route-overlay-head">
+                    <span className="app-route-overlay-dot" aria-hidden="true" />
+                    <span className="app-route-overlay-label">{label}</span>
+                    <span className="app-route-overlay-percent">{percent}%</span>
+                </div>
+                <div
+                    className="app-route-overlay-track"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent}
+                >
+                    <span
+                        className="app-route-overlay-bar"
+                        style={{ transform: `scaleX(${progress})` }}
+                        aria-hidden="true"
+                    />
+                </div>
+            </div>
         </div>
     );
 }
@@ -263,12 +283,12 @@ export function AppLayout({ children, hideHeader = false, hideFooter = false, lo
            demais páginas o layout cresce com o conteúdo (min-h-screen) e rola normalmente, mesmo
            quando o rodapé está escondido (ex.: Termos). */}
         <div className={`flex flex-col ${effectiveLockViewport ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
+            {/* Overlay de carregamento de rota: cobre a TELA TODA. Fica FORA do header de propósito,
+               para não herdar o opacity-0 quando o header está escondido (radar) e para cobrir tudo. */}
+            <NavigationProgress />
             <header className={`app-header sticky top-0 z-[100] border-b border-white/10 bg-space-950/[0.88] backdrop-blur-xl transition-opacity duration-300 ${effectiveHideHeader ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
                 {/* Hairline ciano de assinatura, espelha a linha do footer */}
                 <div className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-signal-cyan/25 to-transparent" aria-hidden="true" />
-                {/* Barra de progresso de rota: ancorada na borda inferior do header,
-                   ocupa a largura toda logo abaixo da navbar. */}
-                <NavigationProgress />
                 <div ref={menuRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between lg:h-auto lg:py-4">
                         <Link href="/" prefetch className="app-brand group flex items-center gap-3">

@@ -243,13 +243,20 @@ export function useRadar3DFocusActions({
             }
 
             // CLOSE-UP genérico (demais naves, sozinhas no espaço): a câmera cola no marcador, mostrando a
-            // sonda de perto (o resto do Sistema Solar fica fora do quadro, e tudo bem). A distância da
+            // sonda BEM de perto (o resto do Sistema Solar fica fora do quadro, e tudo bem). A distância da
             // câmera é proporcional ao RAIO DO MARCADOR (SPACECRAFT_FOCUS_RADIUS), não à distância da nave
             // à origem (dezenas de milhares de unidades): assim o enquadramento é o mesmo close-up
             // confortável para qualquer nave, perto ou longe. Ângulo 3/4 fixo (a direção do Sol, a dezenas
-            // de UA, é quase paralela e dava enquadramentos rasos). ×8 deixa a sonda inteira no quadro.
+            // de UA, é quase paralela e dava enquadramentos rasos). ×4,5 cola na sonda (×8 vinha longe
+            // demais, a nave virava um pontinho). A Juno é a exceção (acima): fica mais larga para Júpiter
+            // caber no fundo, e não é tocada aqui.
+            // EXCEÇÃO Voyager (-31/-32): o GLB tem booms longuíssimos (magnetômetro ~13 m), então ao
+            // normalizar "maior eixo = 2" o CORPO/prato fica pequeno no quadro e a nave parecia distante.
+            // Aproximamos mais (×2,6) para o corpo da Voyager preencher como as demais.
+            const isVoyager = craft.horizonsId === '-31' || craft.horizonsId === '-32';
+            const closeUpMultiplier = isVoyager ? 2.6 : 4.5;
             const viewDir = new THREE.Vector3(0.5, 0.4, 0.75).normalize();
-            setSpacecraftFocusTarget({ ...framingForBody(craftVec, SPACECRAFT_FOCUS_RADIUS, viewDir, 8), durationSeconds: 1.2 });
+            setSpacecraftFocusTarget({ ...framingForBody(craftVec, SPACECRAFT_FOCUS_RADIUS, viewDir, closeUpMultiplier), durationSeconds: 1.2 });
         });
     }, [collapseNavigationForMobile, ephemeris, onClearSelection, withOrbitExit, spacecraftPositions]);
 

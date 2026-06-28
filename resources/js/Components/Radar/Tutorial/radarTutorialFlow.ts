@@ -46,7 +46,7 @@ export type TutorialActionPayload = {
     objectIsFirst?: boolean;
     mode?: SelectionMode;
     limit?: ObjectLimit;
-    tab?: 'summary' | 'physical' | 'approach' | 'history';
+    tab?: 'summary' | 'physical' | 'approach' | 'mission' | 'history';
 };
 
 type TutorialTab = NonNullable<TutorialActionPayload['tab']>;

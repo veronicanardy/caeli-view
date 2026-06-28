@@ -26,6 +26,7 @@ que precise do mesmo pipeline gráfico.
 - Progresso puro da barra de carregamento (`loadingProgress.ts`): etapas reais → porcentagem suave, sem React
 - Registrador de texturas dos corpos (`bodyTextureRegistry.ts`): conta texturas que começaram a carregar e que já resolveram, para a barra só concluir com a cena vestida, não no primeiro frame com materiais de fallback
 - Decisão pura do LOD de textura (`progressiveTexture.ts`): dada a textura leve, a nítida e se a nítida já subiu à GPU, decide qual expor e se já pode trocar (`useProgressiveBodyTexture` consome)
+- Decisão pura de quais abas o card de foco mostra por tipo de objeto (`focusCardTabs.ts` → `tabsForFocusObject`): asteroide/cometa têm Aproximação e Perfil físico, nave tem Missão (sem Aproximação nem Perfil físico vazios), corpo celeste não tem Aproximação; História entra ao fim quando há lore (`UnifiedFocusCard` consome)
 
 ## O que NÃO fica aqui
 
@@ -99,6 +100,7 @@ Os testes unitários ficam em `tests/js/lib/radar/` e seguem o padrão Vitest do
 | `radarLabels.ts`      | `../../Radar/radarLabels.test.ts`       | Prioridade, primários nunca somem por colisão, densidade local das rochas, oclusão 3D forte |
 | `bodyTextureRegistry.ts` | `bodyTextureRegistry.test.ts`        | Decisão pura "todas resolveram", incremento de registrados/resolvidos, idempotência do settle |
 | `progressiveTexture.ts` | `progressiveTexture.test.ts`          | Decisão LOD: expõe 2k até a 8k subir à GPU, troca para 8k quando pronta, nunca marca pronta sem textura |
+| `focusCardTabs.ts`    | `focusCardTabs.test.ts`                 | Abas por tipo: nave sem Aproximação/Perfil físico (tem Missão), corpo sem Aproximação, História ao fim quando há lore |
 | _(transversal)_       | `helioSceneProjection.test.ts`          | Firewall científico: a projeção heliocêntrica preserva direção, alinhamento relativo no mesmo frame, objeto na região de Júpiter, unidades/eixos aplicados uma vez |
 
 `helioSceneProjection.test.ts` não cobre um arquivo específico: trava INVARIANTES da pipeline de posicionamento (a régua é fiel à direção e à UA) contra regressões, mesmo que a implementação seja reescrita. A independência entre posição científica e modelo 3D vive em `tests/js/Radar/modelPositionIndependence.test.ts`.

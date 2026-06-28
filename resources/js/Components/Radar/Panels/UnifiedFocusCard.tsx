@@ -21,12 +21,15 @@ import { formatDistanceAU, formatRelativeDayLabel, formatTimestamp } from '@/lib
 import { isBeyondRenderLimit } from '@/lib/radar/trajectorySampling';
 import { albedoExplanation, motionLabel, objectTypeEyebrow, orbitClassContext, orbitClassLabel, riskAssessment, rotationExplanation, sizeComparison, smartSummary, trajectoryStatusBadge, velocityComparison, type StatusBadgeIcon } from './focusCardPresentation';
 import { knownCometById, knownCometHeliocentricDistanceKm } from '../Bodies/Comet/knownComets';
+import { knownSpacecraftById, knownSpacecraftHeliocentricDistanceKm } from '../Bodies/Spacecraft/knownSpacecraft';
+import { spacecraftContext, spacecraftMilestones } from './spacecraftData';
 import { orbitFactsFromElements } from '@/lib/keplerOrbit';
+import { tabsForFocusObject, type FocusObjectKind } from '@/lib/radar/focusCardTabs';
 import { famousLoreFor } from './famousLore';
 import { BODIES, type BodyId } from './bodyData';
 import { PanelShell, usePanelSheetState } from './PanelShell';
 import { AsteroidModelPreview } from './AsteroidModelPreview';
-import { SpacecraftCardPreview } from './SpacecraftCardPreview';
+import { SpacecraftImagePreview } from './SpacecraftImagePreview';
 import { BodyImagePreview } from './BodyImagePreview';
 import { useRadarTutorialOptional } from '../Tutorial/RadarTutorialContext';
 
@@ -41,12 +44,13 @@ function SheetAwarePreview({ children }: { children: ReactNode }) {
     return <>{children}</>;
 }
 
-type Tab = 'summary' | 'physical' | 'approach' | 'history';
+type Tab = 'summary' | 'physical' | 'approach' | 'mission' | 'history';
 
 const TAB_LABELS_PT: Record<Tab, string> = {
     summary: 'Resumo',
     physical: 'Perfil físico',
     approach: 'Aproximação',
+    mission: 'Missão',
     history: 'História',
 };
 
@@ -54,6 +58,7 @@ const TAB_LABELS_EN: Record<Tab, string> = {
     summary: 'Summary',
     physical: 'Physical Profile',
     approach: 'Approach',
+    mission: 'Mission',
     history: 'History',
 };
 
@@ -144,6 +149,21 @@ export function UnifiedFocusCard(props: Props) {
     if (props.kind === 'body') {
         return (
             <BodyCard
+                {...props}
+                en={en}
+                tab={tab}
+                setTab={setTab}
+                contentVisible={contentVisible}
+                enterStyle={enterStyle}
+            />
+        );
+    }
+
+    // Nave: card próprio (Resumo · Missão · História). Não herda as abas de asteroide, que ficariam
+    // vazias (sem evento de aproximação nem medidas físicas do feed).
+    if (props.object.approach.objectType === 'spacecraft') {
+        return (
+            <SpacecraftCard
                 {...props}
                 en={en}
                 tab={tab}
@@ -262,9 +282,10 @@ function AsteroidCard({
     ) : undefined;
 
     // História só aparece quando o objeto é famoso (tem lore cadastrada). Asteroides comuns do feed
-    // seguem com as 3 abas de sempre.
+    // seguem com as 3 abas de sempre. A lista de abas vem do resolvedor puro (focusCardTabs).
     const history = famousLoreFor(a.id, locale);
-    const tabs: Tab[] = history ? ['summary', 'physical', 'approach', 'history'] : ['summary', 'physical', 'approach'];
+    const objectKind: FocusObjectKind = a.objectType === 'comet' ? 'comet' : 'asteroid';
+    const tabs: Tab[] = tabsForFocusObject(objectKind, history != null);
     const tabLabels = en ? TAB_LABELS_EN : TAB_LABELS_PT;
 
     // Trocar de um famoso (com História) para um objeto sem História deixaria a aba ativa órfã:
@@ -292,9 +313,7 @@ function AsteroidCard({
             dataTutorial="selected-card"
         >
             <SheetAwarePreview>
-                {a.objectType === 'spacecraft'
-                    ? <SpacecraftCardPreview name={a.displayName ?? a.name} />
-                    : <AsteroidModelPreview object={object} locale={locale} />}
+                <AsteroidModelPreview object={object} locale={locale} />
             </SheetAwarePreview>
 
             {/* Abas — visíveis em mobile e desktop */}
@@ -512,7 +531,73 @@ function AsteroidCard({
                         );
                     })() : null}
 
-                    {tab === 'physical' && !knownCometById(a.id) ? (() => {
+                    {/* Cometa comum (do feed, sem catálogo): perfil de núcleo honesto. Não cai no bloco de
+                        asteroide, que mostraria um "diâmetro" esférico enganoso e um campo de magnitude H
+                        (de asteroide) vazio. Sem M1/M2 aqui: o feed não traz a magnitude de cometa. */}
+                    {tab === 'physical' && a.objectType === 'comet' && !knownCometById(a.id) ? (() => {
+                        const nucleusMeters = a.diameterMeters
+                            ?? (a.estimatedDiameterMinMeters != null && a.estimatedDiameterMaxMeters != null
+                                ? Math.round((a.estimatedDiameterMinMeters + a.estimatedDiameterMaxMeters) / 2)
+                                : null);
+                        return (
+                        <dl className="space-y-3 text-[13px]">
+                            <Row label={en ? 'Nucleus' : 'Núcleo'}>
+                                <span className="flex flex-col gap-0.5">
+                                    <span>{en ? 'irregular icy nucleus' : 'núcleo de gelo irregular'}</span>
+                                    <span className="text-[11px] text-white/50">
+                                        {en ? 'a “dirty snowball” of ice and dust, not a sphere' : 'uma “bola de neve suja” de gelo e poeira, não uma esfera'}
+                                    </span>
+                                </span>
+                            </Row>
+                            {/* Tamanho do núcleo: só quando o feed traz alguma medida. Marcado como estimado,
+                                porque a maioria dos núcleos de cometa nunca foi medida de perto. */}
+                            {nucleusMeters != null ? (
+                                <>
+                                    <Row label={en ? 'Nucleus size' : 'Tamanho do núcleo'}>
+                                        <span className="flex flex-col items-end gap-0.5">
+                                            <span>{en ? `~${Math.round(nucleusMeters)} m across` : `~${Math.round(nucleusMeters)} m de extensão`}</span>
+                                            <span className="text-[11px] font-normal text-white/45">{en ? 'estimated' : 'estimado'}</span>
+                                        </span>
+                                    </Row>
+                                    <Row label={en ? 'Size compared to' : 'Tamanho comparável a'}>
+                                        {sizeComparison(nucleusMeters, en)}
+                                    </Row>
+                                </>
+                            ) : null}
+                            {velocity != null ? (
+                                <>
+                                    <Row label={en ? 'Speed' : 'Velocidade'}>
+                                        {new Intl.NumberFormat(locale).format(Math.round(velocity))} km/h
+                                    </Row>
+                                    {velocityComparison(velocity, en) ? (
+                                        <Row label={en ? 'Speed compared to' : 'Velocidade comparável a'}>
+                                            {velocityComparison(velocity, en)}
+                                        </Row>
+                                    ) : null}
+                                </>
+                            ) : null}
+                            {orbitFacts ? (
+                                <Row label={en ? 'Orbital period' : 'Período orbital'}>
+                                    {formatOrbitalPeriod(orbitFacts.periodYears, en)}
+                                </Row>
+                            ) : null}
+                            {effectiveElements ? (
+                                <Row label={en ? 'Eccentricity' : 'Excentricidade'}>
+                                    <span className="flex flex-col gap-0.5">
+                                        <span>{effectiveElements.ec.toFixed(effectiveElements.ec >= 0.99 ? 4 : 3).replace('.', en ? '.' : ',')}</span>
+                                        <span className="text-[11px] text-white/50">
+                                            {effectiveElements.ec >= 0.99 ? (en ? 'near-parabolic, a one-off visitor' : 'quase parabólica, visitante de passagem única')
+                                                : effectiveElements.ec >= 0.8 ? (en ? 'highly elongated orbit' : 'órbita bem alongada')
+                                                : (en ? 'elongated orbit' : 'órbita alongada')}
+                                        </span>
+                                    </span>
+                                </Row>
+                            ) : null}
+                        </dl>
+                        );
+                    })() : null}
+
+                    {tab === 'physical' && a.objectType !== 'comet' ? (() => {
 const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters == null && a.absoluteMagnitude != null
                             ? Math.round((1329 / Math.sqrt(0.25)) * Math.pow(10, -a.absoluteMagnitude / 5) * 1000)
                             : null;
@@ -823,6 +908,171 @@ const hFallbackMin = a.diameterMeters == null && a.estimatedDiameterMinMeters ==
                                 <ArrowRight className="size-3" aria-hidden="true" />
                             </button>
                         </>
+                    ) : null}
+                </div>
+            </div>
+        </PanelShell>
+    );
+}
+
+// ─── Card de nave ──────────────────────────────────────────────────────────────
+
+/**
+ * Card de uma nave/missão (Voyager, Pioneer, New Horizons, Juno). Abas Resumo · Missão · História,
+ * sem Aproximação (não há flyby da Terra) nem Perfil físico (nave não tem diâmetro/velocidade/magnitude
+ * do feed). A identidade (operador, ano, distância ao Sol) vem de KNOWN_SPACECRAFT, casada pelo id.
+ */
+function SpacecraftCard({
+    object,
+    onClose,
+    orbitMode,
+    locale,
+    onShowPanel,
+    panelRef,
+    desktopPanelCollapsed = false,
+    en,
+    tab,
+    setTab,
+    contentVisible,
+    enterStyle,
+}: Omit<AsteroidProps, 'kind'> & TabState) {
+    const a = object.approach;
+    const craft = knownSpacecraftById(a.id);
+    // Contexto rico (como o dos planetas); cai no resumo genérico do smartSummary se a nave não tiver
+    // conteúdo editorial cadastrado.
+    const context = spacecraftContext(a.id, locale)
+        ?? smartSummary({ objectType: 'spacecraft', sizeMeters: null, velocityKph: null }, en);
+    const milestones = spacecraftMilestones(a.id);
+    // No radar a distância importante é DA TERRA. A dezenas/centenas de UA, a Terra (~1 UA) é desprezível
+    // perto da distância heliocêntrica, então este número (heliocêntrico) também é a distância da Terra,
+    // com erro desprezível — rotulamos como "da Terra", que é o que o usuário quer ler aqui.
+    const distanceKm = object.currentDistanceKm
+        ?? (craft ? knownSpacecraftHeliocentricDistanceKm(craft) : null);
+    const auText = formatDistanceAU(distanceKm, locale);
+    const operator = craft ? (en ? craft.operator.en : craft.operator.pt) : null;
+
+    const history = famousLoreFor(a.id, locale);
+    const tabs: Tab[] = tabsForFocusObject('spacecraft', history != null);
+    const tabLabels = en ? TAB_LABELS_EN : TAB_LABELS_PT;
+
+    useEffect(() => {
+        if (tab !== 'summary' && !tabs.includes(tab)) setTab('summary');
+    }, [tab, tabs, setTab]);
+
+    const eyebrowPrefix = onShowPanel ? (
+        <button
+            type="button"
+            onClick={onShowPanel}
+            data-tutorial="object-list-toggle"
+            className="lg:hidden flex items-center gap-1 py-1 text-[11px] text-white/50 transition hover:text-white/80 mr-1"
+            aria-label={en ? 'Back to list' : 'Voltar à lista'}
+        >
+            <ChevronDown className="-rotate-90 size-3" />
+            {en ? 'List' : 'Lista'}
+        </button>
+    ) : undefined;
+
+    return (
+        <PanelShell
+            en={en}
+            onClose={onClose}
+            closeLabel={en ? 'Close focus card' : 'Fechar painel'}
+            showCloseButton={!orbitMode}
+            eyebrow={en ? 'Spacecraft · Mission' : 'Nave · Missão'}
+            eyebrowPrefix={eyebrowPrefix}
+            title={a.displayName ?? a.name}
+            dotColor="#9fc0e8"
+            borderClass="border-signal-cyan/25"
+            className={`flex w-full lg:w-[min(22rem,48%)] flex-col ${desktopRailClasses(desktopPanelCollapsed, orbitMode)}`}
+            style={enterStyle}
+            panelRef={panelRef}
+            dataTutorial="selected-card"
+        >
+            <SheetAwarePreview>
+                <SpacecraftImagePreview id={a.id} name={a.displayName ?? a.name} />
+            </SheetAwarePreview>
+
+            <FocusTabBar
+                tabs={tabs}
+                tab={tab}
+                setTab={setTab}
+                labels={tabLabels}
+                ariaLabel={en ? 'Focus card sections' : 'Seções do painel de foco'}
+            />
+
+            <div
+                role="tabpanel"
+                id="focus-tabpanel"
+                aria-labelledby={`focus-tab-${tab}`}
+                className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 lg:px-4"
+                style={{ transition: 'opacity 0.12s ease', opacity: contentVisible ? 1 : 0 }}
+            >
+                <div className="lg:h-[15rem]">
+                    {tab === 'summary' ? (
+                        <div className="space-y-2.5 lg:space-y-3.5">
+                            {context ? (
+                                <p className="text-[12px] leading-relaxed text-white/55 lg:text-[12.5px]">{context}</p>
+                            ) : null}
+                            {/* Distância DA TERRA: a métrica que importa no radar. A dezenas/centenas de UA, a
+                                Terra (~1 UA) é desprezível perto da distância ao Sol, então este número
+                                heliocêntrico é também a distância da Terra, com erro desprezível. */}
+                            <div>
+                                <div className="flex items-baseline justify-between gap-2">
+                                    <span className="text-[10.5px] font-normal uppercase tracking-wide text-white/50">
+                                        {en ? 'Distance from Earth' : 'Distância da Terra'}
+                                    </span>
+                                    <span className={`flex items-center gap-1 text-[10px] ${object.hasRealCurrentDistance ? 'text-white/45' : 'text-yellow-400/75'}`}>
+                                        {!object.hasRealCurrentDistance ? <TriangleAlert className="size-2.5 shrink-0" aria-hidden="true" /> : null}
+                                        {object.hasRealCurrentDistance
+                                            ? (en ? 'live · Horizons' : 'ao vivo · Horizons')
+                                            : (en ? 'approximate position' : 'posição aproximada')}
+                                    </span>
+                                </div>
+                                <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
+                                    <span className="text-lg font-semibold leading-tight text-white">{approxKm(distanceKm)}</span>
+                                    <span className="text-[11px] text-white/50">· {auText}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {tab === 'mission' ? (
+                        <div className="space-y-3.5">
+                            {operator ? (
+                                <dl className="space-y-3 text-[13px]">
+                                    <Row label={en ? 'Operator' : 'Operadora'}>{operator}</Row>
+                                </dl>
+                            ) : null}
+                            {/* Linha do tempo: marcos passados e previsões futuras. Futuro destacado em ciano
+                                com selo "estimado", o resto neutro. Conteúdo curado em spacecraftData. */}
+                            {milestones.length > 0 ? (
+                                <ol className="relative space-y-2.5 border-l border-white/10 pl-3.5">
+                                    {milestones.map((m, i) => (
+                                        <li key={i} className="relative">
+                                            <span
+                                                className={`absolute -left-[1.18rem] top-1 size-1.5 rounded-full ${m.future ? 'bg-signal-cyan/80' : 'bg-white/35'}`}
+                                                aria-hidden="true"
+                                            />
+                                            <div className="flex items-baseline gap-2">
+                                                <span className={`shrink-0 text-[11px] font-semibold tabular-nums ${m.future ? 'text-signal-cyan/85' : 'text-white/65'}`}>
+                                                    {m.year}
+                                                </span>
+                                                {m.future ? (
+                                                    <span className="rounded-full border border-signal-cyan/30 px-1.5 py-px text-[9px] uppercase tracking-wide text-signal-cyan/70">
+                                                        {en ? 'forecast' : 'previsão'}
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                            <p className="mt-0.5 text-[12px] leading-snug text-white/55">{en ? m.en : m.pt}</p>
+                                        </li>
+                                    ))}
+                                </ol>
+                            ) : null}
+                        </div>
+                    ) : null}
+
+                    {tab === 'history' && history ? (
+                        <p className="text-[12.5px] leading-relaxed text-white/55 lg:text-[13px]">{history}</p>
                     ) : null}
                 </div>
             </div>

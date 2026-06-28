@@ -50,9 +50,6 @@ export function SpacecraftModel({ asset, opacity }: SpacecraftModelProps) {
         return { scene: clone, offset: center.clone().multiplyScalar(-1), scale: 2 / maxAxis };
     }, [gltf.scene, asset.url]);
 
-    // Guarda o estado original de cada material (opacidade) para o esmaecimento restaurar fielmente.
-    const originals = useRef(new WeakMap<THREE.Material, { opacity: number; transparent: boolean }>());
-
     // Ilumina o material da NASA (emissivo com a própria cor/textura) e doma o metalness — in-place, no
     // material original MeshStandard (não troca o tipo). Roda uma vez por modelo.
     useEffect(() => {
@@ -64,9 +61,12 @@ export function SpacecraftModel({ asset, opacity }: SpacecraftModelProps) {
             for (const raw of mats) {
                 const mat = raw as THREE.MeshStandardMaterial;
                 if (!mat || !mat.isMaterial) continue;
-                if (!originals.current.has(mat)) {
-                    originals.current.set(mat, { opacity: mat.opacity, transparent: mat.transparent });
-                }
+                // Nave NUNCA é transparente: alguns GLBs da NASA trazem materiais autorados como
+                // transparentes (mantas térmicas, telas de antena), o que deixava a nave apagada/raio-X
+                // (a Voyager 1 sumia). Forçamos opaco aqui; o esmaecimento de foco usa este opaco como base.
+                mat.transparent = false;
+                mat.opacity = 1;
+                mat.depthWrite = true;
                 if (mat.isMeshStandardMaterial) {
                     mat.metalness = Math.min(mat.metalness, 0.25);
                     mat.roughness = Math.max(mat.roughness, 0.5);
@@ -85,7 +85,8 @@ export function SpacecraftModel({ asset, opacity }: SpacecraftModelProps) {
         });
     }, [scene]);
 
-    // Esmaecimento quando OUTRA nave está focada. Restaura a opacidade original quando opacity >= 1.
+    // Esmaecimento quando OUTRA nave está focada. A base é SEMPRE opaca (opacity 1, transparent false):
+    // só esmaece de propósito, nunca herda transparência baked-in do GLB. Quando opacity >= 1 volta a opaco.
     useEffect(() => {
         scene.traverse((obj) => {
             const mesh = obj as THREE.Mesh;
@@ -94,13 +95,12 @@ export function SpacecraftModel({ asset, opacity }: SpacecraftModelProps) {
             for (const raw of mats) {
                 const mat = raw as THREE.Material;
                 if (!mat?.isMaterial) continue;
-                const orig = originals.current.get(mat) ?? { opacity: mat.opacity, transparent: mat.transparent };
                 if (opacity >= 1) {
-                    mat.transparent = orig.transparent;
-                    mat.opacity = orig.opacity;
+                    mat.transparent = false;
+                    mat.opacity = 1;
                 } else {
                     mat.transparent = true;
-                    mat.opacity = orig.opacity * opacity;
+                    mat.opacity = opacity;
                 }
             }
         });
