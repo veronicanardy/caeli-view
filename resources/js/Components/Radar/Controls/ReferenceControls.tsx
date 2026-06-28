@@ -43,7 +43,14 @@ export function ReferenceSection({
                     {en ? 'References' : 'Referências'}
                 </div>
             ) : null}
-            <div className="flex items-center gap-px rounded-lg border border-white/[0.07] bg-white/[0.02] p-0.5" data-tutorial="reference-controls">
+            {/*
+                A faixa separa as refer\u00eancias por natureza: a primeira linha foca a c\u00e2mera num corpo
+                com um clique (Sol/Terra/Lua); a segunda abre grupos que expandem um flyout
+                (Planetas/Naves). Antes os cinco controles dividiam uma linha s\u00f3 e o texto encostava
+                nos divisores; agora cada grupo tem sua pr\u00f3pria linha e seu divisor interno.
+            */}
+            <div className="space-y-1" data-tutorial="reference-controls">
+                <div className="flex items-center gap-px rounded-lg border border-white/[0.07] bg-white/[0.02] p-0.5">
                 <AstroButton
                     symbol={'\u2609'}
                     label={en ? 'Sun' : 'Sol'}
@@ -82,9 +89,9 @@ export function ReferenceSection({
                     dataTutorial="reference-body"
                     labelAlways={labelsAlwaysVisible}
                 />
+                </div>
                 {!orbitMode ? (
-                    <>
-                        <Divider />
+                    <div className="flex items-center gap-px rounded-lg border border-white/[0.07] bg-white/[0.02] p-0.5">
                         <AstroButton
                             symbol={'\u2726'}
                             label={en ? 'Planets' : 'Planetas'}
@@ -110,7 +117,7 @@ export function ReferenceSection({
                             dataTutorial="reference-spacecraft"
                             labelAlways={labelsAlwaysVisible}
                         />
-                    </>
+                    </div>
                 ) : null}
             </div>
         </div>
