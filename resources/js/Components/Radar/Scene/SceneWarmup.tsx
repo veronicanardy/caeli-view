@@ -27,39 +27,10 @@
 import { useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { collectPendingTextures } from './sceneWarmupGpu';
 
 /** Momentos dos passes de warmup após montagem/mudança, em ms. Cobrem a chegada assíncrona de texturas e GLBs. */
 const WARMUP_PASS_DELAYS_MS = [500, 2500, 6000, 12000, 25000];
-
-/** Coleta as texturas ainda não enviadas à GPU a partir dos materiais da cena. */
-function collectPendingTextures(scene: THREE.Scene, uploaded: WeakSet<THREE.Texture>): THREE.Texture[] {
-    const pending: THREE.Texture[] = [];
-
-    const considerTexture = (value: unknown) => {
-        if (value instanceof THREE.Texture && value.image && !uploaded.has(value)) {
-            uploaded.add(value);
-            pending.push(value);
-        }
-    };
-
-    scene.traverse((obj) => {
-        const mesh = obj as THREE.Mesh;
-        if (!mesh.isMesh) return;
-        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const material of materials) {
-            if (!material) continue;
-            // Materiais padrão expõem texturas como propriedades diretas (map, normalMap, ...).
-            for (const value of Object.values(material)) considerTexture(value);
-            // ShaderMaterial guarda texturas dentro dos uniforms.
-            const uniforms = (material as THREE.ShaderMaterial).uniforms;
-            if (uniforms) {
-                for (const uniform of Object.values(uniforms)) considerTexture(uniform?.value);
-            }
-        }
-    });
-
-    return pending;
-}
 
 export function SceneWarmup({ revision }: { revision: string }) {
     const gl = useThree((s) => s.gl);
