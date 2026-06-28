@@ -65,8 +65,8 @@ export function Earth({
 }: EarthProps) {
     const en = locale === 'en';
     const day = useBodyTexture('/images/earth/blue-marble-land-shallow-topo-2048.jpg', 'raw');
-    const night = useBodyTexture('/images/earth/8k_earth_nightmap.jpg', 'raw');
-    const clouds = useBodyTexture('/images/earth/8k_earth_clouds.jpg', 'srgb');
+    const night = useBodyTexture('/images/earth/earth-night-lights-2048.jpg', 'raw');
+    const clouds = useBodyTexture('/images/earth/earth-clouds-2048.jpg', 'srgb');
 
     const groupRef = useRef<THREE.Group>(null);
     const cloudsMatRef = useRef<THREE.ShaderMaterial>(null);

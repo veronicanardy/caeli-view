@@ -18,6 +18,7 @@ Ela não deve decidir seleção global, modo de câmera, critérios de lista, ra
 * `bodyLighting.ts`: helpers compartilhados de iluminação local dos corpos, como a direção dos planetas até o Sol visual da cena.
 * `planetBodyTypes.ts`: contrato comum de props para planetas ambiente focáveis.
 * `useBodyTexture.ts`: carregamento imperativo de texturas dos corpos, com fallback seguro enquanto a imagem não carrega.
+* `useProgressiveBodyTexture.ts`: LOD de textura para corpos grandes e visíveis ao entrar (Lua). Carrega uma versão leve (2k) primeiro, e a nítida (8k) em segundo plano; só troca depois que a 8k está na GPU, devolvendo `{ texture, highReady }`. O consumidor mantém o material estável e troca o uniform in-place quando `highReady` (sem recriar o material). A decisão pura "qual textura expor" vive em `@/lib/radar/progressiveTexture` (testada).
 
 ## Planetas ambiente
 
@@ -46,6 +47,17 @@ Por isso, os planetas ambiente (`Mercury` a `Neptune`) não recebem `sunDirectio
 
 * `Earth` usa `sunDirection`, `subsolarLatDeg` e `subsolarLonDeg` para orientar o globo e manter o terminador dia/noite coerente.
 * `Moon` usa `sunDirection` e posição geocêntrica para fase, orientação visual e relação com a Terra.
+
+## Resolução de textura (política)
+
+O peso das texturas domina o tempo de carregamento do radar (o usuário baixa cada uma). A política, por tamanho do corpo na cena:
+
+* **Corpo pequeno na cena** (Mercúrio, Vênus, Mars, Júpiter, Saturno, Urano, Netuno): usa **2k seco** (`*-2k.jpg`). Ocupam poucos pixels; 8k seria desperdício de download sem diferença visível. Os paths ficam em `lib/radar/planetData.ts`.
+* **Corpo grande e visível ao entrar** (Lua): usa **LOD progressivo** via `useProgressiveBodyTexture` (2k → 8k ao aproximar). A 2k entra rápido (e é o que a barra de carregamento espera); a 8k carrega em segundo plano e troca **in-place no uniform**, nunca recriando o material — é o que garante que a aproximação não trave.
+* **Terra**: dia já é 2k (`blue-marble-...-2048`); nuvens e luzes noturnas usam as 2k (`earth-clouds-2048`, `earth-night-lights-2048`), não as 8k.
+* **Sol**: mantém 8k (decisão de produto); a granulação do shader por cima esconde o ganho de uma 2k.
+
+Ao adicionar um corpo: escolha 2k seco por padrão; só use LOD se ele for grande na tela ao entrar. **Toda textura por `useBodyTexture` ou `useProgressiveBodyTexture`, nunca um `TextureLoader` solto** (senão não entra na conta da barra nem no aquecimento da GPU).
 
 ## Texturas e recursos WebGL
 
