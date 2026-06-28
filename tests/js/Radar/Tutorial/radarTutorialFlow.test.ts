@@ -145,6 +145,16 @@ describe('radarTutorialFlow permissions', () => {
         expect(doesTutorialActionCompleteStep(planetsStep, 'toggle-planets')).toBe(false);
         expect(doesTutorialActionCompleteStep(planetsStep, 'focus-planet', { planetId: 'mars' })).toBe(true);
     });
+
+    it('bloqueia abrir Naves durante o tutorial (botão fica apagado), mas libera fora dele', () => {
+        // Nenhum passo permite 'toggle-spacecraft', então o botão Naves fica
+        // disabled durante todo o tutorial, igual aos demais controles fora do passo.
+        expect(isTutorialActionAllowed(step('references-planets'), 'toggle-spacecraft')).toBe(false);
+        expect(isTutorialActionAllowed(step('references-bodies'), 'toggle-spacecraft')).toBe(false);
+        expect(isTutorialActionAllowed(step('welcome'), 'toggle-spacecraft')).toBe(false);
+        // Fora do tutorial (sem passo ativo) a ação é livre.
+        expect(isTutorialActionAllowed(null, 'toggle-spacecraft')).toBe(true);
+    });
 });
 
 describe('manualSkipClickSelectors', () => {

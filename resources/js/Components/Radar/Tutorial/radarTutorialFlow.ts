@@ -15,6 +15,7 @@ export type TutorialAction =
     | 'focus-sun'
     | 'focus-planet'
     | 'toggle-planets'
+    | 'toggle-spacecraft'
     | 'open-object-panel'
     | 'close-object-panel'
     | 'collapse-object-panel'

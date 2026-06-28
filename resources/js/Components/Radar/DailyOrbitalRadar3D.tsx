@@ -226,9 +226,11 @@ export function DailyOrbitalRadar3D({
     }, [runTutorialAction]);
 
     const changeSpacecraftOpen = useCallback((open: boolean) => {
-        setSpacecraftOpen(open);
-        if (open) setPlanetsOpen(false);
-    }, []);
+        runTutorialAction('toggle-spacecraft', {}, () => {
+            setSpacecraftOpen(open);
+            if (open) setPlanetsOpen(false);
+        });
+    }, [runTutorialAction]);
 
     const selectObjectForTutorial = useCallback((approach: UnifiedApproach) => {
         // O passo de seleção do tutorial só aceita a PRIMEIRA rocha da lista (a mais

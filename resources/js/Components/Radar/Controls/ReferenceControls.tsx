@@ -35,6 +35,7 @@ export function ReferenceSection({
     const canFocusEarth = tutorial?.isActionAllowed('focus-body', { body: 'earth' }) ?? true;
     const canFocusMoon = tutorial?.isActionAllowed('focus-body', { body: 'moon' }) ?? true;
     const canTogglePlanets = tutorial?.isActionAllowed('toggle-planets') ?? true;
+    const canToggleSpacecraft = tutorial?.isActionAllowed('toggle-spacecraft') ?? true;
 
     return (
         <div className={compact ? '' : 'border-b border-white/[0.04] px-2 pb-1.5 pt-2'}>
@@ -110,7 +111,11 @@ export function ReferenceSection({
                         <AstroButton
                             symbol={'\u29bf'}
                             label={en ? 'Spacecraft' : 'Naves'}
-                            onClick={() => onSpacecraftOpenChange(!spacecraftOpen)}
+                            onClick={() => {
+                                if (!canToggleSpacecraft) return;
+                                onSpacecraftOpenChange(!spacecraftOpen);
+                            }}
+                            disabled={!canToggleSpacecraft}
                             active={spacecraftOpen}
                             chevron
                             chevronOpen={spacecraftOpen}

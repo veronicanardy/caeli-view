@@ -55,9 +55,10 @@ Vários alvos existem em duas versões (desktop e mobile); `findVisibleTarget` r
 | `radar-filters` | barra de filtros desktop (`CompactConsoleBar`) e botão Filtros da `MobileActionBar` |
 | `radar-filter-criterion` | grupo de critério (`RadarObjectControls` desktop e `MobileFiltersSheetContent` mobile) |
 | `radar-filter-limit` | grupo de limite 5/15/30 (`RadarObjectControls` desktop e `MobileFiltersSheetContent` mobile) |
-| `reference-controls` | cluster de atalhos Sol/Terra/Lua/Planetas (`ReferenceControls`) |
+| `reference-controls` | wrapper das duas faixas de atalhos: Sol/Terra/Lua (foco direto) e Planetas/Naves (grupos) (`ReferenceControls`) |
 | `reference-body` | botões Sol, Terra e Lua individualmente (`ReferenceControls`) |
 | `reference-planets` | botão Planetas (`ReferenceControls`) |
+| `reference-spacecraft` | botão Naves (`ReferenceControls`) |
 | `planet-flyout` | flyout desktop ou acordeão mobile com a lista de planetas (`RadarNavigationPanel`/`RadarNavigationMobileContent`) |
 | `planet-option` | cada planeta dentro do flyout (`ReferenceControls`/`PlanetFlyout`) |
 | `object-list` | painel lateral desktop ou sheet de objetos mobile (`RadarNavigationPanel`) |
@@ -91,7 +92,7 @@ Regras de robustez:
 - o passo só avança por uma ação NOVA e válida do usuário no passo atual, nunca por estado herdado. As contemplações (`labels-view`, `fullscreen-view`) deixam a cena como está (sem nomes / em tela cheia); religar os nomes e sair da tela cheia são os passos SEGUINTES, feitos pelo usuário. O tutorial não restaura essa cena com um clique sintético, justamente para não satisfazer sozinho a condição do passo de restauração;
 - ESC ou "Pular tutorial" encerram e persistem como pulado. ESC não encerra com o guia aberto (lá ESC fecha o guia) nem em tela cheia (lá ESC sai do fullscreen, sinalizado por `data-fullscreen` no contêiner do canvas).
 
-Bloqueio do "usuário curioso": o overlay é `pointer-events: none`, então o clique físico chega na cena. O bloqueio NÃO é por região, é por AÇÃO. Toda ação real do radar (selecionar objeto na lista E na cena 3D, focar Sol/Terra/Lua/planeta, órbita, reset, labels, fullscreen, card, guia, filtros) passa por `runTutorialAction` no orquestrador (`DailyOrbitalRadar3D`), que checa `isActionAllowed(passo, ação)` ANTES de executar: ação não permitida não acontece, não é só "não avança". Os botões fora do passo ainda ficam `disabled`. O invariante `tests/js/Radar/Invariants/tutorialActionGate.test.ts` trava isso lendo o fonte do orquestrador: falha se um handler cru de seleção/foco (`selectObject`/`focusBody`/`focusSun`/`focusPlanet`) vazar direto numa prop de filho sem o wrapper gated. Exceção consciente: os gestos de câmera (rotação, zoom, teclado WASD) ficam sempre livres, porque a câmera nunca trava.
+Bloqueio do "usuário curioso": o overlay é `pointer-events: none`, então o clique físico chega na cena. O bloqueio NÃO é por região, é por AÇÃO. Toda ação real do radar (selecionar objeto na lista E na cena 3D, focar Sol/Terra/Lua/planeta, abrir o flyout de Planetas ou de Naves, órbita, reset, labels, fullscreen, card, guia, filtros) passa por `runTutorialAction` no orquestrador (`DailyOrbitalRadar3D`), que checa `isActionAllowed(passo, ação)` ANTES de executar: ação não permitida não acontece, não é só "não avança". Os botões fora do passo ainda ficam `disabled`. O invariante `tests/js/Radar/Invariants/tutorialActionGate.test.ts` trava isso lendo o fonte do orquestrador: falha se um handler cru de seleção/foco (`selectObject`/`focusBody`/`focusSun`/`focusPlanet`) vazar direto numa prop de filho sem o wrapper gated. Exceção consciente: os gestos de câmera (rotação, zoom, teclado WASD) ficam sempre livres, porque a câmera nunca trava.
 
 ## Persistência e reabertura
 
