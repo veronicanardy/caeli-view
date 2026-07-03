@@ -345,6 +345,8 @@ docker compose run --rm app npm install
 docker compose run --rm app php artisan key:generate
 ```
 
+> Ao mudar o `package.json`, o volume anônimo de `node_modules` guarda a versão antiga. Recrie com `docker compose up --build --renew-anon-volumes -d`.
+
 Suba os serviços e rode as migrations:
 
 ```bash

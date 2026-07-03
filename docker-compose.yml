@@ -29,16 +29,29 @@ services:
       JPL_TIMEOUT_SECONDS: 20
       JPL_RETRY_TIMES: 0
       HOME_OBSERVATORY_FEED_ENABLED: "false"
+    # Dev local usa CLEAR, não cache: com config/route/view cacheados, editar .env ou
+    # config/*.php exigia reiniciar o container pra valer. Caches são otimização de produção.
     command: >
       sh -lc "composer install --no-interaction --prefer-dist --optimize-autoloader &&
-      php artisan config:cache &&
-      php artisan route:cache &&
-      php artisan view:cache &&
+      php artisan config:clear &&
+      php artisan route:clear &&
+      php artisan view:clear &&
       (php artisan serve --host=0.0.0.0 --port=8000 &) &&
       npm run dev -- --host 0.0.0.0 --port 5173"
+    # O serve roda em subshell atrás do Vite; sem healthcheck o container ficaria "Up"
+    # mesmo com o Laravel morto. /up é a rota de health do bootstrap (withRouting).
+    # start_period folgado: composer install + boot do Vite levam tempo no primeiro up.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/up || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   postgres:
     image: postgres:17-alpine

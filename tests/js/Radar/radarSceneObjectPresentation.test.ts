@@ -13,9 +13,9 @@ import {
 // ─── formatObjectListTrailingLabel ────────────────────────────────────────────
 
 describe('formatObjectListTrailingLabel', () => {
-    it('usa distância em km no modo "closest" independente de approachDate', () => {
-        const result = formatObjectListTrailingLabel('closest', '2025-Jun-15 14:30', 384400, 'en');
-        // Modo closest deve usar distância, não data
+    it('usa distância em km no modo "nearest" independente de approachDate', () => {
+        const result = formatObjectListTrailingLabel('nearest', '2025-Jun-15 14:30', 384400, 'en');
+        // Modo nearest deve usar distância, não data
         expect(result).toMatch(/km|DL|k|M/i);
     });
 

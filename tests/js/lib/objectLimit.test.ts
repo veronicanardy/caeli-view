@@ -7,7 +7,7 @@
  * pode emitir 'all') e a camada de fetch (que só fala em número).
  */
 import { describe, expect, it } from 'vitest';
-import { OBJECT_LIMITS, OBJECT_LIMIT_MAX, resolveObjectLimit } from '@/types';
+import { OBJECT_LIMITS, OBJECT_LIMIT_MAX, resolveObjectLimit, type ObjectLimit } from '@/types';
 
 describe('resolveObjectLimit', () => {
     it('resolve o sentinela "all" para o teto do backend', () => {
@@ -17,7 +17,6 @@ describe('resolveObjectLimit', () => {
     it('mantém as quantidades numéricas inalteradas', () => {
         expect(resolveObjectLimit(5)).toBe(5);
         expect(resolveObjectLimit(15)).toBe(15);
-        expect(resolveObjectLimit(30)).toBe(30);
     });
 
     it('nunca devolve um valor acima do teto aceito pelo backend', () => {
@@ -26,7 +25,10 @@ describe('resolveObjectLimit', () => {
         }
     });
 
-    it('"all" resolve para mais que o chip 30', () => {
-        expect(resolveObjectLimit('all')).toBeGreaterThan(resolveObjectLimit(30));
+    it('"all" resolve para mais que o maior chip numérico', () => {
+        const largestNumericChip = Math.max(
+            ...OBJECT_LIMITS.filter((limit: ObjectLimit): limit is Exclude<ObjectLimit, 'all'> => limit !== 'all'),
+        );
+        expect(resolveObjectLimit('all')).toBeGreaterThan(largestNumericChip);
     });
 });

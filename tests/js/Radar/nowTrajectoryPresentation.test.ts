@@ -19,7 +19,8 @@ import type { TrajectoryPoint } from '@/types';
 // ─── getMovementDirection ─────────────────────────────────────────────────────
 
 function makePoint(vx: number, vy: number, vz?: number): TrajectoryPoint {
-    return { x: 0, y: 0, z: 0, distanceKm: null, timestamp: null, vx, vy, vz: vz ?? undefined } as TrajectoryPoint;
+    // timestamp null de propósito (o código tolera ponto sem carimbo); o double cast preserva isso.
+    return { x: 0, y: 0, z: 0, distanceKm: null, timestamp: null, vx, vy, vz: vz ?? undefined } as unknown as TrajectoryPoint;
 }
 
 const V_UNIT_X = makePoint(1, 0, 0);

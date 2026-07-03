@@ -271,7 +271,9 @@ describe('orbitClassContext', () => {
 // ─── riskAssessment ────────────────────────────────────────────────────────────
 
 function makeApproach(hazardFlag: boolean): UnifiedApproach {
-    return { id: 'X', name: 'X', displayName: null, objectType: 'asteroid', hazardFlag, approachDate: null, nominalDistanceKm: null, lunarDistance: null, absoluteMagnitude: null, diameterMeters: null, estimatedDiameterMinMeters: null, estimatedDiameterMaxMeters: null, relativeVelocityKph: null, subtitle: null } as UnifiedApproach;
+    // Stub mínimo: riskAssessment só lê hazardFlag; os campos ausentes não participam do teste.
+    // Double cast de propósito: o stub usa null onde o tipo real tem opcionais/uniões mais estritas.
+    return { id: 'X', name: 'X', displayName: null, objectType: 'asteroid', hazardFlag, approachDate: null, nominalDistanceKm: null, lunarDistance: null, absoluteMagnitude: null, diameterMeters: null, estimatedDiameterMinMeters: null, estimatedDiameterMaxMeters: null, relativeVelocityKph: null, subtitle: null } as unknown as UnifiedApproach;
 }
 
 describe('riskAssessment', () => {
