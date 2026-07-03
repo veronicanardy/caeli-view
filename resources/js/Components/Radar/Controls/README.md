@@ -43,18 +43,18 @@ Quando algum componente precisar exibir conteúdo técnico ou educativo, a lógi
 - `Manual/ManualParts.tsx`: blocos visuais reutilizáveis do manual.
 - `Manual/ManualDiagrams.tsx`: diagramas SVG usados pelo manual.
 - `Manual/manualCuriosities.tsx`: curiosidades e FAQ com respostas em ReactNode (SVGs inline, PT-BR e EN).
+- `Manual/manualTypes.ts`: tipos locais compartilhados pelo manual e por controles relacionados.
 
 ### Rigor Científico No Manual
 
 `FriendlyManual.tsx` e `TechnicalManual.tsx` cobrem avisos científicos obrigatórios:
 
 - **Órbita osculadora**: a elipse exibida no modo órbita é calculada a partir dos elementos atuais; não é simulação dinâmica nem previsão futura. Perturbações planetárias não são integradas localmente.
-- **Escala linear única**: distâncias estão em escala linear em UA (sem compressão), fiéis às proporções reais entre os corpos; a aproximação é revelada por zoom de câmera, não esticando a régua. Os tamanhos dos corpos são ampliados à parte. A régua log antiga só existe por trás de `?log`. Avisos inline na cena reforçam isso.
+- **Escala linear única**: distâncias estão em escala linear em UA (sem compressão), fiéis às proporções reais entre os corpos; a aproximação é revelada por zoom de câmera, não esticando a régua. Os tamanhos dos corpos são ampliados à parte. A régua log geocêntrica antiga (`?log`) foi REMOVIDA por completo; a linear é a única régua. Avisos inline na cena reforçam isso.
 - **Posições simbólicas**: objetos sem trajetória Horizons têm posição estimada pela distância da aproximação máxima; o ângulo na cena não tem significado físico.
 - **Tamanho dos corpos**: raios visuais amplificados para legibilidade (um asteroide real seria sub-pixel).
 
 Qualquer mudança de linguagem nesses manuais deve preservar esses quatro avisos.
-- `Manual/manualTypes.ts`: tipos locais compartilhados pelo manual e por controles relacionados.
 
 ### Controles Principais Da Cena
 
@@ -65,13 +65,12 @@ Qualquer mudança de linguagem nesses manuais deve preservar esses quatro avisos
 
 ### Filtros E Formulários
 
-- `ObservationControls.tsx`: formulário principal de data, tipo e busca.
 - `CompactConsoleBar.tsx`: barra de filtros do topo da página, somente desktop (a página esconde abaixo de lg:). No mobile os mesmos filtros vivem no bottom sheet aberto pela `MobileActionBar`. Marcada com `data-tutorial="radar-filters"`.
 - `RadarObjectControls.tsx`: controle de critério e quantidade de objetos mostrados na cena 3D. As opções de quantidade são 5, 15 e "Todos" (`'all'`); "Todos" é um sentinela resolvido para o teto de candidatos mapeados pelo backend (`OBJECT_LIMIT_MAX = 45`) na hora do fetch (ver `resolveObjectLimit` em `@/types` e `hooks/useClosestNow.ts`). Os grupos carregam `data-tutorial="radar-filter-criterion"` e `data-tutorial="radar-filter-limit"`; o sheet mobile de filtros (`../Panels/MobileFiltersSheetContent.tsx`) duplica esses marcadores e o tutorial resolve o alvo filtrando por visibilidade real.
 
 ## Remoção do radar 2D
 
-O controle `RadarFilters.tsx` foi removido junto com o radar 2D/SVG. A seleção principal de objetos agora fica em `RadarObjectControls.tsx`, usada pelo radar 3D.
+O controle `RadarFilters.tsx` foi removido junto com o radar 2D/SVG. A seleção principal de objetos agora fica em `RadarObjectControls.tsx`, usada pelo radar 3D. O formulário `ObservationControls.tsx` (data, tipo e busca) ficou órfão nessa migração e também foi removido.
 
 ## Diretrizes De Manutenção
 

@@ -39,13 +39,11 @@ e explique a fronteira cruzada.
 - **`Components/Radar/Controls/`**: toolbar, barra mobile, Guia/Manual, `Tooltip`.
 - **`Components/Radar/Tutorial/`**: passo a passo guiado.
 - **`Components/Radar/Lists/`**: listas, cards e tabelas a partir de dados já preparados.
-- **`Components/Radar/Charts/`**: gráficos e linha do tempo (só visual, sem cálculo de domínio).
-- **`Components/Radar/Presenters/`**: badges, réguas e elementos visuais leves e reutilizáveis.
 - **`Components/Radar/Dev/`**: ferramentas de diagnóstico só de desenvolvimento (atrás de flag).
 
 ## Primeiro passo: leia o README certo
 
-Cada pasta acima tem um README (14 no total). É a fonte de verdade da estrutura. Não os leia
+Cada pasta acima tem um README (12 no total). É a fonte de verdade da estrutura. Não os leia
 todos; leia só o necessário:
 
 - **Sempre:** `Components/Radar/README.md` (regras transversais: labels e layout sem scroll).

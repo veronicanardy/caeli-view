@@ -20,7 +20,7 @@ A Terra não é um globo ao lado do texto: é um horizonte colossal na base da t
 - `ApproachTransit.tsx`: trânsito de aproximação exibido no hero, alimentado por `useHomeApproachTransits`.
 - `heroSkyCopy.ts`: funções puras de copy do céu (nota de observação, visibilidade, lista de planetas, data de aproximação, fase lunar). Testadas em `tests/js/Home/heroSkyCopy.test.ts`.
 
-Legado não montado atualmente (versões anteriores do hero, mantidas para referência): `InteractiveHero.tsx`, `EarthStage.tsx`, `SpaceBackground.tsx`, `StarField.tsx`, `StarfieldParallax.tsx`, `HomeBackgroundEffects.tsx`, `AtmosphereGlow.tsx`, `FloatingMissionCard.tsx`, `MissionMetricCard.tsx`, `NasaHighlightCard.tsx`, `OrbitalFeatureCard.tsx`.
+As versões anteriores do hero (`InteractiveHero`, `EarthStage`, `SpaceBackground`, `StarField`, `StarfieldParallax`, `HomeBackgroundEffects`, `AtmosphereGlow`, `FloatingMissionCard`, `MissionMetricCard`, `NasaHighlightCard`, `OrbitalFeatureCard`) foram removidas do fonte; a referência histórica vive no git.
 
 ## Padrões Locais
 

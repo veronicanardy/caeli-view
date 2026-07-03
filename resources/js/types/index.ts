@@ -257,31 +257,6 @@ export type SunDirection = {
     timestamp: string;
 };
 
-export type ApproachObservatorySummary = {
-    total: number;
-    asteroids: number;
-    comets: number;
-    fromNeoWs: number;
-    fromCad: number;
-    closerThanMoon: number;
-    nearMoon: number;
-    closestObjectName: string | null;
-    closestDistanceKm: number | null;
-    closestLunarDistance: number | null;
-    fastestObjectName: string | null;
-    fastestVelocityKph: number | null;
-    nextApproachName: string | null;
-    nextApproachDate: string | null;
-};
-
-export type ApproachObservatoryCharts = {
-    byDay: Array<{ date: string; total: number }>;
-    byType: Array<{ name: string; value: number }>;
-    bySource: Array<{ name: string; value: number }>;
-    closest: Array<{ name: string; lunarDistance: number | null; distanceKm: number | null }>;
-    fastest: Array<{ name: string; velocityKph: number | null }>;
-};
-
 export type ApproachObservatoryFilters = {
     date_min: string;
     date_max: string;

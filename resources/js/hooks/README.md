@@ -19,13 +19,17 @@ Hooks React reutilizáveis entre páginas e componentes. Cada arquivo expõe um 
 ## Estrutura
 
 - `useClosestNow.ts`: objetos mais próximos da Terra agora (radar), com critério, limite e refresh.
+- `useHomeApproachTransits.ts`: trânsito de aproximações e contagem viva do hero da Home (fetch leve ao `/radar/closest-now`).
 - `useHomeAstronomyFeed.ts`: feed astronômico da home.
+- `useKnownAsteroidDetail.ts`: detalhe SBDB do asteroide em foco no radar (carregamento progressivo do card).
 - `useMediaQuery.ts`: estado reativo de uma media query CSS (resize/rotação); false em SSR até o primeiro render no browser.
 - `useRadarControls.ts`: estado central dos controles do radar (quantidade + critério), com reset para 5 objetos ao trocar critério.
 - `useSkyObservation.ts`: dados de observação do céu.
-- `useSpaceNewsHighlight.ts`: destaque de notícias espaciais.
+- `useSpacecraftPositions.ts`: posições heliocêntricas ao vivo das naves famosas (endpoint `/radar/spacecraft`).
 - `useUserLocation.ts`: localização do usuário (geolocalização/fallback).
 - `useVisibleObjects.ts`: objetos visíveis para observação.
+
+`useSpaceNewsHighlight.ts` ficou sem consumidor (o destaque espacial da Home chega por props/`useHomeAstronomyFeed`) e foi removido.
 
 ## Regra Para IA
 
