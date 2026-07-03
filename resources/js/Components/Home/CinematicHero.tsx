@@ -24,7 +24,8 @@ import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import {
     buildObservationNote,
     cleanFeedTitle,
-    formatObservingVisibility,
+    formatCloudCoverLine,
+    formatObservingConditionLine,
     formatVisiblePlanetsLine,
     moonPhaseLabel,
 } from './heroSkyCopy';
@@ -211,7 +212,7 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                             </span>
                         </button>
                         <Link href="/radar" prefetch onClick={forceNextRouteProgress} className="home-cta-secondary">
-                            {en ? 'Open the radar' : 'Abrir o radar'}
+                            {t('home.hero.openRadar')}
                             <ArrowRight className="size-3.5" aria-hidden="true" />
                         </Link>
                     </div>
@@ -243,14 +244,6 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
 
 // ─── Console de observação (painel sob o horizonte) ─────────────────────────
 
-/**
- * Spotlight que segue o ponteiro dentro das células do console.
- *
- * Um único listener no container atualiza, com throttle por rAF, as CSS vars
- * --spot-x/--spot-y da célula sob o cursor; o brilho em si é um span com
- * radial-gradient revelado no hover. Sem re-render React e desligado em
- * dispositivos sem hover (touch).
- */
 /**
  * Conta de 0 (ou de um piso) até o valor alvo numa animação curta de ease-out,
  * para o número "ao vivo" subir em vez de aparecer estático. Reanima quando o
@@ -292,6 +285,14 @@ function useCountUp(target: number, durationMs = 1100): number {
     return value;
 }
 
+/**
+ * Spotlight que segue o ponteiro dentro das células do console.
+ *
+ * Um único listener no container atualiza, com throttle por rAF, as CSS vars
+ * --spot-x/--spot-y da célula sob o cursor; o brilho em si é um span com
+ * radial-gradient revelado no hover. Sem re-render React e desligado em
+ * dispositivos sem hover (touch).
+ */
 function useCardSpotlight() {
     const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -370,11 +371,8 @@ function ObservatoryConsole({
     // ── Célula 2: Céu esta noite ──────────────────────────────────────
     const observationLine = buildObservationNote(skySummary, cloudCover, seeing, visibleNowPlanets, moonIllumination, en);
     const moonPhaseLine = moonPhaseLabel(moonIllumination, en);
-    const cloudLine = cloudCover !== null
-        ? (en ? `${formatNumber(cloudCover, 0)}% cloud cover` : `${formatNumber(cloudCover, 0)}% de nuvens`)
-        : null;
-    const visibilityLabel = formatObservingVisibility(cloudCover, seeing, en);
-    const observingConditionLine = en ? `${visibilityLabel} visibility` : `Visibilidade ${visibilityLabel.toLowerCase()}`;
+    const cloudLine = formatCloudCoverLine(cloudCover, en);
+    const observingConditionLine = formatObservingConditionLine(cloudCover, seeing, en);
     const planetsLine = formatVisiblePlanetsLine(visibleNowPlanets.map((p) => en ? p.nameEn : p.namePt), en);
     // ── Célula 1: Vizinhança da Terra ─────────────────────────────────
     // Fonte ÚNICA: closest-now (mesma do contador e dos trânsitos). O dado
@@ -393,7 +391,7 @@ function ObservatoryConsole({
             <section className="observatory-console" aria-label={t('home.hero.statusRibbonLabel')}>
                 <header className="console-header">
                     <span className="console-header-lead">
-                        <span className="console-header-title">{en ? 'The sky right now' : 'O céu agora'}</span>
+                        <span className="console-header-title">{t('home.hero.skyNow')}</span>
                         <span className="console-live-tag">
                             <span className="sky-status-pulse" aria-hidden="true" />
                             {t('home.hero.liveLabel')}
@@ -406,11 +404,11 @@ function ObservatoryConsole({
                             onClick={onRequestLocation}
                         >
                             <MapPin className="size-3.5" aria-hidden="true" />
-                            {en ? 'Read my night sky' : 'Ler o céu da minha noite'}
+                            {t('home.hero.readMySky')}
                         </button>
                     ) : (
                         <span className="console-header-location">
-                            <span className="console-header-prefix">{en ? 'Observing from' : 'Observando de'}</span>
+                            <span className="console-header-prefix">{t('home.hero.observingFrom')}</span>
                             <strong>{locationLabel}</strong>
                         </span>
                     )}
@@ -424,7 +422,7 @@ function ObservatoryConsole({
                         prefetch
                         onClick={forceNextRouteProgress}
                         className="console-cell console-cell-approach console-cell-link group focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan"
-                        aria-label={en ? 'Open the radar to see close approaches' : 'Abrir o radar para ver as aproximações'}
+                        aria-label={t('home.hero.openRadarAria')}
                     >
                         <span className="editorial-card-glow" aria-hidden="true" />
                         <span className="editorial-card-icon editorial-card-icon-orange" aria-hidden="true">
@@ -432,7 +430,7 @@ function ObservatoryConsole({
                         </span>
                         <div className="editorial-card-body">
                             <span className="editorial-card-label">
-                                {en ? 'Near Earth now' : 'Perto da Terra agora'}
+                                {t('home.hero.nearEarthNow')}
                                 <span className="editorial-live-dot" aria-hidden="true" />
                                 <ArrowRight className="console-cell-link-arrow size-3.5" aria-hidden="true" />
                             </span>
@@ -440,12 +438,12 @@ function ObservatoryConsole({
                                 <>
                                     <h3 className="editorial-card-title editorial-card-approach-count">
                                         <span className="editorial-approach-count-value">{formatNumber(animatedCount, 0)}</span>
-                                        <span className="editorial-approach-count-unit">{en ? 'objects' : 'objetos'}</span>
+                                        <span className="editorial-approach-count-unit">{t('home.hero.objectsUnit')}</span>
                                     </h3>
                                     <div className="editorial-approach-details">
                                         {nearestName ? (
                                             <span className="editorial-approach-nearest">
-                                                {en ? 'Closest: ' : 'Mais próximo: '}
+                                                {t('home.hero.closestPrefix')}
                                                 <strong>{nearestName}</strong>
                                             </span>
                                         ) : null}
@@ -455,10 +453,10 @@ function ObservatoryConsole({
                             ) : (
                                 <>
                                     <h3 className="editorial-card-title editorial-card-main-value editorial-card-main-muted">
-                                        {en ? 'All quiet up there' : 'Tudo tranquilo lá em cima'}
+                                        {t('home.hero.allQuiet')}
                                     </h3>
                                     <span className="editorial-card-secondary editorial-card-secondary-dim">
-                                        {en ? 'Nothing we track is coming close right now.' : 'Nada que monitoramos chega perto agora.'}
+                                        {t('home.hero.nothingClose')}
                                     </span>
                                 </>
                             )}
@@ -473,11 +471,11 @@ function ObservatoryConsole({
                         </span>
                         <div className="editorial-card-body">
                             <span className="editorial-card-label">
-                                {en ? 'Tonight\'s sky' : 'Céu esta noite'}
+                                {t('home.hero.tonightSky')}
                                 {!needsLocationGesture ? <span className="editorial-live-dot" aria-hidden="true" /> : null}
                             </span>
                             {needsLocationGesture ? (
-                                <LocationInvite onRequest={onRequestLocation} en={en} />
+                                <LocationInvite onRequest={onRequestLocation} />
                             ) : (
                                 <h3 className="editorial-card-title editorial-card-title-note">{observationLine}</h3>
                             )}
@@ -492,11 +490,11 @@ function ObservatoryConsole({
                         </span>
                         <div className="editorial-card-body">
                             <span className="editorial-card-label">
-                                {en ? 'Sky data' : 'Dados do céu'}
+                                {t('home.hero.skyData')}
                                 {!needsLocationGesture ? <span className="editorial-live-dot" aria-hidden="true" /> : null}
                             </span>
                             {needsLocationGesture ? (
-                                <LocationInvite onRequest={onRequestLocation} en={en} />
+                                <LocationInvite onRequest={onRequestLocation} />
                             ) : (
                                 <>
                                     <h3 className="editorial-card-title editorial-card-main-value">{moonPhaseLine}</h3>
@@ -626,11 +624,12 @@ function OptionsScene({ open, onBack }: { open: boolean; onBack: () => void }) {
  * não autorizou. Em vez de dados falsos (Lua 0%, "Lendo o céu local"), oferece o
  * gesto explícito que dispara o prompt do navegador.
  */
-function LocationInvite({ onRequest, en }: { onRequest: () => void; en: boolean }) {
+function LocationInvite({ onRequest }: { onRequest: () => void }) {
+    const { t } = useTranslation();
     return (
         <button type="button" className="editorial-card-invite" onClick={onRequest}>
             <MapPin className="size-3.5" aria-hidden="true" />
-            <span>{en ? 'Allow location to read your sky' : 'Permita a localização para ler seu céu'}</span>
+            <span>{t('home.hero.allowLocation')}</span>
         </button>
     );
 }

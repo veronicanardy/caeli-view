@@ -53,9 +53,8 @@ export function mapResponseToTransits(payload: ClosestNowResponse): HomeApproach
  * campo falta. Pura e testável.
  */
 export function nearbyCountFromResponse(payload: ClosestNowResponse): number {
-    const evaluated = (payload as { candidatesEvaluated?: number }).candidatesEvaluated;
-    if (typeof evaluated === 'number' && evaluated > 0) {
-        return evaluated;
+    if (typeof payload.candidatesEvaluated === 'number' && payload.candidatesEvaluated > 0) {
+        return payload.candidatesEvaluated;
     }
     return payload.objects.length;
 }

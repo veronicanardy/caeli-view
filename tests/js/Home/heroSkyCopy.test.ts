@@ -9,6 +9,8 @@ import {
     buildObservationNote,
     cleanFeedTitle,
     formatApproachDate,
+    formatCloudCoverLine,
+    formatObservingConditionLine,
     formatObservingVisibility,
     formatVisiblePlanetsLine,
     isGenericSummary,
@@ -242,5 +244,44 @@ describe('cleanFeedTitle', () => {
 
     it('normaliza espaços duplicados e apara as pontas', () => {
         expect(cleanFeedTitle('  Apollo   11   ')).toBe('Apollo 11');
+    });
+});
+
+// ─── formatCloudCoverLine ─────────────────────────────────────────────────────
+
+describe('formatCloudCoverLine', () => {
+    it('sem leitura ainda: devolve null para o card omitir a linha', () => {
+        expect(formatCloudCoverLine(null, false)).toBeNull();
+        expect(formatCloudCoverLine(null, true)).toBeNull();
+    });
+
+    it('formata o percentual arredondado nos dois idiomas', () => {
+        expect(formatCloudCoverLine(34.4, false)).toBe('34% de nuvens');
+        expect(formatCloudCoverLine(34.5, true)).toBe('35% cloud cover');
+    });
+
+    it('aceita os extremos 0 e 100', () => {
+        expect(formatCloudCoverLine(0, false)).toBe('0% de nuvens');
+        expect(formatCloudCoverLine(100, true)).toBe('100% cloud cover');
+    });
+});
+
+// ─── formatObservingConditionLine ─────────────────────────────────────────────
+
+describe('formatObservingConditionLine', () => {
+    it('deriva do rótulo de visibilidade em português', () => {
+        expect(formatObservingConditionLine(10, null, false)).toBe('Visibilidade boa');
+        expect(formatObservingConditionLine(60, null, false)).toBe('Visibilidade moderada');
+        expect(formatObservingConditionLine(90, null, false)).toBe('Visibilidade baixa');
+        expect(formatObservingConditionLine(null, null, false)).toBe('Visibilidade carregando');
+    });
+
+    it('deriva do rótulo de visibilidade em inglês', () => {
+        expect(formatObservingConditionLine(10, null, true)).toBe('good visibility');
+        expect(formatObservingConditionLine(90, null, true)).toBe('low visibility');
+    });
+
+    it('seeing instável rebaixa a visibilidade com céu limpo', () => {
+        expect(formatObservingConditionLine(10, 'Instável', false)).toBe('Visibilidade instável');
     });
 });

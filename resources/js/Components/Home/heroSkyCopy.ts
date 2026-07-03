@@ -120,6 +120,26 @@ export function formatObservingVisibility(cloudCover: number | null, seeing: str
 }
 
 /**
+ * Linha de cobertura de nuvens do módulo "Dados do céu" ("34% de nuvens",
+ * "34% cloud cover"). Null enquanto a leitura ainda não chegou, para o card
+ * simplesmente omitir a linha em vez de inventar um valor.
+ */
+export function formatCloudCoverLine(cloudCover: number | null, en: boolean): string | null {
+    if (cloudCover === null) return null;
+    const pct = Math.round(cloudCover);
+    return en ? `${pct}% cloud cover` : `${pct}% de nuvens`;
+}
+
+/**
+ * Linha qualitativa de visibilidade do módulo "Dados do céu" ("Visibilidade boa",
+ * "good visibility"), derivada do rótulo de formatObservingVisibility.
+ */
+export function formatObservingConditionLine(cloudCover: number | null, seeing: string | null, en: boolean): string {
+    const label = formatObservingVisibility(cloudCover, seeing, en);
+    return en ? `${label} visibility` : `Visibilidade ${label}`;
+}
+
+/**
  * Linha "planetas visíveis agora" do módulo de dados do céu. Prefixo curto
  * para não estourar a largura do card; a lista usa vírgulas e conjunção.
  */

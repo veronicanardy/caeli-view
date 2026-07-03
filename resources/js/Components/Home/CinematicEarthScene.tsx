@@ -20,6 +20,12 @@ import type { CanvasTexture } from 'three';
 // ─────────────────────────────────────────────────────────────────────────────
 const EARTH_DEBUG_MINIMAL = false;
 
+// Diagnóstico da cena (texturas, GPU, primeiro frame) só em desenvolvimento.
+// Em produção fica silencioso; avisos de degradação real (console.warn/error) permanecem.
+function debugEarth(...args: unknown[]): void {
+    if (import.meta.env.DEV) console.debug(...args);
+}
+
 // ── Enquadramento "horizonte orbital" ────────────────────────────────────────
 // A câmera fica a ORBIT_ALTITUDE acima da superfície (esfera de raio 1) e
 // inclina para baixo até a linha do horizonte cair em HORIZON_NDC_Y no canvas
@@ -187,7 +193,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
             // Log GPU texture size limit so we know which cascade entries can work.
             const gl = renderer.getContext();
             const maxTexSize: number = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
-            console.debug('[earth] renderer max texture size:', maxTexSize);
+            debugEarth('[earth] renderer max texture size:', maxTexSize);
 
             const canvasElement = renderer.domElement;
             canvasElement.style.width = '100%';
@@ -414,7 +420,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                 const w = img?.width ?? 0;
                 const h = img?.height ?? 0;
 
-                console.debug('[earth] base texture loaded:', url, { width: w, height: h, uuid: loadedTexture.uuid });
+                debugEarth('[earth] base texture loaded:', url, { width: w, height: h, uuid: loadedTexture.uuid });
 
                 if (!img || w === 0 || h === 0) {
                     console.warn('[earth] base texture has no valid dimensions — skipping apply, trying next');
@@ -427,7 +433,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                 earthMaterial.map = loadedTexture;
                 earthMaterial.needsUpdate = true;
 
-                console.debug('[earth] base texture applied to material:', {
+                debugEarth('[earth] base texture applied to material:', {
                     hasMap: Boolean(earthMaterial.map),
                     materialType: earthMaterial.type,
                     meshVisible: earth.visible,
@@ -452,7 +458,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                         // de relevo, sem o realce artificial.
                         earthMaterial.normalScale = new THREE.Vector2(0.35, 0.35);
                         earthMaterial.needsUpdate = true;
-                        console.debug('[earth] real normal map applied');
+                        debugEarth('[earth] real normal map applied');
                     });
 
                     loader.load(SPECULAR_MAP_TEXTURE_URL, (tex) => {
@@ -464,7 +470,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                         // We feed it ONLY to the custom ocean-sheen shader (which expects that convention)
                         // and keep the base material's roughness uniform — avoids inverting the texture.
                         oceanSheen.material.uniforms.roughnessMap.value = tex;
-                        console.debug('[earth] real specular map applied (ocean sheen)');
+                        debugEarth('[earth] real specular map applied (ocean sheen)');
                     });
 
                     loader.load(NIGHT_LIGHTS_TEXTURE_URL, (tex) => {
@@ -478,7 +484,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                         tex.generateMipmaps = true;
                         nightLightsTexture = tex;
                         nightLights.material.uniforms.lightsMap.value = tex;
-                        console.debug('[earth] real night lights map applied (8K Black Marble)');
+                        debugEarth('[earth] real night lights map applied (8K Black Marble)');
                     });
                 }
 
@@ -497,11 +503,11 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                 // Skip textures that exceed GPU max texture size.
                 const sizeHint = url.includes('8192') ? 8192 : url.includes('4096') ? 4096 : 2048;
                 if (sizeHint > maxTexSize) {
-                    console.debug(`[earth] skipping ${url} — GPU max is ${maxTexSize}`);
+                    debugEarth(`[earth] skipping ${url} — GPU max is ${maxTexSize}`);
                     tryLoadEarth(index + 1);
                     return;
                 }
-                console.debug(`[earth] trying base texture: ${url}`);
+                debugEarth(`[earth] trying base texture: ${url}`);
                 new THREE.TextureLoader().load(
                     url,
                     (tex) => {
@@ -510,7 +516,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                     },
                     undefined,
                     (err) => {
-                        console.debug(`[earth] base texture failed (${url}):`, err);
+                        debugEarth(`[earth] base texture failed (${url}):`, err);
                         tryLoadEarth(index + 1);
                     },
                 );
@@ -717,7 +723,7 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                         url,
                         (tex) => {
                             if (disposed) { tex.dispose(); return; }
-                            console.debug(`[earth] cloud texture loaded: ${url}`);
+                            debugEarth(`[earth] cloud texture loaded: ${url}`);
                             applyCloudTexture(tex, isPng ? 0.92 : 0.88, isPng ? 1.0 : 0.0);
                         },
                         undefined,
@@ -910,8 +916,8 @@ export function CinematicEarthScene({ onReady }: { onReady?: () => void } = {}) 
                     const mat = earth.material as import('three').MeshStandardMaterial;
                     if (mat.map && mat.map.image && (mat.map.image as HTMLImageElement).width > 0 && earth.visible) {
                         firstFrameReady = true;
-                        console.debug('[earth] first valid frame rendered');
-                        console.debug('[earth] fallback hidden after valid render');
+                        debugEarth('[earth] first valid frame rendered');
+                        debugEarth('[earth] fallback hidden after valid render');
                         setReady(true);
                         onReady?.();
                     }
