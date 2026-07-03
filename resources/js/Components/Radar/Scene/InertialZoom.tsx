@@ -61,11 +61,19 @@ export function InertialZoom({ minDistance, maxDistance }: { minDistance: number
         // qualquer escala (um clique amplia a mesma % independente de estar perto ou longe).
         const toTarget = _zoomToTarget.copy(camera.position).sub(target);
         const dist = toTarget.length();
-        const newDist = THREE.MathUtils.clamp(dist * Math.exp(velocity.current), minDistance, maxDistance);
+        const desiredDist = dist * Math.exp(velocity.current);
+        const newDist = THREE.MathUtils.clamp(desiredDist, minDistance, maxDistance);
         if (dist > 1e-6) {
             camera.position.copy(target).add(toTarget.multiplyScalar(newDist / dist));
         }
         controls?.update();
+
+        // No limite (piso/teto), zera a velocidade em vez de deixá-la acumular: continuar rolando
+        // contra a parede criaria uma "dívida" de velocidade que vira zona morta ao inverter o gesto.
+        if (desiredDist <= minDistance || desiredDist >= maxDistance) {
+            velocity.current = 0;
+            return;
+        }
 
         // Decaimento exponencial: menor = desliza mais tempo.
         velocity.current *= 0.82;

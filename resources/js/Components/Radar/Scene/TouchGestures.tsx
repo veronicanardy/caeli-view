@@ -149,15 +149,19 @@ export function TouchGestures({ minDistance, maxDistance }: { minDistance: numbe
         const target = controls?.target ?? _pinchFallbackTarget;
         const toTarget = _pinchToTarget.copy(camera.position).sub(target);
         const dist = toTarget.length();
-        const newDist = THREE.MathUtils.clamp(
-            dist * Math.exp(pinchVelocity.current),
-            minDistance,
-            maxDistance,
-        );
+        const desiredDist = dist * Math.exp(pinchVelocity.current);
+        const newDist = THREE.MathUtils.clamp(desiredDist, minDistance, maxDistance);
         if (dist > 1e-6) {
             camera.position.copy(target).add(toTarget.multiplyScalar(newDist / dist));
         }
         controls?.update();
+
+        // No limite (piso/teto), zera a velocidade em vez de deixá-la acumular: continuar pinçando
+        // contra a parede criaria uma "dívida" de velocidade que vira zona morta ao inverter a pinça.
+        if (desiredDist <= minDistance || desiredDist >= maxDistance) {
+            pinchVelocity.current = 0;
+            return;
+        }
 
         pinchVelocity.current *= PINCH_DECAY;
     });

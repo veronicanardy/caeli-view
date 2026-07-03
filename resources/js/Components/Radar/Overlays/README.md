@@ -72,7 +72,7 @@ Cada marco tem timeout, então nada prende o usuário no carregamento. Enquanto 
 
 ## Campo Estelar
 
-[`StarField.tsx`](./StarField.tsx) gera ~1200 partículas procedurais que seguem a câmera, criando profundidade visual sem afetar cálculos orbitais. O RNG usa seed fixo (42) para resultado determinístico entre sessões.
+[`StarField.tsx`](./StarField.tsx) desenha ~1400 estrelas procedurais que seguem a câmera, sem afetar cálculos orbitais. A geração é pura e fica em [`lib/radar/starField.ts`](../../../lib/radar/starField.ts) (testada em `tests/js/lib/radar/starField.test.ts`), com RNG de seed fixo (42) para resultado determinístico entre sessões. A profundidade vem das CAMADAS: as estrelas se espalham em faixas de distância e cada camada tem tamanho e brilho próprios (próximas maiores e nítidas, distantes minúsculas e tênues), em vez de uma casca uniforme. Como o `pointsMaterial` não suporta tamanho nem opacidade por estrela, o componente usa um `ShaderMaterial` mínimo (tamanho por vértice com atenuação por distância + disco macio).
 
 ## Regra Para IA
 
