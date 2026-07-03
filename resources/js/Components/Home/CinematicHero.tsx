@@ -18,7 +18,6 @@ import { useSkyObservation } from '@/hooks/useSkyObservation';
 import { locationStatusLabel, useUserLocation } from '@/hooks/useUserLocation';
 import { useVisibleObjects } from '@/hooks/useVisibleObjects';
 import { useTranslation } from '@/i18n';
-import { forceNextRouteProgress } from '@/lib/routeProgressForce';
 import { formatNumber } from '@/lib/format';
 import { resolveApproachIdentity } from '@/lib/asteroidIdentity';
 import {
@@ -211,7 +210,7 @@ export function CinematicHero({ apod, apodError, nextApproach, spaceNewsHighligh
                                 </span>
                             </span>
                         </button>
-                        <Link href="/radar" prefetch onClick={forceNextRouteProgress} className="home-cta-secondary">
+                        <Link href="/radar" prefetch className="home-cta-secondary">
                             {t('home.hero.openRadar')}
                             <ArrowRight className="size-3.5" aria-hidden="true" />
                         </Link>
@@ -420,7 +419,6 @@ function ObservatoryConsole({
                     <Link
                         href="/radar"
                         prefetch
-                        onClick={forceNextRouteProgress}
                         className="console-cell console-cell-approach console-cell-link group focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan"
                         aria-label={t('home.hero.openRadarAria')}
                     >
@@ -595,9 +593,6 @@ function OptionsScene({ open, onBack }: { open: boolean; onBack: () => void }) {
                                 key={item.href}
                                 href={item.href}
                                 prefetch
-                                /* Destino do radar é pesado e vem do cache (prefetch): força a barra de rota
-                                   na hora, senão o atraso anti-piscada faz o loader nem aparecer. */
-                                onClick={item.href === '/radar' ? forceNextRouteProgress : undefined}
                                 className="home-option-card group text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-cyan"
                                 style={{ transitionDelay: open ? `${180 + index * 130}ms` : '0ms' }}
                                 tabIndex={open ? 0 : -1}

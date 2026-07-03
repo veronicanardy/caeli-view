@@ -34,5 +34,8 @@ createInertiaApp({
             </TranslationProvider>,
         );
     },
-    progress: false,
+    // Barra fina nativa do Inertia no topo da página em toda troca de rota, na cor
+    // de assinatura do site. O radar tem o próprio overlay de carregamento (texturas,
+    // GPU), exclusivo dele; a navegação entre páginas usa só esta barra.
+    progress: { color: '#54d6d6' },
 });

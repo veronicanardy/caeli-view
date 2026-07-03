@@ -15,7 +15,6 @@ Tudo aqui deve ser testável em Node puro.
 - `asteroidIdentity.ts`: normalização de nomes e identidade de asteroides.
 - `sceneEphemeris.ts`: efemérides de alto nível (Sol/Lua/planetas) e projeção heliocêntrica na régua linear única em UA (`LINEAR_AU_SCALE`).
 - `keplerOrbit.ts`: propagação orbital de Kepler.
-- `routeProgressForce.ts`: força a barra de progresso de rota na próxima navegação (usada nos atalhos da Home para o radar).
 - `transparencyCopy.ts`: copy compartilhado de transparência (afiliação NASA/JPL, fontes e limites), usado pelo footer e pelo guia do radar.
 - `radar/`: infraestrutura matemática e gráfica da cena 3D (ver `radar/README.md`).
 
