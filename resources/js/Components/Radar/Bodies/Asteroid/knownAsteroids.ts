@@ -134,7 +134,7 @@ export function knownAsteroidScenePosition(
 
 /**
  * Posições de todos os conhecidos que puderam ser ancorados em `date`, na régua dos planetas.
- * `scale` permite a escala própria do modo linear (default = ORBIT_AU_SCALE da régua normal).
+ * `scale` permite ajustar a régua (default = LINEAR_AU_SCALE, a régua única da cena).
  */
 export function knownAsteroidPlacements(date: Date = new Date(), scale?: number): KnownAsteroidPlacement[] {
     return KNOWN_ASTEROIDS

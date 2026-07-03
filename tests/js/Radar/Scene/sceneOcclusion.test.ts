@@ -8,7 +8,7 @@ import type { PlanetScenePositions } from '@/Components/Radar/Scene/scenePositio
 /**
  * `computeSceneObjectOccluders` constrói os volumes de oclusão usados para
  * esconder labels atrás de corpos. Os testes verificam cardinalidade, centros
- * e raios em cada branch (helio vs geocêntrico, planetas null vs presentes).
+ * e raios (planetas null vs presentes).
  */
 
 const EARTH: [number, number, number] = [1, 0, 0];
@@ -25,32 +25,22 @@ const NO_PLANETS: PlanetScenePositions = {
 };
 
 describe('computeSceneObjectOccluders', () => {
-    it('retorna apenas o Sol quando useHelioScene é true', () => {
+    it('retorna Sol + Terra + Lua quando não há planetas presentes', () => {
         const occluders = computeSceneObjectOccluders({
-            useHelioScene: true,
-            earthPos: EARTH,
-            moonPos: MOON,
-            planetPositions: NO_PLANETS,
-        });
-        expect(occluders).toHaveLength(1);
-        expect(occluders[0].center.x).toBeCloseTo(0, 6);
-        expect(occluders[0].radius).toBeCloseTo(SUN_RADIUS_SCENE, 6);
-    });
-
-    it('retorna Sol + Terra + Lua + planetas presentes quando useHelioScene é false', () => {
-        const occluders = computeSceneObjectOccluders({
-            useHelioScene: false,
             earthPos: EARTH,
             moonPos: MOON,
             planetPositions: NO_PLANETS,
         });
         // Sem planetas: Sol + Terra + Lua = 3
         expect(occluders).toHaveLength(3);
+        const sun = occluders.find((o) => o.id === 'sun');
+        expect(sun).toBeDefined();
+        expect(sun!.center.x).toBeCloseTo(0, 6);
+        expect(sun!.radius).toBeCloseTo(SUN_RADIUS_SCENE, 6);
     });
 
     it('o oclusor da Terra está centrado em earthPos com raio EARTH_RADIUS_DL', () => {
         const occluders = computeSceneObjectOccluders({
-            useHelioScene: false,
             earthPos: EARTH,
             moonPos: MOON,
             planetPositions: NO_PLANETS,
@@ -62,7 +52,6 @@ describe('computeSceneObjectOccluders', () => {
 
     it('o oclusor da Lua está centrado em moonPos com raio MOON_RADIUS_DL', () => {
         const occluders = computeSceneObjectOccluders({
-            useHelioScene: false,
             earthPos: EARTH,
             moonPos: MOON,
             planetPositions: NO_PLANETS,
@@ -78,7 +67,6 @@ describe('computeSceneObjectOccluders', () => {
             marsPos: [2, 0, 0],
         };
         const occluders = computeSceneObjectOccluders({
-            useHelioScene: false,
             earthPos: EARTH,
             moonPos: MOON,
             planetPositions: withMars,
@@ -100,7 +88,6 @@ describe('computeSceneObjectOccluders', () => {
             neptunePos: [30, 0, 0],
         };
         const occluders = computeSceneObjectOccluders({
-            useHelioScene: false,
             earthPos: EARTH,
             moonPos: MOON,
             planetPositions: allPlanets,

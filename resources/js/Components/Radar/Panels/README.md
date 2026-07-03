@@ -24,7 +24,11 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 
 ## Estrutura
 
-- `UnifiedFocusCard.tsx`: card de foco unificado — renderiza asteroides/cometas/naves (`kind: 'asteroid'`) e corpos celestes (`kind: 'body'`) com o mesmo shell visual, abas e layout mobile/desktop. As abas de cada objeto vêm do resolvedor puro `tabsForFocusObject` (`lib/radar/focusCardTabs.ts`), para cada tipo só mostrar o que faz sentido: asteroide/cometa têm Resumo · Perfil físico · Aproximação; **nave** tem Resumo · Missão · História (sem Aproximação nem Perfil físico, que ficariam vazios), num `SpacecraftCard` próprio dentro do arquivo; corpo tem Resumo · Perfil físico · História. A aba História entra ao fim quando há lore.
+- `UnifiedFocusCard.tsx`: roteador do card de foco — decide entre asteroide/cometa (`kind: 'asteroid'`), nave (`objectType: 'spacecraft'`) e corpo celeste (`kind: 'body'`) e mantém o estado compartilhado (aba ativa, animação de entrada, fade ao trocar de objeto). As abas de cada objeto vêm do resolvedor puro `tabsForFocusObject` (`lib/radar/focusCardTabs.ts`), para cada tipo só mostrar o que faz sentido: asteroide/cometa têm Resumo · Perfil físico · Aproximação; **nave** tem Resumo · Missão · História (sem Aproximação nem Perfil físico, que ficariam vazios); corpo tem Resumo · Perfil físico · História. A aba História entra ao fim quando há lore.
+- `AsteroidFocusCard.tsx`: card de asteroide/cometa (distância viva ou estimada por Kepler, perfil físico por tipo, fatos orbitais, ações de órbita/dossiê).
+- `SpacecraftFocusCard.tsx`: card de nave/missão (Resumo · Missão · História, linha do tempo de marcos com selo de previsão).
+- `BodyFocusCard.tsx`: card de corpo celeste (imagem real, fatos e narrativa de `bodyData.ts`).
+- `FocusCardParts.tsx`: peças compartilhadas dos cards de foco — abas com semântica ARIA (`FocusTabBar`), linha rótulo/valor (`Row`), slot de preview ciente do sheet (`SheetAwarePreview`), classes do trilho desktop e os tipos de props/estado de abas.
 - `BodyImagePreview.tsx`: preview de imagem real estática para corpos celestes; ocupa o mesmo espaço visual do `AsteroidModelPreview`. As imagens são servidas localmente (`/images/bodies/`), com `fit` (cover/contain) e `scale` calibrados por hierarquia de tamanho real — não buscam URLs externas.
 - `AsteroidModelPreview.tsx`: preview 3D do asteroide em foco.
 - `SpacecraftImagePreview.tsx`: preview de foto real da nave no card, no mesmo frame/estilo do `BodyImagePreview` (foto local em `/images/spacecraft/`, crédito NASA/JPL no canto). Foto por id sintético da nave; Voyager 1 e 2 usam artes distintas. Cai no `SpacecraftCardPreview` (ilustração SVG) quando não há foto cadastrada ou o arquivo falha — aprimoramento progressivo.
@@ -46,12 +50,11 @@ Esta pasta deve renderizar e organizar dados já recebidos pelas camadas de rada
 - `bottomSheetSnap.ts`: geometria pura dos snaps dos sheets (alturas, snap mais próximo, dispensa, ciclo no toque). Testada em `tests/js/Radar/bottomSheetSnap.test.ts`.
 - `useBottomSheetDrag.ts`: hook de arraste vertical dos sheets, consumindo `bottomSheetSnap.ts`.
 - `SceneLegend.tsx`: legenda da cena (somente desktop; no mobile o guia abre pela `MobileActionBar` e o modal continua montado via portal).
-- `TechnicalDataPanel.tsx`: painel técnico expansível.
 - `panelFormatters.ts`: formatadores locais de datas e unidades exibidas nos painéis. `formatApproachDateTime` formata dia+mês+hora; `formatApproachDate` formata apenas a data.
 
 ## Padrão Desktop: Trilho Esquerdo
 
-No desktop (lg:+), painel de navegação e card de foco formam um trilho único na esquerda: o card ancora logo abaixo do painel usando a mesma fórmula de altura (`min(20rem,40vh)`, 16rem em modo órbita) em `top`, com `max-height` até a base da cena e scroll interno quando faltar espaço (ver `desktopRailClasses` no `UnifiedFocusCard`). Isso elimina a colisão painel/card e o corte do rodapé do card que existiam com posicionamento independente (`top-[30%]`). O painel é recolhível em pill (`PanelLeftClose`) para dar protagonismo total à cena; o estado vive em `DailyOrbitalRadar3D` porque o card precisa subir junto. O enquadramento de foco compensa o trilho via `Scene/usePanelBias` (biasX, união painel+card, aplicado só durante tweens).
+No desktop (lg:+), painel de navegação e card de foco formam um trilho único na esquerda: o card ancora logo abaixo do painel usando a mesma fórmula de altura (`min(20rem,40vh)`, 16rem em modo órbita) em `top`, com `max-height` até a base da cena e scroll interno quando faltar espaço (ver `desktopRailClasses` em `FocusCardParts.tsx`). Isso elimina a colisão painel/card e o corte do rodapé do card que existiam com posicionamento independente (`top-[30%]`). O painel é recolhível em pill (`PanelLeftClose`) para dar protagonismo total à cena; o estado vive em `DailyOrbitalRadar3D` porque o card precisa subir junto. O enquadramento de foco compensa o trilho via `Scene/usePanelBias` (biasX, união painel+card, aplicado só durante tweens).
 
 Atenção: o shell dos cards não pode usar classes de translate para posicionar no desktop. A animação de entrada aplica `transform` inline, que sobrescreve qualquer `-translate-*` de classe (foi a causa original da colisão).
 
@@ -59,15 +62,15 @@ Atenção: o shell dos cards não pode usar classes de translate para posicionar
 
 No mobile (abaixo de lg:), a navegação abandona painéis flutuantes sobre a cena: a porta de entrada é a `Controls/MobileActionBar.tsx` (Objetos, Filtros, Guia) e cada superfície abre como bottom sheet. O card de foco (`PanelShell`) tem três estados com arraste; os sheets de navegação (`MobileSheet`) têm dois (meio/expandido) e fecham por arraste para baixo. A região de arraste é sempre handle + cabeçalho (com `touch-none`); o conteúdo rola livre, sem disputa entre gesto do sheet e scroll interno. A cena permanece visível e tocável acima do sheet — não há backdrop.
 
-No estado meio aberto o card prioriza dados: o preview decorativo (modelo 3D/imagem) só aparece no estado expandido, via `SheetAwarePreview` (`UnifiedFocusCard`), que lê o snap atual pelo contexto `usePanelSheetState` do `PanelShell`. Além de devolver as métricas ao primeiro olhar, isso evita um segundo contexto WebGL ativo enquanto o usuário só lê números. O valor do contexto é memoizado para o conteúdo não re-renderizar a cada frame de arraste.
+No estado meio aberto o card prioriza dados: o preview decorativo (modelo 3D/imagem) só aparece no estado expandido, via `SheetAwarePreview` (`FocusCardParts.tsx`), que lê o snap atual pelo contexto `usePanelSheetState` do `PanelShell`. Além de devolver as métricas ao primeiro olhar, isso evita um segundo contexto WebGL ativo enquanto o usuário só lê números. O valor do contexto é memoizado para o conteúdo não re-renderizar a cada frame de arraste.
 
 ## Remoção Do Caminho 2D E Consolidação De Cards
 
-Os painéis `ObservatoryFocusPanel.tsx`, `ObservatoryDetailOverlay.tsx` e o card legado `MercuryCard.tsx` foram removidos junto com caminhos duplicados de UI. Os cards `BodyInfoCard.tsx` e `FocusCard.tsx` foram consolidados em `UnifiedFocusCard.tsx`, que usa `kind: 'asteroid'` ou `kind: 'body'` para alternar o conteúdo com o mesmo shell visual. Dentro de `kind: 'asteroid'`, a nave (`objectType: 'spacecraft'`) é roteada para um `SpacecraftCard` próprio em vez do `AsteroidCard`, porque herdar as abas de rocha lhe dava Aproximação e Perfil físico vazios.
+Os painéis `ObservatoryFocusPanel.tsx`, `ObservatoryDetailOverlay.tsx` e o card legado `MercuryCard.tsx` foram removidos junto com caminhos duplicados de UI. Os cards `BodyInfoCard.tsx` e `FocusCard.tsx` foram consolidados em `UnifiedFocusCard.tsx`, que usa `kind: 'asteroid'` ou `kind: 'body'` para alternar o conteúdo com o mesmo shell visual. Dentro de `kind: 'asteroid'`, a nave (`objectType: 'spacecraft'`) é roteada para o `SpacecraftFocusCard` em vez do `AsteroidFocusCard`, porque herdar as abas de rocha lhe dava Aproximação e Perfil físico vazios. Quando o arquivo unificado passou de mil linhas, os três cards foram extraídos para arquivos irmãos (`AsteroidFocusCard.tsx`, `SpacecraftFocusCard.tsx`, `BodyFocusCard.tsx`) com as peças comuns em `FocusCardParts.tsx`; o `UnifiedFocusCard.tsx` seguiu como roteador e dono do estado compartilhado.
 
 ## Card Unificado
 
-`UnifiedFocusCard.tsx` recebe dados já resolvidos e monta a leitura visual: nome, distância, velocidade, tamanho, risco de monitoramento, ações disponíveis e, para corpos celestes, imagem real, fatos físicos e história. O preview visual é delegado para `AsteroidModelPreview` (asteroides) ou `BodyImagePreview` (corpos celestes).
+O conjunto `UnifiedFocusCard` + cards de foco recebe dados já resolvidos e monta a leitura visual: nome, distância, velocidade, tamanho, risco de monitoramento, ações disponíveis e, para corpos celestes, imagem real, fatos físicos e história. O preview visual é delegado para `AsteroidModelPreview` (asteroides), `SpacecraftImagePreview` (naves) ou `BodyImagePreview` (corpos celestes).
 
 As abas usam semântica ARIA de tablist (`FocusTabBar`): navegação por setas e Home/End, roving tabindex e painel `tabpanel` vinculado por `aria-labelledby`. A distância atual é a métrica principal do card: bloco próprio com rótulo em cima e valor em corpo maior embaixo (lado a lado não cabem na largura do card), arredondado via `approxKm` porque o dado muda ao vivo e precisão de 1 km seria falsa.
 
@@ -83,7 +86,7 @@ Os compartimentos de planetas (`planet-flyout`) e naves (`spacecraft-flyout`) s�
 
 ## Tutorial Interativo
 
-Alguns painéis carregam marcadores `data-tutorial` consumidos pelo tutorial de primeira visita (`../Tutorial/`): `selected-card` (via prop `dataTutorial` do `PanelShell`), `card-tabs`, `orbit-button` e `object-list-toggle` (botão "Lista" do eyebrow mobile) no `UnifiedFocusCard`, `object-list` e `planet-flyout` no `RadarNavigationPanel` (desktop e sheet mobile), `radar-filter-criterion`/`radar-filter-limit` no `MobileFiltersSheetContent`, e `radar-guide` no `SceneLegend`. São atributos passivos, sem lógica: ao renomear ou mover esses elementos, atualize o contrato em `../Tutorial/README.md` e `radarTutorialSteps.ts`.
+Alguns painéis carregam marcadores `data-tutorial` consumidos pelo tutorial de primeira visita (`../Tutorial/`): `selected-card` (via prop `dataTutorial` do `PanelShell`), `card-tabs` (`FocusCardParts.tsx`), `orbit-button` e `object-list-toggle` (botão "Lista" do eyebrow mobile) nos cards de foco, `object-list` e `planet-flyout` no `RadarNavigationPanel` (desktop e sheet mobile), `radar-filter-criterion`/`radar-filter-limit` no `MobileFiltersSheetContent`, e `radar-guide` no `SceneLegend`. São atributos passivos, sem lógica: ao renomear ou mover esses elementos, atualize o contrato em `../Tutorial/README.md` e `radarTutorialSteps.ts`.
 
 ## Padrões Locais
 

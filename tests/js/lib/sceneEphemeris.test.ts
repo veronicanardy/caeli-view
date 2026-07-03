@@ -4,7 +4,6 @@ import {
     KM_PER_AU,
     KM_PER_LD,
     LINEAR_AU_SCALE,
-    ORBIT_AU_SCALE,
     SUN_DISPLAY_DL,
     buildHeliocentricOrbit,
     helioAUToSunCenteredScene,
@@ -24,9 +23,6 @@ describe('régua única (LINEAR_AU_SCALE)', () => {
         expect(SUN_DISPLAY_DL).toBeCloseTo(LINEAR_AU_SCALE, 9);
     });
 
-    it('ORBIT_AU_SCALE is the same single ruler', () => {
-        expect(ORBIT_AU_SCALE).toBeCloseTo(LINEAR_AU_SCALE, 9);
-    });
 });
 
 describe('perifocalToEclipticAU', () => {
@@ -80,23 +76,23 @@ describe('buildHeliocentricOrbit', () => {
         expect(pts[2]).toBeCloseTo(pts[n - 1], 4);
     });
 
-    it('Earth-circular orbit centered on the Sun keeps |p| ≈ ORBIT_AU_SCALE for every sample', () => {
+    it('Earth-circular orbit centered on the Sun keeps |p| ≈ LINEAR_AU_SCALE for every sample', () => {
         const pts = buildHeliocentricOrbit(earthCircular, 128)!;
         // Tolerance reflects Float32Array storage (~7 significant digits), not the math itself.
         for (let i = 0; i < pts.length; i += 3) {
             const r = Math.hypot(pts[i], pts[i + 1], pts[i + 2]);
-            expect(r).toBeCloseTo(ORBIT_AU_SCALE, 4);
+            expect(r).toBeCloseTo(LINEAR_AU_SCALE, 4);
         }
     });
 });
 
 describe('helioAUToSunCenteredScene', () => {
-    it('aplica o swap de eixos (x, z, −y) e o fator linear ORBIT_AU_SCALE', () => {
+    it('aplica o swap de eixos (x, z, −y) e o fator linear LINEAR_AU_SCALE', () => {
         // eclíptico (1, 2, 3) → cena (1*s, 3*s, -2*s)
         const s = helioAUToSunCenteredScene({ x: 1, y: 2, z: 3 });
-        expect(s[0]).toBeCloseTo(1 * ORBIT_AU_SCALE, 12);
-        expect(s[1]).toBeCloseTo(3 * ORBIT_AU_SCALE, 12);
-        expect(s[2]).toBeCloseTo(-2 * ORBIT_AU_SCALE, 12);
+        expect(s[0]).toBeCloseTo(1 * LINEAR_AU_SCALE, 12);
+        expect(s[1]).toBeCloseTo(3 * LINEAR_AU_SCALE, 12);
+        expect(s[2]).toBeCloseTo(-2 * LINEAR_AU_SCALE, 12);
     });
 
     it('coloca o Sol (origem) na origem da cena', () => {
@@ -126,7 +122,7 @@ describe('helioAUToSunCenteredScene', () => {
         const s = helioAUToSunCenteredScene({ x: 0, y: 1, z: 0 });
         expect(s[0]).toBeCloseTo(0, 12);
         expect(s[1]).toBeCloseTo(0, 12);
-        expect(s[2]).toBeCloseTo(-1 * ORBIT_AU_SCALE, 12);
+        expect(s[2]).toBeCloseTo(-1 * LINEAR_AU_SCALE, 12);
     });
 });
 

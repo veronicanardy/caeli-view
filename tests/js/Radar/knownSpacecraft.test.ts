@@ -20,7 +20,7 @@ import {
 } from '@/Components/Radar/Bodies/Spacecraft/knownSpacecraft';
 import { isKnownCometId } from '@/Components/Radar/Bodies/Comet/knownComets';
 import { isKnownAsteroidId } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
-import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
+import { LINEAR_AU_SCALE } from '@/lib/sceneEphemeris';
 
 const KM_PER_AU = 149_597_870.7;
 
@@ -53,11 +53,11 @@ describe('posicionamento na régua linear', () => {
 
     it('a posição de cena bate com o vetor heliocêntrico fixo na régua única', () => {
         for (const craft of KNOWN_SPACECRAFT) {
-            const pos = knownSpacecraftScenePosition(craft, ORBIT_AU_SCALE);
+            const pos = knownSpacecraftScenePosition(craft, LINEAR_AU_SCALE);
             // Convenção de eixos: cena (x, z, -y) a partir do eclíptico (x, y, z).
-            expect(pos[0]).toBeCloseTo(craft.helioAU.x * ORBIT_AU_SCALE, 3);
-            expect(pos[1]).toBeCloseTo(craft.helioAU.z * ORBIT_AU_SCALE, 3);
-            expect(pos[2]).toBeCloseTo(-craft.helioAU.y * ORBIT_AU_SCALE, 3);
+            expect(pos[0]).toBeCloseTo(craft.helioAU.x * LINEAR_AU_SCALE, 3);
+            expect(pos[1]).toBeCloseTo(craft.helioAU.z * LINEAR_AU_SCALE, 3);
+            expect(pos[2]).toBeCloseTo(-craft.helioAU.y * LINEAR_AU_SCALE, 3);
         }
     });
 

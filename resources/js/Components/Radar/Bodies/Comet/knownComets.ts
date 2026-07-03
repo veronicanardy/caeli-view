@@ -142,7 +142,7 @@ export function knownCometHeliocentricDistanceKm(comet: KnownComet, date: Date =
 
 /**
  * Posições de todos os cometas que puderam ser ancorados em `date`, na régua dos planetas.
- * `scale` permite a escala própria do modo linear (default = ORBIT_AU_SCALE da régua normal).
+ * `scale` permite ajustar a régua (default = LINEAR_AU_SCALE, a régua única da cena).
  */
 export function knownCometPlacements(date: Date = new Date(), scale?: number): KnownCometPlacement[] {
     return KNOWN_COMETS

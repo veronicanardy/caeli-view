@@ -36,7 +36,7 @@ type KnownCometsLayerProps = {
     showLabels: boolean;
     /** Id do cometa atualmente selecionado (formato knownCometId), ou null. */
     selectedId?: string | null;
-    /** Escala AU própria (modo linear); default = ORBIT_AU_SCALE da régua normal. */
+    /** Régua AU da cena; default = LINEAR_AU_SCALE, a régua única. */
     auScale?: number;
     /** Ids de cometas que já têm posição real do Horizons. Esta camada (Kepler local) os PULA. */
     skipIds?: Set<string>;

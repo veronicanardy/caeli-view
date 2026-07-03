@@ -14,7 +14,6 @@ import { SUN_RADIUS_SCENE } from '../Bodies/bodyRenderConstants';
 import type { PlanetScenePositions, SceneVector } from './scenePositions';
 
 type SceneObjectOccluderInput = {
-    useHelioScene: boolean;
     earthPos: SceneVector;
     moonPos: SceneVector;
     planetPositions: PlanetScenePositions;
@@ -33,16 +32,11 @@ const PLANET_OCCLUDER_RADII = {
 } as const satisfies Record<keyof PlanetScenePositions, number>;
 
 export function computeSceneObjectOccluders({
-    useHelioScene,
     earthPos,
     moonPos,
     planetPositions,
 }: SceneObjectOccluderInput): SceneObjectOccluder[] {
     const sunOccluder = { id: 'sun', center: new THREE.Vector3(0, 0, 0), radius: SUN_RADIUS_SCENE };
-
-    if (useHelioScene) {
-        return [sunOccluder];
-    }
 
     const planetOccluders = Object.entries(planetPositions)
         .flatMap(([key, position]) => {

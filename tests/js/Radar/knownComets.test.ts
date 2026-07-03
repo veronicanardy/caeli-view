@@ -16,7 +16,7 @@ import {
 } from '@/Components/Radar/Bodies/Comet/knownComets';
 import { orbitFactsFromElements } from '@/lib/keplerOrbit';
 import { isKnownAsteroidId } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
-import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
+import { LINEAR_AU_SCALE } from '@/lib/sceneEphemeris';
 
 const FIXED_DATE = new Date('2026-06-15T00:00:00Z');
 
@@ -43,7 +43,7 @@ describe('posicionamento na régua linear', () => {
         for (const comet of KNOWN_COMETS) {
             const pos = knownCometScenePosition(comet, FIXED_DATE)!;
             expect(pos).not.toBeNull();
-            const rAu = Math.hypot(pos[0], pos[1], pos[2]) / ORBIT_AU_SCALE;
+            const rAu = Math.hypot(pos[0], pos[1], pos[2]) / LINEAR_AU_SCALE;
             const a = comet.elements.qrAu / (1 - comet.elements.ec);
             const aphelion = 2 * a - comet.elements.qrAu;
             expect(rAu).toBeGreaterThanOrEqual(comet.elements.qrAu - 1e-6);

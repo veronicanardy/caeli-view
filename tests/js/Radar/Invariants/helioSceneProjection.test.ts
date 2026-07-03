@@ -9,7 +9,7 @@
  *  3. Um objeto na direção/distância de Júpiter cai na região visual de Júpiter.
  *  4. Unidades (UA) e a troca de eixos eclíptico→cena não são aplicadas duas vezes.
  *
- * A régua é LINEAR e fiel à UA: 1 UA cai exatamente em ORBIT_AU_SCALE unidades de cena. A
+ * A régua é LINEAR e fiel à UA: 1 UA cai exatamente em LINEAR_AU_SCALE unidades de cena. A
  * proximidade de uma aproximação é revelada por ZOOM de câmera, nunca distorcendo a escala.
  */
 
@@ -18,7 +18,6 @@ import {
     KM_PER_AU,
     KM_PER_LD,
     LINEAR_AU_SCALE,
-    ORBIT_AU_SCALE,
     helioAUToSunCenteredScene,
 } from '@/lib/sceneEphemeris';
 
@@ -112,9 +111,9 @@ describe('objeto perto de Júpiter cai na região visual de Júpiter', () => {
 // ─── 4. Unidades e eixos não são aplicados duas vezes ──────────────────────────
 
 describe('unidades e eixos aplicados exatamente uma vez', () => {
-    it('usa KM_PER_AU uma vez: 1 UA → 1 × ORBIT_AU_SCALE', () => {
+    it('usa KM_PER_AU uma vez: 1 UA → 1 × LINEAR_AU_SCALE', () => {
         const s = helioAUToSunCenteredScene({ x: 1, y: 0, z: 0 });
-        expect(s[0]).toBeCloseTo(ORBIT_AU_SCALE, 9);
+        expect(s[0]).toBeCloseTo(LINEAR_AU_SCALE, 9);
     });
 
     it('a régua é fiel à distância: N UA caem em N × LINEAR_AU_SCALE', () => {
@@ -127,7 +126,7 @@ describe('unidades e eixos aplicados exatamente uma vez', () => {
         const s = helioAUToSunCenteredScene({ x: 0, y: 1, z: 0 });
         expect(Math.abs(s[0])).toBeLessThan(1e-9);
         expect(Math.abs(s[1])).toBeLessThan(1e-9);
-        expect(s[2]).toBeCloseTo(-ORBIT_AU_SCALE, 9);
+        expect(s[2]).toBeCloseTo(-LINEAR_AU_SCALE, 9);
     });
 
     it('sanidade de unidades: 1 UA = KM_PER_AU/KM_PER_LD distâncias lunares (~389)', () => {

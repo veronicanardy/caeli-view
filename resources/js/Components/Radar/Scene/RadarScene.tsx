@@ -34,6 +34,7 @@ import { InertialZoom } from './InertialZoom';
 import { KeyboardPan } from './KeyboardPan';
 import { TouchGestures } from './TouchGestures';
 import { PlanetLayer } from './PlanetLayer';
+import type { PlanetId } from './planetConfig';
 import { PlanetOrbitLayer } from './PlanetOrbitLayer';
 import { computeLabelOccluder, focusedObjectScenePosition, shouldShowLabelForObject } from './sceneFocus';
 import { SUN_RADIUS_SCENE } from '../Bodies/bodyRenderConstants';
@@ -64,20 +65,10 @@ type RadarSceneProps = {
     /** Direção Terra→Sol semeada pelo servidor até a efeméride resolver. Nunca é vetor arbitrário. */
     fallbackSunDirection: [number, number, number];
     locale: 'pt-BR' | 'en';
-    onFocusMercury: () => void;
-    isMercuryFocused: boolean;
-    onFocusVenus: () => void;
-    isVenusFocused: boolean;
-    onFocusMars: () => void;
-    isMarsFocused: boolean;
-    onFocusJupiter: () => void;
-    isJupiterFocused: boolean;
-    onFocusSaturn: () => void;
-    isSaturnFocused: boolean;
-    onFocusUranus: () => void;
-    isUranusFocused: boolean;
-    onFocusNeptune: () => void;
-    isNeptuneFocused: boolean;
+    /** Foca a câmera no planeta clicado (label/hitbox da cena). */
+    onFocusPlanet: (id: PlanetId) => void;
+    /** Planeta com card aberto (realce de foco), ou null. */
+    focusedPlanetId?: PlanetId | null;
     /** Chamado quando Terra ou Lua são focados de dentro da cena (clique no label/hitbox). */
     onFocusBody: (body: 'earth' | 'moon') => void;
     onFocusSun?: () => void;
@@ -171,7 +162,7 @@ function FirstFrameNotifier({ onFirstFrame }: { onFirstFrame: () => void }) {
     return null;
 }
 
-export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusMercury, isMercuryFocused, onFocusVenus, isVenusFocused, onFocusMars, isMarsFocused, onFocusJupiter, isJupiterFocused, onFocusSaturn, isSaturnFocused, onFocusUranus, isUranusFocused, onFocusNeptune, isNeptuneFocused, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, sceneNavigationEnabled = true, showKnownAsteroids = false, selectedSpacecraftId = null, onFocusSpacecraft, spacecraftPositions, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
+export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect, cameraIntent, focusTarget, panelBiasX = 0, panelBiasY = 0, ephemeris, fallbackSunDirection, locale, onFocusPlanet, focusedPlanetId = null, onFocusBody, onFocusSun, isSunFocused = false, showLabels = true, sceneNavigationEnabled = true, showKnownAsteroids = false, selectedSpacecraftId = null, onFocusSpacecraft, spacecraftPositions, onFirstFrame, onFocusTrajectoryPoint }: RadarSceneProps) {
     // A cena heliocêntrica usa a régua única em UA (LINEAR_AU_SCALE): a efeméride já chega nela
     // (computeSceneEphemeris gera as posições direto na régua), sem reescalonamento intermediário.
     const hasSelection = selectedId !== null;
@@ -291,7 +282,6 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
     const sceneObjectOccluders = useMemo(
         () => {
             const bodyOccluders = computeSceneObjectOccluders({
-                useHelioScene: false,
                 earthPos,
                 moonPos,
                 planetPositions,
@@ -393,23 +383,11 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                             {showLabels ? <MoonOrbit moonPos={moonPos} earthPos={earthPos} orbitNormal={moonOrbitNormal} /> : null}
                             {/* Planetas — posições heliocêntricas reais, Sol na origem. */}
                             <PlanetLayer
-                                {...planetPositions}
+                                positions={planetPositions}
                                 locale={locale}
                                 showLabels={showLabels}
-                                onFocusMercury={onFocusMercury}
-                                isMercuryFocused={isMercuryFocused}
-                                onFocusVenus={onFocusVenus}
-                                isVenusFocused={isVenusFocused}
-                                onFocusMars={onFocusMars}
-                                isMarsFocused={isMarsFocused}
-                                onFocusJupiter={onFocusJupiter}
-                                isJupiterFocused={isJupiterFocused}
-                                onFocusSaturn={onFocusSaturn}
-                                isSaturnFocused={isSaturnFocused}
-                                onFocusUranus={onFocusUranus}
-                                isUranusFocused={isUranusFocused}
-                                onFocusNeptune={onFocusNeptune}
-                                isNeptuneFocused={isNeptuneFocused}
+                                onFocusPlanet={onFocusPlanet}
+                                focusedPlanetId={focusedPlanetId}
                             />
                             {/* Elipses orbitais — longitude do periélio calculada dinamicamente da efeméride. */}
                             <PlanetOrbitLayer ephemeris={ephemeris} show={showLabels && !orbitLabelsOnly} />
@@ -509,7 +487,7 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
 
             {/* Pré-compila shaders e sobe texturas em momentos ociosos para que revelar
                 objetos novos ao rotacionar a câmera não congele o main thread. */}
-            <SceneWarmup revision={`${closestNowObjects.length}:geo`} />
+            <SceneWarmup revision={String(closestNowObjects.length)} />
 
             {/* Suspende o backdrop-blur dos labels enquanto a câmera se move (caro de compor). */}
             <LabelBackdropGate />

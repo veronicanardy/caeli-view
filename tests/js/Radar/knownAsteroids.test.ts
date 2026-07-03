@@ -14,7 +14,7 @@ import {
     knownAsteroidScenePosition,
     modelAssetForKnown,
 } from '@/Components/Radar/Bodies/Asteroid/knownAsteroids';
-import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
+import { LINEAR_AU_SCALE } from '@/lib/sceneEphemeris';
 
 const FIXED_DATE = new Date('2026-06-15T00:00:00Z');
 
@@ -47,17 +47,17 @@ describe('posicionamento na régua linear', () => {
         expect(placements).toHaveLength(5);
     });
 
-    it('cada um cai no raio heliocêntrico real (escala linear ORBIT_AU_SCALE)', () => {
-        // Raio de cena esperado ≈ semieixo maior (a = q/(1-e)) × ORBIT_AU_SCALE, com tolerância
+    it('cada um cai no raio heliocêntrico real (escala linear LINEAR_AU_SCALE)', () => {
+        // Raio de cena esperado ≈ semieixo maior (a = q/(1-e)) × LINEAR_AU_SCALE, com tolerância
         // ampla porque a posição instantânea varia entre periélio e afélio.
         for (const known of KNOWN_ASTEROIDS) {
             const pos = knownAsteroidScenePosition(known, FIXED_DATE)!;
             expect(pos).not.toBeNull();
             const r = Math.hypot(pos[0], pos[1], pos[2]);
             const a = known.elements.qrAu / (1 - known.elements.ec);
-            const expectedR = a * ORBIT_AU_SCALE;
+            const expectedR = a * LINEAR_AU_SCALE;
             // Entre periélio (q) e afélio (2a-q): r/scale ∈ [q, 2a-q]. Checa que está nessa faixa.
-            const rAu = r / ORBIT_AU_SCALE;
+            const rAu = r / LINEAR_AU_SCALE;
             const aphelion = 2 * a - known.elements.qrAu;
             expect(rAu).toBeGreaterThanOrEqual(known.elements.qrAu - 1e-6);
             expect(rAu).toBeLessThanOrEqual(aphelion + 1e-6);
@@ -71,7 +71,7 @@ describe('posicionamento na régua linear', () => {
         for (const name of ['Ceres', 'Vesta']) {
             const known = KNOWN_ASTEROIDS.find((k) => k.name === name)!;
             const r = Math.hypot(...knownAsteroidScenePosition(known, FIXED_DATE)!);
-            const rAu = r / ORBIT_AU_SCALE;
+            const rAu = r / LINEAR_AU_SCALE;
             expect(rAu).toBeGreaterThan(1.5);
             expect(rAu).toBeLessThan(5.2);
         }
@@ -80,7 +80,7 @@ describe('posicionamento na régua linear', () => {
     it('Bennu e Eros ficam próximos da órbita da Terra (NEOs, ~1 UA)', () => {
         for (const name of ['Bennu', 'Eros']) {
             const known = KNOWN_ASTEROIDS.find((k) => k.name === name)!;
-            const rAu = Math.hypot(...knownAsteroidScenePosition(known, FIXED_DATE)!) / ORBIT_AU_SCALE;
+            const rAu = Math.hypot(...knownAsteroidScenePosition(known, FIXED_DATE)!) / LINEAR_AU_SCALE;
             expect(rAu).toBeGreaterThan(0.8);
             expect(rAu).toBeLessThan(2.2);
         }

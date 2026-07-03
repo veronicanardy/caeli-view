@@ -96,9 +96,9 @@ export function isBeyondRenderLimit(object: ClosestNowObject): boolean {
  * polilinha (não do ponto Horizons de currentPositionInHelioScene), senão fica deslocada da linha:
  * a linha é a elipse de dois corpos e o Horizons inclui perturbações, então as fontes divergem.
  *
- * IMPORTANTE: o resultado está em ORBIT_AU_SCALE (embutido em ellipseVertexAtNu), igual à órbita
- * construída por buildHeliocentricOrbit. Quem renderiza deve aplicar o MESMO LINEAR_SCALE_FACTOR
- * (via <group scale>) à linha e a este ponto, para que ambos caiam juntos na régua linear.
+ * IMPORTANTE: o resultado já sai na régua única LINEAR_AU_SCALE (embutida em ellipseVertexAtNu),
+ * igual à órbita construída por buildHeliocentricOrbit; linha e ponto caem juntos, sem
+ * reescalonamento adicional de quem renderiza.
  * Retorna null quando os elementos não permitem ancorar o ν (sem época de periélio, hiperbólico).
  */
 export function focusedOrbitSamplePosition(

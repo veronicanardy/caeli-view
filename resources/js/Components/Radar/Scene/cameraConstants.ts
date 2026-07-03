@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
+import { LINEAR_AU_SCALE } from '@/lib/sceneEphemeris';
 
 /**
  * Constantes compartilhadas do enquadramento da câmera da cena 3D.
@@ -16,7 +16,7 @@ export const CAMERA_FOV_DEG = 42;
 // câmera a ~10.800 unidades da origem) e o zoom é medido A PARTIR do alvo, então o teto tem de ter folga
 // MUITO acima de 36 UA, senão a rotação/zoom em torno do Halley bate no limite e trava por ângulo. 200 UA
 // dá folga ampla sobre o afélio de Halley sem perder o contexto das órbitas internas.
-export const MAX_CAMERA_DISTANCE = ORBIT_AU_SCALE * 200;
+export const MAX_CAMERA_DISTANCE = LINEAR_AU_SCALE * 200;
 
 /**
  * Plano near da câmera. A precisão do depth buffer escala com a razão far/near: um near minúsculo

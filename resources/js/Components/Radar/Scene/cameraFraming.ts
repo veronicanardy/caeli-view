@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import type { ClosestNowObject } from '@/types';
-import { LINEAR_AU_SCALE, buildHeliocentricOrbit, helioAUToSunCenteredScene, ORBIT_AU_SCALE } from '@/lib/sceneEphemeris';
+import { LINEAR_AU_SCALE, buildHeliocentricOrbit, helioAUToSunCenteredScene } from '@/lib/sceneEphemeris';
 import { heliocentricPositionAU } from '@/lib/keplerOrbit';
 import { currentPositionInHelioScene } from '@/lib/radar/trajectorySampling';
 import type { EarthHelioAU } from '@/lib/radar/trajectorySampling';
@@ -257,7 +257,7 @@ export function computeFocusFraming(
             const fovRad = THREE.MathUtils.degToRad(CAMERA_FOV_DEG);
             const distance = THREE.MathUtils.clamp(
                 (sphere.radius / Math.sin(fovRad * 0.5)) * 1.12,
-                ORBIT_AU_SCALE * 1.2,
+                LINEAR_AU_SCALE * 1.2,
                 MAX_CAMERA_DISTANCE,
             );
             const dir = new THREE.Vector3(0.32, 0.72, 0.62).normalize();

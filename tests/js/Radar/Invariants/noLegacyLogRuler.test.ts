@@ -24,11 +24,17 @@ const ROOTS = [
 /**
  * Símbolos da régua log antiga e dos cortes removidos. Se algum voltar a aparecer no código (não em
  * comentário), a decisão de "régua linear única" foi quebrada sem querer.
+ *
+ * `ORBIT_AU_SCALE` e `LINEAR_SCALE_FACTOR` eram aliases deprecados da migração para a régua única
+ * (valiam LINEAR_AU_SCALE e 1); a migração terminou e eles foram removidos, então qualquer volta é
+ * ressurreição acidental do vocabulário antigo.
  */
 const FORBIDDEN_SYMBOLS = [
     'compressSceneVector',
     'useHideAsteroidLabelsMode',
     'RadarDataQualityCard',
+    'ORBIT_AU_SCALE',
+    'LINEAR_SCALE_FACTOR',
 ];
 
 function collectSourceFiles(dir: string): string[] {

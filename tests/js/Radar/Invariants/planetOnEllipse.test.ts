@@ -18,7 +18,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-    ORBIT_AU_SCALE,
+    LINEAR_AU_SCALE,
     ORBIT_ELLIPSE_SEGMENTS,
     buildHeliocentricEllipse,
     buildHeliocentricOrbit,
@@ -56,7 +56,7 @@ function planetSceneAtNuIdealCurve(p: Planet, nu: number): [number, number, numb
     const semilatus = p.a * (1 - p.e * p.e);
     const r = semilatus / (1 + p.e * Math.cos(nu));
     const ecl = perifocalToEclipticAU(r * Math.cos(nu), r * Math.sin(nu), p.iDeg, p.omDeg, argPeriDeg);
-    return [ecl.x * ORBIT_AU_SCALE, ecl.z * ORBIT_AU_SCALE, -ecl.y * ORBIT_AU_SCALE];
+    return [ecl.x * LINEAR_AU_SCALE, ecl.z * LINEAR_AU_SCALE, -ecl.y * LINEAR_AU_SCALE];
 }
 
 /** Menor distância de um ponto à polilinha (lista de segmentos) da elipse. */
@@ -120,7 +120,7 @@ describe('planeta cai EXATAMENTE sobre a polilinha desenhada (desvio absoluto nu
         // Terra: i = 0 ao eclíptico por definição → elipse plana.
         const ellipse = buildHeliocentricEllipse(1.0, 0.0167, 102.94, 0, 0, 64);
         for (let i = 1; i < ellipse.length; i += 3) {
-            expect(Math.abs(ellipse[i])).toBeLessThan(1e-6 * ORBIT_AU_SCALE);
+            expect(Math.abs(ellipse[i])).toBeLessThan(1e-6 * LINEAR_AU_SCALE);
         }
     });
 });

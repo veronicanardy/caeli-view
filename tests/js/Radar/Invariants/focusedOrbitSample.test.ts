@@ -6,12 +6,13 @@
  * desvio é zero por construção, em qualquer distância.
  *
  * Estes testes provam: (a) o ponto amostrado está sobre a polilinha de buildHeliocentricOrbit;
- * (b) a coincidência sobrevive ao LINEAR_SCALE_FACTOR (a régua linear escala linha e ponto juntos);
- * (c) elementos sem época de periélio (tpJd = 0) retornam null, como o resto do pipeline.
+ * (b) elementos sem época de periélio (tpJd = 0) retornam null, como o resto do pipeline.
+ * (O antigo caso do LINEAR_SCALE_FACTOR morreu com o alias: a matemática já gera direto na régua
+ * única LINEAR_AU_SCALE, sem reescalonamento a sobreviver.)
  */
 
 import { describe, expect, it } from 'vitest';
-import { LINEAR_SCALE_FACTOR, buildHeliocentricOrbit } from '@/lib/sceneEphemeris';
+import { buildHeliocentricOrbit } from '@/lib/sceneEphemeris';
 import { focusedOrbitSamplePosition } from '@/lib/radar/trajectorySampling';
 import type { OrbitalElements } from '@/types';
 
@@ -30,12 +31,6 @@ function distanceToPolyline(point: [number, number, number], poly: Float32Array)
         if (d < best) best = d;
     }
     return best;
-}
-
-function scaled(p: Float32Array, k: number): Float32Array {
-    const out = new Float32Array(p.length);
-    for (let i = 0; i < p.length; i += 1) out[i] = p[i] * k;
-    return out;
 }
 
 /**
@@ -64,22 +59,6 @@ describe('focusedOrbitSamplePosition', () => {
             // abaixo do deslocamento do bug original (corpo numa fonte, linha em outra). A barra 1e-4
             // espelha a do teste irmão dos planetas (planetOnEllipse).
             expect(distanceToPolyline(sample!, orbit!), name).toBeLessThan(1e-4);
-        }
-    });
-
-    it('a coincidência sobrevive ao LINEAR_SCALE_FACTOR (régua linear)', () => {
-        for (const { name, elements } of NEOS) {
-            const sample = focusedOrbitSamplePosition(elements, FIXED_DATE)!;
-            const orbit = buildHeliocentricOrbit(elements)!;
-            // Como RadarScene: ponto e linha multiplicados pelo MESMO fator continuam coincidindo.
-            const linearSample: [number, number, number] = [
-                sample[0] * LINEAR_SCALE_FACTOR,
-                sample[1] * LINEAR_SCALE_FACTOR,
-                sample[2] * LINEAR_SCALE_FACTOR,
-            ];
-            const linearOrbit = scaled(orbit, LINEAR_SCALE_FACTOR);
-            // Tolerância acompanha a escala (o desvio absoluto cresce com k, mas segue desprezível).
-            expect(distanceToPolyline(linearSample, linearOrbit), name).toBeLessThan(1e-4 * LINEAR_SCALE_FACTOR);
         }
     });
 

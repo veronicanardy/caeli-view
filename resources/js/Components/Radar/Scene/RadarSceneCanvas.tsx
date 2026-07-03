@@ -100,6 +100,10 @@ export function RadarSceneCanvas({
     // Prioridade de foco: seleção de objeto > foco no Sol > nave > conhecido (famosos) > foco em planeta.
     // Garante que a câmera siga a seleção do usuário antes de qualquer alvo secundário.
     const activeFocusTarget = focusTarget ?? sunFocusTarget ?? spacecraftFocusTarget ?? knownFocusTarget ?? Object.values(planetFocusTargets)[0] ?? null;
+    // Planeta com card aberto (realce de foco na cena). Terra/Lua/Sol têm realce próprio.
+    const focusedPlanetId = bodyCardOpen !== null && bodyCardOpen !== 'earth' && bodyCardOpen !== 'moon' && bodyCardOpen !== 'sun'
+        ? bodyCardOpen
+        : null;
     const [sceneReady, setSceneReady] = useState(false);
     const tweenToRef = useRef<TweenTo>(() => {});
     const [zoomHintState, setZoomHintState] = useState<ZoomHintState | null>(null);
@@ -144,20 +148,8 @@ export function RadarSceneCanvas({
                         }}
                         onFocusSun={onFocusSun}
                         isSunFocused={bodyCardOpen === 'sun'}
-                        onFocusMercury={() => onFocusPlanet('mercury')}
-                        isMercuryFocused={bodyCardOpen === 'mercury'}
-                        onFocusVenus={() => onFocusPlanet('venus')}
-                        isVenusFocused={bodyCardOpen === 'venus'}
-                        onFocusMars={() => onFocusPlanet('mars')}
-                        isMarsFocused={bodyCardOpen === 'mars'}
-                        onFocusJupiter={() => onFocusPlanet('jupiter')}
-                        isJupiterFocused={bodyCardOpen === 'jupiter'}
-                        onFocusSaturn={() => onFocusPlanet('saturn')}
-                        isSaturnFocused={bodyCardOpen === 'saturn'}
-                        onFocusUranus={() => onFocusPlanet('uranus')}
-                        isUranusFocused={bodyCardOpen === 'uranus'}
-                        onFocusNeptune={() => onFocusPlanet('neptune')}
-                        isNeptuneFocused={bodyCardOpen === 'neptune'}
+                        onFocusPlanet={onFocusPlanet}
+                        focusedPlanetId={focusedPlanetId}
                         onFocusBody={onFocusBody}
                         onFocusTrajectoryPoint={onFocusTrajectoryPoint}
                     />

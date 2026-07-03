@@ -36,7 +36,7 @@ type KnownSpacecraftLayerProps = {
     showLabels: boolean;
     /** Id da nave atualmente selecionada (formato knownSpacecraftId), ou null. */
     selectedId?: string | null;
-    /** Escala AU própria (modo linear); default = ORBIT_AU_SCALE da régua normal. */
+    /** Régua AU da cena; default = LINEAR_AU_SCALE, a régua única. */
     auScale?: number;
     /** Posições ao vivo das naves (Horizons). Naves ausentes usam o vetor fixo local. */
     livePositions?: LiveSpacecraftPositions;

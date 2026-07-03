@@ -44,7 +44,7 @@ type KnownAsteroidsLayerProps = {
     showLabels: boolean;
     /** Id do conhecido atualmente selecionado (formato knownAsteroidId), ou null. */
     selectedId?: string | null;
-    /** Escala AU própria (modo linear); default = ORBIT_AU_SCALE da régua normal. */
+    /** Régua AU da cena; default = LINEAR_AU_SCALE, a régua única. */
     auScale?: number;
     /**
      * Ids de conhecidos que já têm posição real do Horizons (desenhados pelo AsteroidSceneLayer).

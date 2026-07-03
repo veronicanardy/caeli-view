@@ -76,7 +76,7 @@ export type SceneEphemeris = {
      */
     earthLonPerihelionDeg: number; earthInclinationDeg: number; earthLonAscNodeDeg: number; earthSemiMajorAU: number; earthEccentricity: number;
     /**
-     * Posição heliocêntrica de Mercúrio em unidades de cena (Sol na origem, 1 UA = ORBIT_AU_SCALE).
+     * Posição heliocêntrica de Mercúrio em unidades de cena (Sol na origem, 1 UA = LINEAR_AU_SCALE).
      * Nulo até que a efeméride assíncrona seja resolvida.
      */
     mercuryScenePosition: [number, number, number]; mercuryLonPerihelionDeg: number; mercuryInclinationDeg: number; mercuryLonAscNodeDeg: number; mercurySemiMajorAU: number; mercuryEccentricity: number;
@@ -335,15 +335,6 @@ export async function computeSceneEphemeris(date: Date = new Date()): Promise<Sc
 }
 
 /**
- * @deprecated Aliases da régua única (LINEAR_AU_SCALE), mantidos enquanto os consumidores são
- * migrados. ORBIT_AU_SCALE era a escala log-derivada (≈96) que a matemática gerava antes de ser
- * reescalada; agora a matemática já gera direto na régua única, então ambos valem LINEAR_AU_SCALE
- * e LINEAR_SCALE_FACTOR é 1 (sem reescalonamento).
- */
-export const ORBIT_AU_SCALE = LINEAR_AU_SCALE;
-export const LINEAR_SCALE_FACTOR = 1;
-
-/**
  * Perifocal (x em direção ao periélio, y a +90° no sentido do movimento) → eclíptico heliocêntrico
  * J2000, ambos em UA. Função pura, compartilhada entre o construtor de curva orbital e o propagador
  * da equação de Kepler (lib/keplerOrbit) para que a elipse desenhada e o ponto "agora" do asteroide
@@ -411,7 +402,7 @@ export function buildHeliocentricOrbit(
  */
 export function helioAUToSunCenteredScene(
     p: { x: number; y: number; z: number },
-    scale: number = ORBIT_AU_SCALE,
+    scale: number = LINEAR_AU_SCALE,
 ): [number, number, number] {
     return [p.x * scale, p.z * scale, -p.y * scale];
 }
@@ -437,7 +428,7 @@ function ellipseVertexAtNu(g: OrbitGeometry, nu: number): [number, number, numbe
     const argPerihelionDeg = g.lonPerihelionDeg - g.lonAscNodeDeg; // ω = ϖ − Ω
     const r = p / (1 + e * Math.cos(nu));            // UA, medido a partir do foco (Sol)
     const ecl = perifocalToEclipticAU(r * Math.cos(nu), r * Math.sin(nu), g.inclinationDeg, g.lonAscNodeDeg, argPerihelionDeg);
-    return [ecl.x * ORBIT_AU_SCALE, ecl.z * ORBIT_AU_SCALE, -ecl.y * ORBIT_AU_SCALE];
+    return [ecl.x * LINEAR_AU_SCALE, ecl.z * LINEAR_AU_SCALE, -ecl.y * LINEAR_AU_SCALE];
 }
 
 /**
