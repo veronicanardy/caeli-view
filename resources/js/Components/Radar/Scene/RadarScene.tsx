@@ -471,14 +471,17 @@ export function RadarScene({ closestNowObjects, selectedId, orbitMode, onSelect,
                     ) : null}
 
                     {/* Naves famosas: SEMPRE na cena, como os planetas (não dependem do modo famosos).
-                        Marcador estilizado na posição heliocêntrica fixa. Fora da régua de órbita Kepler
-                        (showFullOrbit), que isola um único corpo + Sol. Clique foca a câmera e abre o card. */}
+                        Modelo real na posição do Horizons (ou fallback local). earthHelioAU habilita o
+                        caminho preciso Terra_exata + geoAU (James Webb a 0,01 UA da Terra). Fora da régua
+                        de órbita Kepler (showFullOrbit), que isola um único corpo + Sol. Clique foca a
+                        câmera e abre o card. */}
                     {!(showFullOrbit && focusOrbit) ? (
                         <KnownSpacecraftLayer
                             showLabels={showLabels}
                             selectedId={selectedSpacecraftId}
                             auScale={LINEAR_AU_SCALE}
                             livePositions={spacecraftPositions}
+                            earthHelioAU={ephemeris?.earthHelioPositionAU}
                             onSelect={onFocusSpacecraft}
                         />
                     ) : null}

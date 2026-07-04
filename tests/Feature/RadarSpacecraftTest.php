@@ -9,10 +9,10 @@ use Tests\Fixtures\JplResponses;
 use Tests\TestCase;
 
 /**
- * Testa o endpoint /radar/spacecraft: a posição atual das naves famosas (Voyager 1/2, Pioneer 10,
- * New Horizons, Juno) resolvida no JPL Horizons como vetor heliocêntrico em UA. As naves vivem na
- * cena como os planetas; quando o Horizons falha para uma nave, ela some do payload (o front cai no
- * vetor fixo local).
+ * Testa o endpoint /radar/spacecraft: a posição atual das naves famosas (Voyager 1/2, Pioneer 10/11,
+ * New Horizons, Juno, James Webb, Parker Solar Probe, Europa Clipper) resolvida no JPL Horizons como
+ * vetor geocêntrico exato + heliocêntrico aproximado, em UA. As naves vivem na cena como os planetas;
+ * quando o Horizons falha para uma nave, ela some do payload (o front cai no vetor fixo local).
  */
 class RadarSpacecraftTest extends TestCase
 {
@@ -31,16 +31,24 @@ class RadarSpacecraftTest extends TestCase
         $response = $this->getJson('/radar/spacecraft')->assertOk();
 
         $objects = $response->json('objects');
-        $this->assertCount(5, $objects, 'Voyager 1/2, Pioneer 10, New Horizons, Juno.');
+        $this->assertCount(9, $objects, 'Voyager 1/2, Pioneer 10/11, New Horizons, Juno, James Webb, Parker, Europa Clipper.');
 
         $ids = array_map(fn ($o) => $o['id'], $objects);
         $this->assertEqualsCanonicalizing(
-            ['spacecraft:-31', 'spacecraft:-32', 'spacecraft:-23', 'spacecraft:-98', 'spacecraft:-61'],
+            [
+                'spacecraft:-31', 'spacecraft:-32', 'spacecraft:-23', 'spacecraft:-24',
+                'spacecraft:-98', 'spacecraft:-61', 'spacecraft:-170', 'spacecraft:-96',
+                'spacecraft:-159',
+            ],
             $ids,
         );
 
         foreach ($objects as $obj) {
-            // helioAU é um vetor numérico {x, y, z} em UA, pronto para a régua da cena.
+            // geoAU é o vetor geocêntrico EXATO do Horizons; helioAU o heliocêntrico aproximado.
+            // Ambos vetores numéricos {x, y, z} em UA, prontos para a régua da cena.
+            $this->assertIsNumeric($obj['geoAU']['x']);
+            $this->assertIsNumeric($obj['geoAU']['y']);
+            $this->assertIsNumeric($obj['geoAU']['z']);
             $this->assertIsNumeric($obj['helioAU']['x']);
             $this->assertIsNumeric($obj['helioAU']['y']);
             $this->assertIsNumeric($obj['helioAU']['z']);
@@ -57,7 +65,7 @@ class RadarSpacecraftTest extends TestCase
 
         // Naves usam o id de nave do Horizons (SPK negativo) como COMMAND, URL-encoded: COMMAND='-31'
         // vira COMMAND=%27-31%27. O HorizonsObjectIdentity o prioriza via horizonsCommand explícito.
-        foreach (['-31', '-32', '-23', '-98', '-61'] as $horizonsId) {
+        foreach (['-31', '-32', '-23', '-24', '-98', '-61', '-170', '-96', '-159'] as $horizonsId) {
             Http::assertSent(fn (Request $request) => str_contains(
                 (string) $request->url(),
                 'COMMAND=%27'.$horizonsId.'%27',

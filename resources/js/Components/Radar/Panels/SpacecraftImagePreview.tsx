@@ -28,10 +28,13 @@ type ImageConfig = {
 /**
  * Foto por id sintético da nave (spacecraft:<horizonsId>), casando com knownSpacecraftId. Naves sem
  * entrada aqui usam a ilustração SVG. Arquivos em public/images/spacecraft/, servidos em
- * /images/spacecraft/. Todas são arte conceitual oficial NASA enquadrada na própria sonda (preenche o
- * frame, lê bem em miniatura). Voyager 1 e 2 usam artes DISTINTAS (PIA17049 vs PIA26353), não a mesma
- * imagem das gêmeas. Fontes: Voyager PIA17049/PIA26353, Juno PIA21770, Pioneer 10 (Pioneer mission
- * page), New Horizons PIA10075. Crédito = a atribuição oficial de cada imagem.
+ * /images/spacecraft/. Todas são arte oficial NASA enquadrada na própria sonda (preenche o frame, lê
+ * bem em miniatura). Voyager 1 e 2 usam artes DISTINTAS (PIA17049 vs PIA26353), não a mesma imagem das
+ * gêmeas; Pioneer 10 e 11 também (foto da missão vs pintura de Wilson Hurley em Saturno). Fontes:
+ * Voyager PIA17049/PIA26353, Juno PIA21770, Pioneer 10 (Pioneer mission page), Pioneer 11
+ * ARC-2000-80-HC-251, New Horizons PIA10075, James Webb (arte conceitual GSFC/STScI), Parker Solar
+ * Probe (arte JHUAPL "Observing the Sun"), Europa Clipper PIA26068. Crédito = a atribuição oficial de
+ * cada imagem.
  */
 const SPACECRAFT_IMAGE: Record<string, ImageConfig> = {
     // cover por padrão. position aponta para ONDE a sonda está em cada foto (várias não a têm no centro
@@ -40,8 +43,14 @@ const SPACECRAFT_IMAGE: Record<string, ImageConfig> = {
     'spacecraft:-31': { src: '/images/spacecraft/voyager-1.jpg',    credit: 'NASA/JPL-Caltech', position: '40% 42%', scale: 1.1 },
     'spacecraft:-32': { src: '/images/spacecraft/voyager-2.jpg',    credit: 'NASA/JPL-Caltech', position: '50% 48%', scale: 1.15 },
     'spacecraft:-23': { src: '/images/spacecraft/pioneer-10.jpg',   credit: 'NASA',             position: '45% 45%' },
+    // Pintura em Saturno digitalizada de um cartão com borda branca: o scale empurra a borda pra fora
+    // do recorte e a faixa fica em Saturno com a sonda em primeiro plano.
+    'spacecraft:-24': { src: '/images/spacecraft/pioneer-11.jpg',   credit: 'NASA/Ames/Wilson Hurley', position: '50% 58%', scale: 1.25 },
     'spacecraft:-98': { src: '/images/spacecraft/new-horizons.jpg', credit: 'NASA/JHUAPL/SwRI', position: '38% 60%' },
     'spacecraft:-61': { src: '/images/spacecraft/juno.jpg',         credit: 'NASA/JPL-Caltech' },
+    'spacecraft:-170': { src: '/images/spacecraft/jwst.jpg',        credit: 'NASA-GSFC/CIL',    position: '45% 42%' },
+    'spacecraft:-96': { src: '/images/spacecraft/parker-solar-probe.jpg', credit: 'NASA/JHUAPL/Steve Gribben', position: '42% 55%' },
+    'spacecraft:-159': { src: '/images/spacecraft/europa-clipper.jpg',    credit: 'NASA/JPL-Caltech', position: '50% 60%' },
 };
 
 export function SpacecraftImagePreview({ id, name }: { id: string; name: string }) {

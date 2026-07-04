@@ -3,7 +3,8 @@
 namespace App\Support\Spacecraft;
 
 /**
- * Naves e missões interplanetárias famosas (Voyager 1/2, Pioneer 10, New Horizons, Juno).
+ * Naves e missões famosas (Voyager 1/2, Pioneer 10/11, New Horizons, Juno, James Webb, Parker
+ * Solar Probe, Europa Clipper).
  *
  * Responsabilidade: ser a FONTE DE VERDADE no backend da identidade dessas naves (id da nave no
  * Horizons, nome) e montar o payload aceito pelo HorizonsTrajectoryService para buscar a POSIÇÃO
@@ -34,8 +35,12 @@ final class FamousSpacecraft
         ['horizonsId' => '-31', 'name' => 'Voyager 1'],
         ['horizonsId' => '-32', 'name' => 'Voyager 2'],
         ['horizonsId' => '-23', 'name' => 'Pioneer 10'],
+        ['horizonsId' => '-24', 'name' => 'Pioneer 11'],
         ['horizonsId' => '-98', 'name' => 'New Horizons'],
         ['horizonsId' => '-61', 'name' => 'Juno'],
+        ['horizonsId' => '-170', 'name' => 'James Webb'],
+        ['horizonsId' => '-96', 'name' => 'Parker Solar Probe'],
+        ['horizonsId' => '-159', 'name' => 'Europa Clipper'],
     ];
 
     /** Prefixo do id sintético. Casa com KNOWN_SPACECRAFT_ID_PREFIX no frontend. */

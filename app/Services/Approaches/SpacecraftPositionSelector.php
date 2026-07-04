@@ -11,16 +11,19 @@ use Illuminate\Support\Facades\Concurrency;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Resolve a POSIÇÃO ATUAL das naves famosas (Voyager 1/2, Pioneer 10, New Horizons, Juno) no JPL
- * Horizons, entregando para cada uma um vetor HELIOCÊNTRICO em UA (eclíptico J2000), pronto para o
- * frontend usar na régua da cena. As naves não entram no feed /radar/famous: vivem na cena como os
+ * Resolve a POSIÇÃO ATUAL das naves famosas (Voyager 1/2, Pioneer 10/11, New Horizons, Juno, James
+ * Webb, Parker Solar Probe, Europa Clipper) no JPL Horizons, entregando para cada uma o vetor
+ * GEOCÊNTRICO exato em UA (eclíptico J2000, direto do Horizons) e um vetor HELIOCÊNTRICO aproximado,
+ * ambos prontos para o frontend. As naves não entram no feed /radar/famous: vivem na cena como os
  * planetas. Este selector alimenta o endpoint próprio /radar/spacecraft.
  *
- * Por que vetor heliocêntrico pronto: o Horizons mede a posição geocêntrica (km, Terra na origem). A
- * conversão para heliocêntrico é `geocêntrico/KM_PER_AU + posição_da_Terra`. Para uma nave a dezenas
- * de UA, a posição da Terra (~1 UA) é desprezível (<1% em 150 UA), então usamos a aproximação simples
- * `Terra ≈ -direção_do_Sol` (vetor unitário × 1 UA). Direção e região ficam exatas; a fração de UA do
- * offset da Terra é ruído numa nave tão distante.
+ * Por que os DOIS vetores: o Horizons mede a posição geocêntrica (km, Terra na origem). O frontend
+ * tem a posição heliocêntrica EXATA da Terra (astronomy-engine, earthHelioPositionAU), então o
+ * caminho preciso é ele somar `Terra_exata + geoAU`. Isso importa nas naves PRÓXIMAS da Terra: o
+ * James Webb fica a só 0,01 UA, menor que o erro da aproximação de Terra usada aqui. O `helioAU`
+ * deste payload usa `Terra ≈ -direção_do_Sol × 1 UA` (sem excentricidade), aproximação boa a dezenas
+ * de UA (<1% em 150 UA), e permanece como caminho de compatibilidade quando o frontend ainda não tem
+ * a efeméride própria.
  *
  * Fallback: quando o Horizons falha para uma nave, ela simplesmente NÃO entra no payload (available
  * ausente). O frontend cai no vetor fixo local (knownSpacecraft.ts), então a nave nunca some.
@@ -57,7 +60,7 @@ final class SpacecraftPositionSelector
     private const RESULT_CACHE_TTL_SECONDS = 1800;
 
     /** Versão do formato da resposta. Incrementar ao mudar o shape. */
-    private const CACHE_VERSION = 'spacecraft-v1';
+    private const CACHE_VERSION = 'spacecraft-v2';
 
     public function __construct(
         private readonly HorizonsTrajectoryService $horizons,
@@ -99,10 +102,10 @@ final class SpacecraftPositionSelector
         $objects = [];
         foreach (FamousSpacecraft::all() as $craft) {
             $id = FamousSpacecraft::idFor($craft['horizonsId']);
-            $helio = $this->helioFromTrajectory($trajectories[$id] ?? null, $earthHelio);
+            $geo = $this->geoFromTrajectory($trajectories[$id] ?? null);
 
             // Sem posição ao vivo: a nave não entra no payload. O front usa o vetor fixo local.
-            if ($helio === null) {
+            if ($geo === null) {
                 continue;
             }
 
@@ -110,7 +113,15 @@ final class SpacecraftPositionSelector
                 'horizonsId' => $craft['horizonsId'],
                 'id'         => $id,
                 'name'       => $craft['name'],
-                'helioAU'    => $helio,
+                // Geocêntrico EXATO do Horizons: o frontend soma a Terra exata dele (efeméride própria).
+                'geoAU'      => $geo,
+                // Heliocêntrico com Terra aproximada: compatibilidade/fallback quando o frontend ainda
+                // não resolveu a efeméride própria. Nas naves distantes o erro é desprezível.
+                'helioAU'    => [
+                    'x' => $earthHelio['x'] + $geo['x'],
+                    'y' => $earthHelio['y'] + $geo['y'],
+                    'z' => $earthHelio['z'] + $geo['z'],
+                ],
             ];
         }
 
@@ -155,14 +166,13 @@ final class SpacecraftPositionSelector
     }
 
     /**
-     * Converte o currentPoint geocêntrico (km) de uma trajetória em vetor heliocêntrico (UA), ou null
-     * quando a trajetória não está disponível.
+     * Converte o currentPoint geocêntrico (km) de uma trajetória em vetor geocêntrico em UA
+     * (eclíptico J2000), ou null quando a trajetória não está disponível.
      *
      * @param  array<string, mixed>|null  $trajectory
-     * @param  array{x: float, y: float, z: float}  $earthHelio
      * @return array{x: float, y: float, z: float}|null
      */
-    private function helioFromTrajectory(?array $trajectory, array $earthHelio): ?array
+    private function geoFromTrajectory(?array $trajectory): ?array
     {
         if (! is_array($trajectory) || ($trajectory['status'] ?? null) !== 'available') {
             return null;
@@ -174,9 +184,9 @@ final class SpacecraftPositionSelector
         }
 
         return [
-            'x' => $earthHelio['x'] + ((float) $point['x']) / self::KM_PER_AU,
-            'y' => $earthHelio['y'] + ((float) $point['y']) / self::KM_PER_AU,
-            'z' => $earthHelio['z'] + ((float) ($point['z'] ?? 0)) / self::KM_PER_AU,
+            'x' => ((float) $point['x']) / self::KM_PER_AU,
+            'y' => ((float) $point['y']) / self::KM_PER_AU,
+            'z' => ((float) ($point['z'] ?? 0)) / self::KM_PER_AU,
         ];
     }
 

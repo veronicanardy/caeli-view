@@ -1,7 +1,7 @@
 /**
- * Garante que famousLoreFor cobre todos os famosos (5 asteroides + 3 cometas + 5 naves) em PT e EN,
- * devolve null para objetos sem lore (asteroide comum do feed) e respeita o estilo do produto (sem
- * travessão).
+ * Garante que famousLoreFor cobre todos os famosos (asteroides, cometas e naves dos catálogos
+ * conhecidos) em PT e EN, devolve null para objetos sem lore (asteroide comum do feed) e respeita o
+ * estilo do produto (sem travessão).
  */
 
 import { describe, expect, it } from 'vitest';

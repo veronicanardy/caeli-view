@@ -99,6 +99,20 @@ const SPACECRAFT_CONTENT: Record<string, SpacecraftContent> = {
             { year: '~2029', pt: 'Deve cruzar a fronteira para o espaço interestelar.', en: 'Expected to cross into interstellar space.', future: true },
         ],
     },
+    // Pioneer 11 (-24)
+    'spacecraft:-24': {
+        contextPt: 'A primeira nave a ver Saturno de perto, em 1979, abrindo o caminho que as Voyager seguiriam logo depois. Está muda desde 1995, quando a energia ficou baixa demais para transmitir, e hoje segue afastando-se em silêncio, a mais de 110 vezes a distância da Terra ao Sol, rumo à constelação da Águia.',
+        contextEn: 'The first spacecraft to see Saturn up close, in 1979, opening the path the Voyagers would follow soon after. It has been silent since 1995, when its power dropped too low to transmit, and today it keeps drifting away quietly, more than 110 times the Earth to Sun distance, toward the constellation Aquila.',
+        missionIntroPt: 'A gêmea que ousou mais: usou a gravidade de Júpiter como trampolim para cruzar o Sistema Solar em diagonal até Saturno, testando a rota e os perigos que as Voyager enfrentariam em seguida.',
+        missionIntroEn: 'The twin that dared more: it used Jupiter’s gravity as a springboard to cross the Solar System diagonally to Saturn, testing the route and the hazards the Voyagers would face next.',
+        milestones: [
+            { year: '1973', pt: 'Lançada pela NASA, gêmea da Pioneer 10.', en: 'Launched by NASA, twin of Pioneer 10.' },
+            { year: '1974', pt: 'Sobrevoa Júpiter mais de perto que qualquer nave até então e ganha impulso rumo a Saturno.', en: 'Flies by Jupiter closer than any spacecraft before and gains a boost toward Saturn.' },
+            { year: '1979', pt: 'Primeira nave a passar perto de Saturno e de seus anéis.', en: 'First spacecraft to fly close to Saturn and its rings.' },
+            { year: '1995', pt: 'Último contato: a energia ficou baixa demais para transmitir.', en: 'Last contact: power dropped too low to transmit.' },
+            { year: '~4 milhões de anos', pt: 'Deve passar perto de uma estrela da constelação da Águia.', en: 'Expected to pass near a star in the constellation Aquila.', future: true },
+        ],
+    },
     // Juno (-61)
     'spacecraft:-61': {
         contextPt: 'A sonda que estuda Júpiter por dentro, das nuvens ao núcleo. É movida a energia solar, algo raríssimo tão longe do Sol, com três grandes painéis abertos como pás. Diferente das visitantes de passagem, fica em órbita do gigante e volta a mergulhar nele de tempos em tempos, mapeando o que há sob as nuvens.',
@@ -110,6 +124,46 @@ const SPACECRAFT_CONTENT: Record<string, SpacecraftContent> = {
             { year: '2016', pt: 'Entra em órbita de Júpiter e começa os mergulhos.', en: 'Enters orbit around Jupiter and begins its dives.' },
             { year: '2021', pt: 'Missão estendida: passa a sobrevoar também as luas Ganimedes, Europa e Io.', en: 'Extended mission: begins flybys of the moons Ganymede, Europa and Io.' },
             { year: '~2025', pt: 'Fim previsto da missão, com mergulho final na atmosfera de Júpiter.', en: 'Planned end of mission, with a final plunge into Jupiter’s atmosphere.', future: true },
+        ],
+    },
+    // James Webb (-170)
+    'spacecraft:-170': {
+        contextPt: 'O maior e mais poderoso telescópio espacial já construído, com um espelho dourado de 6,5 metros que enxerga em infravermelho a luz das primeiras galáxias do universo. Não orbita a Terra como o Hubble: vive a 1,5 milhão de km daqui, num ponto de equilíbrio chamado L2, viajando junto com o planeta ao redor do Sol.',
+        contextEn: 'The largest and most powerful space telescope ever built, with a gold-coated 6.5 metre mirror that sees, in infrared, the light of the universe’s first galaxies. It does not orbit Earth like Hubble: it lives 1.5 million km away, at a balance point called L2, travelling around the Sun together with the planet.',
+        missionIntroPt: 'Um observatório que precisou se montar sozinho no espaço: espelho e escudo foram lançados dobrados, e cada etapa da abertura tinha de dar certo de primeira, sem chance de conserto tão longe da Terra.',
+        missionIntroEn: 'An observatory that had to assemble itself in space: mirror and sunshield were launched folded, and every step of the deployment had to work on the first try, with no chance of repair so far from Earth.',
+        milestones: [
+            { year: '2021', pt: 'Lançado pela NASA com a ESA e a agência canadense, num foguete Ariane 5.', en: 'Launched by NASA with ESA and the Canadian agency, on an Ariane 5 rocket.' },
+            { year: '2022', pt: 'Chega ao ponto L2, abre espelho e escudo e revela as primeiras imagens.', en: 'Arrives at L2, deploys mirror and sunshield and reveals its first images.' },
+            { year: '2023', pt: 'Identifica algumas das galáxias mais antigas já observadas.', en: 'Identifies some of the oldest galaxies ever observed.' },
+            { year: '~2040', pt: 'O combustível que mantém a órbita deve durar até por volta deste ano.', en: 'The fuel that maintains its orbit should last until around this year.', future: true },
+        ],
+    },
+    // Parker Solar Probe (-96)
+    'spacecraft:-96': {
+        contextPt: 'A nave que toca o Sol e o objeto mais rápido já construído por pessoas. Protegida por um escudo de carbono, mergulha na coroa solar, a atmosfera externa do Sol, para descobrir por que ela é centenas de vezes mais quente que a superfície. Sua órbita alongada explica por que a distância dela muda tanto de um mês para o outro.',
+        contextEn: 'The spacecraft that touches the Sun, and the fastest object people have ever built. Protected by a carbon shield, it dives into the solar corona, the Sun’s outer atmosphere, to find out why it is hundreds of times hotter than the surface. Its stretched orbit is why its distance changes so much from one month to the next.',
+        missionIntroPt: 'Uma missão sonhada desde 1958, que esperou sessenta anos pela tecnologia capaz de chegar tão perto do Sol sem derreter.',
+        missionIntroEn: 'A mission dreamed of since 1958, which waited sixty years for technology able to get this close to the Sun without melting.',
+        milestones: [
+            { year: '2018', pt: 'Lançada pela NASA, batizada em homenagem ao físico Eugene Parker.', en: 'Launched by NASA, named in honour of physicist Eugene Parker.' },
+            { year: '2021', pt: 'Primeira nave a voar dentro da coroa do Sol.', en: 'First spacecraft to fly inside the Sun’s corona.' },
+            { year: '2024', pt: 'Aproximação recorde: passa a 6,1 milhões de km da superfície do Sol, a 692 mil km/h.', en: 'Record approach: passes 6.1 million km from the Sun’s surface, at 692 thousand km/h.' },
+            { year: '2026–', pt: 'Segue mergulhando na coroa a cada órbita de 88 dias.', en: 'Keeps diving into the corona on each 88 day orbit.', future: true },
+        ],
+    },
+    // Europa Clipper (-159)
+    'spacecraft:-159': {
+        contextPt: 'A maior nave que a NASA já construiu para uma missão planetária, a caminho de Europa, lua de Júpiter que guarda sob a crosta de gelo um oceano com mais água que todos os oceanos da Terra somados. Neste momento ela está voltando em direção à Terra: em dezembro de 2026 passa por aqui para ganhar velocidade rumo a Júpiter.',
+        contextEn: 'The largest spacecraft NASA has ever built for a planetary mission, on its way to Europa, Jupiter’s moon that hides beneath its icy crust an ocean holding more water than all of Earth’s oceans combined. Right now it is heading back toward Earth: in December 2026 it swings by to gain speed toward Jupiter.',
+        missionIntroPt: 'Como estudar um oceano sem pousar nele: em vez de orbitar Europa dentro da radiação brutal de Júpiter, a nave orbitará o planeta e fará 49 mergulhos rápidos sobre a lua, um mapa completo feito de sobrevoos.',
+        missionIntroEn: 'How to study an ocean without landing on it: instead of orbiting Europa inside Jupiter’s brutal radiation, the spacecraft will orbit the planet and make 49 quick dives over the moon, a complete map built from flybys.',
+        milestones: [
+            { year: '2024', pt: 'Lançada pela NASA num foguete Falcon Heavy.', en: 'Launched by NASA on a Falcon Heavy rocket.' },
+            { year: '2025', pt: 'Usa a gravidade de Marte para ajustar a rota.', en: 'Uses Mars’s gravity to adjust its route.' },
+            { year: '2026', pt: 'Volta a passar pela Terra em dezembro, ganhando velocidade rumo a Júpiter.', en: 'Swings back past Earth in December, gaining speed toward Jupiter.', future: true },
+            { year: '2030', pt: 'Deve chegar a Júpiter e entrar em órbita.', en: 'Expected to reach Jupiter and enter orbit.', future: true },
+            { year: '2031', pt: 'Começa os 49 sobrevoos de Europa para mapear o oceano sob o gelo.', en: 'Begins its 49 flybys of Europa to map the ocean beneath the ice.', future: true },
         ],
     },
 };

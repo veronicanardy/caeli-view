@@ -215,28 +215,29 @@ export function useRadar3DFocusActions({
             // unidades): assim o enquadramento é o mesmo close-up confortável para qualquer nave, perto ou
             // longe. Câmera num ângulo 3/4 fixo (não pela direção do Sol, que a dezenas de UA é quase
             // paralela e dava enquadramentos rasos). ×8 deixa a sonda inteira no quadro com folga.
-            const pos = knownSpacecraftScenePosition(craft, LINEAR_AU_SCALE, spacecraftPositions);
+            const pos = knownSpacecraftScenePosition(craft, LINEAR_AU_SCALE, spacecraftPositions, ephemeris?.earthHelioPositionAU);
             const craftVec = new THREE.Vector3(...pos);
 
-            // CASO ESPECIAL DA JUNO: ela orbita Júpiter, então a graça é vê-la COM Júpiter ao fundo. A
-            // câmera fica do lado oposto a Júpiter (na direção Júpiter→Juno estendida) e olha de volta
-            // para a Juno: a sonda fica em primeiro plano e o disco de Júpiter aparece atrás dela. Como
-            // estão a só ~0,034 UA (~10 unidades de cena), enquadramos um pouco mais largo (×14) para o
-            // planeta caber no fundo. Sem a posição de Júpiter (efeméride não resolvida) cai no close-up
-            // genérico abaixo.
-            const jupiter = ephemeris?.jupiterScenePosition;
-            if (craft.horizonsId === '-61' && jupiter) {
-                const jupiterVec = new THREE.Vector3(...jupiter);
-                const sep = craftVec.distanceTo(jupiterVec);
+            // CASO ESPECIAL DAS NAVES COM COMPANHEIRO: a Juno orbita Júpiter e o James Webb acompanha a
+            // Terra (ponto L2), então a graça é vê-las COM o corpo companheiro ao fundo. A câmera fica do
+            // lado da nave OPOSTO ao companheiro (na direção companheiro→nave estendida) e olha de volta:
+            // a sonda fica em primeiro plano e o disco do planeta aparece atrás dela. A Juno está a
+            // ~0,034 UA de Júpiter e o James Webb a ~0,01 UA da Terra: em ambos o disco cabe pequeno no
+            // fundo. Sem a posição do companheiro (efeméride não resolvida) cai no close-up genérico.
+            const backdrop = craft.horizonsId === '-61'
+                ? ephemeris?.jupiterScenePosition
+                : craft.horizonsId === '-170'
+                    ? ephemeris?.earthScenePosition
+                    : undefined;
+            if (backdrop) {
+                const backdropVec = new THREE.Vector3(...backdrop);
+                const sep = craftVec.distanceTo(backdropVec);
                 if (sep > 1e-3) {
-                    // CLOSE-UP na Juno COM Júpiter ao fundo: a câmera cola na Juno (sonda grande, como nas
-                    // outras naves), mas posicionada do lado da Juno OPOSTO a Júpiter, olhando ATRAVÉS da
-                    // Juno em direção a Júpiter. Assim a Juno fica em primeiro plano e o disco de Júpiter
-                    // aparece pequeno atrás dela, na linha de visão. A distância é a do close-up genérico
-                    // (proporcional ao marcador), só a DIREÇÃO muda para alinhar Júpiter no fundo. Leve
-                    // elevação para não ficar raso. O alvo é a própria Juno.
-                    const awayFromJupiter = craftVec.clone().sub(jupiterVec).normalize();
-                    const camDir = awayFromJupiter.add(new THREE.Vector3(0, 0.18, 0)).normalize();
+                    // CLOSE-UP na nave COM o companheiro ao fundo: a distância é a do close-up genérico
+                    // (proporcional ao marcador), só a DIREÇÃO muda para alinhar o companheiro no fundo.
+                    // Leve elevação para não ficar raso. O alvo é a própria nave.
+                    const awayFromBackdrop = craftVec.clone().sub(backdropVec).normalize();
+                    const camDir = awayFromBackdrop.add(new THREE.Vector3(0, 0.18, 0)).normalize();
                     setSpacecraftFocusTarget({ ...framingForBody(craftVec, SPACECRAFT_FOCUS_RADIUS, camDir, 8), durationSeconds: 1.3 });
                     return;
                 }
@@ -248,8 +249,8 @@ export function useRadar3DFocusActions({
             // à origem (dezenas de milhares de unidades): assim o enquadramento é o mesmo close-up
             // confortável para qualquer nave, perto ou longe. Ângulo 3/4 fixo (a direção do Sol, a dezenas
             // de UA, é quase paralela e dava enquadramentos rasos). ×4,5 cola na sonda (×8 vinha longe
-            // demais, a nave virava um pontinho). A Juno é a exceção (acima): fica mais larga para Júpiter
-            // caber no fundo, e não é tocada aqui.
+            // demais, a nave virava um pontinho). Juno e James Webb são as exceções (acima): enquadram o
+            // corpo companheiro ao fundo (Júpiter e Terra) e não passam por aqui.
             // EXCEÇÃO Voyager (-31/-32): o GLB tem booms longuíssimos (magnetômetro ~13 m), então ao
             // normalizar "maior eixo = 2" o CORPO/prato fica pequeno no quadro e a nave parecia distante.
             // Aproximamos mais (×2,6) para o corpo da Voyager preencher como as demais.

@@ -16,8 +16,14 @@ describe('spacecraftData', () => {
         expect(spacecraftMissionIntro('spacecraft:-999', 'pt-BR')).toBeNull();
     });
 
+    const ALL_SPACECRAFT_IDS = [
+        'spacecraft:-31', 'spacecraft:-32', 'spacecraft:-23', 'spacecraft:-24',
+        'spacecraft:-98', 'spacecraft:-61', 'spacecraft:-170', 'spacecraft:-96',
+        'spacecraft:-159',
+    ];
+
     it('cada nave tem abertura de missão bilíngue, distinta do resumo', () => {
-        for (const id of ['spacecraft:-31', 'spacecraft:-32', 'spacecraft:-23', 'spacecraft:-98', 'spacecraft:-61']) {
+        for (const id of ALL_SPACECRAFT_IDS) {
             const introPt = spacecraftMissionIntro(id, 'pt-BR');
             const introEn = spacecraftMissionIntro(id, 'en');
             expect(introPt).toBeTruthy();
@@ -29,7 +35,7 @@ describe('spacecraftData', () => {
     });
 
     it('cada nave tem marcos, com pelo menos uma previsão futura', () => {
-        for (const id of ['spacecraft:-31', 'spacecraft:-32', 'spacecraft:-23', 'spacecraft:-98', 'spacecraft:-61']) {
+        for (const id of ALL_SPACECRAFT_IDS) {
             const ms = spacecraftMilestones(id);
             expect(ms.length).toBeGreaterThan(0);
             expect(ms.some((m) => m.future)).toBe(true);

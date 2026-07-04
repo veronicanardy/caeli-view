@@ -1,32 +1,41 @@
 /**
  * Busca a posição ATUAL das naves famosas via /radar/spacecraft.
  *
- * Responsabilidade: trazer do backend, uma vez por carga, o vetor heliocêntrico em UA de cada nave
- * (Voyager 1/2, Pioneer 10, New Horizons, Juno), resolvido ao vivo no JPL Horizons. A cena (camada e
- * foco de câmera) usa essa posição quando disponível e cai no vetor fixo local (knownSpacecraft.ts)
- * para as naves ausentes do payload, então nenhuma nave some quando o Horizons falha.
+ * Responsabilidade: trazer do backend, uma vez por carga, os vetores em UA de cada nave (Voyager 1/2,
+ * Pioneer 10/11, New Horizons, Juno, James Webb, Parker Solar Probe, Europa Clipper), resolvidos ao
+ * vivo no JPL Horizons: o geocêntrico EXATO (geoAU) e o heliocêntrico aproximado (helioAU). A cena
+ * (camada e foco de câmera) prefere `Terra_exata + geoAU` (importa nas naves próximas, ex.: James Webb
+ * a 0,01 UA) e cai no fallback local (knownSpacecraft.ts) para as naves ausentes do payload, então
+ * nenhuma nave some quando o Horizons falha.
  *
- * Fetch único no mount: o backend cacheia ~30 min e a posição de uma nave a dezenas de UA muda
- * imperceptivelmente na escala da cena durante uma sessão, então não há re-fetch por intervalo.
+ * Fetch único no mount: o backend cacheia ~30 min e a posição das naves muda imperceptivelmente na
+ * escala da cena durante uma sessão, então não há re-fetch por intervalo.
  */
 
 import { useEffect, useState } from 'react';
+import type { LiveSpacecraftPositions } from '@/Components/Radar/Bodies/Spacecraft/knownSpacecraft';
 
-/** Vetor heliocêntrico em UA (eclíptico J2000) de uma nave, do backend. */
+/** Vetor em UA (eclíptico J2000) de uma nave, do backend. */
 export type SpacecraftHelioAU = { x: number; y: number; z: number };
 
 type SpacecraftPositionResponse = {
-    objects: Array<{ horizonsId: string; id: string; name: string; helioAU: SpacecraftHelioAU }>;
+    objects: Array<{
+        horizonsId: string;
+        id: string;
+        name: string;
+        helioAU: SpacecraftHelioAU;
+        geoAU?: SpacecraftHelioAU;
+    }>;
 };
 
 export interface UseSpacecraftPositionsResult {
-    /** Mapa horizonsId → posição heliocêntrica ao vivo. Naves sem posição não aparecem aqui. */
-    positions: Record<string, SpacecraftHelioAU>;
+    /** Mapa horizonsId → posição ao vivo (helioAU + geoAU). Naves sem posição não aparecem aqui. */
+    positions: LiveSpacecraftPositions;
     loading: boolean;
 }
 
 export function useSpacecraftPositions(): UseSpacecraftPositionsResult {
-    const [positions, setPositions] = useState<Record<string, SpacecraftHelioAU>>({});
+    const [positions, setPositions] = useState<LiveSpacecraftPositions>({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -36,14 +45,14 @@ export function useSpacecraftPositions(): UseSpacecraftPositionsResult {
             .then((res) => (res.ok ? (res.json() as Promise<SpacecraftPositionResponse>) : null))
             .then((data) => {
                 if (!data?.objects) return;
-                const map: Record<string, SpacecraftHelioAU> = {};
+                const map: LiveSpacecraftPositions = {};
                 for (const obj of data.objects) {
-                    if (obj.helioAU) map[obj.horizonsId] = obj.helioAU;
+                    if (obj.helioAU) map[obj.horizonsId] = { helioAU: obj.helioAU, geoAU: obj.geoAU };
                 }
                 setPositions(map);
             })
             .catch(() => {
-                // Falha de rede: o front fica só com os vetores fixos locais. Nenhuma nave some.
+                // Falha de rede: o front fica só com os fallbacks locais. Nenhuma nave some.
             })
             .finally(() => setLoading(false));
 

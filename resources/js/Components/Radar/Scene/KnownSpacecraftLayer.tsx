@@ -1,5 +1,6 @@
 /**
- * Camada das naves famosas (Voyager 1/2, Pioneer 10, New Horizons, Juno) na cena do radar.
+ * Camada das naves famosas (Voyager 1/2, Pioneer 10/11, New Horizons, Juno, James Webb, Parker Solar
+ * Probe, Europa Clipper) na cena do radar.
  *
  * Responsabilidade: desenhar (modelo 3D real, label e hitbox) as naves na régua LINEAR dos planetas
  * (Sol na origem), a partir da posição heliocêntrica de knownSpacecraft. É a contraparte de
@@ -7,11 +8,10 @@
  * da NASA (SpacecraftModel; cai no marcador estilizado SpacecraftMarker se o GLB não carregar), e a
  * posição vem de um vetor (ao vivo ou fixo), não de Kepler (naves não seguem órbita kepleriana).
  *
- * Caminho principal x fallback: igual aos cometas, as naves também chegam pelo feed /radar/famous com
- * posição REAL do Horizons. As naves cuja posição real cai DENTRO do limite de render do AsteroidSceneLayer
- * seriam desenhadas lá; para não virarem "rocha" (o AsteroidMarker só sabe desenhar rocha/cometa), o
- * RadarScene as exclui daquela camada e elas são SEMPRE desenhadas aqui. `skipIds` continua existindo por
- * simetria, mas na prática as naves não são puladas: esta é a única camada que sabe desenhá-las.
+ * Caminho principal x fallback: as naves NÃO entram no feed /radar/famous; a posição ao vivo vem do
+ * endpoint próprio /radar/spacecraft (livePositions) e o fallback local de knownSpacecraft cobre as
+ * ausentes. O RadarScene ainda exclui objectType 'spacecraft' do AsteroidSceneLayer por defesa (o
+ * AsteroidMarker só sabe desenhar rocha/cometa): esta é a única camada que sabe desenhá-las.
  *
  * As naves distantes (Voyager a ~167 UA) ficam no extremo da régua honesta. Isso é intencional: revela a
  * escala real do Sistema Solar. Não há cauda (decisão: nave não é cometa).
@@ -38,19 +38,24 @@ type KnownSpacecraftLayerProps = {
     selectedId?: string | null;
     /** Régua AU da cena; default = LINEAR_AU_SCALE, a régua única. */
     auScale?: number;
-    /** Posições ao vivo das naves (Horizons). Naves ausentes usam o vetor fixo local. */
+    /** Posições ao vivo das naves (Horizons). Naves ausentes usam o fallback local. */
     livePositions?: LiveSpacecraftPositions;
+    /**
+     * Posição heliocêntrica EXATA da Terra (efeméride do frontend, UA). Habilita o caminho preciso
+     * `Terra_exata + geoAU` e o fallback do James Webb ancorado na Terra (L2).
+     */
+    earthHelioAU?: { x: number; y: number; z: number } | null;
     /** Abre o card da nave clicada. */
     onSelect?: (craft: KnownSpacecraft) => void;
 };
 
 /**
- * Renderiza as naves famosas com marcador estilizado na régua dos planetas (Sol na origem), cada uma na
+ * Renderiza as naves famosas com o modelo real na régua dos planetas (Sol na origem), cada uma na
  * região real onde está. Usa a posição ao vivo do Horizons (livePositions) quando disponível, senão o
- * vetor heliocêntrico fixo local.
+ * fallback heliocêntrico local.
  */
-export function KnownSpacecraftLayer({ showLabels, selectedId, auScale, livePositions, onSelect }: KnownSpacecraftLayerProps) {
-    const placements = knownSpacecraftPlacements(auScale, livePositions);
+export function KnownSpacecraftLayer({ showLabels, selectedId, auScale, livePositions, earthHelioAU, onSelect }: KnownSpacecraftLayerProps) {
+    const placements = knownSpacecraftPlacements(auScale, livePositions, earthHelioAU);
     const hasSelection = Boolean(selectedId);
 
     return (

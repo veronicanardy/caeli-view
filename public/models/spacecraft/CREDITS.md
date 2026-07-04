@@ -27,13 +27,42 @@ Modelo da sonda New Horizons (missão a Plutão e ao cinturão de Kuiper).
 - Arquivo: https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/n/New_Horizons.glb
 - Crédito: NASA Visualization Technology Applications and Development (VTAD).
 
-## Pioneer_10.glb, sonda Pioneer 10
+## Pioneer_10.glb, sondas Pioneer 10 e Pioneer 11
 
-Modelo da sonda Pioneer 10 (primeira a cruzar o cinturão de asteroides e sobrevoar Júpiter).
+Modelo da sonda Pioneer 10 (primeira a cruzar o cinturão de asteroides e sobrevoar Júpiter). Pioneer
+10 e Pioneer 11 são gêmeas, então o MESMO modelo serve às duas.
 
 - Fonte: https://science.nasa.gov/3d-resources/pioneer/
 - Arquivo: https://assets.science.nasa.gov/content/dam/science/cds/3d/resources/model/pioneer-10/Pioneer%2010.glb
 - Crédito: NASA/JPL/Eyes on the Solar System.
+
+## JWST.glb, telescópio espacial James Webb
+
+Modelo do telescópio James Webb (observatório infravermelho no ponto de equilíbrio L2).
+
+- Fonte: https://science.nasa.gov/3d-resources/james-webb-space-telescope-a/
+- Arquivo: https://assets.science.nasa.gov/content/dam/science/cds/3d/resources/model/james-webb-space-telescope-(a)/James%20Webb%20Space%20Telescope%20(A).glb
+- Crédito: NASA/Goddard Space Flight Center.
+
+## Parker_Solar_Probe.glb, sonda Parker Solar Probe
+
+Modelo da sonda Parker Solar Probe (a nave que mergulha na coroa do Sol).
+
+- Fonte: https://science.nasa.gov/resource/parker-solar-probe-3d-model/
+- Arquivo: https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/p/s/PSP.glb
+- Crédito: NASA Visualization Technology Applications and Development (VTAD).
+
+## Europa_Clipper.glb, sonda Europa Clipper
+
+Modelo da sonda Europa Clipper (missão à lua Europa, de Júpiter). O arquivo original tem 34 MB, pesado
+demais para a carga da cena; este foi otimizado localmente com gltf-transform, preservando a geometria
+e os materiais oficiais: texturas limitadas a 512 px (a resolução que o próprio modelo usa na maioria
+das peças), convertidas para WebP (EXT_texture_webp, suportado nativamente pelo three.js) e malha
+quantizada (KHR_mesh_quantization, idem). Resultado: 9,6 MB, sem decodificadores externos.
+
+- Fonte: https://science.nasa.gov/resource/europa-clipper-3d-model/
+- Arquivo: https://assets.science.nasa.gov/content/dam/science/psd/solar/2023/09/c/clipper_spacecraft.glb
+- Crédito: NASA Visualization Technology Applications and Development (VTAD).
 
 ## Observações
 

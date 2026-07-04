@@ -1,9 +1,10 @@
 /**
- * Card de foco de nave/missão (Voyager, Pioneer, New Horizons, Juno).
+ * Card de foco de nave/missão (Voyager, Pioneer, New Horizons, Juno, James Webb,
+ * Parker Solar Probe, Europa Clipper).
  *
  * Abas Resumo · Missão · História (via focusCardTabs), sem Aproximação (não há
  * flyby da Terra) nem Perfil físico (nave não tem diâmetro/velocidade/magnitude
- * do feed). A identidade (operadora, marcos, distância ao Sol) vem de
+ * do feed). A identidade (operadora, marcos, distância da Terra) vem de
  * KNOWN_SPACECRAFT e do conteúdo editorial em spacecraftData, casados pelo id.
  * O shell de abas e as peças comuns vivem em FocusCardParts.
  */
@@ -13,7 +14,7 @@ import { ChevronDown, TriangleAlert } from 'lucide-react';
 import { approxKm } from '@/lib/format';
 import { formatDistanceAU } from '@/lib/radar/format';
 import { smartSummary } from './focusCardPresentation';
-import { knownSpacecraftById, knownSpacecraftHeliocentricDistanceKm } from '../Bodies/Spacecraft/knownSpacecraft';
+import { knownSpacecraftById, knownSpacecraftEarthDistanceKm } from '../Bodies/Spacecraft/knownSpacecraft';
 import { spacecraftContext, spacecraftMilestones, spacecraftMissionIntro } from './spacecraftData';
 import { tabsForFocusObject } from '@/lib/radar/focusCardTabs';
 import { famousLoreFor } from './famousLore';
@@ -53,11 +54,11 @@ export function SpacecraftFocusCard({
         ?? smartSummary({ objectType: 'spacecraft', sizeMeters: null, velocityKph: null }, en);
     const milestones = spacecraftMilestones(a.id);
     const missionIntro = spacecraftMissionIntro(a.id, locale);
-    // No radar a distância importante é DA TERRA. A dezenas/centenas de UA, a Terra (~1 UA) é desprezível
-    // perto da distância heliocêntrica, então este número (heliocêntrico) também é a distância da Terra,
-    // com erro desprezível — rotulamos como "da Terra", que é o que o usuário quer ler aqui.
+    // No radar a distância importante é DA TERRA. O objeto sintético já chega com ela (geocêntrica,
+    // knownSpacecraftEarthDistanceKm); o fallback local cobre o caso raro de objeto montado sem ela e
+    // devolve null quando não dá para calcular com honestidade (o approxKm mostra "Indisponível").
     const distanceKm = object.currentDistanceKm
-        ?? (craft ? knownSpacecraftHeliocentricDistanceKm(craft) : null);
+        ?? (craft ? knownSpacecraftEarthDistanceKm(craft) : null);
     const auText = formatDistanceAU(distanceKm, locale);
     const operator = craft ? (en ? craft.operator.en : craft.operator.pt) : null;
 
@@ -123,9 +124,10 @@ export function SpacecraftFocusCard({
                             {context ? (
                                 <p className="text-[12px] leading-relaxed text-white/55 lg:text-[12.5px]">{context}</p>
                             ) : null}
-                            {/* Distância DA TERRA: a métrica que importa no radar. A dezenas/centenas de UA, a
-                                Terra (~1 UA) é desprezível perto da distância ao Sol, então este número
-                                heliocêntrico é também a distância da Terra, com erro desprezível. */}
+                            {/* Distância DA TERRA: a métrica que importa no radar. Geocêntrica de verdade
+                                (geoAU do Horizons ou vetor efetivo menos a Terra da efeméride), o que importa
+                                nas naves próximas: o James Webb está a 0,01 UA, e o número heliocêntrico
+                                erraria por 100 vezes. */}
                             <div>
                                 <div className="flex items-baseline justify-between gap-2">
                                     <span className="text-[10.5px] font-normal uppercase tracking-wide text-white/50">

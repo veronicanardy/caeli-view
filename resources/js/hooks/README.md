@@ -25,7 +25,7 @@ Hooks React reutilizáveis entre páginas e componentes. Cada arquivo expõe um 
 - `useMediaQuery.ts`: estado reativo de uma media query CSS (resize/rotação); false em SSR até o primeiro render no browser.
 - `useRadarControls.ts`: estado central dos controles do radar (quantidade + critério), com reset para 5 objetos ao trocar critério.
 - `useSkyObservation.ts`: dados de observação do céu.
-- `useSpacecraftPositions.ts`: posições heliocêntricas ao vivo das naves famosas (endpoint `/radar/spacecraft`).
+- `useSpacecraftPositions.ts`: posições ao vivo das naves famosas (endpoint `/radar/spacecraft`): vetor geocêntrico exato + heliocêntrico aproximado, em UA.
 - `useUserLocation.ts`: localização do usuário (geolocalização/fallback).
 - `useVisibleObjects.ts`: objetos visíveis para observação.
 

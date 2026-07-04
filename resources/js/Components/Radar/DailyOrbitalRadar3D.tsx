@@ -196,9 +196,12 @@ export function DailyOrbitalRadar3D({
     // Nave selecionada: vira um objeto sintético local que reaproveita TODA a máquina de card
     // (kind="asteroid", aba História pelo id spacecraft:<id>). Como a nave não está no feed, este
     // objeto vive só aqui. selectedSpacecraftId destaca a nave na cena (label/realce do marcador).
+    // A Terra exata da efeméride dá a distância geocêntrica honesta do card (James Webb a 0,01 UA).
     const spacecraftCardObject = useMemo(
-        () => (selectedSpacecraft ? knownSpacecraftToClosestNowObject(selectedSpacecraft, spacecraftPositions) : null),
-        [selectedSpacecraft, spacecraftPositions],
+        () => (selectedSpacecraft
+            ? knownSpacecraftToClosestNowObject(selectedSpacecraft, spacecraftPositions, ephemeris?.earthHelioPositionAU)
+            : null),
+        [selectedSpacecraft, spacecraftPositions, ephemeris],
     );
     const selectedSpacecraftId = selectedSpacecraft ? knownSpacecraftId(selectedSpacecraft) : null;
     // O card mostra a nave selecionada quando há uma; senão, o objeto do feed em foco.
